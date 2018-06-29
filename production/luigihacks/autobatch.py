@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
-from luigihacks import BatchClient
+from luigihacks import batchclient
 from subprocess import check_output
 import luigi
 
@@ -10,35 +10,30 @@ def command_line(command):
     return out.decode("utf-8").split("\n")[-2]
 
 
-class AutoBatchTask(ABC, luigi.Task):
+class AutoBatchTask(luigi.Task, ABC):
     '''A base class for automatically preparing and submitting batch tasks'''
+    batchable = luigi.Parameter()
     job_def = luigi.Parameter()
     job_name = luigi.Parameter()
     job_queue = luigi.Parameter()
+    env_files = luigi.ListParameter(default=[])
     vcpus = luigi.IntParameter(default=1)
     memory = luigi.IntParameter(default=512)
     max_runs = luigi.IntParameter(default=None) # For testing
     timeout = luigi.IntParameter(default=21600)
     poll_time = luigi.IntParameter(default=60)
-    success_rate = luigi.FloatParameter(default=0.75)
-
-
-    def __init__(self):
-        super().__init__()
-        self.aws_id = command_line("aws --profile default configure "
-                                   "get aws_access_key_id")
-        self.aws_secret = command_line("aws --profile default configure "
-                                       "get aws_secret_access_key")                
+    success_rate = luigi.FloatParameter(default=0.75)    
 
     def run(self):
+        # Generate the parameters for batches
+        job_params = self.prepare()
         # Prepare the environment for batching
         env_files = " ".join(self.env_files)
         try:
-            s3file_timestamp = command_line("nesta_prepare_batch {}".format(env_files))
+            s3file_timestamp = command_line("nesta_prepare_batch "
+                                            "{} {}".format(self.batchable, env_files))
         except CalledProcessError:
             raise BatchJobException("Invalid input or environment files")
-        # Generate the parameters for batches
-        job_params = self.prepare()
         # Execute batch jobs
         self.execute(job_params, s3file_timestamp)
         # Combine the outputs
@@ -61,8 +56,13 @@ class AutoBatchTask(ABC, luigi.Task):
         pass
 
     def execute(self, job_params, s3file_timestamp):
+        # Get AWS info to pass to the batch jobs
+        aws_id = command_line("aws --profile default configure "
+                              "get aws_access_key_id")
+        aws_secret = command_line("aws --profile default configure "
+                                  "get aws_secret_access_key")
         # Submit jobs
-        batch_client = BatchClient(**self.aws_params)
+        batch_client = batchclient.BatchClient(**self.aws_params)
         job_ids = []
         for i, params in enumerate(job_params):
             if params["done"]:
@@ -72,8 +72,8 @@ class AutoBatchTask(ABC, luigi.Task):
                 break
             # Build a set of environmental variables to send
             # to the batch job
-            env_variables = [{"name":"AWS_ACCESS_KEY_ID", "value":self.aws_id},
-                             {"name":"AWS_SECRET_ACCESS_KEY", "value":self.aws_secret},
+            env_variables = [{"name":"AWS_ACCESS_KEY_ID", "value":aws_id},
+                             {"name":"AWS_SECRET_ACCESS_KEY", "value":aws_secret},
                              {"name":"BATCHPAR_S3FILE_TIMESTAMP", "value":s3file_timestamp}]
             for k,v in params.items():
                 new_row = dict(name="BATCHPAR_{}".format(k), value=str(v))
@@ -90,7 +90,7 @@ class AutoBatchTask(ABC, luigi.Task):
         # Wait for jobs to finish
         self.monitor_batch_jobs(batch_client, job_ids)
 
-    def monitor_batch_jobs(self)
+    def monitor_batch_jobs(self):
         '''Wait for jobs to finish'''
         stats = defaultdict(int)  # Collection of failure vs total statistics
         done_jobs = set()
