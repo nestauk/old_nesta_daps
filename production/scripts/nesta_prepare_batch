@@ -1,0 +1,46 @@
+#!/bin/bash
+
+TOP_DIR=${PWD}
+RUNDIR=${1}
+
+# Check if the main file exists
+ls $RUNDIR/run.py &> /dev/null
+if [[ $? -ne 0 ]];
+then
+    ls $RUNDIR/run.py
+    return 1
+fi
+
+# Prepare the run directory
+mkdir run/
+cp $RUNDIR/run.py run/
+
+# Copy dependencies
+for DIR_TO_COPY in "${@:2}"
+do
+    echo $DIR_TO_COPY
+    ls $DIR_TO_COPY &> /dev/null
+    if [[ $? -ne 0 ]];
+    then
+        rm -rf run/
+        ls $DIR_TO_COPY
+        return 1
+    fi
+    cp -r ${DIR_TO_COPY} run/
+done
+
+# Generate pip requirements
+pip install pipreqs &> /dev/null
+pipreqs run
+
+# Zip it up and copy to s3
+zip -r run.zip run/
+FILE_TIMESTAMP=run-$(date +%s%N).zip
+aws s3 cp run.zip s3://nesta-batch/${FILE_TIMESTAMP}
+
+# Tidy up
+rm run.zip
+rm -r run/
+
+# Echo the file name
+echo ${FILE_TIMESTAMP}
