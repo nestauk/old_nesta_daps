@@ -1,7 +1,7 @@
 #!/bin/bash
-
 TOP_DIR=${PWD}
 RUNDIR=${1}
+echo "Generating batchable from ${1} (working directory is ${TOP_DIR})"
 
 # Check if the main file exists
 ls $RUNDIR/run.py &> /dev/null

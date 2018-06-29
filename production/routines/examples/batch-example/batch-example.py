@@ -1,17 +1,19 @@
 from luigihacks import autobatch
 from luigihacks import s3
 import luigi
-
+import datetime
+import json
 
 S3PREFIX = "s3://nesta-dev/production_batch_example_"
 
-class InputData(luigi.ExternalTask):
+class SomeInitialTask(luigi.ExternalTask):
     def output(self):
-        return S3Target(S3PREFIX+'input.json')
+        return s3.S3Target(S3PREFIX+'input.json')
 
 
 class SomeBatchTask(autobatch.AutoBatchTask):
-    
+    date = luigi.DateParameter(default=datetime.datetime.today())
+
     def requires(self):
         return SomeInitialTask()
 
@@ -19,11 +21,13 @@ class SomeBatchTask(autobatch.AutoBatchTask):
         return s3.S3Target(S3PREFIX+"intermediate_output_%s.json" % self.date)
 
     def prepare(self):
-        with input().open("rb") as f:
-            job_params = something(f)
-        for params in job_params:
-            params["done"] = False
-            params["outinfo"] = outpathinstructions
+        instream = self.input().open("rb")
+        job_params = json.load(instream)
+        s3fs = s3.S3FS()
+        for i, params in enumerate(job_params):
+            params["outinfo"] = ("s3://nesta-production-intermediate/"
+                                 "batch-example-{}-{}".format(self.date, i))            
+            params["done"] = s3fs.exists(params["outinfo"])
         return job_params
 
     def combine(self, job_params):
@@ -40,7 +44,13 @@ class FinalTask(luigi.Task):
     date = luigi.DateParameter(default=datetime.datetime.today())
 
     def requires(self):
-        return SomeBatchTask(self.date)
+        return SomeBatchTask(date=self.date,
+                             batchable = ("/home/ec2-user/nesta/production/"
+                                          "batchables/examples/batch-example/"),
+                             job_def = "test_definition",
+                             job_name = "batch-example-%s" % self.date,
+                             job_queue = "HighPriority",
+                             poll_time = 10)
 
     def output(self):
         return s3.S3Target(S3PREFIX+"final_output_%s.json" % self.date)
