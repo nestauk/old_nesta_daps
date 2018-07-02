@@ -89,11 +89,12 @@ def _random_id():
 
 class BatchClient(object):
 
-    def __init__(self, poll_time=POLL_TIME):
+    def __init__(self, poll_time=POLL_TIME, **kwargs):
         self.poll_time = poll_time
-        self._client = boto3.client('batch')
-        self._log_client = boto3.client('logs')
-        self._queue = self.get_active_queue()
+        self._client = boto3.client('batch', **kwargs)
+        self._log_client = boto3.client('logs', **kwargs)
+        self._queue = None
+        #self._queue = self.get_active_queue()
 
     def get_active_queue(self):
         """Get name of first active job queue"""
@@ -140,17 +141,24 @@ class BatchClient(object):
         events = response['events']
         return '\n'.join(e['message'] for e in events[-get_last:])
 
-    def submit_job(self, job_definition, parameters, job_name=None, queue=None):
+    def submit_job(self, **kwargs):
         """Wrap submit_job with useful defaults"""
-        if job_name is None:
-            job_name = _random_id()
-        response = self._client.submit_job(
-            jobName=job_name,
-            jobQueue=queue or self.get_active_queue(),
-            jobDefinition=job_definition,
-            parameters=parameters
-        )
+        if "jobName" not in kwargs:
+            kwargs["jobName"] = _random_id()
+        if "jobQueue" in kwargs:
+            self._queue = kwargs["jobQueue"]
+        response = self._client.submit_job(**kwargs)
+        #jobName=job_name,
+        #    jobQueue=queue or self.get_active_queue(),
+        #    jobDefinition=job_definition,
+        #    parameters=parameters,
+        #    **kwargs
+        #)
         return response['jobId']
+
+    def terminate_job(self, **kwargs):
+        """Wrap submit_job with useful defaults"""
+        self._client.terminate_job(**kwargs)
 
     def wait_on_job(self, job_id):
         """Poll task status until STOPPED"""
