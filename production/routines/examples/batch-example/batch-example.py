@@ -33,7 +33,7 @@ class SomeBatchTask(autobatch.AutoBatchTask):
     def combine(self, job_params):
         outdata = []
         for params in job_params:
-            _data = S3Target(params["outinfo"]).open("rb")
+            _data = s3.S3Target(params["outinfo"]).open("rb")
             outdata.append(json.loads(_data))
 
         with output().open("wb") as f:
@@ -50,7 +50,8 @@ class FinalTask(luigi.Task):
                              job_def = "test_definition",
                              job_name = "batch-example-%s" % self.date,
                              job_queue = "HighPriority",
-                             poll_time = 10)
+                             region_name = "eu-west-2",
+                             poll_time = 60)
 
     def output(self):
         return s3.S3Target(S3PREFIX+"final_output_%s.json" % self.date)

@@ -1,0 +1,69 @@
+#!/bin/bash
+
+DKR_PKG_NAME=${1}
+THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Check whether the repository has been registered on AWS ECR
+aws ecr create-repository --repository-name --region eu-west-2 ${1} &> /dev/null
+STATUS=$?
+if [[ $STATUS -ne 0 && $STATUS -ne 255 ]];
+then
+    echo $STATUS
+    aws ecr create-repository --repository-name --region eu-west-2 ${1}
+    exit 1
+fi
+
+
+# Check whether the docker directory exists
+TOCHECK=${THIS_DIR}/docker_recipes/${1}
+ls $TOCHECK &> /dev/null
+if [[ $? -ne 0 ]];
+then
+    ls $TOCHECK
+    exit 1
+fi
+
+# Check whether the docker file exists
+TOCHECK=${THIS_DIR}/docker_recipes/${1}/Dockerfile
+ls $TOCHECK &> /dev/null
+if [[ $? -ne 0 ]];
+then
+    ls $TOCHECK
+    exit 1
+fi
+
+# Check whether the launch file exists
+TOCHECK=${THIS_DIR}/docker_recipes/${1}/launch.sh
+ls $TOCHECK &> /dev/null
+if [[ $? -ne 0 ]];
+then
+    ls $TOCHECK
+    exit 1
+fi
+
+# Set parameters
+AWS_DKR_PATH=195787726158.dkr.ecr.eu-west-2.amazonaws.com
+AWS_ACCESS_KEY_ID=$(aws --profile default configure get aws_access_key_id)
+AWS_SECRET_ACCESS_KEY=$(aws --profile default configure get aws_secret_access_key)
+TOP_DIR=${PWD}
+
+# Clean up old and dangling images
+docker system prune -a -f 
+docker rmi -f $(docker images --filter "dangling=true" -q --no-trunc) &> /dev/null
+
+# Register intention to push docker image with AWS ECR
+DKR_LOGIN_CMD=$(aws ecr get-login --no-include-email --region eu-west-2)
+eval ${DKR_LOGIN_CMD} || exit 1
+
+# Build the docker image
+cd ${THIS_DIR}/docker_recipes/${DKR_PKG_NAME}
+chmod +x launch.sh
+docker build --no-cache -t ${DKR_PKG_NAME} .
+
+# Back to the top
+cd ${TOP_DIR}
+
+# Tag and push the docker image to AWS
+docker tag ${DKR_PKG_NAME}:latest ${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
+docker push ${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
+docker system prune -a -f 
