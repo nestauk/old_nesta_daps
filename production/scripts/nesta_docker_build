@@ -13,7 +13,6 @@ then
     exit 1
 fi
 
-
 # Check whether the docker directory exists
 TOCHECK=${THIS_DIR}/docker_recipes/${1}
 ls $TOCHECK &> /dev/null
@@ -42,7 +41,8 @@ then
 fi
 
 # Set parameters
-AWS_DKR_PATH=195787726158.dkr.ecr.eu-west-2.amazonaws.com
+AWS_RGN_NAME=eu-west-2
+AWS_DKR_PATH=195787726158.dkr.ecr.${AWS_RGN_NAME}.amazonaws.com
 AWS_ACCESS_KEY_ID=$(aws --profile default configure get aws_access_key_id)
 AWS_SECRET_ACCESS_KEY=$(aws --profile default configure get aws_secret_access_key)
 TOP_DIR=${PWD}
@@ -52,7 +52,7 @@ docker system prune -a -f
 docker rmi -f $(docker images --filter "dangling=true" -q --no-trunc) &> /dev/null
 
 # Register intention to push docker image with AWS ECR
-DKR_LOGIN_CMD=$(aws ecr get-login --no-include-email --region eu-west-2)
+DKR_LOGIN_CMD=$(aws ecr get-login --no-include-email --region ${AWS_RGN_NAME})
 eval ${DKR_LOGIN_CMD} || exit 1
 
 # Build the docker image
@@ -64,6 +64,14 @@ docker build --no-cache -t ${DKR_PKG_NAME} .
 cd ${TOP_DIR}
 
 # Tag and push the docker image to AWS
-docker tag ${DKR_PKG_NAME}:latest ${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
-docker push ${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
+DKR_IMG_NAME=${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
+docker tag ${DKR_PKG_NAME}:latest ${DKR_IMG_NAME}
+docker push ${DKR_IMG_NAME}
 docker system prune -a -f 
+
+# Register the job
+aws batch register-job-definition --region ${AWS_RGN_NAME} \
+    --job-definition-name ${DKR_PKG_NAME} \
+    --type container \
+    --container-properties "{ \"image\": \"${DKR_IMG_NAME}\", \"vcpus\": 1, \"memory\": 128 }" 
+

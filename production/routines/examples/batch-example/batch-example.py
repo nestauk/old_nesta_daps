@@ -3,6 +3,7 @@ from luigihacks import s3
 import luigi
 import datetime
 import json
+import time
 
 S3PREFIX = "s3://nesta-dev/production_batch_example_"
 
@@ -33,10 +34,11 @@ class SomeBatchTask(autobatch.AutoBatchTask):
     def combine(self, job_params):
         outdata = []
         for params in job_params:
-            _data = s3.S3Target(params["outinfo"]).open("rb")
+            _body = s3.S3Target(params["outinfo"]).open("rb")
+            _data = _body.read().decode('utf-8') 
             outdata.append(json.loads(_data))
 
-        with output().open("wb") as f:
+        with self.output().open("wb") as f:
             f.write(json.dumps(outdata).encode('utf-8'))
     
 
@@ -47,7 +49,7 @@ class FinalTask(luigi.Task):
         return SomeBatchTask(date=self.date,
                              batchable = ("/home/ec2-user/nesta/production/"
                                           "batchables/examples/batch-example/"),
-                             job_def = "test_definition",
+                             job_def = "standard_image",
                              job_name = "batch-example-%s" % self.date,
                              job_queue = "HighPriority",
                              region_name = "eu-west-2",
@@ -57,7 +59,7 @@ class FinalTask(luigi.Task):
         return s3.S3Target(S3PREFIX+"final_output_%s.json" % self.date)
 
     def run(self):
-        time.sleep(30)
+        time.sleep(10)
         instream = self.input().open('rb')
         data = json.load(instream)
         for row in data:
