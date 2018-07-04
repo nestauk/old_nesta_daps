@@ -13,11 +13,11 @@ def parse_s3_path(path):
     return (s3_bucket, s3_key)
 
 
-def run(self):
+def run():
     # Get parameters for the batch job
-    outpath = os.environ("BATCHPAR_outinfo")
-    age = os.environ("BATCHPAR_age")
-    name = os.environ("BATCHPAR_name")
+    outpath = os.environ["BATCHPAR_outinfo"]
+    age = int(os.environ["BATCHPAR_age"])
+    name = os.environ["BATCHPAR_name"]
     print(outpath, age, name, sep="\n")
     # Generate the output json
     data = json.dumps({"name":name, "age":age+1}).encode('utf8')
@@ -26,3 +26,6 @@ def run(self):
     s3 = boto3.resource('s3')    
     s3_obj = s3.Object(*parse_s3_path(outpath))
     s3_obj.put(Body=data)
+
+if __name__ == "__main__":
+    run()
