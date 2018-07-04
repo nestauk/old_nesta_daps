@@ -12,9 +12,11 @@ reusable tools and packages, as well as our production system.
 .. _nesta: http://www.nesta.org.uk/
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
-
+       packages/modules
+       production/modules
+       tools/modules
 
 
 Indices and tables
