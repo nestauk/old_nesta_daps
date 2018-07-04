@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to nesta's documentation!
+nesta
 =================================
+
+This is the documentation for the main nesta_ GitHub repo. Here, we document our main 
+reusable tools and packages, as well as our production system.
+
+.. _nesta: http://www.nesta.org.uk/
 
 .. toctree::
    :maxdepth: 2
