@@ -4,11 +4,10 @@
    contain the root `toctree` directive.
 
 .. include:: ../../README.rst
-
-
-
+.. include:: ../../production/README.rst
+	   
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
    :caption: Contents:
    
    production

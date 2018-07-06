@@ -3,20 +3,12 @@ nesta
 
 |docs|
 
-** [N.B. Open work-in-progress] **
-
-This is the documentation for the main nesta_ GitHub repo. Here, we document our main
-reusable tools and packages, as well as our production system.
+Welcome to nesta_! This repository houses our fully-audited
+tools and packages, as well as our in-house production system. If you're reading this
+on GitHub, you will find complete documentation at our `Read the Docs site`_.
 
 .. _nesta: http://www.nesta.org.uk/
-
-
-Documentation
------------------
-
-You will (eventually) find complete documentation `the Read the Docs site`_.
-
-.. _the Read the Docs site: https://nesta.readthedocs.io/
+.. _Read the Docs site: https://nesta.readthedocs.io/
 
 ..    :build-status:
 ..    :imagehttps://img.shields.io/travis/rtfd/readthedocs.org.svg?style=flat
