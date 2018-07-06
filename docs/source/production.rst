@@ -5,11 +5,12 @@
     :undoc-members:
     :show-inheritance:
 
-Packages
------------
+Code and scripts
+----------------
 
 .. toctree::
 
     production.routines
     production.batchables    
     production.luigihacks
+    production.scripts

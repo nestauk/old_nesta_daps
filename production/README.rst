@@ -1,20 +1,22 @@
 Production
 ==========
 
-Nesta's production system, based on Luigi on AWS. The main features are:
+Nesta's production system is based on Luigi_ pipelines, and are designed to be entirely
+run on AWS via the batch service. The main Luigi server runs on a persistent EC2 instance.
+Beyond the well documented Luigi code, the main features of the nesta production system are:
 
-- `luigihacks.autobatch`, which facilates a managed :code:`Luigi.Task` which is split,
+.. _Luigi: https://luigi.readthedocs.io/en/stable/
+
+- :code:`luigihacks.autobatch`, which facilates a managed :code:`Luigi.Task` which is split,
   batched and combined in a single step. Currently only synchronous jobs are
   accepted. Asynchonous jobs (where downstream :code:`Luigi.Task` jobs can be triggered)
   are a part of a longer term plan.
-- `scripts.nesta_prepare_batch` (if you're on readthedocs, see the GitHub), which zips up
+- :code:`scripts.nesta_prepare_batch` (if you're on readthedocs, see the GitHub), which zips up
   the batchable with the specified environmental files.
-- `scripts.nesta_docker_build` which 
+- :code:`scripts.nesta_docker_build` which 
 
-More details to follow.
-
-Productionising
----------------
+How to put code into production at nesta
+----------------------------------------
 
 1. Audit the package code, required to pass all auditing tests
 2. Understand what environment is required
