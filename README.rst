@@ -5,7 +5,11 @@ nesta
 
 ** [N.B. Open work-in-progress] **
 
-A central repository for fully audited Nesta code
+This is the documentation for the main nesta_ GitHub repo. Here, we document our main
+reusable tools and packages, as well as our production system.
+
+.. _nesta: http://www.nesta.org.uk/
+
 
 Documentation
 -----------------
@@ -22,13 +26,7 @@ You will (eventually) find complete documentation `the Read the Docs site`_.
 
 .. |docs| image:: https://readthedocs.org/projects/nesta/badge/?version=latest
     :alt: Documentation Status
-    :scale: 100%
     :target: https://nesta.readthedocs.io/en/latest/?badge=latest
 
 
-License
--------
 
-`MIT`_ © 2018 Nesta
-
-.. _MIT: LICENSE

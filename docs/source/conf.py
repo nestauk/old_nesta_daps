@@ -14,10 +14,9 @@
 #
 import os
 import sys
-# sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('production'))
-sys.path.insert(0, os.path.abspath('packages'))
-sys.path.insert(0, os.path.abspath('tools'))
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../production'))
 
 
 # -- Project information -----------------------------------------------------
@@ -30,7 +29,6 @@ author = 'nesta'
 version = ''
 # The full version, including alpha/beta/rc tags
 release = ''
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -79,6 +77,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+autodoc_default_flags = ['members', 'undoc-members']
+autodoc_member_order = 'bysource'
+html_logo = 'nesta.png'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -86,11 +87,14 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 #html_theme = 'alabaster'
-html_theme = "nature"
+#html_theme = "nature"
 #html_theme_options = {
 #    "rightsidebar": "true",
 #    "relbarbgcolor": "black"
 #}
+
+html_theme = "sphinx_rtd_theme"
+html_theme_path = ["_themes", ]
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -173,6 +177,8 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+add_module_names = False
+
 
 # -- Options for todo extension ----------------------------------------------
 
