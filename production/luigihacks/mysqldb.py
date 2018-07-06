@@ -17,6 +17,14 @@
 # limitations under the License.
 #
 
+'''
+NOTE: overwhelmingly based on this2_, where the following documentation
+has been directly lifted. The main difference to the latter, is that
+:code:`**cnx_kwargs` in the constructor can accept `port` as a key.
+
+.. _this2: https://luigi.readthedocs.io/en/stable/api/luigi.contrib.mysqldb.html
+'''
+
 import logging
 
 import luigi

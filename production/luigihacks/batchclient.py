@@ -1,5 +1,3 @@
-# BASED ON THE FOLLOWING
-
 # -*- coding: utf-8 -*-
 #
 # Copyright 2018 Outlier Bio, LLC
@@ -18,6 +16,14 @@
 #
 
 """
+NOTE: overwhelmingly based on this_, where the following documentation
+has been directly lifted. The main difference to the latter, is that
+AWS jobs are submitted via :code:`**kwargs` in order to allow more
+flexibility (and probably more future-proofing if new parameters are
+added to boto3).
+
+.. _this: https://luigi.readthedocs.io/en/stable/api/luigi.contrib.batch.html#luigi.contrib.batch.BatchClient
+
 AWS Batch wrapper for Luigi
 
 From the AWS website:

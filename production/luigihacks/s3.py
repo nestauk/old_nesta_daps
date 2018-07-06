@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-A more recent implementation of AWS S3 support
-Stolen from: https://gitlab.com/ced/s3_helpers/blob/master/luigi_s3_target.py
+A more recent implementation of AWS S3 support, stolen from: https://gitlab.com/ced/s3_helpers/blob/master/luigi_s3_target.py,
+but instead using modern boto3 commands.
 """
 
 try:
