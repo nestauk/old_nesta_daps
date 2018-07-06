@@ -1,8 +1,10 @@
-botocore==1.9.22
+python=3.6
 requests==2.18.4
 retrying==1.3.3
-geopy==1.11.0
 pycountry==0.12.1
 boto3==1.6.22
+setuptools==38.4.0
+geopy==1.11.0
+botocore==1.9.22
 mysql_connector_repackaged==0.3.1
 utils==0.9.0
