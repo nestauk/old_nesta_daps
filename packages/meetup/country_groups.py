@@ -1,7 +1,7 @@
-import ast
 from geopy.geocoders import GoogleV3
 import logging
 from pycountry import countries as pycountries
+import os
 import requests
 from retrying import retry
 import time
@@ -16,33 +16,38 @@ def get_country_info(country):
 class MeetupCountryGroups:
     '''Extract all meetup groups for a given country.
 
-    Attrs:
+    Attributes:
         country_code (str): 2-letter country code assigned by `pycountry`.
-        params (dict): GET request parameters, including lat/lon.
-        groups (list): List of meetup groups in this country, assigned
+        params (:obj:'dict'): GET request parameters, including lat/lon.
+        groups (:obj:`list` of :obj:`str`): List of meetup groups in this country, assigned
             assigned after calling `get_groups`.
     '''
 
-    def __init__(self, country, category, api_key):
+    def __init__(self, country, category, **params):
         '''Set meetup search parameters.
 
         Args:
             country (str): A country name, which must exist in
                 to pycountry.countries
+            category (int): A meetup category
         '''
         # Retrieve country lat/lon and 2-letter country code
         self.country_code = pycountries.get(name=country).alpha_2
         self.country_name = country
-        geo_info = get_country_info(country)
         # Assign request parameters
-        self.params = dict(country=self.country_code,
-                           key=api_key,
-                           radius=800,
-                           lat=geo_info.latitude,
-                           lon=geo_info.longitude,
-                           category=category,
-                           page=200)
-        print("Generated parameters", self.params)
+        if len(params) == 0:
+            geo_info = get_country_info(country)  
+            self.params = dict(country=self.country_code,
+                               radius=1600,  # Brute force approach
+                               lat=geo_info.latitude,
+                               lon=geo_info.longitude,
+                               page=200)
+        else:
+            self.params = params
+        self.params["key"] = os.environ["MEETUP_API_KEY"]
+        self.params["category"] = str(category)
+
+        logging.info("Generated parameters %s" % self.params)
         self.groups = []
 
 
@@ -63,7 +68,7 @@ class MeetupCountryGroups:
         # If no response is found
         if len(r.text) == 0:
             time.sleep(5)
-            print("Got a bad response, so retrying page", offset)
+            logging.info("Got a bad response, so retrying page %s" % offset)
             return self.get_groups(offset=offset, max_pages=max_pages)
         # Extract results in the country of interest (bonus countries
         # can enter the fold because of the radius parameter)
@@ -148,16 +153,16 @@ if __name__ == "__main__":
     logging.info("Got %s groups", len(mcg.groups))
 
     # Flatten the json data
-    flatten_data(mcg, desired_columns=[('category', 'name'),
-                                       ('category', 'shortname'),
-                                       ('category', 'id'), 
-                                       'description', 
-                                       'created',
-                                       'country',
-                                       'city',
-                                       'id',
-                                       'lat',
-                                       'lon',
-                                       'members',
-                                       'name',
-                                       'topics'])
+    flatten_data(mcg, desired_keys=[('category', 'name'),
+                                    ('category', 'shortname'),
+                                    ('category', 'id'), 
+                                    'description', 
+                                    'created',
+                                    'country',
+                                    'city',
+                                    'id',
+                                    'lat',
+                                    'lon',
+                                    'members',
+                                    'name',
+                                    'topics'])
