@@ -10,7 +10,7 @@ Code and scripts
 
 .. toctree::
 
-    packages.meetups
+    packages.meetup
 
 
 Code auditing
