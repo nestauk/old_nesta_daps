@@ -6,31 +6,30 @@ import requests
 from retrying import retry
 import time
 
-from utils.common.datapipeline import DataPipeline
-
 
 @retry(wait_fixed=10000, stop_max_attempt_number=5)
 def get_country_info(country):
-    """Call geocode with retrying"""
+    '''Call GoogleV3().geocode with retrying'''
     return GoogleV3().geocode(country)
 
 
 class MeetupCountryGroups:
-    """Extract all meetup groups for a given country.
+    '''Extract all meetup groups for a given country.
 
-    Attributes:
+    Attrs:
         country_code (str): 2-letter country code assigned by `pycountry`.
         params (dict): GET request parameters, including lat/lon.
         groups (list): List of meetup groups in this country, assigned
             assigned after calling `get_groups`.
-    """
+    '''
+
     def __init__(self, country, category, api_key):
-        """MeetupCountryGroups constuctor.
+        '''Set meetup search parameters.
 
         Args:
             country (str): A country name, which must exist in
                 to pycountry.countries
-        """
+        '''
         # Retrieve country lat/lon and 2-letter country code
         self.country_code = pycountries.get(name=country).alpha_2
         self.country_name = country
@@ -46,7 +45,13 @@ class MeetupCountryGroups:
         print("Generated parameters", self.params)
         self.groups = []
 
+
     def get_groups(self, offset=0, max_pages=None):
+        '''Recursively get all groups for the given parameters.
+        It is assumed that you will run with the default arguments,
+        since they are set automatically in the recursing procedure.
+        '''
+        
         # Check if we're in too deep
         if max_pages is not None and offset >= max_pages:
             return
@@ -78,19 +83,37 @@ class MeetupCountryGroups:
             self.get_groups(offset=offset+1, max_pages=max_pages)
 
 
-def run(config):
-    mcg = MeetupCountryGroups(country=config['parameters']['country'],
-                              category=config['parameters']['category'],
-                              api_key=config['Meetup']['api-key'])
-    mcg.get_groups()
-    logging.info("Got %s groups", len(mcg.groups))
+def flatten_data(mcg, desired_keys):
+    '''Flatten the nested JSON data from :code:`mcg` by a
+    list of predefined keys. Each element in the list
+    may also be an ordered list of keys,
+    such that subsequent keys describe a path through the
+    JSON to desired value. For example in order to extract 
+    `key1` and `key3` from:
 
-    # A list of field names to extract from the data
-    desired_keys = ast.literal_eval(config['parameters']['desired_keys'])
+    .. code-block:: python
+
+        {'key': <some_value>, 'key2' : {'key3': <some_value>}}
+    
+    one would specify :code:`desired_keys` as:
+
+    .. code-block:: python
+
+        ['key1', ['key2', 'key3']]    
+
+    Args:
+        mcg (:obj:`MeetupCountryGroups`): A :code:`MeetupCountryGroups` object to be subsetted.
+        desired_keys (:obj:`list`): Mixed list of either: individual `str` keys for data values
+        which are not nested; **or** sublists of `str`, as described above.
+
+    Returns:
+       :obj:`list` of :obj:`dict`
+    '''
     # Loop through groups
     group_info = []
     for info in mcg.groups:
-        row = dict(urlname=info["urlname"], country_name=mcg.country_name)
+        row = dict(urlname=info["urlname"], 
+                   country_name=mcg.country_name)
         # Generate the field names and values, if they exist
         for key in desired_keys:
             field_name = key
@@ -109,9 +132,32 @@ def run(config):
             # as NULL in the database anyway)
             except KeyError:
                 continue
-            row[field_name] = value
+            row[field_name] = value        
         group_info.append(row)
+    return group_info
 
-    with DataPipeline(config) as dp:
-        for row in group_info:
-            dp.insert(row)
+
+if __name__ == "__main__":
+    import sys  # For the API key
+
+    # Get groups for this countru
+    mcg = MeetupCountryGroups(country="Mexico",
+                              category=34,
+                              api_key=sys.argv[1])
+    mcg.get_groups()
+    logging.info("Got %s groups", len(mcg.groups))
+
+    # Flatten the json data
+    flatten_data(mcg, desired_columns=[('category', 'name'),
+                                       ('category', 'shortname'),
+                                       ('category', 'id'), 
+                                       'description', 
+                                       'created',
+                                       'country',
+                                       'city',
+                                       'id',
+                                       'lat',
+                                       'lon',
+                                       'members',
+                                       'name',
+                                       'topics'])
