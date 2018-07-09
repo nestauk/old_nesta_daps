@@ -4,12 +4,14 @@
    contain the root `toctree` directive.
 
 .. include:: ../../README.rst
+.. include:: ../../packages/README.rst
 .. include:: ../../production/README.rst
 	   
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
-   
+  
+   packages
    production
 
 
