@@ -36,12 +36,13 @@ Packages are only accepted if they satisfy our internal auditing procedure:
    d) The process is a regular / longitudinal data collection.
 
 
-- Basic PEP8 style requirements:
+- Basic PEP8 and style requirements:
    - Docstrings for every exposable class, method and function.
    - Usage in a README.rst or in Docstring at the top of the file.
    - CamelCase class names.
    - Underscore separation of all other variable, function and module names.
    - No glaring programming no-nos.
+   - Never use :code:`print`: opt for :code:`logging` instead.
 
 
 - Bureaucratic requirements:
