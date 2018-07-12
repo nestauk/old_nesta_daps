@@ -1,0 +1,4 @@
+#!/bin/bash
+make clean
+make html && sudo cp -r ~/nesta/docs/_build/html/* /var/www/html/nesta-docs
+
