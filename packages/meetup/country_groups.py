@@ -6,11 +6,13 @@ import pandas as pd
 import geopy.distance                                  
 import shapefile            
 import numpy as np
+from meetup import meetup_utils
+
 
 def generate_coords(x0, y0, x1, y1, n):
     '''Generate :math:`\mathcal{O}(\\frac{n}{2}^2)` coordinates in the bounding box
-    :math:`(x0, y0), (x1, y1)`, such that overlapping circles of equal 
-    radii (situated at each coordinate) entirely cover the area of 
+    :math:`(x0, y0), (x1, y1)`, such that overlapping circles of equal
+    radii (situated at each coordinate) entirely cover the area of
     the bounding box. The longitude and latitude are treated as
     euclidean variables, although the radius (calculated from the
     smallest side of the bounding box divided by :math:`n`) is calculated
@@ -24,11 +26,11 @@ def generate_coords(x0, y0, x1, y1, n):
 
     ____X____ ____X____
 
-    |                 |
+    \|
 
     X________X________X
 
-    |                 |
+    \|
 
     ____X____ ____X____
 
@@ -167,7 +169,6 @@ class MeetupCountryGroups:
         # Set up the static Meetup API parameters
         self.params = dict(country=self.country_code,
                            page=200, 
-                           key=os.environ["MEETUP_API_KEY"],
                            category=str(category),
                            radius=radius)
         logging.info("Generated parameters %s" % self.params)
@@ -187,6 +188,7 @@ class MeetupCountryGroups:
         self.params["offset"] = offset
         self.params['lat'] = lat
         self.params['lon'] = lon
+        self.params['key'] = meetup_utils.get_api_key()
 
         # Work out whether the task has failed or not
         failed = False
@@ -195,7 +197,6 @@ class MeetupCountryGroups:
                              params=self.params)
             r.raise_for_status()
         except Exception as err:
-            print(type(err).__name__)
             failed = True
             if type(err) not in (requests.exceptions.HTTPError, 
                                  requests.exceptions.ChunkedEncodingError,

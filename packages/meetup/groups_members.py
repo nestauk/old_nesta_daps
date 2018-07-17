@@ -2,12 +2,20 @@ import requests
 import logging
 import time
 from retrying import retry
-import json
-import os
+from meetup import meetup_utils
 
 
-@retry(wait_random_min=2000, wait_random_max=60000, stop_max_attempt_number=10)
+@retry(wait_random_min=200, wait_random_max=10000, stop_max_attempt_number=10)
 def get_members(params):
+    '''Hit the Meetup API for the members of a specified group.
+    
+    Args:
+        params (:obj:`dict`): :code:`https://api.meetup.com/members/` parameters
+        
+    Returns:
+        (:obj:`list` of :obj:`str`): Meetup member IDs
+    '''
+    params['key'] = meetup_utils.get_api_key()
     # Set the offset parameter and make the request
     r = requests.get("https://api.meetup.com/members/", params=params)
     r.raise_for_status()
@@ -19,17 +27,30 @@ def get_members(params):
     return [row['id'] for row in data['results']]
 
 
-def get_all_members(group_id, max_results):
+def get_all_members(group_id, group_urlname, max_results, test=False):
+    '''Get all of the Meetup members for a specified group.
+    
+    Args:
+        group_id (int): The Meetup ID of the group.
+        group_urlname (str): The URL name of the group.
+        max_results (int): The maximum number of results to return per API query.
+        test (bool): For testing.
+        
+    Returns:
+        (:obj:`list` of :obj:`dict`): A matchable list of Meetup members
+    '''
     member_ids = []
     offset = 0
     while True:
         params = dict(offset=offset, page=max_results,
-                      key=os.environ["MEETUP_API_KEY"], group_id=group_id)
+                      group_id=group_id)
         _results = get_members(params)
         member_ids += _results
         if len(_results) < max_results:
             break
         offset += 1
+        if test:
+            break
 
     # Join together unique member ids
     members = []
@@ -42,6 +63,8 @@ def get_all_members(group_id, max_results):
 
 
 if __name__ == "__main__":
+    import json
+    import numpy as np
     logging.getLogger().setLevel(logging.INFO)
     
     # Get input data from somewhere
@@ -55,6 +78,11 @@ if __name__ == "__main__":
     # Collect members
     output = []
     for group_id, group_urlname in groups:
-        members = get_all_members(group_id, max_results=200)
+        logging.info("Getting %s", group_urlname)
+        members = get_all_members(group_id, group_urlname, max_results=200)
         output += members
     logging.info("Got %s members", len(output))
+
+    # Write the output
+    with open('data/groups_members.json', 'w') as fp:
+        json.dump(list(np.random.choice(output, 20)), fp)
