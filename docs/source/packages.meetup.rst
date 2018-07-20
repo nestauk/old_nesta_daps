@@ -42,3 +42,13 @@ Start with Meetup groups and end up with Meetup group details.
     :members:
     :undoc-members:
     :show-inheritance:
+
+Utils
+----------------------------------------
+
+Common tools between the different data collection points.
+
+.. automodule:: packages.meetup.meetup_utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
