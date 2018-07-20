@@ -4,7 +4,6 @@ from pycountry import countries as pycountries
 import pandas as pd
 
 from meetup.country_groups import MeetupCountryGroups
-from meetup.country_groups import flatten_data
 from meetup.country_groups import get_coordinate_data
 from meetup.country_groups import assert_iso2_key
 
@@ -41,22 +40,6 @@ class TestMeetupApiCountryGroups(unittest.TestCase):
         mcg = MeetupCountryGroups(iso2="MX", category=34)
         mcg.get_groups(lat=23.63, lon=-102.55, max_pages=3)
         self.assertGreater(len(mcg.groups), 0)
-        
-        # Test the flattener
-        flattened = flatten_data(mcg, desired_keys=[('category', 'name'),
-                                                    ('category', 'shortname'),
-                                                    ('category', 'id'),
-                                                    'description',
-                                                    'created',
-                                                    'country',
-                                                    'city',
-                                                    'id',
-                                                    'lat',
-                                                    'lon',
-                                                    'members',
-                                                    'name',
-                                                    'topics'])
-        self.assertEqual(len(flattened), len(mcg.groups))
 
 
 if __name__ == '__main__':

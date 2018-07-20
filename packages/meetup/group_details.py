@@ -11,7 +11,7 @@ class NoGroupFound(Exception):
         super().__init__("No such group found: {}".format(group_urlname))
 
 
-#@retry(wait_random_min=200, wait_random_max=10000, stop_max_attempt_number=10)
+@retry(wait_random_min=200, wait_random_max=10000, stop_max_attempt_number=10)
 def get_group_details(group_urlname, max_results):
     '''Hit the Meetup API for the details of a specified groups.
     Args:
