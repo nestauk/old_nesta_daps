@@ -1,3 +1,4 @@
+import logging
 import requests
 import time
 from retrying import retry
@@ -26,12 +27,12 @@ def get_member_details(member_id, max_results):
     r = requests.get('https://api.meetup.com/members/{}'.format(member_id),
                      params=params)
     member_info = r.json()    
-    if len(member_info) == 0:
+    if 'errors' in member_info:
         raise NoMemberFound(member_id)
     return member_info
 
 
-def get_member_groups(member_id, member_info):
+def get_member_groups(member_info):
     '''Extract the groups data from Meetup membership information.
     
     Args:
@@ -43,9 +44,10 @@ def get_member_groups(member_id, member_info):
     '''
     output = []
     # If memberships aren't in the data the ignore this member
-    row = dict(member_id=int(member_id))
+    member_id=int(member_info['id'])
+    row = dict(member_id=member_id)
     if 'memberships' not in member_info:
-        logging.WARNING('No info for {}'.format(member_id))
+        logging.WARNING('No info for {}'.format(member_id=member_id))
         output.append(row)
         return output
 
@@ -62,7 +64,7 @@ def get_member_groups(member_id, member_info):
 
 if __name__ == "__main__":
     import json
-    import numpy as np
+    logging.getLogger().setLevel(logging.INFO)
 
     with open("data/groups_members.json", "r") as f:
         groups_members = json.load(f)
@@ -71,9 +73,7 @@ if __name__ == "__main__":
     output = []
     for row in groups_members:
         member_info = get_member_details(row['member_id'], max_results=200)
-        output += get_member_groups(row['member_id'], member_info)
-
+        output += get_member_groups(member_info)
                   
     # Write the output
-    with open('data/members_groups.json', 'w') as fp:
-        json.dump(list(np.random.choice(output, 20)), fp)
+    meetup_utils.save_sample(output, 'data/members_groups.json', 20)

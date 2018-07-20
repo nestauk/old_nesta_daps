@@ -64,7 +64,6 @@ def get_all_members(group_id, group_urlname, max_results, test=False):
 
 if __name__ == "__main__":
     import json
-    import numpy as np
     logging.getLogger().setLevel(logging.INFO)
     
     # Get input data from somewhere
@@ -84,5 +83,4 @@ if __name__ == "__main__":
     logging.info("Got %s members", len(output))
 
     # Write the output
-    with open('data/groups_members.json', 'w') as fp:
-        json.dump(list(np.random.choice(output, 20)), fp)
+    meetup_utils.save_sample(output, 'data/groups_members.json', 20)

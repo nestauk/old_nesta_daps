@@ -243,61 +243,6 @@ class MeetupCountryGroups:
             self.get_groups(lon, lat)
 
 
-def flatten_data(mcg, desired_keys):
-    '''Flatten the nested JSON data from :code:`mcg` by a
-    list of predefined keys. Each element in the list
-    may also be an ordered list of keys,
-    such that subsequent keys describe a path through the
-    JSON to desired value. For example in order to extract 
-    `key1` and `key3` from:
-
-    .. code-block:: python
-
-        {'key': <some_value>, 'key2' : {'key3': <some_value>}}
-    
-    one would specify :code:`desired_keys` as:
-
-    .. code-block:: python
-
-        ['key1', ['key2', 'key3']]    
-
-    Args:
-        mcg (:obj:`MeetupCountryGroups`): A :code:`MeetupCountryGroups` object to be subsetted.
-        desired_keys (:obj:`list`): Mixed list of either: individual `str` keys for data values
-        which are not nested; **or** sublists of `str`, as described above.
-
-    Returns:
-       :obj:`list` of :obj:`dict`
-    '''
-    # Loop through groups
-    group_info = []
-    for info in mcg.groups:
-        row = dict(urlname=info["urlname"], 
-                   country_name=mcg.country_name,
-                   country_code=mcg.country_code)
-        # Generate the field names and values, if they exist
-        for key in desired_keys:
-            field_name = key
-            try:
-                # If the key is just a string
-                if type(key) == str:
-                    value = info[key]
-                # Otherwise, assume its a list of keys
-                else:
-                    field_name = "_".join(key)
-                    # Recursively assign the list of keys
-                    value = info
-                    for k in key:
-                        value = value[k]
-            # Ignore fields which aren't found (these will appear
-            # as NULL in the database anyway)
-            except KeyError:
-                continue
-            row[field_name] = value        
-        group_info.append(row)
-    return group_info
-
-
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
 
@@ -307,21 +252,23 @@ if __name__ == "__main__":
     logging.info("Got %s groups", len(mcg.groups))
 
     # Flatten the json data
-    outdata = flatten_data(mcg, desired_keys=[('category', 'name'),
-                                              ('category', 'shortname'),
-                                              ('category', 'id'), 
-                                              'description', 
-                                              'created',
-                                              'country',
-                                              'city',
-                                              'id',
-                                              'lat',
-                                              'lon',
-                                              'members',
-                                              'name',
-                                              'topics'])
-
+    output = meetup_utils.flatten_data(mcg.groups, 
+                                       country_name=mcg.country_name,
+                                       country_code=mcg.country_code,
+                                       keys=[('category', 'name'),
+                                             ('category', 'shortname'),
+                                             ('category', 'id'), 
+                                             'description', 
+                                             'created',
+                                             'country',
+                                             'city',
+                                             'id',
+                                             'lat',
+                                             'lon',
+                                             'members',
+                                             'name',
+                                             'topics',
+                                             'urlname'])
+    
     # Write the output
-    import json    
-    with open('data/country_groups.json', 'w') as fp:
-        json.dump(list(np.random.choice(outdata, 20)), fp)
+    meetup_utils.save_sample(output, 'data/country_groups.json', 20)

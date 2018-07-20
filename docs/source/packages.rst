@@ -22,7 +22,7 @@ Packages are only accepted if they satisfy our internal auditing procedure:
    - Either:
        - The code produces at least one data or model output; **or**
        - The code provides a service which abstracts away significant complexity.
-   - There is one unit test for each function or method.
+   - There is one unit test for each function or method, which lasts no longer than about 1 minute.
    - Each data or model output is produced from a single function or method, as described in the :code:`__main__` of a specified file.
    - Can the nearest programmer (or equivalent) checkout and execute your tests from scratch?
    - Will the code be used to perform non-project specific tasks?
