@@ -8,6 +8,7 @@ TOPDIR=$PWD
 mkdir $TOPDIR/packages/meetup/data
 cd $TOPDIR/packages/meetup/data
 wget http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip
+unzip TM_WORLD_BORDERS_SIMPL-0.3.zip
 cd $PWD
 
 # Set paths, and check they work
