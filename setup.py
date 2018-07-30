@@ -1,10 +1,14 @@
 from setuptools import setup
-from setuptools import find_packages_ns
+from setuptools import find_packages
+
+exclude = ['docs', 'tests*']
+production_packages = find_packages(exclude=exclude)
+packages = find_packages(where="packages", exclude=exclude)
 
 setup(
     name='nestauk',
     version='0.1',
-    packages=find_packages_ns(exclude=['docs', 'tests*']),
+    packages=packages + production_packages,
     license='MIT',
     long_description=open('README.rst').read(),
     url='https://github.com/nestauk/nesta',
