@@ -3,9 +3,6 @@ python:
   - '3.6'
 install:
   - pip install -r requirements.txt
-before_script:
-  - export WORLD_BORDERS=$PWD/nesta/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
-  - export LUIGI_CONFIG_PATH=$PWD/nesta/production/config/luigi.cfg
 script:
   - ./.travis/run.sh
 env:
