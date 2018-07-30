@@ -9,7 +9,7 @@ mkdir $TOPDIR/packages/meetup/data
 cd $TOPDIR/packages/meetup/data
 wget http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip
 unzip TM_WORLD_BORDERS_SIMPL-0.3.zip
-cd $PWD
+cd $TOPDIR
 
 # Set paths, and check they work
 export WORLD_BORDERS=$TOPDIR/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
