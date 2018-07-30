@@ -1,9 +1,10 @@
 from setuptools import setup
+from setuptools import find_packages
 
 setup(
     name='nestauk',
     version='0.1',
-    packages=['production', 'packages.meetup', 'tools'],
+    packages=find_packages(exclude=['docs', 'tests*']),
     license='MIT',
     long_description=open('README.rst').read(),
     url='https://github.com/nestauk/nesta',
