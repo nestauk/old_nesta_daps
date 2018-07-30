@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='nestauk',
     version='0.1',
-    packages=['production', 'packages', 'tools'],
+    packages=['production', 'packages.meetup', 'tools'],
     license='MIT',
     long_description=open('README.rst').read(),
     url='https://github.com/nestauk/nesta',

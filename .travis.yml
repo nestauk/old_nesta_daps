@@ -1,11 +1,14 @@
 language: python
 python:
-  - "3.6"
-
-# command to install dependencies
+  - '3.6'
 install:
   - pip install -r requirements.txt
-
-# command to run tests
+before_script:
+  - export WORLD_BORDERS=$PWD/nesta/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
+  - export LUIGI_CONFIG_PATH=$PWD/nesta/production/config/luigi.cfg
 script:
-  - "./.travis/run.sh"
+  - ./.travis/run.sh
+env:
+  global:
+    - secure: ZnagfL67+wcwCTXkgFFLUOKRUMhkfe7mWblmvb3i7nwBypsgvkeIwCVe6//p5YwosbTr2BGFsbOtXXqW9NZkim3zFDAnfw+bOdfj+IIuGsNQwtMUU1Ru/ABjVqToNtDJ1cQ8DdteAZKjIr0Z5W3gM3OkuvkwsNXqkb3HxHLLLOXriRxqvsd0vjsURp0qyQwTWWp0O0RxYLFqe6X92NuzUlByZFVDMnj3g7UFiEck8wIGqAP5Uqkbe4bbhxdrT3+dHRxPFEMQLAuRHRwnSZ4s23rql3pzMZYTP7LStHT8dqFP0AFCqNePoLv4CGcjRF+wmcEtpRyXEAHr49XnFZYu0SKj/kX22WVzTJ5GaJPZCMn29XjiwqC0xPcABGUCDoYAXFY21HC7QNQU20bt94TjEJYTcx1L6zY3jrDklgl6FGcHBfO3ikuNfyzBRHkFCOMiPZiQdvnotywp28kAefT9TZtQx7szB0l0RziJxCGppmgEXv6VIGqkmygeayfhPqq8SxS+2/pvf86HN+kI/sNX3xmVMaL7mrygpaCa2O/xlq5neNl6VsZ4adlfV7Km2LIQ6r64COJiWtLsOZ1YI5SEQu1nVB+43lyO4khGvn92EXLNWu73cJ6GdmFndMwnwmm6BSzQQXMTOVvKw/T8AyGDJ0Qrn2lXDvNeQEMTRTyPcc4=
+    - secure: IGY5WmufIwBJwBa92fHH9nFY6Na6URSvfnVKOqvgMaRdOqSrQQzuLO35CRN/yZs0M881LsYNdefS/iLL9wolrd9ekd4MCsxdVZCS2KiojxA8X33RJC0yTVb5OavnhdaHjz3UNTnUbxy+UdRRxSPocNju6PEDWDoQGP4/qT3xf2nL7IiRKn5Snz0V0Qpu0qoRBVfqg3D0guy4n/PFuUUD+C9+WWhn2sapzm6MTN+FR4o80Va5Uzavc060fEkxWqssjpd5dpwPyvR+NvL/BPuIw7Ev3EWmWOcto7+eOnOF8UbTPiFJtFp+AECktYNXXlsgno1VEG2rMSplvPVYgGlx1Ajkk8oChUaqaX1Gb6M6vJnK9AvMWRdGlnCIGUOJi63+7zeOGgXyi3uxNaGCcoZ8LzF551oX1f3WH/ZMd2jSJaUYVHXY9soChKrGNu4BvzH9sOAKWPjcBhsHmCvJLfcZsnNJ9ybnk44NsBH8rOMacXznZMVq19wIQWCU5xWEVVmXfu8wtQacvja8NpaQDmHTx/TIhc9h/bbXa5cuYgWyQPIC7cAyxPRaKlTt96CMNKs4wbpFZ3S0+sHYPwDZx1TiZGdz5A4g59KHSHXLmuHXHFvD1dQuKIHdcNMxRxKrYFIeovQtbwLrPzas1W/wBhqfpowm1z+4ua+f1X7/wUMEMyo=
