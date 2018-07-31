@@ -1,8 +1,8 @@
 import unittest
 
-from packages.meetup.members_groups import get_member_details
-from packages.meetup.members_groups import get_member_groups
-from packages.meetup.members_groups import NoMemberFound
+from meetup.members_groups import get_member_details
+from meetup.members_groups import get_member_groups
+from meetup.members_groups import NoMemberFound
 
 
 class TestMemberGroups(unittest.TestCase):
