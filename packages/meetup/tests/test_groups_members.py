@@ -1,7 +1,7 @@
 import unittest
 
-from packages.meetup.groups_members import get_members
-from packages.meetup.groups_members import get_all_members
+from meetup.groups_members import get_members
+from meetup.groups_members import get_all_members
 
 
 class TestGetMembers(unittest.TestCase):

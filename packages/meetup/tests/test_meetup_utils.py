@@ -1,6 +1,6 @@
 import unittest
 
-from packages.meetup.meetup_utils import flatten_data
+from meetup.meetup_utils import flatten_data
 
 
 class TestMeetupUtils(unittest.TestCase):

@@ -3,9 +3,9 @@ import os
 from pycountry import countries as pycountries
 import pandas as pd
 
-from packages.meetup.country_groups import MeetupCountryGroups
-from packages.meetup.country_groups import get_coordinate_data
-from packages.meetup.country_groups import assert_iso2_key
+from meetup.country_groups import MeetupCountryGroups
+from meetup.country_groups import get_coordinate_data
+from meetup.country_groups import assert_iso2_key
 
 
 class TestGeoCoding(unittest.TestCase):

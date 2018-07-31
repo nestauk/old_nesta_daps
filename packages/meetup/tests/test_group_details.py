@@ -1,7 +1,7 @@
 import unittest
 
-from packages.meetup.group_details import NoGroupFound
-from packages.meetup.group_details import get_group_details
+from meetup.group_details import NoGroupFound
+from meetup.group_details import get_group_details
 
 
 class TestGroupDetails(unittest.TestCase):
