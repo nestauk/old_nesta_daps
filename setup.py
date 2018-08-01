@@ -1,9 +1,9 @@
 from setuptools import setup
+from setuptools import find_packages
 
-setup(
-    name='nestauk',
+exclude = ['docs', 'tests*']
+common_kwargs = dict(
     version='0.1',
-    packages=['production', 'packages', 'tools'],
     license='MIT',
     long_description=open('README.rst').read(),
     url='https://github.com/nestauk/nesta',
@@ -24,3 +24,11 @@ setup(
     ],
     python_requires='>3.6',
 )
+
+
+for p in ["packages", "production", "tools"]:
+    setup(name=".".join(('nesta',p)),
+          packages=find_packages(where=p, exclude=exclude),
+          package_dir={'': p},
+          **common_kwargs)
+
