@@ -26,6 +26,7 @@ Code and scripts
 .. toctree::
 
     production.routines
-    production.batchables    
+    production.batchables
+    production.orms    
     production.luigihacks
     production.scripts
