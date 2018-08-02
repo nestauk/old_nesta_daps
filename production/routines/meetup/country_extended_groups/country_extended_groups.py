@@ -135,7 +135,7 @@ class MembersGroupsTask(BaseGroupsMembersTask):
                                  iso2=self.iso2, 
                                  category=self.category,
                                  meetup_id="group_id",
-                                 batchable="" ##### TODO: add batchable
+                                 batchable="", ##### TODO: add batchable
                                  job_def=self.job_def,
                                  job_name="GroupsMembers-%s" % self.date,
                                  job_queue=self.job_queue,
@@ -165,7 +165,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
                                  iso2=self.iso2, 
                                  category=self.category,
                                  meetup_id="member_id",
-                                 batchable="" ##### TODO: add batchable
+                                 batchable="", ##### TODO: add batchable
                                  job_def=self.job_def,
                                  job_name="MembersGroups-%s" % self.date,
                                  job_queue=self.job_queue,

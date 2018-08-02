@@ -5,9 +5,6 @@ install:
   - python setup.py install
   - pip install -r requirements.txt
   - python -c "import sys; print(sys.path)"
-  - python -c "import meetup"
-  - python -c "from meetup import country_groups"
-  - python -c "import meetup.country_groups"
 script:
   - ./.travis/run.sh
 env:
