@@ -5,6 +5,8 @@ install:
   - python setup.py install
   - pip install -r requirements.txt
   - python -c "import sys; print(sys.path)"
+before_script:
+  - mysql -e 'CREATE DATABASE production_tests;'
 script:
   - ./.travis/run.sh
 env:
@@ -18,5 +20,10 @@ branches:
     - dev
 services:
   - mysql
-before_script:
-  - mysql -e 'CREATE DATABASE production_tests;'
+addons:
+  apt:
+    sources:
+      - mysql-5.7-trusty
+    packages:
+      - mysql-server
+      - mysql-client

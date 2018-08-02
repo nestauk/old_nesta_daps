@@ -28,7 +28,7 @@ class Group(Base):
     lon = Column(DECIMAL(5,2))
     members = Column(INT)
     name = Column(TEXT)
-#    topics = Column(JSON)
+    topics = Column(JSON)
     category_id = Column(INT)
     country_name = Column(VARCHAR(100))
     timestamp = Column(TIMESTAMP)
