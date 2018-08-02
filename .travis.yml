@@ -8,7 +8,7 @@ install:
 before_script:
   - mysql -e 'CREATE DATABASE production_tests;'
   - mysql_upgrade -u root --force
-  - sudo service mysqld restart
+  - sudo service mysql restart
 script:
   - ./.travis/run.sh
 env:
