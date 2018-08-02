@@ -8,7 +8,7 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
 
     # Load connection to the input db
-    conf = ConfigParser(os.environ["BATCHPAR_dbconf"]))
+    conf = ConfigParser(os.environ["BATCHPAR_dbconf"])
     engine = engine_from_config(conf._sections["mysqldb"])
     cnx = engine.connect()
 

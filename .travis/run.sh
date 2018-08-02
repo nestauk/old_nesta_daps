@@ -16,7 +16,7 @@ export WORLD_BORDERS=$TOPDIR/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
 ls $WORLD_BORDERS
 
 # Run every test
-for TOPDIRNAME in packages production tools;
+for TOPDIRNAME in production packages tools;
 do
     TESTDIRS=$(find $TOPDIRNAME -name "test*" -type d)
     for TESTDIRNAME in $TESTDIRS;
