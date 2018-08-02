@@ -33,7 +33,7 @@ class TestMeetup(unittest.TestCase):
                       lon = -3.1,
                       members = 23,
                       name = "something",
-                      topics = {"something":["else"]},
+                      #topics = {"something":["else"]},
                       category_id = 12,
                       country_name = "united kingdom",
                       timestamp = "2018-02-17 12:12:12")
@@ -50,7 +50,7 @@ class TestMeetup(unittest.TestCase):
                           lon = -3.1,
                           members = 23,
                           name = "something",
-                          topics = {"something":["else"]},
+                       #   topics = {"something":["else"]},
                           category_id = 12,
                           country_name = "united kingdom",
                           timestamp = "2018-02-17 12:12:12")
