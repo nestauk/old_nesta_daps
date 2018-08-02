@@ -1,26 +1,26 @@
-from groups_members import get_members
-from groups_members import get_all_members
 import logging
-from sqlalchemy import engine_from_config
-from configparser import ConfigParser
+from groups_members import get_all_members
+from orms.orm_utils import get_mysql_engine
+from orms.meetup_orm import Base
+from orms.meetup_orm import Group
+from orms.meetup_orm import GroupMember
+from sqlalchemy import and_
 
 def run():
     logging.getLogger().setLevel(logging.INFO)
 
-    # Load connection to the input db
-    conf = ConfigParser(os.environ["BATCHPAR_dbconf"])
-    engine = engine_from_config(conf._sections["mysqldb"])
-    cnx = engine.connect()
+    # Load connection to the input db, and create the tables
+    engine = get_mysql_engine("BATCHPAR_dbconf", "mysqldb")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(engine)
+    session = Session()
 
-    cursor = cnx.cursor()
-    query = ("SELECT name, age FROM muppets_input WHERE age <= %s")
-    cursor.execute(query, (self.max_age, ))
-    data = [dict(name=name, age=age+1) for name, age in cursor]
-
-    groups = json.load(f)
+    # 
+    condition = Group.id == os.environ["BATCHPAR_groupid"]
+    groups = session.query(Group).filter(condition).all()
 
     # Collect group info
-    groups = set((row['id'], row['urlname']) for row in groups)
+    groups = set((g.id, g.urlname) for row in groups)
     logging.info("Got %s distinct groups from database", len(groups))
 
     # Collect members
@@ -32,5 +32,7 @@ def run():
     logging.info("Got %s members", len(output))
 
     # Write the output
-
-
+    outrows = [GroupMember(**row) for row in output]
+    session.add_all(outrows)
+    session.commit()
+    session.close()
