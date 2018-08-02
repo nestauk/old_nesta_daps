@@ -37,7 +37,8 @@ class CountryGroupsTask(autobatch.AutoBatchTask):
     def prepare(self):
         '''Prepare the batch job parameters'''
         # Add the mandatory `outinfo' and `done' fields        
-        return [{"date":self.date, "iso2":self.iso2, "cat":category}]
+        return [{"date":self.date, "iso2":self.iso2, "cat":category,
+                 "outinfo":mysqldb.config, "done":False}]
 
     def combine(self, job_params):
         '''Combine the outputs from the batch jobs'''
@@ -202,26 +203,26 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
-        db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "dev"
+        yield CountryGroupsTask(date=self.date,
+                                iso2=self.iso2,
+                                category=self.category,
+                                batchable=("/home/ec2-user/nesta/production/"
+                                           "batchables/meetup/country_groups/"),
+                                job_def="standard_image",
+                                job_name="CountryGroups-%s" % self.date,      
+                                job_queue="HighPriority",
+                                region_name="eu-west-2",
+                                poll_time=60)
 
-        # Prepare the input DB config
-        in_db_config = db_config.copy()
-        in_db_config["table"] = "muppets_input"
-
-        # Prepare the output DB config
-        out_db_config = db_config.copy()
-        out_db_config["table"] = "muppets_output"
-
-        yield GroupDetailsTask(date=self.date,
-                               iso2=self.iso2,
-                               category=self.category,
-                               in_db_config=in_db_config,
-                               out_db_config=out_db_config,
-                               batchable=("/home/ec2-user/nesta/production/"
-                                          "batchables/meetup/something"),
-                               job_def="standard_image",
-                               job_name="GroupDetails-%s" % self.date,
-                               job_queue="HighPriority",
-                               region_name="eu-west-2",
-                               poll_time=60)
+        # yield GroupDetailsTask(date=self.date,
+        #                        iso2=self.iso2,
+        #                        category=self.category,
+        #                        in_db_config=in_db_config,
+        #                        out_db_config=out_db_config,
+        #                        batchable=("/home/ec2-user/nesta/production/"
+        #                                   "batchables/meetup/something"),
+        #                        job_def="standard_image",
+        #                        job_name="GroupDetails-%s" % self.date,
+        #                        job_queue="HighPriority",
+        #                        region_name="eu-west-2",
+        #                        poll_time=60)

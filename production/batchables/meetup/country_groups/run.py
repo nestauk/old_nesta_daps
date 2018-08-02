@@ -14,8 +14,9 @@ def run():
     Session = sessionmaker(engine)
     session = Session()
 
-    
-    mcg = MeetupCountryGroups(iso2=self.iso2, category=self.category)
+    # Get the data
+    mcg = MeetupCountryGroups(iso2=os.environ["BATCHPAR_iso2"], 
+                              category=os.environ["BATCHPAR_cat"])
     mcg.get_groups_recursive()
     output = meetup_utils.flatten_data(mcg.groups,
                                        country_name=mcg.country_name,
@@ -34,3 +35,10 @@ def run():
                                              'name',
                                              'topics',
                                              'urlname'])
+
+    outrows = [GroupMember(**row) for row in output]
+    
+    session.add_all(outrows)
+    session.commit()
+    session.close()
+
