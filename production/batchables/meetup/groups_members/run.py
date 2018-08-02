@@ -10,7 +10,8 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
 
     # Load connection to the input db, and create the tables
-    engine = get_mysql_engine("BATCHPAR_dbconf", "mysqldb")
+    engine = get_mysql_engine("BATCHPAR_outinfo", 
+                              "mysqldb", "production")
     Base.metadata.create_all(engine)
     Session = sessionmaker(engine)
     session = Session()
