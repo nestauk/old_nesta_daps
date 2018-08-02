@@ -7,7 +7,7 @@ install:
   - python -c "import sys; print(sys.path)"
 before_script:
   - mysql -e 'CREATE DATABASE production_tests;'
-  - mysql_upgrade -u root -p --force
+  - mysql_upgrade -u root --force
   - systemctl restart mysqld
 script:
   - ./.travis/run.sh
