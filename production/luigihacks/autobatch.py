@@ -10,6 +10,13 @@ from subprocess import check_output
 from subprocess import CalledProcessError
 import time
 import luigi
+from luigihacks.misctools import get_config
+import logging
+
+# Define a global timeout, set to 95% of the timeout time
+# in order to give the Luigi worker some grace
+_config = get_config("luigi.cfg", "worker")
+TIMEOUT = time.time() + 0.95*int(_config["timeout"])
 
 
 def command_line(command, verbose=False):
@@ -23,7 +30,7 @@ def command_line(command, verbose=False):
     out_lines = out.decode("utf-8").split("\n")
     if verbose:
         for line in out_lines:
-            print(">>>\t'", line.replace("\r", ' '), "'")
+            logging.info(">>>\t'{}'".format(line.replace("\r", ' ')))
     # The second last output is the actual final output
     # (ignoring the status code, which is the last output)
     return out_lines[-2]
@@ -81,7 +88,9 @@ class AutoBatchTask(luigi.Task, ABC):
     timeout = luigi.IntParameter(default=21600)
     poll_time = luigi.IntParameter(default=60)
     success_rate = luigi.FloatParameter(default=0.75)
+    verbose = luigi.BoolParameter(default=False)
 
+    
     def run(self):
         '''DO NOT OVERRIDE THIS METHOD.
 
@@ -99,7 +108,7 @@ class AutoBatchTask(luigi.Task, ABC):
         try:
             s3file_timestamp = command_line("nesta_prepare_batch "
                                             "{} {}".format(self.batchable,
-                                                           env_files))
+                                                           env_files), self.verbose)
         except CalledProcessError:
             raise batchclient.BatchJobException("Invalid input "
                                                 "or environment files")
@@ -203,20 +212,22 @@ class AutoBatchTask(luigi.Task, ABC):
         stats = defaultdict(int)  # Collection of failure vs total statistics
         done_jobs = set()
         while len(job_ids) - len(done_jobs) > 0:
+            self._assert_timeout(batch_client, job_ids)
+            # Check status for each job
             for id_ in job_ids:
                 status = batch_client.get_job_status(id_)
-                print(id_, status)
+                logging.info("{} {}".format(id_, status))
                 if status not in ("SUCCEEDED", "FAILED", "RUNNING"):
                     continue
                 stats[status] += 1
                 if status == "RUNNING":
                     continue
-                done_jobs.add(id_)
+                done_jobs.add(id_)            
             # Check that the success rate is as expected
             if len(stats) > 0:
                 self._assert_success(batch_client, job_ids, stats)
             # Wait before continuing
-            print("Not finished yet...")
+            logging.info("Not finished yet...")
             time.sleep(self.poll_time)
 
     def _assert_success(self, batch_client, job_ids, stats):
@@ -227,6 +238,16 @@ class AutoBatchTask(luigi.Task, ABC):
             return
 
         reason = "Exiting due to high failure rate: {}%".format(int(failure_rate*100))
+        for job_id in job_ids:
+            batch_client.terminate_job(jobId=job_id, reason=reason)
+        raise batchclient.BatchJobException(reason)
+
+    def _assert_timeout(self, batch_client, job_ids):
+        '''Assert that timeout has not been breached.'''
+        if time.time() < TIMEOUT:
+            return
+
+        reason = "Impending worker timeout, so killing live tasks"
         for job_id in job_ids:
             batch_client.terminate_job(jobId=job_id, reason=reason)
         raise batchclient.BatchJobException(reason)
