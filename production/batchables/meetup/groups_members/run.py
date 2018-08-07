@@ -2,38 +2,54 @@ import logging
 from groups_members import get_all_members
 from orms.orm_utils import get_mysql_engine
 from orms.meetup_orm import Base
-from orms.meetup_orm import Group
 from orms.meetup_orm import GroupMember
 from sqlalchemy import and_
+import boto3
+from urllib.parse import urlsplit
+
+
+def parse_s3_path(path):
+    '''For a given S3 path, return the bucket and key values'''
+    parsed_path = urlsplit(path)
+    s3_bucket = parsed_path.netloc
+    s3_key = parsed_path.path.lstrip('/')
+    return (s3_bucket, s3_key)
+
 
 def run():
     logging.getLogger().setLevel(logging.INFO)
+    
+    # Fetch the input parameters
+    group_urlname = os.environ["BATCHPAR_group_urlname"]
+    group_id = os.environ["BATCHPAR_group_id"]
+    s3_path = os.environ["BATCHPAR_outinfo"]
 
-    # Load connection to the input db, and create the tables
-    engine = get_mysql_engine("BATCHPAR_outinfo", 
+    # Load connection to the db, and create the tables
+    engine = get_mysql_engine("BATCHPAR_config", 
                               "mysqldb", "production")
     Base.metadata.create_all(engine)
     Session = sessionmaker(engine)
     session = Session()
 
-    # 
-    condition = Group.id == os.environ["BATCHPAR_groupid"]
-    groups = session.query(Group).filter(condition).all()
-
-    # Collect group info
-    groups = set((g.id, g.urlname) for row in groups)
-    logging.info("Got %s distinct groups from database", len(groups))
-
     # Collect members
-    output = []
-    for group_id, group_urlname in groups:
-        logging.info("Getting %s", group_urlname)
-        members = get_all_members(group_id, group_urlname, max_results=200)
-        output += members
+    logging.info("Getting %s", group_urlname)
+    output = get_all_members(group_id, group_urlname, max_results=200)
     logging.info("Got %s members", len(output))
 
-    # Write the output
-    outrows = [GroupMember(**row) for row in output]
-    session.add_all(outrows)
+    # Add the data
+    for row in output:
+        and_stmt = _and(GroupMember.group_id == row["group_id"],
+                        GroupMember.member_id == row["member_id"])
+        q = session.query(GroupMember).filter(and_stmt)
+        if q.count() > 0:
+            continue
+        g = Group(**row)
+        session.merge(g)
+
     session.commit()
     session.close()
+
+    # Mark the task as done
+    s3 = boto3.resource('s3')
+    s3_obj = s3.Object(*parse_s3_path(s3_path))
+    s3_obj.put(Body="")

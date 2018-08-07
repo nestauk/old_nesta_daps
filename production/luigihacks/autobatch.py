@@ -87,8 +87,8 @@ class AutoBatchTask(luigi.Task, ABC):
     max_runs = luigi.IntParameter(default=None)  # For testing
     timeout = luigi.IntParameter(default=21600)
     poll_time = luigi.IntParameter(default=60)
-    success_rate = luigi.FloatParameter(default=0.75)
-    verbose = luigi.BoolParameter(default=False)
+    success_rate = luigi.FloatParameter(default=0.95)
+    test = luigi.BoolParameter(default=True)
 
     
     def run(self):
@@ -103,12 +103,16 @@ class AutoBatchTask(luigi.Task, ABC):
 
         # Generate the parameters for batches
         job_params = self.prepare()
+        if self.test:
+            if len(job_params) > 2:
+                job_params = job_params[0:2]
+
         # Prepare the environment for batching
         env_files = " ".join(self.env_files)
         try:
             s3file_timestamp = command_line("nesta_prepare_batch "
                                             "{} {}".format(self.batchable,
-                                                           env_files), self.verbose)
+                                                           env_files), self.test)
         except CalledProcessError:
             raise batchclient.BatchJobException("Invalid input "
                                                 "or environment files")
@@ -166,9 +170,9 @@ class AutoBatchTask(luigi.Task, ABC):
 
         # Get AWS info to pass to the batch jobs
         aws_id = command_line("aws --profile default configure "
-                              "get aws_access_key_id")
+                              "get aws_access_key_id", self.test)
         aws_secret = command_line("aws --profile default configure "
-                                  "get aws_secret_access_key")
+                                  "get aws_secret_access_key", self.test)
         # Submit jobs
         batch_client = batchclient.BatchClient(poll_time=self.poll_time,
                                                region_name=self.region_name)
@@ -209,9 +213,9 @@ class AutoBatchTask(luigi.Task, ABC):
             job_ids (:obj:`list` of :obj:`str`): List of AWS batch
                     job IDs to monitor.
         '''
-        stats = defaultdict(int)  # Collection of failure vs total statistics
         done_jobs = set()
         while len(job_ids) - len(done_jobs) > 0:
+            stats = defaultdict(int)  # Collection of failure vs total statistics
             self._assert_timeout(batch_client, job_ids)
             # Check status for each job
             for id_ in job_ids:
@@ -229,6 +233,25 @@ class AutoBatchTask(luigi.Task, ABC):
             # Wait before continuing
             logging.info("Not finished yet...")
             time.sleep(self.poll_time)
+
+        # One last check of status
+        reason = "Jobs should no longer be running"
+        stats = defaultdict(int)  # Collection of failure vs total statistics
+        unexplained_jobs = False
+        for id_ in job_ids:
+            status = batch_client.get_job_status(id_)
+            logging.info("{} {}".format(id_, status))
+            if status not in ("SUCCEEDED", "FAILED"):
+                unexplained_jobs = True
+                batch_client.terminate_job(jobId=id_, reason=reason)
+                continue
+            stats[status] += 1
+        # Check that the success rate is as expected
+        if unexplained_jobs:
+            raise batchclient.BatchJobException(reason)
+        if len(stats) > 0:
+            self._assert_success(batch_client, job_ids, stats)
+        
 
     def _assert_success(self, batch_client, job_ids, stats):
         '''Assert that success rate has not been breached.'''
