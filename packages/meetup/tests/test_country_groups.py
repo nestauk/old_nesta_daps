@@ -37,7 +37,20 @@ class TestGeoCoding(unittest.TestCase):
 class TestMeetupApiCountryGroups(unittest.TestCase):
     def test_meetup_api(self):
         '''Test that the Meetup API hasn't changed drastically'''
-        mcg = MeetupCountryGroups(iso2="MX", category=34)
+
+        iso2 = "MX"
+        category = 34
+
+        df = get_coordinate_data(n=10)
+        condition = assert_iso2_key(df, iso2)
+        
+        # Get parameters for this country
+        name = df.loc[condition, "NAME"].values[0]
+        coords = df.loc[condition, "coords"].values[0]
+        radius = df.loc[condition, "radius"].values[0]
+        
+        mcg = MeetupCountryGroups(country_code=iso2, coords=coords,
+                                  radius=radius, category=category)
         mcg.get_groups(lat=23.63, lon=-102.55, max_pages=3)
         self.assertGreater(len(mcg.groups), 0)
 

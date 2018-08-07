@@ -58,7 +58,8 @@ eval ${DKR_LOGIN_CMD} || exit 1
 # Build the docker image
 cd ${THIS_DIR}/docker_recipes/${DKR_PKG_NAME}
 chmod +x launch.sh
-docker build --no-cache -t ${DKR_PKG_NAME} .
+#### TODO: PASS BUILD ARGS AS ARGUMENT TO THIS SCRIPT (i.e. remove MEETUP_API_KEYS)
+docker build --no-cache -t ${DKR_PKG_NAME} --build-arg MEETUP_API_KEYS .
 
 # Back to the top
 cd ${TOP_DIR}

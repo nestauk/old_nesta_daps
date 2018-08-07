@@ -135,12 +135,15 @@ class MeetupCountryGroups:
             assigned after calling `get_groups`.
     '''
 
-    def __init__(self, iso2, category, n=10):
+    def __init__(self, country_code, coords, radius, category, n=10):
         '''Set meetup search parameters.
 
         Args:
-            iso2 (str): A country ISO2, which must exist in
-                to pycountry.countries
+            country_code (str): A country ISO2
+            coords (:obj:`list` of :obj:`tuple`): (lat, lon) coordinates
+                from which to perform the Meetup API calls, with radius
+                :obj:`radius`.
+            radius (float): Meetup API radius parameter.
             category (int): A Meetup category
             n (int): The fraction by which to calculate the Meetup
                  API radius parameter, with respect to the
@@ -151,23 +154,13 @@ class MeetupCountryGroups:
                  of the bbox sides.
             
         '''
-        
-        # Get all country data and generate the lat/lon and radius
-        # parameter for this country
-        df = get_coordinate_data(n)
-        condition = assert_iso2_key(df, iso2)
 
-        # Retrieve country lat/lon and 2-letter country code
-        self.country_code = iso2
-        self.country_name = df.loc[condition, "NAME"].values[0]
         self.ids = set()
-
-        # Get the coordinate and radius parameters
-        self.coords = df.loc[condition, "coords"].values[0]
-        radius = df.loc[condition, "radius"].values[0]
+        self.country_code = country_code
+        self.coords = coords
 
         # Set up the static Meetup API parameters
-        self.params = dict(country=self.country_code,
+        self.params = dict(country=country_code,
                            page=200, 
                            category=str(category),
                            radius=radius)
@@ -245,16 +238,29 @@ class MeetupCountryGroups:
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
+    iso2 = "MX"
+    category = 34
 
-    # Get groups for this country
-    mcg = MeetupCountryGroups(iso2="MX", category=34)
+    # Get all country data and generate the lat/lon and radius
+    # parameter for this country
+    df = get_coordinate_data(n=10)
+    condition = assert_iso2_key(df, iso2)
+    
+    # Get parameters for this country
+    name = df.loc[condition, "NAME"].values[0]
+    coords = df.loc[condition, "coords"].values[0]
+    radius = df.loc[condition, "radius"].values[0]
+    
+    # Get groups for the first 10 coords in this country
+    mcg = MeetupCountryGroups(country_code=iso2, coords=coords[0:10],
+                              radius=radius, category=category)
     mcg.get_groups_recursive()
     logging.info("Got %s groups", len(mcg.groups))
 
     # Flatten the json data
     output = meetup_utils.flatten_data(mcg.groups, 
-                                       country_name=mcg.country_name,
-                                       country_code=mcg.country_code,
+                                       country_name=name,
+                                       country_code=iso2,
                                        keys=[('category', 'name'),
                                              ('category', 'shortname'),
                                              ('category', 'id'), 

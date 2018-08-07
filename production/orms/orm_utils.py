@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
+import pymysql
 import os
 
 def get_mysql_engine(db_env, section, database="production_tests"):
@@ -31,5 +32,5 @@ def get_mysql_engine(db_env, section, database="production_tests"):
                   port=conf['port'],
                   database=database)
     # Create the database
-    return create_engine(url)
+    return create_engine(url, connect_args={"charset":"utf8mb4"})
     
