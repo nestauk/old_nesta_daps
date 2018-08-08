@@ -1,5 +1,6 @@
 import logging
-from meetup.groups_members import get_all_members
+from meetup.members_groups import get_member_details
+from meetup.members_groups import get_member_groups
 from orms.orm_utils import get_mysql_engine
 from orms.meetup_orm import Base
 from orms.meetup_orm import GroupMember
@@ -22,8 +23,7 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
     
     # Fetch the input parameters
-    group_urlname = os.environ["BATCHPAR_group_urlname"]
-    group_id = os.environ["BATCHPAR_group_id"]
+    member_id = os.environ["BATCHPAR_member_id"]
     s3_path = os.environ["BATCHPAR_outinfo"]
 
     # Load connection to the db, and create the tables
@@ -33,10 +33,10 @@ def run():
     Session = sessionmaker(engine)
     session = Session()
 
-    # Collect members
-    logging.info("Getting %s", group_urlname)
-    output = get_all_members(group_id, group_urlname, max_results=200)
-    logging.info("Got %s members", len(output))
+    # Generate the groups for these members
+    response = get_member_details(member_id, max_results=200)
+    output = get_member_groups(response)
+    logging.info("Got %s groups", len(output))
 
     # Add the data
     for row in output:
