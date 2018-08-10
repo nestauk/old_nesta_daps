@@ -16,7 +16,6 @@ import logging
 # Define a global timeout, set to 95% of the timeout time
 # in order to give the Luigi worker some grace
 _config = get_config("luigi.cfg", "worker")
-TIMEOUT = time.time() + 0.95*int(_config["timeout"])
 
 
 def command_line(command, verbose=False):
@@ -89,7 +88,7 @@ class AutoBatchTask(luigi.Task, ABC):
     poll_time = luigi.IntParameter(default=60)
     success_rate = luigi.FloatParameter(default=0.95)
     test = luigi.BoolParameter(default=True)
-
+    worker_timeout = float('inf')
     
     def run(self):
         '''DO NOT OVERRIDE THIS METHOD.
@@ -100,6 +99,8 @@ class AutoBatchTask(luigi.Task, ABC):
         should implement :code:`prepare` and :code:`combine` methods in
         your class.
         '''
+
+        self.TIMEOUT = time.time() + int(_config["timeout"])
 
         # Generate the parameters for batches
         job_params = self.prepare()
@@ -178,6 +179,7 @@ class AutoBatchTask(luigi.Task, ABC):
                                                region_name=self.region_name)
         job_ids = []
         for i, params in enumerate(job_params):
+            self._assert_timeout(batch_client, job_ids)
             if params["done"]:
                 continue
             # Break in case of testing
@@ -251,7 +253,7 @@ class AutoBatchTask(luigi.Task, ABC):
             raise batchclient.BatchJobException(reason)
         if len(stats) > 0:
             self._assert_success(batch_client, job_ids, stats)
-        
+
 
     def _assert_success(self, batch_client, job_ids, stats):
         '''Assert that success rate has not been breached.'''
@@ -259,18 +261,19 @@ class AutoBatchTask(luigi.Task, ABC):
         failure_rate = stats["FAILED"] / total
         if failure_rate <= (1 - self.success_rate):
             return
-
         reason = "Exiting due to high failure rate: {}%".format(int(failure_rate*100))
-        for job_id in job_ids:
-            batch_client.terminate_job(jobId=job_id, reason=reason)
-        raise batchclient.BatchJobException(reason)
+        batch_client.hard_terminate(job_ids=job_ids, reason=reason)
+
 
     def _assert_timeout(self, batch_client, job_ids):
         '''Assert that timeout has not been breached.'''
-        if time.time() < TIMEOUT:
+        logging.warning("Timeout summary: {}, "
+                        "{}\n{} seconds left".format(time.time(), 
+                                                     self.TIMEOUT, 
+                                                     self.TIMEOUT - time.time()))
+        if time.time() < self.TIMEOUT:
             return
-
         reason = "Impending worker timeout, so killing live tasks"
-        for job_id in job_ids:
-            batch_client.terminate_job(jobId=job_id, reason=reason)
-        raise batchclient.BatchJobException(reason)
+        batch_client.hard_terminate(job_ids=job_ids, reason=reason)
+                                    
+

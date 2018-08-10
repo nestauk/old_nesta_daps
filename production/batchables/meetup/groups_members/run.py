@@ -1,6 +1,7 @@
 import logging
 from meetup.groups_members import get_all_members
 from orms.orm_utils import get_mysql_engine
+from orms.orm_utils import try_until_allowed
 from orms.meetup_orm import Base
 from orms.meetup_orm import GroupMember
 from sqlalchemy import and_
@@ -26,17 +27,16 @@ def run():
     group_id = os.environ["BATCHPAR_group_id"]
     s3_path = os.environ["BATCHPAR_outinfo"]
 
-    # Load connection to the db, and create the tables
-    engine = get_mysql_engine("BATCHPAR_config", 
-                              "mysqldb", "production")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(engine)
-    session = Session()
-
     # Collect members
     logging.info("Getting %s", group_urlname)
     output = get_all_members(group_id, group_urlname, max_results=200)
     logging.info("Got %s members", len(output))
+
+    # Load connection to the db, and create the tables
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "production")
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
 
     # Add the data
     for row in output:
@@ -47,7 +47,7 @@ def run():
             continue
         g = GroupMember(**row)
         session.merge(g)
-
+    
     session.commit()
     session.close()
 

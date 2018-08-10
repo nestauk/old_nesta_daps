@@ -47,7 +47,7 @@ def get_member_groups(member_info):
     member_id=int(member_info['id'])
     row = dict(member_id=member_id)
     if 'memberships' not in member_info:
-        logging.WARNING('No info for {}'.format(member_id=member_id))
+        logging.warning('No info for {}'.format(member_id))
         output.append(row)
         return output
 

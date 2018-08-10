@@ -163,8 +163,28 @@ class BatchClient(object):
         return response['jobId']
 
     def terminate_job(self, **kwargs):
-        """Wrap submit_job with useful defaults"""
+        """Wrap terminate_job"""
         self._client.terminate_job(**kwargs)
+
+    def hard_terminate(self, job_ids, reason, **kwargs):
+        """Terminate all jobs with a hard(ish) exit via an Exception.
+        The function will also wait for jobs to be explicitly terminated"""        
+        # Try to kill all the jobs and then wait a couple of seconds
+        for job_id in job_ids:
+            self.terminate_job(jobId=job_id, reason=reason, **kwargs)
+        time.sleep(2)
+
+        # Check which jobs are still running
+        job_ids = [job_id for job_id in job_ids 
+                   if self.get_job_status(job_id) 
+                   not in ("FAILED", "SUCCEEDED")]
+        if len(job_ids) > 0:
+            print("Still got", len(job_ids),
+                  "hanging batch jobs to terminate")
+            return self.hard_terminate(job_ids, reason, **kwargs)
+            
+        # When finished terminating, shut it all down
+        raise BatchJobException(reason)
 
     def wait_on_job(self, job_id):
         """Poll task status until STOPPED"""

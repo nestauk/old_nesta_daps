@@ -3,6 +3,26 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 import pymysql
 import os
+from sqlalchemy.exc import OperationalError
+
+
+def try_until_allowed(f, *args, **kwargs):
+    '''Keep trying a function if a specific exception is raised.
+    Specifically meant for handling too many connections to a database.
+
+    Args:
+        f (:obj:`function`): A function to keep trying.
+    '''
+    while True:
+        try:
+            value = f(*args, **kwargs)
+        except OperationalError:
+            logging.warning("Waiting on exception {}".format(exception))
+            time.sleep(5)
+            continue
+        else:
+            return value
+
 
 def get_mysql_engine(db_env, section, database="production_tests"):
     '''Generates the MySQL DB engine for tests
