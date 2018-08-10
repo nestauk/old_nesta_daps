@@ -1,16 +1,15 @@
 import logging
-from meetup.members_groups import get_member_details
-from meetup.members_groups import get_member_groups
+from meetup.group_details import get_group_details
+from meetup.meetup_utils import flatten_data
 from orms.orm_utils import get_mysql_engine
 from orms.orm_utils import try_until_allowed
 from orms.meetup_orm import Base
-from orms.meetup_orm import GroupMember
-from sqlalchemy import and_
+from orms.meetup_orm import Group
 from sqlalchemy.orm import sessionmaker
 import boto3
 from urllib.parse import urlsplit
 import os
-
+from ast import literal_eval
 
 def parse_s3_path(path):
     '''For a given S3 path, return the bucket and key values'''
@@ -24,13 +23,15 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
     
     # Fetch the input parameters
-    member_id = os.environ["BATCHPAR_member_id"]
+    group_urlnames = literal_eval(os.environ["BATCHPAR_group_urlnames"])
     s3_path = os.environ["BATCHPAR_outinfo"]
 
     # Generate the groups for these members
-    response = get_member_details(member_id, max_results=200)
-    output = get_member_groups(response)
-    logging.info("Got %s groups", len(output))
+    _output = []
+    for urlname in group_urlnames:
+        _info = get_group_details(urlname, max_results=200)
+        _output.append(_info)
+    logging.info("Processed %s groups", len(_output))
 
     # Load connection to the db, and create the tables
     engine = get_mysql_engine("BATCHPAR_config", 
@@ -39,16 +40,29 @@ def run():
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
 
+    # Flatten the output                                                 
+    output = flatten_data(_output,
+                          keys = [('category', 'name'),
+                                  ('category', 'shortname'),
+                                  ('category', 'id'),
+                                  'created',
+                                  'country',
+                                  'city',
+                                  'description',
+                                  'id',
+                                  'lat',
+                                  'lon',
+                                  'members',
+                                  'name',
+                                  'topics',
+                                  'urlname'])
+    
     # Add the data
     for row in output:
-        if 'group_id' not in row:
-            continue
-        and_stmt = and_(GroupMember.group_id == row["group_id"],
-                        GroupMember.member_id == row["member_id"])
-        q = session.query(GroupMember).filter(and_stmt)
+        q = session.query(Group).filter(Group.id == row["id"])
         if q.count() > 0:
             continue
-        g = GroupMember(**row)
+        g = Group(**row)
         session.merge(g)
 
     session.commit()

@@ -2,6 +2,7 @@ import logging
 from meetup.country_groups import MeetupCountryGroups
 from meetup.meetup_utils import flatten_data
 from orms.orm_utils import get_mysql_engine
+from orms.orm_utils import try_until_allowed
 from orms.meetup_orm import Base
 from orms.meetup_orm import Group
 from sqlalchemy.orm import sessionmaker
@@ -59,9 +60,9 @@ def run():
     # Load connection to the db, and create the tables
     engine = get_mysql_engine("BATCHPAR_config",
                               "mysqldb", "production")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(engine)
-    session = Session()
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
     
     # Add the data
     for row in output:

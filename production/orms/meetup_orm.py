@@ -33,21 +33,14 @@ class Group(Base):
     country_name = Column(VARCHAR(100))
     timestamp = Column(TIMESTAMP)
 
-#    meetup_groups_members = relationship("GroupMember", 
-#                                         cascade="all", 
-#                                         backref="meetup_groups")
-
 
 class GroupMember(Base):
+    '''Note: no foreign key constraint, since unknown groups 
+    will be found in the member expansion phase'''
     __tablename__ = 'meetup_groups_members'
 
     group_id = Column(BIGINT(20), 
-                      ForeignKey("meetup_groups.id"),
                       primary_key=True)
-    group_urlname = Column(VARCHAR(200),                            
-                           ForeignKey("meetup_groups.urlname"))
+    group_urlname = Column(VARCHAR(200))
     member_id = Column(BIGINT(20), primary_key=True)
-
- #   meetup_groups = relationship("Group", 
- #                                backref="meetup_groups_members")
 
