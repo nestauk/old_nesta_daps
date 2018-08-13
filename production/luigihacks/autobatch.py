@@ -88,6 +88,7 @@ class AutoBatchTask(luigi.Task, ABC):
     poll_time = luigi.IntParameter(default=60)
     success_rate = luigi.FloatParameter(default=0.95)
     test = luigi.BoolParameter(default=True)
+    max_live_jobs = luigi.IntParameter(default=500)
     worker_timeout = float('inf')
     
     def run(self):
@@ -99,7 +100,7 @@ class AutoBatchTask(luigi.Task, ABC):
         should implement :code:`prepare` and :code:`combine` methods in
         your class.
         '''
-
+        
         self.TIMEOUT = time.time() + int(_config["timeout"])
 
         # Generate the parameters for batches
@@ -174,40 +175,46 @@ class AutoBatchTask(luigi.Task, ABC):
                               "get aws_access_key_id", self.test)
         aws_secret = command_line("aws --profile default configure "
                                   "get aws_secret_access_key", self.test)
-        # Submit jobs
+
+        # Build a set of environmental variables to send to the jobs
+        env_variables = [{"name": "AWS_ACCESS_KEY_ID", "value": aws_id},
+                         {"name": "AWS_SECRET_ACCESS_KEY",
+                          "value": aws_secret},
+                         {"name": "BATCHPAR_S3FILE_TIMESTAMP",
+                          "value": s3file_timestamp}]
+
+        # Set up batch client, and check that we haven't 
+        # already hit the time limit
         batch_client = batchclient.BatchClient(poll_time=self.poll_time,
                                                region_name=self.region_name)
-        job_ids = []
+        self._assert_timeout(batch_client, job_ids=[])
+        
+        all_job_kwargs = []
         for i, params in enumerate(job_params):
-            self._assert_timeout(batch_client, job_ids)
             if params["done"]:
                 continue
             # Break in case of testing
             if (self.max_runs is not None) and (i >= self.max_runs):
                 break
-            # Build a set of environmental variables to send
-            # to the batch job
-            env_variables = [{"name": "AWS_ACCESS_KEY_ID", "value": aws_id},
-                             {"name": "AWS_SECRET_ACCESS_KEY",
-                              "value": aws_secret},
-                             {"name": "BATCHPAR_S3FILE_TIMESTAMP",
-                              "value": s3file_timestamp}]
+
+            _env_variables = env_variables.copy()
             for k, v in params.items():
                 new_row = dict(name="BATCHPAR_{}".format(k), value=str(v))
-                env_variables.append(new_row)
+                _env_variables.append(new_row)
             # Add the environmental variables to the container overrides
-            overrides = dict(environment=env_variables,
+            overrides = dict(environment=_env_variables,
                              memory=self.memory, vcpus=self.vcpus)
-            id_ = batch_client.submit_job(jobDefinition=self.job_def,
-                                          jobName=self.job_name,
-                                          jobQueue=self.job_queue,
-                                          timeout=dict(attemptDurationSeconds=self.timeout),
-                                          containerOverrides=overrides)
-            job_ids.append(id_)
-        # Wait for jobs to finish
-        self._monitor_batch_jobs(batch_client, job_ids)
+            job_kwargs = dict(jobDefinition=self.job_def,
+                              jobName=self.job_name,
+                              jobQueue=self.job_queue,
+                              timeout=dict(attemptDurationSeconds=self.timeout),
+                              containerOverrides=overrides)
+            all_job_kwargs.append(job_kwargs)
 
-    def _monitor_batch_jobs(self, batch_client, job_ids):
+        # Wait for jobs to finish
+        self._run_batch_jobs(batch_client, all_job_kwargs)
+
+    def _run_batch_jobs(self, batch_client, all_job_kwargs):
         '''Monitor AWS batch jobs until finished or failed.
 
         Parameters:
@@ -215,48 +222,72 @@ class AutoBatchTask(luigi.Task, ABC):
             job_ids (:obj:`list` of :obj:`str`): List of AWS batch
                     job IDs to monitor.
         '''
-        done_jobs = set()
-        while len(job_ids) - len(done_jobs) > 0:
-            stats = defaultdict(int)  # Collection of failure vs total statistics
-            self._assert_timeout(batch_client, job_ids)
-            # Check status for each job
-            for id_ in job_ids:
-                status = batch_client.get_job_status(id_)
-                logging.info("{} {}".format(id_, status))
-                if status not in ("SUCCEEDED", "FAILED", "RUNNING"):
+
+        # Keep submitting until all submitted
+        all_job_ids = set()
+        done_job_ids = set()
+        submitted_job_idxs = set()
+        logging.info("{} jobs to run".format(len(all_job_kwargs)))
+        while len(all_job_kwargs) > len(all_job_ids):
+            # Get the number of live jobs
+            running_job_ids = all_job_ids - done_job_ids
+            n_live = len(running_job_ids)
+            n_done = len(done_job_ids)
+            n_left = len(all_job_kwargs) - n_done
+            logging.info("{} jobs are live, "
+                         "{} are finished, "
+                         "and {} are yet to be submitted".format(n_live, n_done, n_left))
+                                                 
+            if n_live > 1:
+                self._assert_timeout(batch_client, running_job_ids)
+                self._assert_success(batch_client, all_job_ids, done_job_ids)
+            # Submit some jobs until `self.max_live_jobs` reached
+            for ijob, job_kwargs in enumerate(all_job_kwargs):
+                if n_live >= self.max_live_jobs:
+                    break
+                if ijob in submitted_job_idxs:
                     continue
-                stats[status] += 1
-                if status == "RUNNING":
-                    continue
-                done_jobs.add(id_)            
-            # Check that the success rate is as expected
-            if len(stats) > 0:
-                self._assert_success(batch_client, job_ids, stats)
+                # Submit a new job
+                id_ = batch_client.submit_job(**job_kwargs)
+                all_job_ids.add(id_)
+                submitted_job_idxs.add(ijob)
+                n_live += 1
             # Wait before continuing
-            logging.info("Not finished yet...")
+            logging.info("Not finished submitting...")
             time.sleep(self.poll_time)
 
-        # One last check of status
-        reason = "Jobs should no longer be running"
+        # Wait until all finished
+        running_job_ids = all_job_ids - done_job_ids
+        while len(running_job_ids) > 0:
+            running_job_ids = all_job_ids - done_job_ids
+            self._assert_timeout(batch_client, running_job_ids)
+            self._assert_success(batch_client, all_job_ids, done_job_ids)
+            # Wait before continuing
+            logging.info("Not finished waiting...")
+            time.sleep(self.poll_time)
+
+
+    def _assert_success(self, batch_client, job_ids, done_jobs):
+        '''Assert that success rate has not been breached.'''
+
         stats = defaultdict(int)  # Collection of failure vs total statistics
-        unexplained_jobs = False
+        # Check status for each job
         for id_ in job_ids:
             status = batch_client.get_job_status(id_)
-            logging.info("{} {}".format(id_, status))
-            if status not in ("SUCCEEDED", "FAILED"):
-                unexplained_jobs = True
-                batch_client.terminate_job(jobId=id_, reason=reason)
+            if id_ not in done_jobs:
+                logging.debug("{} {}".format(id_, status))
+            if status not in ("SUCCEEDED", "FAILED", "RUNNING"):
                 continue
             stats[status] += 1
-        # Check that the success rate is as expected
-        if unexplained_jobs:
-            raise batchclient.BatchJobException(reason)
-        if len(stats) > 0:
-            self._assert_success(batch_client, job_ids, stats)
+            if status != "RUNNING":
+                done_jobs.add(id_)
 
+        # Ignore if jobs are simply stalling
+        if len(stats) == 0:
+            logging.info("No jobs are currently running")
+            return
 
-    def _assert_success(self, batch_client, job_ids, stats):
-        '''Assert that success rate has not been breached.'''
+        # Calculate the failure rate
         total = sum(stats.values())
         failure_rate = stats["FAILED"] / total
         if failure_rate <= (1 - self.success_rate):
@@ -267,13 +298,8 @@ class AutoBatchTask(luigi.Task, ABC):
 
     def _assert_timeout(self, batch_client, job_ids):
         '''Assert that timeout has not been breached.'''
-        logging.warning("Timeout summary: {}, "
-                        "{}\n{} seconds left".format(time.time(), 
-                                                     self.TIMEOUT, 
-                                                     self.TIMEOUT - time.time()))
+        logging.warning("{} seconds left".format(self.TIMEOUT - time.time()))
         if time.time() < self.TIMEOUT:
             return
         reason = "Impending worker timeout, so killing live tasks"
         batch_client.hard_terminate(job_ids=job_ids, reason=reason)
-                                    
-
