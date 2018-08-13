@@ -168,7 +168,8 @@ class BatchClient(object):
 
     def hard_terminate(self, job_ids, reason, **kwargs):
         """Terminate all jobs with a hard(ish) exit via an Exception.
-        The function will also wait for jobs to be explicitly terminated"""        
+        The function will also wait for jobs to be explicitly terminated"""
+
         # Try to kill all the jobs and then wait a couple of seconds
         for job_id in job_ids:
             self.terminate_job(jobId=job_id, reason=reason, **kwargs)

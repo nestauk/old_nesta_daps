@@ -344,5 +344,5 @@ class RootTask(luigi.WrapperTask):
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
                                region_name="eu-west-2",
-                               poll_time=10,
+                               poll_time=60,
                                test=(not self.production))
