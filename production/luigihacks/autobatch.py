@@ -182,6 +182,7 @@ class AutoBatchTask(luigi.Task, ABC):
                           "value": aws_secret},
                          {"name": "BATCHPAR_S3FILE_TIMESTAMP",
                           "value": s3file_timestamp}]
+                         #{"name": "PYTHONIOENCODING", "value": "latin1"}]
 
         # Set up batch client, and check that we haven't 
         # already hit the time limit
@@ -233,7 +234,7 @@ class AutoBatchTask(luigi.Task, ABC):
             running_job_ids = all_job_ids - done_job_ids
             n_live = len(running_job_ids)
             n_done = len(done_job_ids)
-            n_left = len(all_job_kwargs) - n_done
+            n_left = len(all_job_kwargs) - n_done - n_live
             logging.info("{} jobs are live, "
                          "{} are finished, "
                          "and {} are yet to be submitted".format(n_live, n_done, n_left))
@@ -298,7 +299,7 @@ class AutoBatchTask(luigi.Task, ABC):
 
     def _assert_timeout(self, batch_client, job_ids):
         '''Assert that timeout has not been breached.'''
-        logging.warning("{} seconds left".format(self.TIMEOUT - time.time()))
+        logging.info("{} seconds left".format(self.TIMEOUT - time.time()))
         if time.time() < self.TIMEOUT:
             return
         reason = "Impending worker timeout, so killing live tasks"

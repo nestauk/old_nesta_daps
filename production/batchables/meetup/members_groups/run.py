@@ -10,6 +10,8 @@ from sqlalchemy.orm import sessionmaker
 import boto3
 from urllib.parse import urlsplit
 import os
+from ast import literal_eval
+from sqlalchemy.exc import IntegrityError
 
 
 def parse_s3_path(path):
@@ -24,17 +26,18 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
     
     # Fetch the input parameters
-    member_id = os.environ["BATCHPAR_member_id"]
+    member_ids = literal_eval(os.environ["BATCHPAR_member_ids"])
     s3_path = os.environ["BATCHPAR_outinfo"]
 
     # Generate the groups for these members
-    response = get_member_details(member_id, max_results=200)
-    output = get_member_groups(response)
+    output = []
+    for member_id in member_ids:
+        response = get_member_details(member_id, max_results=200)
+        output += get_member_groups(response)
     logging.info("Got %s groups", len(output))
 
     # Load connection to the db, and create the tables
-    engine = get_mysql_engine("BATCHPAR_config", 
-                              "mysqldb", "production")
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "production")
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
@@ -45,11 +48,12 @@ def run():
             continue
         and_stmt = and_(GroupMember.group_id == row["group_id"],
                         GroupMember.member_id == row["member_id"])
-        q = session.query(GroupMember).filter(and_stmt)
-        if q.count() > 0:
-            continue
+        #        q = session.query(GroupMember).filter(and_stmt)
+        #        if q.count() > 0:
+        #            continue
         g = GroupMember(**row)
         session.merge(g)
+        session.flush()
 
     session.commit()
     session.close()

@@ -216,15 +216,18 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
                  "WHERE country = %s AND category_id = %s;")
         cursor.execute(query, (self.iso2, self.category))
 
-        # Add the mandatory `outinfo' and `done' fields
         job_params = []
-        for member_id, in cursor:
+        while True:
+            chunk = cursor.fetchmany(100)
+            if len(chunk) == 0:
+                break
+            data = [member_id for member_id, in chunk]
             # Check whether the job has been done already
-            s3_key = "{}-{}".format(self.job_name, member_id)
+            s3_key = "{}-{}-{}".format(self.job_name, data[0], data[-1])
             s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
-            params = {"member_id":member_id,
+            params = {"member_ids":str(data),
                       "config":"mysqldb.config",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
@@ -232,6 +235,23 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
         cursor.close()
         cnx.close()
         return job_params
+
+        # # Add the mandatory `outinfo' and `done' fields
+        # job_params = []
+        # for member_id, in cursor:
+        #     # Check whether the job has been done already
+        #     s3_key = "{}-{}".format(self.job_name, member_id)
+        #     s3_path = "s3://nesta-production-intermediate/%s" % s3_key
+        #     done = s3_key in DONE_KEYS
+        #     # Fill in the params
+        #     params = {"member_id":member_id,
+        #               "config":"mysqldb.config",
+        #               "outinfo":s3_path, "done":done}
+        #     job_params.append(params)
+        # # Tidy up and return
+        # cursor.close()
+        # cnx.close()
+        # return job_params
 
 
     def combine(self, job_params):
@@ -289,18 +309,19 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
 
         # Add the mandatory `outinfo' and `done' fields
         job_params = []
-
         while True:
             chunk = cursor.fetchmany(100)
             if len(chunk) == 0:
                 break
-            data = [group_urlname for group_urlname, in chunk]
+            data = [group_urlname for group_urlname, in chunk
+                    if group_urlname.count("?") == 0]
             # Check whether the job has been done already
             s3_key = "{}-{}-{}".format(self.job_name, data[0], data[-1])
             s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
-            params = {"group_urlnames":str(data),
+            params = {"group_urlnames":str([x.encode("utf8") 
+                                            for x in data]),
                       "config":"mysqldb.config",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
@@ -344,5 +365,5 @@ class RootTask(luigi.WrapperTask):
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
                                region_name="eu-west-2",
-                               poll_time=60,
+                               poll_time=10,
                                test=(not self.production))
