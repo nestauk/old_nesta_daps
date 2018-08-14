@@ -73,21 +73,28 @@ def build_ngrams(documents, n=2, **kwargs):
         level = 2
     else:
         level = kwargs["level"]
+    # Generate sentences, as required for gensim Phrases
+    sentences = []
+    for doc in documents:
+        sentences += doc
     # Get the bigrams
-    phrases = gensim.models.Phrases(documents, min_count=2, delimiter=b'_')
+    phrases = gensim.models.Phrases(sentences, min_count=2, delimiter=b'_')
     bigram = gensim.models.phrases.Phraser(phrases)
-    docs_bi = list(bigram[documents])
+    docs_bi = [[bigram[sentence] for sentence in doc] for doc in documents]
     # If finished
     if level == n:
         return docs_bi
     # Otherwise, keep processing until n-grams satisfied
-    return build_ngrams(docs_bi, n=n+1, level=level+1)
+    return build_ngrams(docs_bi, n=n, level=level+1)
 
 
 if __name__ == '__main__':
     nltk.download("gutenberg")
     from nltk.corpus import gutenberg
-    docs = [gutenberg.open(fid).read() 
-            for fid in gutenberg.fileids()]
+    docs = []
+    for fid in gutenberg.fileids():
+        f = gutenberg.open(fid)
+        docs.append(f.read())
+        f.close()
     docs = [tokenize_document(d) for d in docs]
     docs = build_ngrams(docs)
