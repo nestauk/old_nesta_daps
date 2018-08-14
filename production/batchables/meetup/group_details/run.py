@@ -21,15 +21,18 @@ def parse_s3_path(path):
 
 def run():
     logging.getLogger().setLevel(logging.INFO)
-    
+
     # Fetch the input parameters
-    group_urlnames = literal_eval(os.environ["BATCHPAR_group_urlnames"])
+    group_urlnames = literal_eval(os.environ["BATCHPAR_group_urlnames"])    
+    group_urlnames = [x.decode("utf8") for x in group_urlnames]
     s3_path = os.environ["BATCHPAR_outinfo"]
 
     # Generate the groups for these members
     _output = []
     for urlname in group_urlnames:
         _info = get_group_details(urlname, max_results=200)
+        if len(_info) == 0:
+            continue
         _output.append(_info)
     logging.info("Processed %s groups", len(_output))
 
