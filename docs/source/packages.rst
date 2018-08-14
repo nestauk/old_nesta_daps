@@ -11,6 +11,7 @@ Code and scripts
 .. toctree::
 
     packages.meetup
+    packages.nlp_utils
 
 
 Code auditing
