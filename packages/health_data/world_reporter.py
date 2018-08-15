@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # Get the data for each abstract link
     for idx, row in df.iterrows():
-        df.at[idx, "abstract_text"] = get_abstract(browser, url=row["abstract_link"])
+        df.at[idx, "abstract_text"] = get_abstract(url=row["abstract_link"])
         # Only do the first few for this test
         condition = ~pd.isnull(df["abstract_text"])
         if condition.sum() > 2:
