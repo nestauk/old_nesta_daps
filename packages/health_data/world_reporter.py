@@ -20,6 +20,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import boto3
 import pandas as pd
+from io import BytesIO
 
 s3 = boto3.resource('s3')
 # Path to the abstract element
@@ -49,7 +50,8 @@ def get_abstract(url):
 def get_csv_data():
     '''Retrieve the CSV data from AWS and tidy the columns'''
     obj = s3.Object("nesta-inputs", "world_reporter_inputs.csv")
-    df = pd.read_csv(obj.get()['Body'])           
+    bio = BytesIO(obj.get()['Body'].read())
+    df = pd.read_csv(bio)
     df.columns = [col.replace(" ","_").lower() for col in df.columns]
     # Create a field ready for the abstract text
     df["abstract_text"] = None
