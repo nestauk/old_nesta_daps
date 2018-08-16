@@ -60,6 +60,10 @@ cd ${THIS_DIR}/docker_recipes/${DKR_PKG_NAME}
 chmod +x launch.sh
 #### TODO: PASS BUILD ARGS AS ARGUMENT TO THIS SCRIPT (i.e. remove MEETUP_API_KEYS)
 docker build --no-cache -t ${DKR_PKG_NAME} --build-arg MEETUP_API_KEYS .
+if [[ $? -ne 0 ]];
+then    
+    exit 1
+fi
 
 # Back to the top
 cd ${TOP_DIR}
