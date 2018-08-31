@@ -135,6 +135,10 @@ class BatchClient(object):
         if status_code != 200:
             msg = 'Job status request received status code {0}:\n{1}'
             raise Exception(msg.format(status_code, response))
+        if len(response['jobs']) == 0:
+            return 'FAILED'
+            #time.sleep(60)
+            #return self.get_job_status(job_id)
 
         return response['jobs'][0]['status']
 
@@ -166,24 +170,28 @@ class BatchClient(object):
         """Wrap terminate_job"""
         self._client.terminate_job(**kwargs)
 
-    def hard_terminate(self, job_ids, reason, **kwargs):
+    def hard_terminate(self, job_ids, reason, iattempt=0, **kwargs):
         """Terminate all jobs with a hard(ish) exit via an Exception.
         The function will also wait for jobs to be explicitly terminated"""
 
         # Try to kill all the jobs and then wait a couple of seconds
         for job_id in job_ids:
-            self.terminate_job(jobId=job_id, reason=reason, **kwargs)
-        time.sleep(2)
+            self.terminate_job(jobId=job_id, reason=reason, **kwargs)        
+        time.sleep(30)
 
         # Check which jobs are still running
         job_ids = [job_id for job_id in job_ids 
                    if self.get_job_status(job_id) 
                    not in ("FAILED", "SUCCEEDED")]
-        if len(job_ids) > 0:
+        if len(job_ids) > 0 and iattempt < 10:
             print("Still got", len(job_ids),
                   "hanging batch jobs to terminate")
-            return self.hard_terminate(job_ids, reason, **kwargs)
-            
+            return self.hard_terminate(job_ids, reason, 
+                                       iattempt=iattempt+1, 
+                                       **kwargs)
+    
+        if iattempt >= 10:
+            reason += "\n NOTE: {} jobs could not be killed!".format(len(job_ids))
         # When finished terminating, shut it all down
         raise BatchJobException(reason)
 

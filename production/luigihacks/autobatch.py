@@ -91,6 +91,11 @@ class AutoBatchTask(luigi.Task, ABC):
     max_live_jobs = luigi.IntParameter(default=500)
     worker_timeout = float('inf')
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.failed_jobs = set()
+
+
     def run(self):
         '''DO NOT OVERRIDE THIS METHOD.
 
@@ -277,6 +282,8 @@ class AutoBatchTask(luigi.Task, ABC):
             status = batch_client.get_job_status(id_)
             if id_ not in done_jobs:
                 logging.debug("{} {}".format(id_, status))
+            if status == "FAILED":
+                self.failed_jobs.add(id_)
             if status not in ("SUCCEEDED", "FAILED", "RUNNING"):
                 continue
             stats[status] += 1
@@ -294,6 +301,7 @@ class AutoBatchTask(luigi.Task, ABC):
         if failure_rate <= (1 - self.success_rate):
             return
         reason = "Exiting due to high failure rate: {}%".format(int(failure_rate*100))
+        reason += "\nFailed jobs are: {}".format(self.failed_jobs)
         batch_client.hard_terminate(job_ids=job_ids, reason=reason)
 
 
@@ -303,4 +311,5 @@ class AutoBatchTask(luigi.Task, ABC):
         if time.time() < self.TIMEOUT:
             return
         reason = "Impending worker timeout, so killing live tasks"
+        reason += "\nFailed jobs are: {}".format(self.failed_jobs)
         batch_client.hard_terminate(job_ids=job_ids, reason=reason)

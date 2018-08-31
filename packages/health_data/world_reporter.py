@@ -18,9 +18,16 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import WebDriverException
 import boto3
 import pandas as pd
 from io import BytesIO
+from retrying import retry
+import time
+import traceback
+
 
 s3 = boto3.resource('s3')
 # Path to the abstract element
@@ -29,22 +36,44 @@ ELEMENT_EXISTS = EC.visibility_of_element_located((By.CSS_SELECTOR,
                                                     "tr.expanded-view.ng-scope > "
                                                     "td > div > div > p")))
 
+#@retry(wait_random_min=20, wait_random_max=150, stop_max_attempt_number=10)
 def get_abstract(url):
     '''Wait for the abstract to appear at the URL
 
     Args:
         url (str): An abstract URL specified from the input CSV file.
     '''
-    # Fire up a browser
-    browser = webdriver.Chrome()
-    browser.get(url)
-    # Wait until the element appears
-    wait = WebDriverWait(browser, 60)
-    element = wait.until(ELEMENT_EXISTS)
-    text = element.text
-    # Tidy up and exit
-    browser.quit()
-    return text
+    text = None
+    ntries = 0
+    while text is None:
+        browser = None
+        ntries += 1
+        assert ntries < 10, "Max retries exceeded"
+        # Fire up a browser
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-extensions")
+            browser = webdriver.Chrome(chrome_options=options)
+            browser.get(url)
+            time.sleep(10)
+            # Wait until the element appears
+            wait = WebDriverWait(browser, 60)
+            element = wait.until(ELEMENT_EXISTS)
+        except (TimeoutException, WebDriverException, ConnectionResetError):
+            print("Retrying", url)
+            print(traceback.format_exc())
+            time.sleep(60)
+        else:
+            text = element.text
+        finally:
+            # Tidy up and exit
+            if browser is not None:
+                browser.quit()
+
+    return text.encode("utf-8")
 
 
 def get_csv_data():
