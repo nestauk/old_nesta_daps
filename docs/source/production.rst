@@ -31,3 +31,4 @@ Code and scripts
     production.luigihacks
     production.scripts
     production.troubleshooting
+    production.elasticsearch
