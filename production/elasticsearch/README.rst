@@ -39,3 +39,12 @@ Docker
 - max file descriptors
 - docker-compose
 
+Reindexing data from a remote cluster
+-------------------------------------
+- reindex permissions need to be set in the new cluster's *elasticsearch.yml*
+- if the existing cluster is AWS hosted ES the ip address needs to be added to
+  the security settings
+- follow this guide: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html#reindex-from-remote
+- *index* and *query* do not need to be supplied
+- if reindexing from AWS ES the port should be 443 for https. This is mandatory in the json sent to the reindexing api
+
