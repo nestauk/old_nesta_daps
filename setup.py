@@ -43,7 +43,7 @@ for p in packages:
     setup(name=".".join(('nesta',p)),
           #packages=find_packages(where=p, exclude=exclude),
           packages=find_namespace_packages(where='.', exclude=exclude),
-          package_dir={'': p},
+          #package_dir={'': p},
           package_data={'': ['TM_WORLD_BORDERS_SIMPL*']},
           **common_kwargs)
 
