@@ -34,7 +34,7 @@ common_kwargs = dict(
     include_package_data=True,
 )
 
-setup(name=".".join(('nesta',p)),
+setup(name='nesta',
       #packages=find_packages(where=p, exclude=exclude),
       packages=find_namespace_packages(where='.', exclude=exclude),
       #package_dir={'nesta': '.'},
