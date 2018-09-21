@@ -1,9 +1,10 @@
 from setuptools import setup
 from setuptools import find_packages
+import os
 
-print("----> HERE")
+is_travis = 'TRAVIS' in os.environ
 
-exclude = ['docs', 'tests*', 'batchables/']
+exclude = ['docs', 'tests*']
 common_kwargs = dict(
     version='0.1',
     license='MIT',
@@ -27,8 +28,11 @@ common_kwargs = dict(
     python_requires='>3.6',
 )
 
+packages = ["packages"]
+if is_travis:
+    packages = ["packages", "production"]
 
-for p in ["packages", "production"]:
+for p in packages:
     setup(name=".".join(('nesta',p)),
           packages=find_packages(where=p, exclude=exclude),
           package_dir={'': p},
