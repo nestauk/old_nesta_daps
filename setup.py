@@ -26,7 +26,7 @@ common_kwargs = dict(
 )
 
 
-for p in ["packages", "production", "tools"]:
+for p in ["production", "packages"]:
     setup(name=".".join(('nesta',p)),
           packages=find_packages(where=p, exclude=exclude),
           package_dir={'': p},
