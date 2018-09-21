@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-exclude = ['docs', 'tests*']
+exclude = ['docs', 'tests*', 'batchables']
 common_kwargs = dict(
     version='0.1',
     license='MIT',
@@ -26,7 +26,7 @@ common_kwargs = dict(
 )
 
 
-for p in ["production", "packages"]:
+for p in ["packages", "production"]:
     setup(name=".".join(('nesta',p)),
           packages=find_packages(where=p, exclude=exclude),
           package_dir={'': p},
