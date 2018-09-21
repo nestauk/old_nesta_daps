@@ -1,6 +1,3 @@
-#TODO: submit this and check a) it works and b) the data structure
-# Then index data according to https://stackoverflow.com/questions/20288770/how-to-use-bulk-api-to-store-the-keywords-in-es-by-using-python
-
 from pyvirtualdisplay import Display
 from health_data.world_reporter import get_abstract
 from nlp_utils.preprocess import tokenize_document
@@ -32,8 +29,8 @@ def run():
     # Get the data for each abstract link                                      
     for idx, row in df.iterrows():
         abstract = get_abstract(url=row["abstract_link"])
-        _abstract = tokenize_document(abstract.decode("utf-8")) 
-        processed_abstract = build_ngrams([_abstract])
+        #_abstract = tokenize_document(abstract.decode("utf-8")) 
+        #processed_abstract = build_ngrams([_abstract])
         df.at[idx, "abstract_text"] = abstract.decode("utf-8")
         #        df.at[idx, "processed_abstract_text"] = processed_abstract
 
@@ -42,8 +39,9 @@ def run():
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
         doc.pop("unnamed:_0")
-        res = es.index(index='rwjf', doc_type='world_reporter', 
-                       id=row["program_number"], body=doc)
+        uid = doc.pop("unique_id")
+        res = es.index(index='rwjf_uid', doc_type='world_reporter', 
+                       id=uid, body=doc)
 
     # Tidy up
     display.stop()
