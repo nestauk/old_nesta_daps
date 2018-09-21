@@ -18,6 +18,8 @@ import boto3
 import botocore
 from io import StringIO
 import requests
+from pairing import pair
+import re
 
 
 # Define these globally since they are shared resources
@@ -25,6 +27,13 @@ import requests
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-inputs")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
+RE_COMP = re.compile(("https://worldreport.nih.gov:443/app/#!/"
+                      "researchOrgId=(\w+)&programId=(\w+)"))
+
+def create_key(url):
+    '''Create a composite key based on the abstract url'''
+    ids = [int(i) for i in RE_COMP.findall(url)[0]]
+    return pair(*ids)
 
 
 def chunks(l, n):
@@ -60,22 +69,23 @@ class WorldReporter(autobatch.AutoBatchTask):
         # Prepare parameters to be used for checking for
         # done jobs
         db_config = misctools.get_config("es.config", "es")        
-        url = "https://{}:{}/rwjf/world_reporter/{}"
+        url = "https://{}:{}/rwjf_uid/world_reporter/{}"
 
         # Get the input data
         df = get_csv_data()
         logging.info("Got {} rows from S3".format(len(df)))
         job_params = []
         n_done = 0
+        df["unique_id"] = df["abstract_link"].apply(create_key)
         for i, chunk in enumerate(chunks(df, self.chunksize)):
             # Check whether the job has been done already
-            ids = chunk.program_number.values
+            ids = chunk.unique_id.values
             done = True
             for id_ in (ids[0], ids[-1]):
                 r = requests.head(url.format(db_config["host"],
                                              db_config["port"],
                                              id_))
-                done = done and (r.status_code == 200)
+                done = done and (r.status_code == 200)                
                 if not done:
                     break
             n_done += int(done)
@@ -133,7 +143,7 @@ class RootTask(luigi.WrapperTask):
         yield WorldReporter(date=self.date,
                             chunksize=self.chunksize,
                             _routine_id=_routine_id,
-                            index="rwjf",
+                            index="rwjf_uid",
                             doc_type="funding_app",
                             batchable=("/home/ec2-user/nesta/production/"
                                        "batchables/health_data/world_reporter/"),
