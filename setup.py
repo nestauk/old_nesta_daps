@@ -1,5 +1,4 @@
 from setuptools import setup
-#from setuptools import find_packages
 from setuptools import find_namespace_packages
 import os
 
@@ -35,15 +34,10 @@ common_kwargs = dict(
     include_package_data=True,
 )
 
-packages = ["packages"]
-if is_travis:
-    packages = ["packages", "production"]
-
-for p in packages:
-    setup(name=".".join(('nesta',p)),
-          #packages=find_packages(where=p, exclude=exclude),
-          packages=find_namespace_packages(where='.', exclude=exclude),
-          package_dir={'nesta': '.'},
-          package_data={'': ['TM_WORLD_BORDERS_SIMPL*']},
-          **common_kwargs)
+setup(name=".".join(('nesta',p)),
+      #packages=find_packages(where=p, exclude=exclude),
+      packages=find_namespace_packages(where='.', exclude=exclude),
+      #package_dir={'nesta': '.'},
+      package_data={'': ['TM_WORLD_BORDERS_SIMPL*']},
+      **common_kwargs)
 

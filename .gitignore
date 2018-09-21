@@ -106,3 +106,7 @@ venv.bak/
 *~
 #*
 *#
+*out
+*log
+*json
+*csv
