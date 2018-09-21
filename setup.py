@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 print("----> HERE")
 
-exclude = ['docs', 'tests*', 'batchables']
+exclude = ['docs', 'tests*', 'batchables/']
 common_kwargs = dict(
     version='0.1',
     license='MIT',
