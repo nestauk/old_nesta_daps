@@ -1,6 +1,6 @@
-.. include:: ../../packages/README.rst
+.. include:: ../../nesta/packages/README.rst
 
-.. automodule:: packages
+.. automodule:: nesta.packages
     :members:
     :undoc-members:
     :show-inheritance:
@@ -10,8 +10,8 @@ Code and scripts
 
 .. toctree::
 
-    packages.meetup
-    packages.nlp_utils
+    nesta.packages.meetup
+    nesta.packages.nlp_utils
 
 
 Code auditing

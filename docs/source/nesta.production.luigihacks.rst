@@ -1,8 +1,8 @@
 .. _luigihacks_label:
 
-.. include:: ../../production/luigihacks/README.rst
+.. include:: ../../nesta/production/luigihacks/README.rst
 
-.. automodule:: production.luigihacks
+.. automodule:: nesta.production.luigihacks
     :members:
     :undoc-members:
     :show-inheritance:
@@ -10,7 +10,7 @@
 autobatch
 --------------------------------------
 
-.. automodule:: production.luigihacks.autobatch
+.. automodule:: nesta.production.luigihacks.autobatch
     :members:
     :undoc-members:
     :show-inheritance:
@@ -18,7 +18,7 @@ autobatch
 batchclient
 ----------------------------------------
 
-.. automodule:: production.luigihacks.batchclient
+.. automodule:: nesta.production.luigihacks.batchclient
     :members:
     :undoc-members:
     :show-inheritance:
@@ -26,7 +26,7 @@ batchclient
 misctools
 --------------------------------------
 
-.. automodule:: production.luigihacks.misctools
+.. automodule:: nesta.production.luigihacks.misctools
     :members:
     :undoc-members:
     :show-inheritance:
@@ -34,7 +34,7 @@ misctools
 mysqldb
 ------------------------------------
 
-.. automodule:: production.luigihacks.mysqldb
+.. automodule:: nesta.production.luigihacks.mysqldb
     :members:
     :undoc-members:
     :show-inheritance:
@@ -42,7 +42,7 @@ mysqldb
 s3
 -------------------------------
 
-.. automodule:: production.luigihacks.s3
+.. automodule:: nesta.production.luigihacks.s3
     :members:
     :undoc-members:
     :show-inheritance:

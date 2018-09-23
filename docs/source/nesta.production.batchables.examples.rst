@@ -1,7 +1,7 @@
 Example
 =============================================
 
-.. automodule:: production.batchables.examples.batch_example.run
+.. automodule:: nesta.production.batchables.examples.batch_example.run
     :members:
     :undoc-members:
     :show-inheritance:       

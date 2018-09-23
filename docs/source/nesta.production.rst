@@ -1,4 +1,4 @@
-.. include:: ../../production/README.rst
+.. include:: ../../nesta/production/README.rst
 
 How to put code into production at nesta
 ----------------------------------------
@@ -15,7 +15,7 @@ Note: this is being actively developed.
 8. Run the full chain
 
 	     
-.. automodule:: production
+.. automodule:: nesta.production
     :members:
     :undoc-members:
     :show-inheritance:
@@ -25,8 +25,8 @@ Code and scripts
 
 .. toctree::
 
-    production.routines
-    production.batchables
-    production.orms    
-    production.luigihacks
-    production.scripts
+    nesta.production.routines
+    nesta.production.batchables
+    nesta.production.orms    
+    nesta.production.luigihacks
+    nesta.production.scripts
