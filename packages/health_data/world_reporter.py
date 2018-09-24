@@ -25,6 +25,8 @@ import boto3
 import pandas as pd
 from io import BytesIO
 from retrying import retry
+import re
+import requests
 import time
 import traceback
 
@@ -85,11 +87,47 @@ def get_csv_data():
     # Create a field ready for the abstract text
     df["abstract_text"] = None
     return df
-    
-    
+
+
+def extract_year(date):
+    '''
+    Use a regex search for 4 digits in a row to identify the year.
+
+    Args:
+        date (str): The full date string.
+    '''
+    try:
+        return re.search(r'\d{4}', date).group(0)
+    except (TypeError, AttributeError):
+        return None
+
+
+def geocode(city, country):
+    '''
+    Geocoder using openstreetmap API.
+
+    Requests must be limited to 1 per second and cached locally.
+
+    Args:
+        city (str): name of the city.
+        country (str): name of the country.
+    '''
+    headers = {'User-Agent': 'City Geocoder'}
+    url = f'https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json'
+    try:
+        response = requests.get(url, headers=headers)
+    except requests.exceptions.RequestException as e:
+        # catch any timeouts etc here
+        raise e
+    geo_data = response.json()
+    lat = geo_data[0]['lat']
+    lon = geo_data[0]['lon']
+    return [lat, lon]
+
+
 if __name__ == "__main__":
     df = get_csv_data()
-    
+
     # Start the display
     display = Display(visible=0, size=(1366, 768))
     display.start()
@@ -101,7 +139,7 @@ if __name__ == "__main__":
         condition = ~pd.isnull(df["abstract_text"])
         if condition.sum() > 2:
             break
-            
+
     # Tidy up
     display.stop()
 
