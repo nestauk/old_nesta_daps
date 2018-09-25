@@ -1,6 +1,4 @@
 # import boto3
-# import calendar
-# from dateutil.parser import parse
 from datetime import datetime
 import logging
 # import pandas as pd
@@ -26,9 +24,11 @@ def extract_year(date):
         date (str): The full date string.
     '''
     try:
-        return re.search(r'\d{4}', date).group(0)
+        year = re.search(r'\d{4}', date).group(0)
     except (TypeError, AttributeError):
         return None
+
+    return f"{year}-01-01"
 
 
 def extract_date(date):
@@ -38,12 +38,18 @@ def extract_date(date):
     Args:
         date (str): the full date string.
     '''
-    if '/' in date:
-        date_object = datetime.strptime(date, '%m/%d/%Y')
-    elif '-' in date:
-        date_object = datetime.strptime(date, '%Y-%m-%d')
-    else:
-        date_object = datetime.strptime(date, '%b %d %Y')
+    date = date.strip()
+    date_object = None
+
+    for dateformat in ['%m/%d/%Y', '%Y/%m/%d', '%Y-%m-%d', '%b %d %Y', '%d %B %Y', '%B %Y', '%b %Y', '%Y']:
+        try:
+            date_object = datetime.strptime(date, dateformat)
+            break
+        except ValueError:
+            pass
+
+    if not date_object:
+        raise ValueError(f"Invalid date: {date}")
 
     return date_object.strftime('%Y-%m-%d')
 
