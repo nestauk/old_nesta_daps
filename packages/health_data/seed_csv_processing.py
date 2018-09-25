@@ -38,44 +38,14 @@ def extract_date(date):
     Args:
         date (str): the full date string.
     '''
-    pattern_string = r'(\w{3})  ?(\d?\d) (\d{4})'  # Sep 21 2017, Mar  1 2011
-    pattern_dash = r'(\d{4})-(\d{2})-(\d{2})'  # 2016-07-31
-    pattern_slash = r'(\d\d?)\/(\d\d?)\/(\d{4})'  # 5/31/2020, 11/1/2012, 1/1/2012
-
     if '/' in date:
-        standardised_date = datetime.strptime(date, '%m/%d/%Y')
-        # date_match = re.search(pattern_slash, date)
-        # year = date_match.groups()[2]
-        # month = date_match.groups()[0]
-        # day = date_match.groups()[1]
-        # standardised_date = f"{year}-{month}-{day}"
+        date_object = datetime.strptime(date, '%m/%d/%Y')
     elif '-' in date:
-        standardised_date = datetime.strptime(date, '%Y-%m-%d')
-        # standardised_date = date
-        # date_match = re.search(pattern_dash, date)
-        # year = date_match.groups()[0]
-        # month = date_match.groups()[1]
-        # day = date_match.groups()[2]
+        date_object = datetime.strptime(date, '%Y-%m-%d')
     else:
-        standardised_date = datetime.strptime(date, '%b %d %Y')
-        # date_match = re.search(pattern_string, date)
-        # month_abbr = list(calendar.month_abbr)
-        # year = date_match.groups()[2]
-        # try:
-        #     month = month_abbr.index(date_match.groups()[0])
-        # except ValueError:
-        #     raise ValueError(f"Month is invalid: {date_match.groups()[0]}")
-        # day = date_match.groups()[1]
-        # standardised_date = f"{year}-{month}-{day}"
+        date_object = datetime.strptime(date, '%b %d %Y')
 
-    # try:
-    #     parse(standardised_date, dayfirst=False)
-    # except ValueError:
-    #     raise ValueError("Invalid date: {standardised_date}")
-
-    formatted_date = standardised_date.strftime('%Y-%m-%d')
-    return formatted_date
-
+    return date_object.strftime('%Y-%m-%d')
 
 
 def geocode(city=None, country=None, query=None):
