@@ -26,6 +26,7 @@ def extract_year(date):
     try:
         year = re.search(r'\d{4}', date).group(0)
     except (TypeError, AttributeError):
+        logging.info(f"No year extraction possible for: {date}")
         return None
 
     return f"{year}-01-01"
@@ -40,8 +41,19 @@ def extract_date(date):
     '''
     date = date.strip()
     date_object = None
+    date_formats = [
+            '%m/%d/%Y',
+            '%Y/%m/%d',
+            '%Y-%m-%d',
+            '%b %d %Y',
+            '%d %B %Y',
+            '%d %b, %Y',
+            '%B %Y',
+            '%b %Y',
+            '%Y'
+            ]
 
-    for dateformat in ['%m/%d/%Y', '%Y/%m/%d', '%Y-%m-%d', '%b %d %Y', '%d %B %Y', '%B %Y', '%b %Y', '%Y']:
+    for dateformat in date_formats:
         try:
             date_object = datetime.strptime(date, dateformat)
             break
@@ -49,6 +61,7 @@ def extract_date(date):
             pass
 
     if not date_object:
+        logging.info(f"No date conversion possible for: {date}")
         raise ValueError(f"Invalid date: {date}")
 
     return date_object.strftime('%Y-%m-%d')

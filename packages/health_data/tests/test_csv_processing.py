@@ -13,6 +13,7 @@ class TestExtractDateSuccess():
         assert extract_date('Oct 2014') == '2014-10-01'
         assert extract_date('2015') == '2015-01-01'
         assert extract_date('6 April 2018') == '2018-04-06'
+        assert extract_date('8 Dec, 2010') == '2010-12-08'
 
     def test_dash_date_pattern(self):
         assert extract_date('2016-07-31') == '2016-07-31'
