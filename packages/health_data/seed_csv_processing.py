@@ -1,7 +1,7 @@
 # import boto3
 from datetime import datetime
 import logging
-# import pandas as pd
+import pandas as pd
 import re
 import requests
 import time
@@ -71,13 +71,14 @@ def geocode(query=None, city=None, country=None):
     '''
     Geocoder using the Open Street Map Nominatim API.
 
-    API usage policy allows maximum 1 request per second and no multithreading.
+    If there are multiple results the first one is returned (they are ranked by importance).
+    The API usage policy allows maximum 1 request per second and no multithreading:
     https://operations.osmfoundation.org/policies/nominatim/
 
     Args:
+        query (str): query string, multiple words should be separated with +
         city (str): name of the city.
         country (str): name of the country.
-        query (str): query string, multiple words should be separated with +
     '''
     if city and country:
         url = f"https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json"
@@ -107,20 +108,23 @@ if __name__ == "__main__":
     for idx, row in deduped_locations.iterrows():
         try:
             coordinates = geocode(city=row['city'], country=row['country'])
-            row['coordinates'] = coordinates
         except requests.exceptions.RequestException as e:
             failed_geocode_idx.append(idx)
             logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
             logging.exception(e)
-        finally:
+        else:
+            row['coordinates'] = coordinates
             logging.info(f"coordinates for {row['city']}: {coordinates}")
+        finally:
             time.sleep(1)  # respect the OSM api usage limits
 
         # testing
         if idx > 12:
             break
-    print(deduped_locations)
+    deduped_locations.to_csv('geocoded_cities.csv')  # just in case...
 
+    from IPython import embed; embed()
+    df = pd.merge(df, deduped_locations, how='left', left_on=['city', 'country'], right_on=['city', 'country'])
+    print(df)
     # retry the failures with the query approach?...
-    # now join the coordinates back to the original data
     # also perform the cleaning for start and end dates while iterating through
