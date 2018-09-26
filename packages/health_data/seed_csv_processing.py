@@ -42,15 +42,15 @@ def extract_date(date):
     date = date.strip()
     date_object = None
     date_formats = [
-            '%m/%d/%Y',
-            '%Y/%m/%d',
-            '%Y-%m-%d',
-            '%b %d %Y',
-            '%d %B %Y',
-            '%d %b, %Y',
-            '%B %Y',
-            '%b %Y',
-            '%Y'
+            '%m/%d/%Y',   # 10/15/2013
+            '%Y/%m/%d',   # 2013/10/15
+            '%Y-%m-%d',   # 2013-10-15
+            '%b %d %Y',   # Oct 15 2013
+            '%d %B %Y',   # 15 October 2013
+            '%d %b, %Y',  # 15 Oct, 2013
+            '%B %Y',      # October 2013
+            '%b %Y',      # Oct 2013
+            '%Y'          # 2013
             ]
 
     for dateformat in date_formats:
@@ -67,7 +67,7 @@ def extract_date(date):
     return date_object.strftime('%Y-%m-%d')
 
 
-def geocode(city=None, country=None, query=None):
+def geocode(query=None, city=None, country=None):
     '''
     Geocoder using the Open Street Map Nominatim API.
 
@@ -79,12 +79,12 @@ def geocode(city=None, country=None, query=None):
         country (str): name of the country.
         query (str): query string, multiple words should be separated with +
     '''
-    if city or country:
+    if city and country:
         url = f"https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json"
     elif query:
         url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json"
     else:
-        raise TypeError("Missing argument: city, country or query required")
+        raise TypeError("Missing argument: query or city and country required")
 
     headers = {'User-Agent': 'Nesta health data geocode'}
     response = requests.get(url, headers=headers)
@@ -103,11 +103,13 @@ if __name__ == "__main__":
     deduped_locations = df[['city', 'country']].drop_duplicates()
     deduped_locations['coordinates'] = None
 
+    failed_geocode_idx = []
     for idx, row in deduped_locations.iterrows():
         try:
             coordinates = geocode(city=row['city'], country=row['country'])
             row['coordinates'] = coordinates
         except requests.exceptions.RequestException as e:
+            failed_geocode_idx.append(idx)
             logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
             logging.exception(e)
         finally:
@@ -119,5 +121,6 @@ if __name__ == "__main__":
             break
     print(deduped_locations)
 
+    # retry the failures with the query approach?...
     # now join the coordinates back to the original data
     # also perform the cleaning for start and end dates while iterating through

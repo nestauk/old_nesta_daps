@@ -1,7 +1,10 @@
+import mock
 import pytest
 
+import seed_csv_processing
 from seed_csv_processing import extract_date
 from seed_csv_processing import extract_year
+from seed_csv_processing import geocode
 
 
 class TestExtractDateSuccess():
@@ -64,3 +67,58 @@ class TestYearExtraction():
         assert extract_year('no year') is None
         assert extract_year('nan') is None
         assert extract_year('-') is None
+
+
+class TestGeocoding():
+    @staticmethod
+    @pytest.fixture
+    def mocked_osm_response():
+        mocked_response = mock.Mock()
+        mocked_response.json.return_value = [{'lat': '12.923432', 'lon': '-75.234569'}]
+        return mocked_response
+
+    def test_error_raised_when_arguments_missing(self):
+        with pytest.raises(TypeError) as e:
+            geocode()
+        assert "Missing argument: query or city and country required" in str(e.value)
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_request_includes_user_agent_in_header(self, mocked_request, mocked_osm_response):
+        mocked_request.return_value = mocked_osm_response
+        geocode('a')
+        assert mocked_request.call_args[1]['headers'] == {'User-Agent': 'Nesta health data geocode'}
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_url_correct_with_city_and_country(self, mocked_request, mocked_osm_response):
+        mocked_request.return_value = mocked_osm_response
+        geocode(city='london', country='UK')
+        assert "https://nominatim.openstreetmap.org/search?city=london&country=UK&format=json" in mocked_request.call_args[0]
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_url_correct_with_query(self, mocked_request, mocked_osm_response):
+        mocked_request.return_value = mocked_osm_response
+        geocode('my+place')
+        assert "https://nominatim.openstreetmap.org/search?q=my+place&format=json" in mocked_request.call_args[0]
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_none_returned_if_no_match(self, mocked_request):
+        mocked_response = mock.Mock()
+        mocked_response.json.return_value = []
+        mocked_request.return_value = mocked_response
+        assert geocode('nowhere') is None
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_coordinates_extracted_from_json_with_one_result(self, mocked_request, mocked_osm_response):
+        mocked_request.return_value = mocked_osm_response
+        assert geocode('somewhere') == ['12.923432', '-75.234569']
+
+    @mock.patch('seed_csv_processing.requests.get')
+    def test_coordindates_of_first_result_extracted_from_json_with_multiple_results(self, mocked_request):
+        mocked_response = mock.Mock()
+        mocked_response.json.return_value = [
+                {'lat': '123', 'lon': '456'},
+                {'lat': '111', 'lon': '222'},
+                {'lat': '777', 'lon': '888'}
+                ]
+        mocked_request.return_value = mocked_response
+        assert geocode('nowhere') == ['123', '456']
