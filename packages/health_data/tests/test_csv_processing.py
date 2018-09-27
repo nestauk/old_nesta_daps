@@ -1,10 +1,13 @@
 import mock
+import pandas as pd
 import pytest
+from io import StringIO
 
-import seed_csv_processing
 from seed_csv_processing import extract_date
 from seed_csv_processing import extract_year
+from seed_csv_processing import fix_dates
 from seed_csv_processing import geocode
+from seed_csv_processing import geocode_dataframe
 
 
 class TestExtractDateSuccess():
@@ -55,6 +58,44 @@ class TestYearExtraction():
         assert extract_year('-') is None
 
 
+class TestDateFixDataFrame():
+    @staticmethod
+    @pytest.fixture
+    def test_dataframe():
+        data = pd.DataFrame({
+            'start_date': ['5/30/1999', 'nan', '2012', 'cat'],
+            'end_date': ['Apr  7 2009', 'October', 'maybe 2020', 'ongoing']
+            })
+        return data
+
+    def test_invalid_start_dates_are_none(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.start_date[1] is None
+        assert fixed_dates.start_date[3] is None
+        assert False  # these tests need to be re-written to mock the underlying functionality
+
+    def test_invalid_end_dates_are_none(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.end_date[1] is None
+        assert fixed_dates.end_date[3] is None
+
+    def test_start_date_extraction_succeeds(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.start_date[0] == '1999-05-30'
+
+    def test_end_date_extraction_succeeds(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.end_date[0] == '2009-04-07'
+
+    def test_start_date_year_extraction_when_date_extraction_fails(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.start_date[2] == '2012-01-01'
+
+    def test_end_date_year_extraction_when_date_extraction_fails(self, test_dataframe):
+        fixed_dates = fix_dates(test_dataframe)
+        assert fixed_dates.end_date[2] == '2020-01-01'
+
+
 class TestGeocoding():
     @staticmethod
     @pytest.fixture
@@ -96,7 +137,7 @@ class TestGeocoding():
     @mock.patch('seed_csv_processing.requests.get')
     def test_coordinates_extracted_from_json_with_one_result(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
-        assert geocode('somewhere') == ['12.923432', '-75.234569']
+        assert geocode('somewhere') == {'lat': '12.923432', 'lon': '-75.234569'}
 
     @mock.patch('seed_csv_processing.requests.get')
     def test_coordindates_of_first_result_extracted_from_json_with_multiple_results(self, mocked_request):
@@ -107,4 +148,38 @@ class TestGeocoding():
                 {'lat': '777', 'lon': '888'}
                 ]
         mocked_request.return_value = mocked_response
-        assert geocode('nowhere') == ['123', '456']
+        assert geocode('best match') == {'lat': '123', 'lon': '456'}
+
+
+class TestGeocodeDataFrame():
+    @staticmethod
+    @pytest.fixture
+    def test_dataframe():
+        data = pd.DataFrame({
+            'index': [0, 1, 2, 3, 4, 5, 6],
+            'city': ['London', 'Brussels', 'London', 'Sheffield', 'Manchester', 'Jamaica', 'London'],
+            'country': ['UK', 'Belgium', 'United Kingdom', 'United Kingdom', 'UK', 'United States', 'UK']
+            })
+        return data
+
+    def test_merge_with_existing_file(self, test_dataframe):
+        with StringIO() as existing_file:
+            existing_data = pd.DataFrame({
+                'city': ['London', 'Sheffield', 'Brussels'],
+                'country': ['UK', 'United Kingdom', 'Belgium'],
+                'coordinates': [{'lat': 1.4, 'lon': 2.4}, {'lat': 1.3, 'lon': 2.3}, {'lat': 1.2, 'lon': 2.2}]
+                })
+            existing_data.to_json(existing_file, orient='records')
+            merged_dataframes = geocode_dataframe(test_dataframe, existing_file=existing_file.getvalue())
+        assert merged_dataframes.coordinates[0] == {'lat': 1.4, 'lon': 2.4}
+        assert merged_dataframes.coordinates[1] == {'lat': 1.2, 'lon': 2.2}
+        assert merged_dataframes.coordinates[3] == {'lat': 1.3, 'lon': 2.3}
+
+    def test_request_exception_doesnt_crash_process(self):
+        pass
+
+    def test_fall_back_to_query_method(self):
+        pass
+
+    def test_duplicates_are_only_geocoded_once(self):
+        pass
