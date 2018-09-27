@@ -77,7 +77,7 @@ def fix_dates(df):
         df (DataFrame): the pandas dataframe with the dates to be processed.
     '''
     df = df.rename(columns={'start_date': 'original_start_date', 'end_date': 'original_end_date'})
-    df.start_date, df.end_date = [], []
+    df['start_date'], df['end_date'] = None, None
     for idx, row in df.iterrows():
         start_date = extract_date(row.original_start_date)
         if start_date:
@@ -124,10 +124,10 @@ def geocode(query=None, city=None, country=None):
         lat = geo_data[0]['lat']
         lon = geo_data[0]['lon']
         logging.debug(f"Successfully geocoded {query or (city, country)} to {lat, lon}")
-        return [lat, lon]
+        return {'lat': lat, 'lon': lon}
 
 
-def geocode_dataframe(df, existing_file=None):
+def geocode_dataframe(df, out_file='geocoded_cities.csv', existing_file=None):
     '''
     A wrapper for the geocode function to process a supplied dataframe using
     the city and country.
@@ -138,7 +138,9 @@ def geocode_dataframe(df, existing_file=None):
         df (dataframe): a dataframe containing city and country fields.
         existing_file (str): local file that has previously been geocoded.
     '''
-    if not existing_file:
+    if existing_file:
+        deduped_locations = pd.read_json(existing_file, orient='records')
+    else:
         deduped_locations = df[['city', 'country']].drop_duplicates()
         deduped_locations['coordinates'] = None
 
@@ -152,8 +154,8 @@ def geocode_dataframe(df, existing_file=None):
             finally:
                 time.sleep(1)  # respect the OSM api usage limits
 
-            # retry with the query approach
             if not coordinates:
+                # retry with the query method
                 try:
                     query = f"{row['city']}+{row['country']}"
                     coordinates = geocode(query)
@@ -165,12 +167,10 @@ def geocode_dataframe(df, existing_file=None):
                     time.sleep(1)  # respect the OSM api usage limits
 
             row['coordinates'] = coordinates
-            # testing
-            if idx > 12:
-                break
-        deduped_locations.to_csv('geocoded_cities.csv')  # just in case...
-    else:
-        deduped_locations = pd.read_csv(existing_file)
+            # # testing
+            # if idx > 12:
+            #     break
+        deduped_locations.to_json(out_file, orient='records')  # just in case...
 
     df = pd.merge(df, deduped_locations, how='left', left_on=['city', 'country'], right_on=['city', 'country'])
 
