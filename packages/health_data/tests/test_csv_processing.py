@@ -32,29 +32,15 @@ class TestExtractDateSuccess():
 
 
 class TestExtractDateFailure():
-    def test_invalid_month_string(self):
-        with pytest.raises(ValueError):
-            extract_date('Cat 12 2009')
+    def test_invalid_month_returns_none(self):
+        extract_date('Cat 12 2009') is None
+        extract_date('2000-19-09') is None
+        extract_date('20/4/2009') is None
 
-    def test_invalid_month_dash(self):
-        with pytest.raises(ValueError):
-            extract_date('2000-19-09')
-
-    def test_invalid_month_slash(self):
-        with pytest.raises(ValueError):
-            extract_date('20/4/2009')
-
-    def test_invalid_day_string(self):
-        with pytest.raises(ValueError):
-            extract_date('Mar 38 2001')
-
-    def test_invalid_day_dash(self):
-        with pytest.raises(ValueError):
-            extract_date('2000-09-40')
-
-    def test_invalid_day_slash(self):
-        with pytest.raises(ValueError):
-            extract_date('5/32/2017')
+    def test_invalid_day_returns_none(self):
+        extract_date('Mar 38 2001') is None
+        extract_date('2000-09-40') is None
+        extract_date('5/32/2017') is None
 
 
 class TestYearExtraction():
@@ -63,17 +49,10 @@ class TestYearExtraction():
         assert extract_year('sometime in 2011') == '2011-01-01'
         assert extract_year('maybe 2019 or 2020') == '2019-01-01'
 
-    def test_invalid_year_raises_value_error(self):
-        with pytest.raises(ValueError):
-            assert extract_year('no year') is None
-
-    def test_nan_raises_value_error(self):
-        with pytest.raises(ValueError):
-            assert extract_year('nan') is None
-
-    def test_dash_raises_value_error(self):
-        with pytest.raises(ValueError):
-            assert extract_year('-') is None
+    def test_invalid_year_returns_none(self):
+        assert extract_year('no year') is None
+        assert extract_year('nan') is None
+        assert extract_year('-') is None
 
 
 class TestGeocoding():

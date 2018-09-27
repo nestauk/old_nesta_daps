@@ -26,8 +26,7 @@ def extract_year(date):
         year = re.search(r'\d{4}', date).group(0)
     except (TypeError, AttributeError):
         logging.info(f"No year extraction possible for: {date}")
-        raise ValueError(f"Invalid date: {date}")
-
+        return None
     return f"{year}-01-01"
 
 
@@ -61,8 +60,7 @@ def extract_date(date):
 
     if not date_object:
         logging.info(f"No date conversion possible for: {date}")
-        raise ValueError(f"Invalid date: {date}")
-
+        return None
     return date_object.strftime('%Y-%m-%d')
 
 
@@ -113,16 +111,19 @@ def geocode(query=None, city=None, country=None):
     elif query:
         url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json"
     else:
+        logging.error("Missing argument: query or city and country required")
         raise TypeError("Missing argument: query or city and country required")
 
     headers = {'User-Agent': 'Nesta health data geocode'}
     response = requests.get(url, headers=headers)
     geo_data = response.json()
     if len(geo_data) < 1:
+        logging.debug(f"No geocode match for {query or (city, country)}")
         return None
     else:
         lat = geo_data[0]['lat']
         lon = geo_data[0]['lon']
+        logging.debug(f"Successfully geocoded {query or (city, country)} to {lat, lon}")
         return [lat, lon]
 
 
@@ -131,7 +132,7 @@ def geocode_dataframe(df, existing_file=None):
     A wrapper for the geocode function to process a supplied dataframe using
     the city and country.
 
-    Returns a dataframe with a 'coordinates' column appended.
+    Returns a dataframe with a 'coordinated' column appended.
 
     Args:
         df (dataframe): a dataframe containing city and country fields.
@@ -151,7 +152,7 @@ def geocode_dataframe(df, existing_file=None):
             finally:
                 time.sleep(1)  # respect the OSM api usage limits
 
-            # retry the failures with the query approach
+            # retry with the query approach
             if not coordinates:
                 try:
                     query = f"{row['city']}+{row['country']}"
