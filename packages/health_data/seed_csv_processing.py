@@ -1,4 +1,3 @@
-# import boto3
 from datetime import datetime
 import logging
 import pandas as pd
@@ -27,7 +26,7 @@ def extract_year(date):
         year = re.search(r'\d{4}', date).group(0)
     except (TypeError, AttributeError):
         logging.info(f"No year extraction possible for: {date}")
-        return None
+        raise ValueError(f"Invalid date: {date}")
 
     return f"{year}-01-01"
 
@@ -67,6 +66,35 @@ def extract_date(date):
     return date_object.strftime('%Y-%m-%d')
 
 
+def fix_dates(df):
+    '''
+    A wrapper for the extract_date and extract_year functions to process a
+    whole dataframe.
+
+    Returns a dataframe with the original start_date and end_date columns
+    appended with 'original' and the fixed data taking the place of the
+    original columns.
+
+    Args:
+        df (DataFrame): the pandas dataframe with the dates to be processed.
+    '''
+    df = df.rename(columns={'start_date': 'original_start_date', 'end_date': 'original_end_date'})
+    df.start_date, df.end_date = [], []
+    for idx, row in df.iterrows():
+        start_date = extract_date(row.original_start_date)
+        if start_date:
+            row.start_date = start_date
+        else:
+            row.start_date = extract_year(row.original_start_date)
+
+        end_date = extract_date(row.original_end_date)
+        if end_date:
+            row.end_date = end_date
+        else:
+            row.end_date = extract_year(row.original_end_date)
+    return df
+
+
 def geocode(query=None, city=None, country=None):
     '''
     Geocoder using the Open Street Map Nominatim API.
@@ -98,33 +126,58 @@ def geocode(query=None, city=None, country=None):
         return [lat, lon]
 
 
+def geocode_dataframe(df, existing_file=None):
+    '''
+    A wrapper for the geocode function to process a supplied dataframe using
+    the city and country.
+
+    Returns a dataframe with a 'coordinates' column appended.
+
+    Args:
+        df (dataframe): a dataframe containing city and country fields.
+        existing_file (str): local file that has previously been geocoded.
+    '''
+    if not existing_file:
+        deduped_locations = df[['city', 'country']].drop_duplicates()
+        deduped_locations['coordinates'] = None
+
+        for idx, row in deduped_locations.iterrows():
+            try:
+                coordinates = geocode(city=row['city'], country=row['country'])
+                logging.info(f"coordinates for {row['city']}: {coordinates}")
+            except requests.exceptions.RequestException as e:
+                logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
+                logging.exception(e)
+            finally:
+                time.sleep(1)  # respect the OSM api usage limits
+
+            # retry the failures with the query approach
+            if not coordinates:
+                try:
+                    query = f"{row['city']}+{row['country']}"
+                    coordinates = geocode(query)
+                    logging.info(f"coordinates for {row['city']}: {coordinates}")
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
+                    logging.exception(e)
+                finally:
+                    time.sleep(1)  # respect the OSM api usage limits
+
+            row['coordinates'] = coordinates
+            # testing
+            if idx > 12:
+                break
+        deduped_locations.to_csv('geocoded_cities.csv')  # just in case...
+    else:
+        deduped_locations = pd.read_csv(existing_file)
+
+    df = pd.merge(df, deduped_locations, how='left', left_on=['city', 'country'], right_on=['city', 'country'])
+
+    return df
+
+
 if __name__ == "__main__":
     df = get_csv_data()
-    # TODO: convert cities and countries to lowercase to further reduce dupes
-    deduped_locations = df[['city', 'country']].drop_duplicates()
-    deduped_locations['coordinates'] = None
-
-    failed_geocode_idx = []
-    for idx, row in deduped_locations.iterrows():
-        try:
-            coordinates = geocode(city=row['city'], country=row['country'])
-        except requests.exceptions.RequestException as e:
-            failed_geocode_idx.append(idx)
-            logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
-            logging.exception(e)
-        else:
-            row['coordinates'] = coordinates
-            logging.info(f"coordinates for {row['city']}: {coordinates}")
-        finally:
-            time.sleep(1)  # respect the OSM api usage limits
-
-        # testing
-        if idx > 12:
-            break
-    deduped_locations.to_csv('geocoded_cities.csv')  # just in case...
-
-    from IPython import embed; embed()
-    df = pd.merge(df, deduped_locations, how='left', left_on=['city', 'country'], right_on=['city', 'country'])
-    print(df)
-    # retry the failures with the query approach?...
-    # also perform the cleaning for start and end dates while iterating through
+    df = geocode_dataframe(df)
+    df = fix_dates(df)
+    df.to_csv('world_reporter_inputs_v2.csv')

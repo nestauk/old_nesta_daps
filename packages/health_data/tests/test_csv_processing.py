@@ -63,10 +63,17 @@ class TestYearExtraction():
         assert extract_year('sometime in 2011') == '2011-01-01'
         assert extract_year('maybe 2019 or 2020') == '2019-01-01'
 
-    def test_invalid_year_returns_none(self):
-        assert extract_year('no year') is None
-        assert extract_year('nan') is None
-        assert extract_year('-') is None
+    def test_invalid_year_raises_value_error(self):
+        with pytest.raises(ValueError):
+            assert extract_year('no year') is None
+
+    def test_nan_raises_value_error(self):
+        with pytest.raises(ValueError):
+            assert extract_year('nan') is None
+
+    def test_dash_raises_value_error(self):
+        with pytest.raises(ValueError):
+            assert extract_year('-') is None
 
 
 class TestGeocoding():
