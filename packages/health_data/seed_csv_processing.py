@@ -80,8 +80,8 @@ def fix_dates(df):
                             'end_date': 'original_end_date'})
     df['start_date'], df['end_date'] = None, None
     for idx, row in df.iterrows():
-        row.start_date = extract_date(row.original_start_date) or extract_year(row.original_start_date)
-        row.end_date = extract_date(row.original_end_date) or extract_year(row.original_end_date)
+        df.at[idx, 'start_date'] = extract_date(row.original_start_date) or extract_year(row.original_start_date)
+        df.at[idx, 'end_date'] = extract_date(row.original_end_date) or extract_year(row.original_end_date)
 
     return df
 
@@ -148,7 +148,7 @@ def geocode_dataframe(df, out_file='geocoded_cities.json', existing_file=None):
             except requests.exceptions.RequestException as e:
                 logging.exception(e)
             else:
-                row['coordinates'] = coordinates
+                deduped_locations.at[idx, 'coordinates'] = coordinates
                 logging.info(f"coordinates for {row['city']}: {coordinates}")
             finally:
                 time.sleep(1)  # respect the OSM api usage limits
