@@ -2,10 +2,10 @@
 World Reporter
 ==============
 
-Extract all of the World Reporter data (specifically abstracts). 
+Extract all of the World Reporter data (specifically abstracts).
 We use a seed list of URLs (one for each abstract) by
 selecting all years and exporting a CSV from
-https://worldreport.nih.gov/app/#!/. Note that this process 
+https://worldreport.nih.gov/app/#!/. Note that this process
 is super slow and so that step was performed in browser
 manually.
 
@@ -24,9 +24,7 @@ from selenium.common.exceptions import WebDriverException
 import boto3
 import pandas as pd
 from io import BytesIO
-from retrying import retry
-import re
-import requests
+# from retrying import retry
 import time
 import traceback
 
@@ -37,6 +35,7 @@ ELEMENT_EXISTS = EC.visibility_of_element_located((By.CSS_SELECTOR,
                                                    ("#dataViewTable > tbody > "
                                                     "tr.expanded-view.ng-scope > "
                                                     "td > div > div > p")))
+
 
 #@retry(wait_random_min=20, wait_random_max=150, stop_max_attempt_number=10)
 def get_abstract(url):
@@ -83,46 +82,10 @@ def get_csv_data():
     obj = s3.Object("nesta-inputs", "world_reporter_inputs.csv")
     bio = BytesIO(obj.get()['Body'].read())
     df = pd.read_csv(bio)
-    df.columns = [col.replace(" ","_").lower() for col in df.columns]
+    df.columns = [col.replace(" ", "_").lower() for col in df.columns]
     # Create a field ready for the abstract text
     df["abstract_text"] = None
     return df
-
-
-def extract_year(date):
-    '''
-    Use a regex search for 4 digits in a row to identify the year.
-
-    Args:
-        date (str): The full date string.
-    '''
-    try:
-        return re.search(r'\d{4}', date).group(0)
-    except (TypeError, AttributeError):
-        return None
-
-
-def geocode(city, country):
-    '''
-    Geocoder using openstreetmap API.
-
-    Requests must be limited to 1 per second and cached locally.
-
-    Args:
-        city (str): name of the city.
-        country (str): name of the country.
-    '''
-    headers = {'User-Agent': 'City Geocoder'}
-    url = f'https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json'
-    try:
-        response = requests.get(url, headers=headers)
-    except requests.exceptions.RequestException as e:
-        # catch any timeouts etc here
-        raise e
-    geo_data = response.json()
-    lat = geo_data[0]['lat']
-    lon = geo_data[0]['lon']
-    return [lat, lon]
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
+from io import StringIO
 import mock
 import pandas as pd
 import pytest
-from io import StringIO
+import requests
+import time
 
 from seed_csv_processing import extract_date
 from seed_csv_processing import extract_year
@@ -59,41 +61,95 @@ class TestYearExtraction():
 
 
 class TestDateFixDataFrame():
-    @staticmethod
-    @pytest.fixture
-    def test_dataframe():
-        data = pd.DataFrame({
-            'start_date': ['5/30/1999', 'nan', '2012', 'cat'],
-            'end_date': ['Apr  7 2009', 'October', 'maybe 2020', 'ongoing']
-            })
-        return data
+    @mock.patch('seed_csv_processing.extract_date')
+    @mock.patch('seed_csv_processing.extract_year')
+    def test_start_and_end_date_extraction_succeeds(self, mocked_year, mocked_date):
+        test_dataframe = pd.DataFrame({
+                'start_date': ['5/30/1999', '2012-07-14'],
+                'end_date': ['Apr  7 2009', 'January 2000']
+                })
+        mocked_date.side_effect = ['1999-05-30', '2009-04-07', '2012-07-14', '2000-01-01']
 
-    def test_invalid_start_dates_are_none(self, test_dataframe):
         fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.start_date[1] is None
-        assert fixed_dates.start_date[3] is None
-        assert False  # these tests need to be re-written to mock the underlying functionality
 
-    def test_invalid_end_dates_are_none(self, test_dataframe):
-        fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.end_date[1] is None
-        assert fixed_dates.end_date[3] is None
+        expected_start_dates = pd.Series(['1999-05-30', '2012-07-14'])
+        expected_end_dates = pd.Series(['2009-04-07', '2000-01-01'])
+        expected_date_calls = [mock.call('5/30/1999'),
+                               mock.call('Apr  7 2009'),
+                               mock.call('2012-07-14'),
+                               mock.call('January 2000')
+                               ]
 
-    def test_start_date_extraction_succeeds(self, test_dataframe):
-        fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.start_date[0] == '1999-05-30'
+        assert fixed_dates.start_date.equals(expected_start_dates)
+        assert fixed_dates.end_date.equals(expected_end_dates)
+        mocked_date.assert_has_calls(expected_date_calls)
+        mocked_year.assert_not_called()
 
-    def test_end_date_extraction_succeeds(self, test_dataframe):
-        fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.end_date[0] == '2009-04-07'
+    @mock.patch('seed_csv_processing.extract_date')
+    @mock.patch('seed_csv_processing.extract_year')
+    def test_year_extraction_when_date_extraction_fails(self, mocked_year, mocked_date):
+        test_dataframe = pd.DataFrame({
+                'start_date': ['5/1999', 'hopefully 2012'],
+                'end_date': ['Apri 2009', '2000 or 2001']
+                })
+        mocked_date.return_value = None
+        mocked_year.side_effect = ['1999-01-01', '2009-01-01', '2012-01-01', '2000-01-01']
 
-    def test_start_date_year_extraction_when_date_extraction_fails(self, test_dataframe):
         fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.start_date[2] == '2012-01-01'
 
-    def test_end_date_year_extraction_when_date_extraction_fails(self, test_dataframe):
+        expected_start_dates = pd.Series(['1999-01-01', '2012-01-01'])
+        expected_end_dates = pd.Series(['2009-01-01', '2000-01-01'])
+        expected_year_calls = [mock.call('5/1999'),
+                               mock.call('Apri 2009'),
+                               mock.call('hopefully 2012'),
+                               mock.call('2000 or 2001')
+                               ]
+
+        assert fixed_dates.start_date.equals(expected_start_dates)
+        assert fixed_dates.end_date.equals(expected_end_dates)
+        assert mocked_date.call_count == 4
+        mocked_year.assert_has_calls(expected_year_calls)
+
+    @mock.patch('seed_csv_processing.extract_date')
+    @mock.patch('seed_csv_processing.extract_year')
+    def test_start_and_end_date_are_none_if_no_match(self, mocked_year, mocked_date):
+        test_dataframe = pd.DataFrame({
+                'start_date': ['100/10', 'hopefully'],
+                'end_date': ['April', 'S000']
+                })
+        mocked_date.return_value = None
+        mocked_year.return_value = None
+
         fixed_dates = fix_dates(test_dataframe)
-        assert fixed_dates.end_date[2] == '2020-01-01'
+
+        expected_start_dates = pd.Series([None, None])
+        expected_end_dates = pd.Series([None, None])
+        expected_calls = [mock.call('100/10'),
+                          mock.call('April'),
+                          mock.call('hopefully'),
+                          mock.call('S000')
+                          ]
+
+        assert fixed_dates.start_date.equals(expected_start_dates)
+        assert fixed_dates.end_date.equals(expected_end_dates)
+        mocked_date.assert_has_calls(expected_calls)
+        mocked_year.assert_has_calls(expected_calls)
+
+    @mock.patch('seed_csv_processing.extract_date')
+    def test_original_dates_moved_to_renamed_columns(self, mocked_date):
+        test_dataframe = pd.DataFrame({
+                'start_date': ['5/30/1999', '2012-07-14'],
+                'end_date': ['Apr  7 2009', 'January 2000']
+                })
+        mocked_date.side_effect = ['1999-05-30', '2009-04-07', '2012-07-14', '2000-01-01']
+
+        fixed_dates = fix_dates(test_dataframe)
+
+        expected_start_dates = pd.Series(['5/30/1999', '2012-07-14'])
+        expected_end_dates = pd.Series(['Apr  7 2009', 'January 2000'])
+
+        assert fixed_dates.original_start_date.equals(expected_start_dates)
+        assert fixed_dates.original_end_date.equals(expected_end_dates)
 
 
 class TestGeocoding():
@@ -143,10 +199,10 @@ class TestGeocoding():
     def test_coordindates_of_first_result_extracted_from_json_with_multiple_results(self, mocked_request):
         mocked_response = mock.Mock()
         mocked_response.json.return_value = [
-                {'lat': '123', 'lon': '456'},
-                {'lat': '111', 'lon': '222'},
-                {'lat': '777', 'lon': '888'}
-                ]
+                    {'lat': '123', 'lon': '456'},
+                    {'lat': '111', 'lon': '222'},
+                    {'lat': '777', 'lon': '888'}
+                    ]
         mocked_request.return_value = mocked_response
         assert geocode('best match') == {'lat': '123', 'lon': '456'}
 
@@ -155,31 +211,132 @@ class TestGeocodeDataFrame():
     @staticmethod
     @pytest.fixture
     def test_dataframe():
-        data = pd.DataFrame({
-            'index': [0, 1, 2, 3, 4, 5, 6],
-            'city': ['London', 'Brussels', 'London', 'Sheffield', 'Manchester', 'Jamaica', 'London'],
-            'country': ['UK', 'Belgium', 'United Kingdom', 'United Kingdom', 'UK', 'United States', 'UK']
-            })
-        return data
+        df = pd.DataFrame({
+                'index': [0, 1, 2],
+                'city': ['London', 'Sheffield', 'Brussels'],
+                'country': ['UK', 'United Kingdom', 'Belgium'],
+                })
+        return df
 
     def test_merge_with_existing_file(self, test_dataframe):
         with StringIO() as existing_file:
             existing_data = pd.DataFrame({
-                'city': ['London', 'Sheffield', 'Brussels'],
-                'country': ['UK', 'United Kingdom', 'Belgium'],
+                'city': ['London', 'Brussels', 'Sheffield'],
+                'country': ['UK', 'Belgium', 'United Kingdom'],
                 'coordinates': [{'lat': 1.4, 'lon': 2.4}, {'lat': 1.3, 'lon': 2.3}, {'lat': 1.2, 'lon': 2.2}]
                 })
             existing_data.to_json(existing_file, orient='records')
             merged_dataframes = geocode_dataframe(test_dataframe, existing_file=existing_file.getvalue())
+
         assert merged_dataframes.coordinates[0] == {'lat': 1.4, 'lon': 2.4}
         assert merged_dataframes.coordinates[1] == {'lat': 1.2, 'lon': 2.2}
-        assert merged_dataframes.coordinates[3] == {'lat': 1.3, 'lon': 2.3}
+        assert merged_dataframes.coordinates[2] == {'lat': 1.3, 'lon': 2.3}
 
-    def test_request_exception_doesnt_crash_process(self):
-        pass
+    @mock.patch('seed_csv_processing.geocode')
+    def test_underlying_geocoding_function_called_with_city_country(self, mocked_geocode, test_dataframe):
+        mocked_geocode.side_effect = ['cat', 'dog', 'squirrel']
 
-    def test_fall_back_to_query_method(self):
-        pass
+        with StringIO() as temp_out:
+            geocoded_dataframe = geocode_dataframe(test_dataframe, out_file=temp_out)
 
-    def test_duplicates_are_only_geocoded_once(self):
-        pass
+        expected_dataframe = pd.DataFrame({
+                'index': [0, 1, 2],
+                'city': ['London', 'Sheffield', 'Brussels'],
+                'country': ['UK', 'United Kingdom', 'Belgium'],
+                'coordinates': ['cat', 'dog', 'squirrel']
+                })
+        expected_calls = [mock.call(city='London', country='UK'),
+                          mock.call(city='Sheffield', country='United Kingdom'),
+                          mock.call(city='Brussels', country='Belgium')
+                          ]
+
+        assert geocoded_dataframe.equals(expected_dataframe)
+        mocked_geocode.assert_has_calls(expected_calls)
+
+    @mock.patch('seed_csv_processing.geocode')
+    def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode, test_dataframe):
+        mocked_geocode.side_effect = [None, 'cat', None, 'dog', None, 'squirrel']
+        with StringIO() as temp_out:
+            geocoded_dataframe = geocode_dataframe(test_dataframe, out_file=temp_out)
+
+        expected_dataframe = pd.DataFrame({
+                'index': [0, 1, 2],
+                'city': ['London', 'Sheffield', 'Brussels'],
+                'country': ['UK', 'United Kingdom', 'Belgium'],
+                'coordinates': ['cat', 'dog', 'squirrel']
+                })
+        expected_calls = [mock.call(city='London', country='UK'),
+                          mock.call('London+UK'),
+                          mock.call(city='Sheffield', country='United Kingdom'),
+                          mock.call('Sheffield+United Kingdom'),
+                          mock.call(city='Brussels', country='Belgium'),
+                          mock.call('Brussels+Belgium')
+                          ]
+
+        assert geocoded_dataframe.equals(expected_dataframe)
+        mocked_geocode.assert_has_calls(expected_calls)
+
+    @mock.patch('seed_csv_processing.geocode')
+    def test_time_between_calls_not_less_than_1_second(self, mocked_geocode, test_dataframe):
+        successful_request = iter([False, False, False, True, True])
+
+        def side_effect(*args, **kwargs):
+            if next(successful_request):
+                return time.time()
+            return None
+
+        mocked_geocode.side_effect = side_effect
+        start_time = time.time()
+        with StringIO() as temp_out:
+            geocoded_dataframe = geocode_dataframe(test_dataframe, out_file=temp_out)
+
+        assert geocoded_dataframe.coordinates[0] is None
+        assert geocoded_dataframe.coordinates[1] > start_time - 3
+        assert geocoded_dataframe.coordinates[2] > start_time - 4
+
+    @mock.patch('seed_csv_processing.geocode')
+    def test_request_exception_doesnt_crash_process(self, mocked_geocode, test_dataframe):
+        request_exceptions = iter([requests.exceptions.Timeout(),
+                                   requests.exceptions.ConnectionError(),
+                                   requests.exceptions.ConnectTimeout()
+                                   ])
+
+        def side_effect(*args, **kwargs):
+            raise next(request_exceptions)
+
+        mocked_geocode.side_effect = side_effect
+        try:
+            with StringIO() as temp_out:
+                geocoded_dataframe = geocode_dataframe(test_dataframe, out_file=temp_out)
+        except Exception as e:
+            pytest.fail(str(e))
+
+        expected_dataframe = pd.DataFrame({
+                'index': [0, 1, 2],
+                'city': ['London', 'Sheffield', 'Brussels'],
+                'country': ['UK', 'United Kingdom', 'Belgium'],
+                'coordinates': [None, None, None]
+                })
+        assert geocoded_dataframe.equals(expected_dataframe)
+        assert mocked_geocode.call_count == 3
+
+    @mock.patch('seed_csv_processing.geocode')
+    def test_duplicates_are_only_geocoded_once(self, mocked_geocode):
+        test_dataframe = pd.DataFrame({
+                'index': [0, 1, 2, 3],
+                'city': ['London', 'Brussels', 'London', 'Brussels'],
+                'country': ['UK', 'Belgium', 'UK', 'Belgium']
+                })
+
+        mocked_geocode.side_effect = ['LON', 'BRU']
+        with StringIO() as temp_out:
+            geocoded_dataframe = geocode_dataframe(test_dataframe, out_file=temp_out)
+
+        expected_dataframe = pd.DataFrame({
+                'index': [0, 1, 2, 3],
+                'city': ['London', 'Brussels', 'London', 'Brussels'],
+                'country': ['UK', 'Belgium', 'UK', 'Belgium'],
+                'coordinates': ['LON', 'BRU', 'LON', 'BRU']
+                })
+        assert geocoded_dataframe.equals(expected_dataframe)
+        assert mocked_geocode.call_count == 2
