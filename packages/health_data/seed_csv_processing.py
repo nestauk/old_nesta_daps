@@ -17,7 +17,7 @@ logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
 
 def extract_year(date):
     '''
-    Use a regex search for 4 digits in a row to identify the year.
+    Use search for 4 digits in a row to identify the year and return as YYYY-01-01.
 
     Args:
         date (str): The full date string.
@@ -70,26 +70,19 @@ def fix_dates(df):
     whole dataframe.
 
     Returns a dataframe with the original start_date and end_date columns
-    appended with 'original' and the fixed data taking the place of the
+    appended with 'original' and the fixed dates taking the place of the
     original columns.
 
     Args:
         df (DataFrame): the pandas dataframe with the dates to be processed.
     '''
-    df = df.rename(columns={'start_date': 'original_start_date', 'end_date': 'original_end_date'})
+    df = df.rename(columns={'start_date': 'original_start_date',
+                            'end_date': 'original_end_date'})
     df['start_date'], df['end_date'] = None, None
     for idx, row in df.iterrows():
-        start_date = extract_date(row.original_start_date)
-        if start_date:
-            row.start_date = start_date
-        else:
-            row.start_date = extract_year(row.original_start_date)
+        row.start_date = extract_date(row.original_start_date) or extract_year(row.original_start_date)
+        row.end_date = extract_date(row.original_end_date) or extract_year(row.original_end_date)
 
-        end_date = extract_date(row.original_end_date)
-        if end_date:
-            row.end_date = end_date
-        else:
-            row.end_date = extract_year(row.original_end_date)
     return df
 
 
@@ -127,16 +120,17 @@ def geocode(query=None, city=None, country=None):
         return {'lat': lat, 'lon': lon}
 
 
-def geocode_dataframe(df, out_file='geocoded_cities.csv', existing_file=None):
+def geocode_dataframe(df, out_file='geocoded_cities.json', existing_file=None):
     '''
     A wrapper for the geocode function to process a supplied dataframe using
     the city and country.
 
-    Returns a dataframe with a 'coordinated' column appended.
+    Returns a dataframe with a 'coordinates' column appended.
 
     Args:
         df (dataframe): a dataframe containing city and country fields.
-        existing_file (str): local file that has previously been geocoded.
+        out_file (str): local file path to store the geocoded json.
+        existing_file (str): path of local file that has previously been geocoded.
     '''
     if existing_file:
         deduped_locations = pd.read_json(existing_file, orient='records')
@@ -147,29 +141,18 @@ def geocode_dataframe(df, out_file='geocoded_cities.csv', existing_file=None):
         for idx, row in deduped_locations.iterrows():
             try:
                 coordinates = geocode(city=row['city'], country=row['country'])
-                logging.info(f"coordinates for {row['city']}: {coordinates}")
+                if not coordinates:
+                    time.sleep(1)
+                    logging.info(f"retry {row['city']} with query method")
+                    coordinates = geocode(f"{row['city']}+{row['country']}")
             except requests.exceptions.RequestException as e:
-                logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
                 logging.exception(e)
+            else:
+                row['coordinates'] = coordinates
+                logging.info(f"coordinates for {row['city']}: {coordinates}")
             finally:
                 time.sleep(1)  # respect the OSM api usage limits
 
-            if not coordinates:
-                # retry with the query method
-                try:
-                    query = f"{row['city']}+{row['country']}"
-                    coordinates = geocode(query)
-                    logging.info(f"coordinates for {row['city']}: {coordinates}")
-                except requests.exceptions.RequestException as e:
-                    logging.error(f"id {idx} failed to geocode {row['city']}:{row['country']}")
-                    logging.exception(e)
-                finally:
-                    time.sleep(1)  # respect the OSM api usage limits
-
-            row['coordinates'] = coordinates
-            # # testing
-            # if idx > 12:
-            #     break
         deduped_locations.to_json(out_file, orient='records')  # just in case...
 
     df = pd.merge(df, deduped_locations, how='left', left_on=['city', 'country'], right_on=['city', 'country'])
@@ -181,4 +164,4 @@ if __name__ == "__main__":
     df = get_csv_data()
     df = geocode_dataframe(df)
     df = fix_dates(df)
-    df.to_csv('world_reporter_inputs_v2.csv')
+    df.to_csv('world_reporter_inputs_processed.csv')
