@@ -141,7 +141,7 @@ def geocode_dataframe(df, out_file='geocoded_cities.json', existing_file=None):
         for idx, row in deduped_locations.iterrows():
             try:
                 coordinates = geocode(city=row['city'], country=row['country'])
-                if not coordinates:
+                if coordinates is None:
                     time.sleep(1)
                     logging.info(f"retry {row['city']} with query method")
                     coordinates = geocode(f"{row['city']}+{row['country']}")
