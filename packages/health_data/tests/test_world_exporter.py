@@ -1,19 +1,9 @@
 import unittest
-from world_reporter import get_csv_data
-from world_reporter import get_abstract
-from pyvirtualdisplay import Display
+from world_exporter import get_csv_data
+from world_exporter import get_abstract
+
 
 class TestWorldReporter(unittest.TestCase):
-    
-    def setUp(self):
-        '''Selenium won't work unless a display is hanging about'''
-        self.display = Display(visible=0, size=(1366, 768))
-        self.display.start()
-
-        
-    def tearDown(self):
-        self.display.stop()
-
     
     def test_get_abstract(self):
         '''Test whether the website is still up and running'''
