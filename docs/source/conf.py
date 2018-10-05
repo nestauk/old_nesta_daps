@@ -15,8 +15,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../../'))
-sys.path.insert(0, os.path.abspath('../../production'))
+sys.path.insert(0, os.path.abspath('../../nesta/'))
+sys.path.insert(0, os.path.abspath('../../nesta/production'))
 
 
 # -- Project information -----------------------------------------------------
