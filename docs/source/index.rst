@@ -9,13 +9,13 @@
    :maxdepth: 3
    :caption: Contents:
   
-   packages
-   production
+   nesta.packages
+   nesta.production
 
 
 	     
-.. include:: ../../packages/README.rst
-.. include:: ../../production/README.rst
+.. include:: ../../nesta/packages/README.rst
+.. include:: ../../nesta/production/README.rst
 	   
 
 License
