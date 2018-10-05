@@ -2,10 +2,10 @@
 World Reporter
 ==============
 
-Extract all of the World Reporter data (specifically abstracts). 
+Extract all of the World Reporter data (specifically abstracts).
 We use a seed list of URLs (one for each abstract) by
 selecting all years and exporting a CSV from
-https://worldreport.nih.gov/app/#!/. Note that this process 
+https://worldreport.nih.gov/app/#!/. Note that this process
 is super slow and so that step was performed in browser
 manually.
 
@@ -24,7 +24,7 @@ from selenium.common.exceptions import WebDriverException
 import boto3
 import pandas as pd
 from io import BytesIO
-from retrying import retry
+# from retrying import retry
 import time
 import traceback
 
@@ -35,6 +35,7 @@ ELEMENT_EXISTS = EC.visibility_of_element_located((By.CSS_SELECTOR,
                                                    ("#dataViewTable > tbody > "
                                                     "tr.expanded-view.ng-scope > "
                                                     "td > div > div > p")))
+
 
 #@retry(wait_random_min=20, wait_random_max=150, stop_max_attempt_number=10)
 def get_abstract(url):
@@ -81,15 +82,15 @@ def get_csv_data():
     obj = s3.Object("nesta-inputs", "world_reporter_inputs.csv")
     bio = BytesIO(obj.get()['Body'].read())
     df = pd.read_csv(bio)
-    df.columns = [col.replace(" ","_").lower() for col in df.columns]
+    df.columns = [col.replace(" ", "_").lower() for col in df.columns]
     # Create a field ready for the abstract text
     df["abstract_text"] = None
     return df
-    
-    
+
+
 if __name__ == "__main__":
     df = get_csv_data()
-    
+
     # Start the display
     display = Display(visible=0, size=(1366, 768))
     display.start()
@@ -101,7 +102,7 @@ if __name__ == "__main__":
         condition = ~pd.isnull(df["abstract_text"])
         if condition.sum() > 2:
             break
-            
+
     # Tidy up
     display.stop()
 
