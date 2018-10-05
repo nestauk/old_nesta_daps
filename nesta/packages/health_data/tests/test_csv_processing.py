@@ -5,11 +5,11 @@ import pytest
 import requests
 import time
 
-from seed_csv_processing import extract_date
-from seed_csv_processing import extract_year
-from seed_csv_processing import fix_dates
-from seed_csv_processing import geocode
-from seed_csv_processing import geocode_dataframe
+from nesta.packages.health_data.seed_csv_processing import extract_date
+from nesta.packages.health_data.seed_csv_processing import extract_year
+from nesta.packages.health_data.seed_csv_processing import fix_dates
+from nesta.packages.health_data.seed_csv_processing import geocode
+from nesta.packages.health_data.seed_csv_processing import geocode_dataframe
 
 
 class TestExtractDateSuccess():
@@ -61,8 +61,8 @@ class TestYearExtraction():
 
 
 class TestDateFixDataFrame():
-    @mock.patch('seed_csv_processing.extract_date')
-    @mock.patch('seed_csv_processing.extract_year')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_date')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_year')
     def test_start_and_end_date_extraction_succeeds(self, mocked_year, mocked_date):
         test_dataframe = pd.DataFrame({
                 'start_date': ['5/30/1999', '2012-07-14'],
@@ -85,8 +85,8 @@ class TestDateFixDataFrame():
         mocked_date.assert_has_calls(expected_date_calls)
         mocked_year.assert_not_called()
 
-    @mock.patch('seed_csv_processing.extract_date')
-    @mock.patch('seed_csv_processing.extract_year')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_date')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_year')
     def test_year_extraction_when_date_extraction_fails(self, mocked_year, mocked_date):
         test_dataframe = pd.DataFrame({
                 'start_date': ['5/1999', 'hopefully 2012'],
@@ -110,8 +110,8 @@ class TestDateFixDataFrame():
         assert mocked_date.call_count == 4
         mocked_year.assert_has_calls(expected_year_calls)
 
-    @mock.patch('seed_csv_processing.extract_date')
-    @mock.patch('seed_csv_processing.extract_year')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_date')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_year')
     def test_start_and_end_date_are_none_if_no_match(self, mocked_year, mocked_date):
         test_dataframe = pd.DataFrame({
                 'start_date': ['100/10', 'hopefully'],
@@ -135,7 +135,7 @@ class TestDateFixDataFrame():
         mocked_date.assert_has_calls(expected_calls)
         mocked_year.assert_has_calls(expected_calls)
 
-    @mock.patch('seed_csv_processing.extract_date')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.extract_date')
     def test_original_dates_moved_to_renamed_columns(self, mocked_date):
         test_dataframe = pd.DataFrame({
                 'start_date': ['5/30/1999', '2012-07-14'],
@@ -165,37 +165,37 @@ class TestGeocoding():
             geocode()
         assert "Missing argument: query or city and country required" in str(e.value)
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_request_includes_user_agent_in_header(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
         geocode('a')
         assert mocked_request.call_args[1]['headers'] == {'User-Agent': 'Nesta health data geocode'}
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_url_correct_with_city_and_country(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
         geocode(city='london', country='UK')
         assert "https://nominatim.openstreetmap.org/search?city=london&country=UK&format=json" in mocked_request.call_args[0]
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_url_correct_with_query(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
         geocode('my+place')
         assert "https://nominatim.openstreetmap.org/search?q=my+place&format=json" in mocked_request.call_args[0]
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_none_returned_if_no_match(self, mocked_request):
         mocked_response = mock.Mock()
         mocked_response.json.return_value = []
         mocked_request.return_value = mocked_response
         assert geocode('nowhere') is None
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_coordinates_extracted_from_json_with_one_result(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
         assert geocode('somewhere') == {'lat': '12.923432', 'lon': '-75.234569'}
 
-    @mock.patch('seed_csv_processing.requests.get')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.requests.get')
     def test_coordindates_of_first_result_extracted_from_json_with_multiple_results(self, mocked_request):
         mocked_response = mock.Mock()
         mocked_response.json.return_value = [
@@ -232,7 +232,7 @@ class TestGeocodeDataFrame():
         assert merged_dataframes.coordinates[1] == {'lat': 1.2, 'lon': 2.2}
         assert merged_dataframes.coordinates[2] == {'lat': 1.3, 'lon': 2.3}
 
-    @mock.patch('seed_csv_processing.geocode')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.geocode')
     def test_underlying_geocoding_function_called_with_city_country(self, mocked_geocode, test_dataframe):
         mocked_geocode.side_effect = ['cat', 'dog', 'squirrel']
 
@@ -253,7 +253,7 @@ class TestGeocodeDataFrame():
         assert geocoded_dataframe.equals(expected_dataframe)
         mocked_geocode.assert_has_calls(expected_calls)
 
-    @mock.patch('seed_csv_processing.geocode')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.geocode')
     def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode, test_dataframe):
         mocked_geocode.side_effect = [None, 'cat', None, 'dog', None, 'squirrel']
         with StringIO() as temp_out:
@@ -276,7 +276,7 @@ class TestGeocodeDataFrame():
         assert geocoded_dataframe.equals(expected_dataframe)
         mocked_geocode.assert_has_calls(expected_calls)
 
-    @mock.patch('seed_csv_processing.geocode')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.geocode')
     def test_time_between_calls_not_less_than_1_second(self, mocked_geocode, test_dataframe):
         successful_request = iter([False, False, False, True, True])
 
@@ -294,7 +294,7 @@ class TestGeocodeDataFrame():
         assert geocoded_dataframe.coordinates[1] > start_time - 3
         assert geocoded_dataframe.coordinates[2] > start_time - 4
 
-    @mock.patch('seed_csv_processing.geocode')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.geocode')
     def test_request_exception_doesnt_crash_process(self, mocked_geocode, test_dataframe):
         request_exceptions = iter([requests.exceptions.Timeout(),
                                    requests.exceptions.ConnectionError(),
@@ -320,7 +320,7 @@ class TestGeocodeDataFrame():
         assert geocoded_dataframe.equals(expected_dataframe)
         assert mocked_geocode.call_count == 3
 
-    @mock.patch('seed_csv_processing.geocode')
+    @mock.patch('nesta.packages.health_data.seed_csv_processing.geocode')
     def test_duplicates_are_only_geocoded_once(self, mocked_geocode):
         test_dataframe = pd.DataFrame({
                 'index': [0, 1, 2, 3],
