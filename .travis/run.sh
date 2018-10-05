@@ -5,18 +5,18 @@ set -x
 
 # Setup test data
 TOPDIR=$PWD
-mkdir $TOPDIR/packages/meetup/data
-cd $TOPDIR/packages/meetup/data
+mkdir $TOPDIR/nesta/packages/meetup/data
+cd $TOPDIR/nesta/packages/meetup/data
 wget http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip
 unzip TM_WORLD_BORDERS_SIMPL-0.3.zip
 cd $TOPDIR
 
 # Set paths, and check they work
-export WORLD_BORDERS=$TOPDIR/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
+export WORLD_BORDERS=$TOPDIR/nesta/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp
 ls $WORLD_BORDERS
 
 # Run every test
-for TOPDIRNAME in production packages tools;
+for TOPDIRNAME in production packages;
 do
     TESTDIRS=$(find $TOPDIRNAME -name "test*" -type d)
     for TESTDIRNAME in $TESTDIRS;
