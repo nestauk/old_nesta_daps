@@ -7,6 +7,7 @@ install:
   - pip install -r requirements.txt
   - python -c "import sys; print(sys.path)"
 before_script:
+  - sudo rm -f /etc/boto.cfg
   - mysql -e 'CREATE DATABASE production_tests;'
   - mysql_upgrade -u root --force
   - sudo service mysql restart

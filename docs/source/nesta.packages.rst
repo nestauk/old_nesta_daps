@@ -11,7 +11,11 @@ Code and scripts
 .. toctree::
 
     nesta.packages.meetup
+    nesta.packages.health_data
     nesta.packages.nlp_utils
+    nesta.packages.geo_utils
+    nesta.packages.format_utils
+    nesta.packages.decorators
 
 
 Code auditing

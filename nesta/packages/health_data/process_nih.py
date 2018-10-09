@@ -1,5 +1,5 @@
 '''
-process_nih
+Process NIH
 ===========
 
 Data cleaning and processing procedures for the NIH World Reporter data.
