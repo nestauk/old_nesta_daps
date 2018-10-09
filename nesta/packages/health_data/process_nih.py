@@ -11,9 +11,9 @@ import logging
 import pandas as pd
 from retrying import retry
 from nesta.packages.decorators.ratelimit import ratelimit
-from nesta.packages.preprocess.datetools import extract_date
-from nesta.packages.preprocess.datetools import extract_year
-from nesta.packages.geotools.geocode import geocode
+from nesta.packages.format_utils.datetools import extract_date
+from nesta.packages.format_utils.datetools import extract_year
+from nesta.packages.geo_utils.geocode import geocode
 
 
 def _extract_date(date, date_format='%Y-%m-%d'):
@@ -78,8 +78,6 @@ def geocode_dataframe(df):
 
     Args:
         df (dataframe): a dataframe containing city and country fields.
-        out_file (str): local file path to store the geocoded json.
-        existing_file (str): path of local file that has previously been geocoded.
     Returns:
         a dataframe with a 'coordinates' column appended.
     '''
