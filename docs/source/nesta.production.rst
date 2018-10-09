@@ -30,4 +30,5 @@ Code and scripts
     nesta.production.orms    
     nesta.production.luigihacks
     nesta.production.scripts
+    nesta.production.elasticsearch
     nesta.production.troubleshooting

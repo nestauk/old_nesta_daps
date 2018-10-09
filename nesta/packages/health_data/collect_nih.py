@@ -1,6 +1,6 @@
 '''
-World ExPORTER
-==============
+Collect NIH
+===========
 
 Extract all of the NIH World RePORTER data via
 their static data dump. :code:`N_TABS` outputs are produced
