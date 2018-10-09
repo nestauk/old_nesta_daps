@@ -1,6 +1,6 @@
 '''
-World ExPORTER
-==============
+NIH data collection and processing
+==================================
 
 Luigi routine to collect NIH World RePORTER data
 via the World ExPORTER data dump. The routine
@@ -10,17 +10,20 @@ processing and indexing the data to ElasticSearch.
 
 import luigi
 import datetime
-from luigihacks import misctools
-from luigihacks.mysqldb import MySqlTarget
 import logging
-
-# LatestDataToMySQL dependencies
-from production.orms.orm_utils import get_mysql_engine
-from production.orms.orm_utils import get_class_by_tablename
-from production.orms.world_reporter_orm import Base
-from packages.health_data.world_exporter import get_data_urls
-from packages.health_data.world_exporter import iterrows
 from sqlalchemy.orm import sessionmaker
+
+from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+
+from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import get_class_by_tablename
+from nesta.production.orms.world_reporter_orm import Base
+from nesta.packages.health_data.collect_nih import get_data_urls
+from nesta.packages.health_data.collect_nih import iterrows
+from nesta.packages.health_data.process_nih import geocode_dataframe
+from nesta.packages.health_data.process_nih import _extract_date
+
 
 
 class LatestDataToMySQL(luigi.Task):
@@ -39,7 +42,7 @@ class LatestDataToMySQL(luigi.Task):
         '''Points to the output database engine'''
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = "production" if self.production else "dev"
-        db_config["table"] = "WorldExporter <dummy>"  # Note, not a real table
+        db_config["table"] = "NIH <dummy>"  # Note, not a real table
         update_id = "LatestDataToMySQL_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
