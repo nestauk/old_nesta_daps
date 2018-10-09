@@ -8,12 +8,12 @@ find all groups associated with all members of the
 original set of groups.
 '''
 
-from meetup.country_groups import get_coordinate_data
-from meetup.country_groups import assert_iso2_key
-from luigihacks.mysqldb import MySqlTarget
-from luigihacks import misctools
-from luigihacks import autobatch
-from luigihacks import s3
+from nesta.packages.meetup.country_groups import get_coordinate_data
+from nesta.packages.meetup.country_groups import assert_iso2_key
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks import s3
 import luigi
 import datetime
 import json
@@ -356,11 +356,11 @@ class RootTask(luigi.WrapperTask):
         yield GroupDetailsTask(iso2=self.iso2,
                                category=self.category,
                                _routine_id=_routine_id,
-                               batchable=("/home/ec2-user/nesta/production/"
+                               batchable=("/home/ec2-user/nesta/nesta/production/"
                                           "batchables/meetup/group_details/"),
-                               env_files=["/home/ec2-user/nesta/production/config/mysqldb.config",
-                                          "/home/ec2-user/nesta/production/orms/",
-                                          "/home/ec2-user/nesta/packages/meetup/"],
+                               env_files=["/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
+                                          "/home/ec2-user/nesta/nesta/production/orms/",
+                                          "/home/ec2-user/nesta/nesta/packages/meetup/"],
                                job_def="py36_amzn1_image",
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
