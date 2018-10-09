@@ -18,7 +18,7 @@ ls $WORLD_BORDERS
 # Run every test
 for TOPDIRNAME in production packages;
 do
-    TESTDIRS=$(find $TOPDIRNAME -name "test*" -type d)
+    TESTDIRS=$(find nesta/$TOPDIRNAME -name "test*" -type d)
     for TESTDIRNAME in $TESTDIRS;
     do
 	python -m unittest discover $TESTDIRNAME
