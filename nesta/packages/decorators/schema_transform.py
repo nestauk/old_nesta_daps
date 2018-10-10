@@ -1,3 +1,19 @@
+'''
+schema_transform
+================
+
+Apply a field name transformation to a data output from the wrapped function,
+such that specified field names are transformed and unspecified fields are dropped.
+A valid file would be formatted as shown:
+
+[{"tier_0": "bad_col", "tier_1": "good_col"},
+{"tier_0": "another_bad_col", "tier_1": "another_good_col"},
+...]
+
+where :code:`tier_0` and :code:`tier_1` correspond to :code:`from_key` and :code:`to_key`
+in the below documentation.    
+'''
+
 import pandas
 import json
 
@@ -7,22 +23,9 @@ def load_transformer(filename, from_key, to_key):
     transformer = {row[from_key]:row[to_key] for row in _data}
     return transformer
 
+
 def schema_transform(filename, from_key, to_key):
     '''
-    schema_transform
-    ----------------
-    
-    Apply a field name transformation to a data output from the wrapped function,
-    such that specified field names are transformed and unspecified fields are dropped.
-    A valid file would be formatted as shown:
-    
-    [{"tier_0": "bad_col", "tier_1": "good_col"},
-     {"tier_0": "another_bad_col", "tier_1": "another_good_col"},
-    ...]
-    
-    where :code:`tier_0` and :code:`tier_1` correspond to :code:`from_key` and :code:`to_key`
-    in the below documentation.
-
     Args:
         filename (str): A record-oriented JSON file path mapping field names
                         denoted by from :code:`from_key` and :code:`to_key`.
