@@ -1,0 +1,16 @@
+[
+    {
+	"term": "firstName",
+	"values": ["id", "year", "placeName", "title", "terms",
+		   "textBody", "date", "cost", "coordinate"]
+    },
+    {
+	"term": "middleName",
+	"values": ["of", "fiscal", "city", "country", "zipcode", "state", "total",
+		   "official", "start", "end", "descriptive", "abstract", "duns"]
+    },
+    {
+	"term": "lastName",
+	"values": ["project", "funding", "organisation"]
+    }
+]
