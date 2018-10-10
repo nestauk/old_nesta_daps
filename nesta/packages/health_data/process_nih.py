@@ -10,10 +10,12 @@ the formatting of date fields is unified.
 import logging
 import pandas as pd
 from retrying import retry
+
 from nesta.packages.decorators.ratelimit import ratelimit
 from nesta.packages.format_utils.datetools import extract_date
 from nesta.packages.format_utils.datetools import extract_year
 from nesta.packages.geo_utils.geocode import geocode
+from nesta.packages.geo_utils.country_iso_code import country_iso_code
 
 
 def _extract_date(date, date_format='%Y-%m-%d'):
@@ -98,6 +100,32 @@ def geocode_dataframe(df):
     return pd.merge(df, _df, how='left', left_on=in_cols, right_on=in_cols)
 
 
+def country_iso_code_dataframe(df):
+    '''
+    A wrapper for the country_iso_code function to apply it to a whole dataframe,
+    using the country.
+
+    Args:
+        df (dataframe): a dataframe containing a country field.
+    Returns:
+        a dataframe with country_alpha_2, country_alpha_3, country_numeric columns appended.
+    '''
+    df['country_alpha_2'], df['country_alpha_3'], df['country_numeric'] = None, None, None
+
+    for idx, row in df.iterrows():
+        try:
+            country_codes = country_iso_code(row['country'])
+        except KeyError:
+            # some fallback method could go here
+            pass
+        else:
+            df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
+            df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
+            df.at[idx, 'country_numeric'] = country_codes.numeric
+
+    return df
+
+
 if __name__ == "__main__":
     # Local imports and log settings
     from sqlalchemy.orm import sessionmaker
@@ -123,8 +151,11 @@ if __name__ == "__main__":
 
     # Geocode the dataframe
     df = geocode_dataframe(df)
+    # clean start and end dates
     for col in ["project_start", "project_end"]:
         df[col] = df[col].apply(_extract_date)
+    # append iso codes for country
+    df = country_iso_code_dataframe(df)
     assert len(set(df.application_id)) == n_ids
     assert len(df) == n
         
