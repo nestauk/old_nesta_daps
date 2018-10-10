@@ -27,7 +27,8 @@ Code and scripts
 
     nesta.production.routines
     nesta.production.batchables
-    nesta.production.orms    
+    nesta.production.orms   
+    nesta.production.schemas 
     nesta.production.luigihacks
     nesta.production.scripts
     nesta.production.troubleshooting
