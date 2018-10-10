@@ -12,6 +12,8 @@ import luigi
 import datetime
 import logging
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import and_
+from sqlalchemy import exists as sql_exists
 
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -24,6 +26,11 @@ from nesta.packages.health_data.collect_nih import iterrows
 from nesta.packages.health_data.process_nih import geocode_dataframe
 from nesta.packages.health_data.process_nih import _extract_date
 
+
+def exists(_class, **kwargs):
+    statements = [getattr(_class, pkey.name) == kwargs[pkey.name]
+                  for pkey in _class.__table__.primary_key.columns]
+    return sql_exists().where(and_(*statements))
 
 
 class LatestDataToMySQL(luigi.Task):
@@ -65,13 +72,14 @@ class LatestDataToMySQL(luigi.Task):
             # Commit the data
             Session = sessionmaker(engine)
             session = Session()
-            for url in urls:                
-                for row in iterrows(url):
-                    g = _class(**row)
-                    session.merge(g)
+            for url in urls:       
+                objs = [_class(**row) for row in iterrows(url)
+                        if len(row) > 0 and
+                        not session.query(exists(_class, **row)).scalar()]
+                session.bulk_save_objects(objs)
+                session.commit()
                 if not self.production:
-                    break
-            session.commit()
+                    break            
             session.close()
 
         # Mark the task as done
