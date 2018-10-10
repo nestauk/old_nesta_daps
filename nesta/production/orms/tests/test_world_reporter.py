@@ -9,6 +9,7 @@ from nesta.production.orms.world_reporter_orm import LinkTables
 from nesta.production.orms.orm_utils import get_mysql_engine
 from sqlalchemy.exc import IntegrityError
 
+
 class TestMeetup(unittest.TestCase):
     '''Currently just a placeholder test to check that the schema compiles'''
     engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
