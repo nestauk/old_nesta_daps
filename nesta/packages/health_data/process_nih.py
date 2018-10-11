@@ -22,11 +22,11 @@ def _extract_date(date, date_format='%Y-%m-%d'):
     '''
     Extract the date if a valid format exists, otherwise just extract the year
     and return {year}-01-01.
-    
+
     Args:
         date (str): Full date string, with unknown formatting
         date_format (str): Output format string
-    
+
     Returns:
         :code:`str` of date formatted according to date_format.
         Returns :code:`None` if not even a year is found.
@@ -103,7 +103,7 @@ def geocode_dataframe(df):
 def country_iso_code_dataframe(df):
     '''
     A wrapper for the country_iso_code function to apply it to a whole dataframe,
-    using the country.
+    using the country name.
 
     Args:
         df (dataframe): a dataframe containing a country field.
@@ -137,14 +137,14 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-    
+
     # Get first 30 rows, and strip off prefixes
     engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
-    cols = ['application_id', 'org_city', 'org_country', 
+    cols = ['application_id', 'org_city', 'org_country',
             'project_start', 'project_end']
     df = pd.read_sql('nih_projects', engine, columns=cols).head(30)
     df.columns = [c.lstrip('org_') for c in df.columns]
-    
+
     # For sense-checking later
     n = len(df)
     n_ids = len(set(df.application_id))
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     df = country_iso_code_dataframe(df)
     assert len(set(df.application_id)) == n_ids
     assert len(df) == n
-        
+
     # Print the results
     for _, row in df.iterrows():
         logging.info(dict(row))
