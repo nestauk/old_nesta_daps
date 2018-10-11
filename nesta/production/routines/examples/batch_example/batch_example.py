@@ -5,8 +5,8 @@ Batch Example
 An example of building a pipeline with batched tasks.
 '''
 
-from luigihacks import autobatch
-from luigihacks import s3
+from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks import s3
 import luigi
 import datetime
 import json
