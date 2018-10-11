@@ -10,21 +10,23 @@ the formatting of date fields is unified.
 import logging
 import pandas as pd
 from retrying import retry
+
 from nesta.packages.decorators.ratelimit import ratelimit
 from nesta.packages.format_utils.datetools import extract_date
 from nesta.packages.format_utils.datetools import extract_year
 from nesta.packages.geo_utils.geocode import geocode
+from nesta.packages.geo_utils.country_iso_code import country_iso_code
 
 
 def _extract_date(date, date_format='%Y-%m-%d'):
     '''
     Extract the date if a valid format exists, otherwise just extract the year
     and return {year}-01-01.
-    
+
     Args:
         date (str): Full date string, with unknown formatting
         date_format (str): Output format string
-    
+
     Returns:
         :code:`str` of date formatted according to date_format.
         Returns :code:`None` if not even a year is found.
@@ -98,6 +100,32 @@ def geocode_dataframe(df):
     return pd.merge(df, _df, how='left', left_on=in_cols, right_on=in_cols)
 
 
+def country_iso_code_dataframe(df):
+    '''
+    A wrapper for the country_iso_code function to apply it to a whole dataframe,
+    using the country name.
+
+    Args:
+        df (dataframe): a dataframe containing a country field.
+    Returns:
+        a dataframe with country_alpha_2, country_alpha_3, country_numeric columns appended.
+    '''
+    df['country_alpha_2'], df['country_alpha_3'], df['country_numeric'] = None, None, None
+
+    for idx, row in df.iterrows():
+        try:
+            country_codes = country_iso_code(row['country'])
+        except KeyError:
+            # some fallback method could go here
+            pass
+        else:
+            df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
+            df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
+            df.at[idx, 'country_numeric'] = country_codes.numeric
+
+    return df
+
+
 if __name__ == "__main__":
     # Local imports and log settings
     from sqlalchemy.orm import sessionmaker
@@ -109,25 +137,28 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-    
+
     # Get first 30 rows, and strip off prefixes
     engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
-    cols = ['application_id', 'org_city', 'org_country', 
+    cols = ['application_id', 'org_city', 'org_country',
             'project_start', 'project_end']
     df = pd.read_sql('nih_projects', engine, columns=cols).head(30)
     df.columns = [c.lstrip('org_') for c in df.columns]
-    
+
     # For sense-checking later
     n = len(df)
     n_ids = len(set(df.application_id))
 
     # Geocode the dataframe
     df = geocode_dataframe(df)
+    # clean start and end dates
     for col in ["project_start", "project_end"]:
         df[col] = df[col].apply(_extract_date)
+    # append iso codes for country
+    df = country_iso_code_dataframe(df)
     assert len(set(df.application_id)) == n_ids
     assert len(df) == n
-        
+
     # Print the results
     for _, row in df.iterrows():
         logging.info(dict(row))
