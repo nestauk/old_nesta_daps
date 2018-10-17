@@ -29,9 +29,9 @@ def get_group_details(group_urlname, max_results):
         return {}
     group_info = r.json()
     if 'errors' in group_info:
-        #for err in group_info['errors']:
-        #    if err["code"] == "group_error":
-        #        return {}
+        for err in group_info['errors']:
+            if err["code"] == "group_error":
+                return {}
         raise NoGroupFound(group_urlname)
     return group_info
     
