@@ -5,12 +5,12 @@ of AWS batch tasks; as a single Luigi Task.
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
-from luigihacks import batchclient
+from nesta.production.luigihacks import batchclient
 from subprocess import check_output
 from subprocess import CalledProcessError
 import time
 import luigi
-from luigihacks.misctools import get_config
+from nesta.production.luigihacks.misctools import get_config
 import logging
 
 # Define a global timeout, set to 95% of the timeout time
