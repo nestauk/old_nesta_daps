@@ -4,6 +4,8 @@ from sqlalchemy.engine.url import URL
 import pymysql
 import os
 from sqlalchemy.exc import OperationalError
+import logging
+import time
 
 
 def get_class_by_tablename(Base, tablename):
@@ -31,7 +33,7 @@ def try_until_allowed(f, *args, **kwargs):
         try:
             value = f(*args, **kwargs)
         except OperationalError:
-            logging.warning("Waiting on exception {}".format(exception))
+            logging.warning("Waiting on OperationalError")
             time.sleep(5)
             continue
         else:

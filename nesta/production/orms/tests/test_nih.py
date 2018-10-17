@@ -1,11 +1,11 @@
 import unittest
 from sqlalchemy.orm import sessionmaker
-from nesta.production.orms.world_reporter_orm import Base
-from nesta.production.orms.world_reporter_orm import Projects
-from nesta.production.orms.world_reporter_orm import Abstracts
-from nesta.production.orms.world_reporter_orm import Publications
-from nesta.production.orms.world_reporter_orm import Patents
-from nesta.production.orms.world_reporter_orm import LinkTables
+from nesta.production.orms.nih_orm import Base
+from nesta.production.orms.nih_orm import Projects
+from nesta.production.orms.nih_orm import Abstracts
+from nesta.production.orms.nih_orm import Publications
+from nesta.production.orms.nih_orm import Patents
+from nesta.production.orms.nih_orm import LinkTables
 from nesta.production.orms.orm_utils import get_mysql_engine
 from sqlalchemy.exc import IntegrityError
 
