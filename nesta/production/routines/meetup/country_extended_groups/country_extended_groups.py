@@ -28,7 +28,7 @@ import boto3
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-
+BATCHABLE = "/home/ec2-user/nesta/nesta/production/batchables/meetup/{}/"
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -112,8 +112,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
         return CountryGroupsTask(iso2=self.iso2, 
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/country_groups/"),
+                                 batchable=BATCHABLE.format("country_groups"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,                                 
                                  job_name="CountryGroups-%s" % self._routine_id,
@@ -185,8 +184,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
         return GroupsMembersTask(iso2=self.iso2,
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/groups_members/"),
+                                 batchable=BATCHABLE.format("groups_members"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,
                                  job_name="GroupsMembers-%s" % self._routine_id,      
@@ -275,8 +273,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
         return MembersGroupsTask(iso2=self.iso2,
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/members_groups/"),
+                                 batchable=BATCHABLE.format("members_groups"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,
                                  job_name="MembersGroups-%s" % self._routine_id,
@@ -356,11 +353,9 @@ class RootTask(luigi.WrapperTask):
         yield GroupDetailsTask(iso2=self.iso2,
                                category=self.category,
                                _routine_id=_routine_id,
-                               batchable=("/home/ec2-user/nesta/nesta/production/"
-                                          "batchables/meetup/group_details/"),
-                               env_files=["/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
-                                          "/home/ec2-user/nesta/nesta/production/orms/",
-                                          "/home/ec2-user/nesta/nesta/packages/meetup/"],
+                               batchable=BATCHABLE.format("group_details"),
+                               env_files=["/home/ec2-user/nesta/nesta",
+                                          "/home/ec2-user/nesta/nesta/production/config/mysqldb.config"],
                                job_def="py36_amzn1_image",
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
