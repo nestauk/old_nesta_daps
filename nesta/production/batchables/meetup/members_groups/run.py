@@ -1,10 +1,10 @@
 import logging
-from meetup.members_groups import get_member_details
-from meetup.members_groups import get_member_groups
-from orms.orm_utils import get_mysql_engine
-from orms.orm_utils import try_until_allowed
-from orms.meetup_orm import Base
-from orms.meetup_orm import GroupMember
+from nesta.packages.meetup.members_groups import get_member_details
+from nesta.packages.meetup.members_groups import get_member_groups
+from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import try_until_allowed
+from nesta.production.orms.meetup_orm import Base
+from nesta.production.orms.meetup_orm import GroupMember
 from sqlalchemy import and_
 from sqlalchemy.orm import sessionmaker
 import boto3

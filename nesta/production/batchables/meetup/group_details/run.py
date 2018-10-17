@@ -1,10 +1,10 @@
 import logging
-from meetup.group_details import get_group_details
-from meetup.meetup_utils import flatten_data
-from orms.orm_utils import get_mysql_engine
-from orms.orm_utils import try_until_allowed
-from orms.meetup_orm import Base
-from orms.meetup_orm import Group
+from nesta.packages.meetup.group_details import get_group_details
+from nesta.packages.meetup.meetup_utils import flatten_data
+from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import try_until_allowed
+from nesta.production.orms.meetup_orm import Base
+from nesta.production.orms.meetup_orm import Group
 from sqlalchemy.orm import sessionmaker
 import boto3
 from urllib.parse import urlsplit
