@@ -24,7 +24,6 @@ def get_group_details(group_urlname, max_results, avoid_exception=True):
     params['key'] = meetup_utils.get_api_key()
     r = requests.get('https://api.meetup.com/{}'.format(group_urlname),
                      params=params)
-
     if r.text == "":
         return {}
     group_info = r.json()
