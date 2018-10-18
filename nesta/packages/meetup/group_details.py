@@ -12,7 +12,7 @@ class NoGroupFound(Exception):
 
 
 @retry(wait_random_min=200, wait_random_max=600, stop_max_attempt_number=10)
-def get_group_details(group_urlname, max_results):
+def get_group_details(group_urlname, max_results, avoid_exception=True):
     '''Hit the Meetup API for the details of a specified groups.
     Args:
         group_urlname (str): A Meetup group urlname
@@ -29,9 +29,10 @@ def get_group_details(group_urlname, max_results):
         return {}
     group_info = r.json()
     if 'errors' in group_info:
-        for err in group_info['errors']:
-            if err["code"] == "group_error":
-                return {}
+        if avoid_exception:
+            for err in group_info['errors']:
+                if err["code"] == "group_error":
+                    return {}
         raise NoGroupFound(group_urlname)
     return group_info
     
