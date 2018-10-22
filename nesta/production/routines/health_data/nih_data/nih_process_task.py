@@ -13,10 +13,14 @@ import datetime
 import logging
 from luigi.contrib.esindex import ElasticsearchTarget
 import pandas as pd
+from sqlalchemy.orm import sessionmaker
 
 from nih_collect_task import CollectTask
 from nesta.production.luigihacks import autobatch
+from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.world_reporter_orm import Projects
 
+BATCH_SIZE = 50000
 
 class ProcessTask(autobatch.AutoBatchTask):
     '''A dummy root task, which collects the database configurations
@@ -41,21 +45,49 @@ class ProcessTask(autobatch.AutoBatchTask):
                           production=self.production)
 
     def output(self):
-        # to Elasticsearch. requires:
-            # local config file
-            # index and mapping set up in ES
-
         '''Points to the input database target'''
         update_id = "worldreporter-%s" % self._routine_id
-        db_config = misctools.get_config("es.config", "es")
-        return ElasticsearchTarget(update_id=update_id,
-                                   index=self.index,
-                                   doc_type=self.doc_type,
-                                   extra_elasticsearch_args={"scheme":"https"},
-                                   **db_config)
+        db_config = misctools.get_config("mysqldb.config", "mysqldb")
+        db_config["database"] = "production"
+        db_config["table"] = "worldreporter"
+        return MySqlTarget(update_id=update_id, **db_config)
+
+    def batch_limits(self, query, batch_size, test=self.test):
+        '''Generates first and last ids from a query object, by batch size.'''
+        offset = 0
+        while True:
+            if test and (offset / batch_size > 1):
+                break
+            rows = query.order_by(Projects.application_id).filter(Projects.application_id > offset).limit(batch_size).all()
+            if len(rows) == 0:
+                break
+            first = rows[0].application_id
+            last = rows[-1].application_id
+            yield first, last
+            offset = last
+
 
     def prepare(self):
-        pass
+        '''add logic to check if done and include in params.'''
+        engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        project_query = session.query(Projects)
+
+        batches = self.batch_limits(project_query, BATCH_SIZE)
+        job_params = []
+        for start, end in batches:
+            params = {'start_index': start,
+                      'end_index': end,
+                      'config': "mysqldb_config",
+                      'db': 'production' if not self.test else 'dev'
+                      'outinfo': 'esconfig here',
+                      'done': 'calc this from es'
+                      }
+            print(params)
+            job_params.append(params)
+        return job_params
+
 
     def combine(self):
         self.output().touch()

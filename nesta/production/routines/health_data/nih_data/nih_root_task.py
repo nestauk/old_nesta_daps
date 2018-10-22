@@ -34,4 +34,12 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
                           db_config_path=self.db_config_path,
-                          production=self.production)
+                          production=self.production
+                          batchable="home/ec2user/nesta/nesta/production/"
+                                    "batchables/health_data/world_reporter_process/"
+                          # job_def="py36_amzn1_image",
+                          # job_name="GroupDetails-%s" % _routine_id,
+                          # job_queue="HighPriority",
+                          # region_name="eu-west-2",
+                          # poll_time=10,
+                          )
