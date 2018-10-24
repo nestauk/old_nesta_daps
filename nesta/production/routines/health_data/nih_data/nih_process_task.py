@@ -101,7 +101,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         es_index = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = get_elasticsearch_config(ESCONFIG_ENV, es_index)
 
-        es = Elasticsearch(es_config['host'], sniff_on_start=True)
+        es = Elasticsearch(es_config['host'], port=es_config['port'], sniff_on_start=True)
 
         Session = sessionmaker(bind=engine)
         session = Session()
