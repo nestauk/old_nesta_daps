@@ -3,7 +3,7 @@ from collections import defaultdict
 
 def dedup(docs, depth_cut=lambda depth: pow(5, depth),
           depth=0):
-    '''Efficient recursive deduplication of large iterables.
+    '''Efficient recursive deduplication of large very similar iterables.
 
     Args:
         docs (dict): A dictionary mapping a unique identifier key to
@@ -21,6 +21,20 @@ def dedup(docs, depth_cut=lambda depth: pow(5, depth),
                         unduplicated documents can be infered for those with
                         an identical key and value.
     '''
+    # First step is to split documents by length
+    deduped = {}
+    if depth == 0:
+        for _docs in split_by_length(docs):
+            # Now iteratively dedup
+            _deduped = dedup(_docs, depth_cut=depth_cut,
+                             depth=depth+1)
+            # ... and append these
+            for k, v in _deduped.items():
+                deduped[k] = v
+        return deduped
+
+    # The assumption is that if you have got this far, we
+    # are beyond depth == 0
 
     # Generate mapping between document stubs and ids
     inverse_docs = defaultdict(list)
@@ -34,8 +48,8 @@ def dedup(docs, depth_cut=lambda depth: pow(5, depth),
             maxed_ids.add(id_)
         # Map the stub to its id
         inverse_docs[doc[0: n_cut]].append(id_)
+
     # Deduplicate
-    deduped = {}
     for _, ids in inverse_docs.items():
         # Unique docs are (by definition) deduped
         if len(ids) == 1:
@@ -55,3 +69,19 @@ def dedup(docs, depth_cut=lambda depth: pow(5, depth),
             deduped[k] = v
     # Done
     return deduped
+
+
+def split_by_length(docs):
+    '''Split documents into groups by their length, and yield each group
+    Args:
+        docs (dict): A dictionary mapping a unique identifier key to
+                     an iterable (e.g. [but not restricted to]
+                     a continuous text body, :code:`list` of `str`)
+    Yields:
+        :obj:`dict` chunks of the input documents, each of the same length.
+    '''
+    docs_by_length = defaultdict(dict)
+    for id_, doc in docs.items():
+        docs_by_length[len(doc)][id_] = doc
+    for _, _docs in docs_by_length.items():
+        yield _docs
