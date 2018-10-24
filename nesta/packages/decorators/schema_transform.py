@@ -19,7 +19,7 @@ import json
 
 def load_transformer(filename, from_key, to_key):
     with open(filename) as f:
-        _data = json.load(filename)
+        _data = json.load(f)
     transformer = {row[from_key]:row[to_key] for row in _data}
     return transformer
 
@@ -60,3 +60,34 @@ def schema_transform(filename, from_key, to_key):
             return data
         return transformed
     return wrapper
+
+
+def schema_transformer(data, *, filename, from_key, to_key, ignore=[]):
+    '''Function version of the schema_transformer wrapper.
+    Args:
+        data (dataframe OR list of dicts): the data requiring the schama transformation
+        filename (str): the path to the schema json file
+        from_key (str): tier level of the data
+        to_key (str): tier level to be applied to the data
+        ignore (list): optional list of fields, eg ids or keys which shouldn't be dropped
+
+    Returns:
+        supplied data with schema applied
+    '''
+    # Accept DataFrames...
+    transformer = load_transformer(filename, from_key, to_key)
+    if type(data) == pandas.DataFrame:
+        drop_cols = [c for c in data.columns
+                     if c not in transformer
+                     and c not in ignore]
+        data.drop(drop_cols, axis=1, inplace=True)
+        data.rename(columns=transformer, inplace=True)
+    # ... OR list of dicts
+    elif type(data) == list and all(type(row) == dict for row in data):
+        data = [{transformer[k]:v for k, v in row.items()
+                 if k in transformer} for row in data]
+    # Otherwise throw an error
+    else:
+        raise ValueError("Schema transform expects EITHER a pandas.DataFrame "
+                         "OR a list of dict from the wrapped function.")
+    return data
