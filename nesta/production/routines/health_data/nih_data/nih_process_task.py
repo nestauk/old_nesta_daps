@@ -68,6 +68,7 @@ class ProcessTask(autobatch.AutoBatchTask):
             '''
         offset = 0
         while True:
+            import pdb; pdb.set_trace()
             if self.test and (offset / batch_size > 1):  # break after 2 batches
                 break
             rows = query.order_by(Projects.application_id).filter(Projects.application_id > offset).limit(batch_size).all()
@@ -126,3 +127,11 @@ class ProcessTask(autobatch.AutoBatchTask):
 
     def combine(self):
         self.output().touch()
+
+
+if __name__ == '__main__':
+    pt = ProcessTask()
+    process = pt.ProcessTask(batchable='aaa', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
+    process.prepare()
+
+
