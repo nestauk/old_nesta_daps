@@ -12,7 +12,7 @@ import luigi
 import datetime
 from elasticsearch import Elasticsearch
 import logging
-from luigi.contrib.esindex import MySqlTarget
+from nesta.production.luigihacks.mysqldb import MySqlTarget
 from sqlalchemy.orm import sessionmaker
 
 from nih_collect_task import CollectTask
@@ -104,7 +104,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         session = Session()
         project_query = session.query(Projects)
 
-        batches = self.batch_limits(project_query, BATCH_SIZE, test=self.test)
+        batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
         for start, end in batches:
             params = {'start_index': start,

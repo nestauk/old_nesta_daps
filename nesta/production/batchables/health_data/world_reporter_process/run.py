@@ -1,7 +1,6 @@
-import pandas as pd
-import os
 from elasticsearch import Elasticsearch
-# from elasticsearch import helpers
+import os
+import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
 from nesta.packages.decorators.schema_transform import schema_transformer
@@ -73,3 +72,7 @@ def run():
         doc = dict(row.loc[~pd.isnull(row)])
         uid = doc.pop("application_id")
         es.index(es_index, doc_type=es_type, id=uid, body=doc)
+
+
+if __name__ == '__main__':
+    run()
