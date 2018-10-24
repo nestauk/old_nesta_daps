@@ -79,17 +79,19 @@ class ProcessTask(autobatch.AutoBatchTask):
             offset = last
 
     @staticmethod
-    def es_exists_check(es, uid):
+    def es_exists_check(es, uid, index, doc_type):
         '''Checks to see if the document exists within elasticsearch.
 
         Args:
             es (object): elasticsearch client
             uid (int): document to be checked
+            index (str): target elasticsearch index
+            doc_type (str): target elasticsearch type
 
         Returns:
             (bool)
         '''
-        return es.exists(index='rwjf', doc_type='_doc', id=uid)
+        return es.exists(index=index, doc_type=doc_type, id=uid)
 
     def prepare(self):
         db = 'production' if not self.test else 'dev'
