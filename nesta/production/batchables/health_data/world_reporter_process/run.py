@@ -8,7 +8,6 @@ from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.health_data.process_nih import _extract_date
 from nesta.packages.health_data.process_nih import country_iso_code_dataframe
 from nesta.packages.health_data.process_nih import geocode_dataframe
-from nesta.production.orms.orm_utils import get_elasticsearch_config
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.world_reporter_orm import Projects
 
@@ -74,12 +73,3 @@ def run():
         doc = dict(row.loc[~pd.isnull(row)])
         uid = doc.pop("application_id")
         es.index(es_index, doc_type=es_type, id=uid, body=doc)
-
-
-if __name__ == "__main__":
-    os.environ["BATCHPAR_start_index"] = '100001'
-    os.environ["BATCHPAR_end_index"] = '100020'
-    os.environ["BATCHPAR_config"] = 'MYSQLDB'
-    os.environ["BATCHPAR_outinfo"] = 'ESCONFIG'
-    os.environ["BATCHPAR_db"] = 'dev'
-    run()
