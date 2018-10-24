@@ -1,27 +1,29 @@
 import pandas as pd
 import os
 from elasticsearch import Elasticsearch
-from elasticsearch import helpers
+# from elasticsearch import helpers
 from sqlalchemy.orm import sessionmaker
 
+from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.health_data.process_nih import _extract_date
-from nesta.packages.health_data.process_nih import geocode_dataframe
 from nesta.packages.health_data.process_nih import country_iso_code_dataframe
-from nesta.packages.decorators.schema_transform import schema_transform
+from nesta.packages.health_data.process_nih import geocode_dataframe
+from nesta.production.orms.orm_utils import get_elasticsearch_config
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.world_reporter_orm import Projects
 
 
-
-# @schema_transform(mapping, from_key, to_key)
 def run():
     start_index = os.environ["BATCHPAR_start_index"]
     end_index = os.environ["BATCHPAR_end_index"]
     mysqldb_config = os.environ["BATCHPAR_config"]
-    outpath = os.environ["BATCHPAR_outinfo"]
-    # variable for prod/dev
+    es_host = os.environ["BATCHPAR_outinfo"]
+    es_port = os.environ["BATCHPAR_out_port"]
+    es_index = os.environ["BATCHPAR_out_index"]
+    es_type = os.environ["BATCHPAR_out_type"]
+    db = os.environ["BATCHPAR_database"]
 
-    engine = get_mysql_engine(mysqldb_config, "mysqldb", "dev")  # replace with mysqlconfig
+    engine = get_mysql_engine(mysqldb_config, "mysqldb", db)
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -46,36 +48,38 @@ def run():
     df = pd.read_sql(batch_selection, session.bind)
     df.columns = [c[13::] for c in df.columns]  # remove the 'nih_projects_' prefix
 
+    # geocode the dataframe
     df = df.rename(columns={'org_city': 'city', 'org_country': 'country'})
-
-
-    # Geocode the dataframe
-    import pdb; pdb.set_trace()
     df = geocode_dataframe(df)
-    # clean start and end dates
-    for col in ["project_start", "project_end"]:
-        df[col] = df[col].apply(_extract_date)
+
     # append iso codes for country
     df = country_iso_code_dataframe(df)
 
-    print(df)
+    # clean start and end dates
+    for col in ["project_start", "project_end"]:
+        df[col] = df[col].apply(_extract_date)
 
+    # apply schema
+    schema = 'nesta/production/schemas/tier_1/schema_transformations/nih.json'
+    df = schema_transformer(df, filename=schema,
+                            from_key='tier_0', to_key='tier_1',
+                            ignore=['application_id'])
 
+    # output to elasticsearch
+    es = Elasticsearch(es_host, port=es_port, sniff_on_start=True)
+    # TODO: implement https
+    # , scheme='https')
 
-    # es = Elasticsearch([os.environ["BATCHPAR_outinfo"]], 
-    #                    port=443, scheme="https")
-    # for _, row in df.iterrows():
-    #     doc = dict(row.loc[~pd.isnull(row)])
-    #     doc.pop("unnamed:_0")
-    #     uid = doc.pop("unique_id")
-    #     res = es.index(index='rwjf_uid', doc_type='world_reporter', 
-    #                    id=uid, body=doc)
-
+    for _, row in df.iterrows():
+        doc = dict(row.loc[~pd.isnull(row)])
+        uid = doc.pop("application_id")
+        es.index(es_index, doc_type=es_type, id=uid, body=doc)
 
 
 if __name__ == "__main__":
     os.environ["BATCHPAR_start_index"] = '100001'
-    os.environ["BATCHPAR_end_index"] = '100009'
+    os.environ["BATCHPAR_end_index"] = '100020'
     os.environ["BATCHPAR_config"] = 'MYSQLDB'
-    os.environ["BATCHPAR_outinfo"] = 'testing'
+    os.environ["BATCHPAR_outinfo"] = 'ESCONFIG'
+    os.environ["BATCHPAR_db"] = 'dev'
     run()
