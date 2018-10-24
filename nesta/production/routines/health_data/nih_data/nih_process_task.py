@@ -67,9 +67,9 @@ class ProcessTask(autobatch.AutoBatchTask):
             first (int), last (int) application_ids
             '''
         offset = 0
+        batches = 0
         while True:
-            import pdb; pdb.set_trace()
-            if self.test and (offset / batch_size > 1):  # break after 2 batches
+            if self.test and batches > 1:  # break after 2 batches
                 break
             rows = query.order_by(Projects.application_id).filter(Projects.application_id > offset).limit(batch_size).all()
             if len(rows) == 0:
@@ -78,6 +78,7 @@ class ProcessTask(autobatch.AutoBatchTask):
             last = rows[-1].application_id
             yield first, last
             offset = last
+            batches += 1
 
     @staticmethod
     def es_exists_check(es, uid, index, doc_type):
@@ -130,8 +131,7 @@ class ProcessTask(autobatch.AutoBatchTask):
 
 
 if __name__ == '__main__':
-    pt = ProcessTask()
-    process = pt.ProcessTask(batchable='aaa', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
+    process = ProcessTask(batchable='aaa', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
     process.prepare()
 
 
