@@ -8,4 +8,5 @@
 .. toctree::
 
     nesta.production.batchables.examples
-
+    nesta.production.batchables.meetup
+    nesta.production.batchables.health_data

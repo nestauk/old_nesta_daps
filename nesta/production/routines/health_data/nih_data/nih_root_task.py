@@ -12,7 +12,7 @@ import luigi
 import datetime
 import logging
 
-from nih_process_task import ProcessTask
+from _nih_process_task import ProcessTask
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations

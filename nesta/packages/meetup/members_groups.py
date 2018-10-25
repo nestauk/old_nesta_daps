@@ -58,7 +58,7 @@ def get_member_groups(member_info):
         for membership in member_info['memberships'][key]:
             row["group_id"] = membership['group']['id']
             row["group_urlname"] = membership['group']['urlname']
-            output.append(row)
+            output.append(row.copy())
     return output
 
 

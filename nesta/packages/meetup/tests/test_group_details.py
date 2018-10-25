@@ -17,7 +17,7 @@ class TestGroupDetails(unittest.TestCase):
     def test_nogroupfound(self):
         '''Test that the an error is raised if no group is found'''
         self.assertRaises(NoGroupFound, get_group_details, 
-                          TestGroupDetails.fake_group_urlname, 200)
+                          TestGroupDetails.fake_group_urlname, 200, False)
 
 
 if __name__ == '__main__':
