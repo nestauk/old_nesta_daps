@@ -1,3 +1,4 @@
+urllib3==1.22
 geopy==1.11.0
 pandas==0.20.3
 setuptools==40.4.3
