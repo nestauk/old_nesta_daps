@@ -11,21 +11,19 @@ processing and indexing the data to ElasticSearch.
 import luigi
 import datetime
 import logging
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import and_
-from sqlalchemy import exists as sql_exists
+
+from nesta.packages.health_data.collect_nih import get_data_urls
 
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks import autobatch
 
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.orm_utils import get_class_by_tablename
-from nesta.production.orms.world_reporter_orm import Base
-from nesta.packages.health_data.collect_nih import get_data_urls
-from nesta.packages.health_data.collect_nih import iterrows
-from nesta.packages.health_data.process_nih import geocode_dataframe
-from nesta.packages.health_data.process_nih import _extract_date
+import boto3
+import re
 
+S3 = boto3.resource('s3')
+_BUCKET = S3.Bucket("nesta-production-intermediate")
+DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 def exists(_class, **kwargs):
     statements = [getattr(_class, pkey.name) == kwargs[pkey.name]
@@ -33,7 +31,7 @@ def exists(_class, **kwargs):
     return sql_exists().where(and_(*statements))
 
 
-class CollectTask(luigi.Task):
+class CollectTask(autobatch.AutoBatchTask):
     '''Scrape CSVs from the World ExPORTER site and dump the
     data in the MySQL server.
 
@@ -50,37 +48,28 @@ class CollectTask(luigi.Task):
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = "production" if self.production else "dev"
         db_config["table"] = "NIH <dummy>"  # Note, not a real table
-        update_id = "LatestDataToMySQL_{}".format(self.date)
+        update_id = "NihCollectData_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
-    def run(self):
-        '''Execute the World ExPORTER collection and dump the
-        data in the database'''
-
-        # Setup the database connectors
-        engine = get_mysql_engine("MYSQLDB", "mysqldb", 
-                                  "production" if self.production else "dev")
-        Base.metadata.create_all(engine)
-
+    def prepare(self):
+        '''Prepare the batch job parameters'''
         # Iterate over all tabs
-        for i in range(0, 6):
+        job_params = []
+        for i in range(0, 4):
             logging.info("Extracting table {}...".format(i))
             title, urls = get_data_urls(i)
             table_name = "nih_{}".format(title.replace(" ","").lower())
-            _class = get_class_by_tablename(Base, table_name)
-            logging.info("Extracted table {}. Merging to database...".format(table_name))
-            # Commit the data
-            Session = sessionmaker(engine)
-            session = Session()
-            for url in urls:       
-                objs = [_class(**row) for row in iterrows(url)
-                        if len(row) > 0 and
-                        not session.query(exists(_class, **row)).scalar()]
-                session.bulk_save_objects(objs)
-                session.commit()
-                if not self.production:
-                    break            
-            session.close()
+            for url in urls:
+                done = url in DONE_KEYS
+                params = {"table_name": table_name,
+                          "url": url,
+                          "config": "mysqldb.config",
+                          "db_name": "production" if self.production else "dev",
+                          "outinfo": "s3://nesta-production-intermediate/%s" % url,
+                          "done": done}
+                job_params.append(params)
+        return job_params
 
-        # Mark the task as done
+    def combine(self, job_params):
+        '''Touch the checkpoint'''
         self.output().touch()

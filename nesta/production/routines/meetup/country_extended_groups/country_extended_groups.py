@@ -14,6 +14,8 @@ from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks import s3
+from nesta.production.orms.meetup_orm import Base
+from nesta.production.orms.orm_utils import get_mysql_engine
 import luigi
 import datetime
 import json
@@ -28,7 +30,7 @@ import boto3
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-
+BATCHABLE = "/home/ec2-user/nesta/nesta/production/batchables/meetup/{}/"
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -51,7 +53,7 @@ class CountryGroupsTask(autobatch.AutoBatchTask):
         '''Points to the input database target'''
         update_id = "meetup_groups-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "production"
+        db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups"
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -81,6 +83,7 @@ class CountryGroupsTask(autobatch.AutoBatchTask):
                       "cat":self.category, "name":name,
                       "radius":radius, "coords":str(_coords),
                       "config": "mysqldb.config",
+                      "db":"production" if not self.test else "dev",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
         return job_params
@@ -112,8 +115,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
         return CountryGroupsTask(iso2=self.iso2, 
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/country_groups/"),
+                                 batchable=BATCHABLE.format("country_groups"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,                                 
                                  job_name="CountryGroups-%s" % self._routine_id,
@@ -127,7 +129,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
         '''Points to the DB target'''
         update_id = "meetup_groups_members-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "production"
+        db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups_members"
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -151,6 +153,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
             params = {"group_urlname":group_urlname,
                       "group_id":group_id,
                       "config":"mysqldb.config",
+                      "db":"production" if not self.test else "dev",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
         # Tidy up and return
@@ -185,8 +188,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
         return GroupsMembersTask(iso2=self.iso2,
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/groups_members/"),
+                                 batchable=BATCHABLE.format("groups_members"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,
                                  job_name="GroupsMembers-%s" % self._routine_id,      
@@ -200,7 +202,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
         '''Points to the DB target'''
         update_id = "meetup_members_groups-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "production"
+        db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_members_groups"
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -229,6 +231,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
             # Fill in the params
             params = {"member_ids":str(data),
                       "config":"mysqldb.config",
+                      "db":"production" if not self.test else "dev",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
         # Tidy up and return
@@ -275,8 +278,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
         return MembersGroupsTask(iso2=self.iso2,
                                  category=self.category,
                                  _routine_id=self._routine_id,
-                                 batchable=("/home/ec2-user/nesta/production/"
-                                            "batchables/meetup/members_groups/"),
+                                 batchable=BATCHABLE.format("members_groups"),
                                  env_files=self.env_files,
                                  job_def=self.job_def,
                                  job_name="MembersGroups-%s" % self._routine_id,
@@ -290,7 +292,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
         '''Points to the DB target'''
         update_id = "meetup_group_details-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "production"
+        db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups"
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -323,6 +325,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
             params = {"group_urlnames":str([x.encode("utf8") 
                                             for x in data]),
                       "config":"mysqldb.config",
+                      "db":"production" if not self.test else "dev",
                       "outinfo":s3_path, "done":done}
             job_params.append(params)
         # Tidy up and return
@@ -351,16 +354,18 @@ class RootTask(luigi.WrapperTask):
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
         logging.getLogger().setLevel(logging.INFO)
-        _routine_id = "{}-{}-{}".format(self.date, self.iso2, self.category)
+        _routine_id = f"{self.date}-{self.iso2}-{self.category}-{self.production}"
+
+        engine = get_mysql_engine("MYSQLDB", "mysqldb", 
+                                  "production" if self.production else "dev")
+        Base.metadata.create_all(engine)
         
         yield GroupDetailsTask(iso2=self.iso2,
                                category=self.category,
                                _routine_id=_routine_id,
-                               batchable=("/home/ec2-user/nesta/nesta/production/"
-                                          "batchables/meetup/group_details/"),
-                               env_files=["/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
-                                          "/home/ec2-user/nesta/nesta/production/orms/",
-                                          "/home/ec2-user/nesta/nesta/packages/meetup/"],
+                               batchable=BATCHABLE.format("group_details"),
+                               env_files=["/home/ec2-user/nesta/nesta",
+                                          "/home/ec2-user/nesta/nesta/production/config/mysqldb.config"],
                                job_def="py36_amzn1_image",
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",

@@ -82,8 +82,8 @@ class FinalTask(luigi.Task):
     def requires(self):
         '''Get the output from the batchtask'''
         return SomeBatchTask(date=self.date,
-                             batchable=("/home/ec2-user/nesta/production/"
-                                        "batchables/examples/batch-example/"),
+                             batchable=("/home/ec2-user/nesta/nesta/production/"
+                                        "batchables/examples/batch_example/"),
                              job_def="standard_image",
                              job_name="batch-example-%s" % self.date,
                              job_queue="HighPriority",
