@@ -269,7 +269,7 @@ class AutoBatchTask(luigi.Task, ABC):
             self._assert_timeout(batch_client, running_job_ids)
             self._assert_success(batch_client, all_job_ids, done_job_ids)
             # Wait before continuing
-            logging.info("Not finished waiting...")
+            #logging.info("Not finished waiting...")
             time.sleep(self.poll_time)
 
 

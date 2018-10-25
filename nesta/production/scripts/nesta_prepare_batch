@@ -1,5 +1,8 @@
 #!/bin/bash
-TOP_DIR=${PWD}
+TOP_DIR=/var/tmp/batch/$(date +%s)   #${PWD}
+mkdir ${TOP_DIR}
+cd ${TOP_DIR}
+
 RUNDIR=${1}
 echo "Generating batchable from ${1} (working directory is ${TOP_DIR})"
 
@@ -27,11 +30,18 @@ do
     then
         rm -rf run/
         ls $DIR_TO_COPY
+	rmdir ${TOP_DIR}
         return 1
     fi
+    echo "Doing 'cp -r ${DIR_TO_COPY} run/'"
     cp -r ${DIR_TO_COPY} run/
 done
-echo "Added $DEPCOUNTER files to the environment"
+find run/ -name "*.pyc" -exec rm -f {} \;
+find run/ -name "*.~" -exec rm -f {} \;
+find run/ -name "*out" -exec rm -f {} \;
+find run/ -name "*log" -exec rm -f {} \;
+find run/ -name "*#" -exec rm -f {} \;
+echo "Added $DEPCOUNTER objects to the environment"
 
 # Generate pip requirements
 pip install pipreqs &> /dev/null
@@ -51,3 +61,4 @@ rm -r run/
 
 # Echo the file name
 echo ${FILE_TIMESTAMP}
+rmdir ${TOP_DIR}
