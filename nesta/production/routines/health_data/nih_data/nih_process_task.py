@@ -8,15 +8,15 @@ transfers the data into the MySQL database before
 processing and indexing the data to ElasticSearch.
 '''
 
-import luigi
 import datetime
 from elasticsearch import Elasticsearch
 import logging
-from nesta.production.luigihacks.mysqldb import MySqlTarget
+import luigi
 from sqlalchemy.orm import sessionmaker
 
 from nih_collect_task import CollectTask
-from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks import autobatch, misctools
+from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_elasticsearch_config
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.world_reporter_orm import Projects
@@ -57,7 +57,8 @@ class ProcessTask(autobatch.AutoBatchTask):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def batch_limits(self, query, batch_size):
-        '''Generates first and last ids from a query object, by batch size.
+        '''
+        Determines first and last ids for a batch.
 
         Args:
             query (object): orm query object
@@ -65,48 +66,35 @@ class ProcessTask(autobatch.AutoBatchTask):
 
         Returns:
             first (int), last (int) application_ids
-            '''
-        offset = 0
+        '''
+        if self.test:
+            batch_size = 20
+
         batches = 0
+        last = 0
         while True:
             if self.test and batches > 1:  # break after 2 batches
                 break
-            rows = query.order_by(Projects.application_id).filter(Projects.application_id > offset).limit(batch_size).all()
-            if len(rows) == 0:
+            rows = query.order_by(Projects.application_id).filter(Projects.application_id > last).limit(batch_size).all()
+            if len(rows) == 0:  # all rows have been collected
                 break
             first = rows[0].application_id
             last = rows[-1].application_id
             yield first, last
-            offset = last
             batches += 1
 
-    @staticmethod
-    def es_exists_check(es, uid, index, doc_type):
-        '''Checks to see if the document exists within elasticsearch.
-
-        Args:
-            es (object): elasticsearch client
-            uid (int): document to be checked
-            index (str): target elasticsearch index
-            doc_type (str): target elasticsearch type
-
-        Returns:
-            (bool)
-        '''
-        return es.exists(index=index, doc_type=doc_type, id=uid)
-
     def prepare(self):
+        # mysql setup
         db = 'production' if not self.test else 'dev'
         engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb", db)
-
-        es_index = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = get_elasticsearch_config(ESCONFIG_ENV, es_index)
-
-        es = Elasticsearch(es_config['host'], port=es_config['port'], sniff_on_start=True)
-
         Session = sessionmaker(bind=engine)
         session = Session()
         project_query = session.query(Projects)
+
+        # elasticsearch setup
+        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
+        es_config = get_elasticsearch_config(ESCONFIG_ENV, es_mode)
+        es = Elasticsearch(es_config['host'], port=es_config['port'], sniff_on_start=True)
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
@@ -119,8 +107,9 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'out_port': es_config['port'],
                       'out_index': es_config['index'],
                       'out_type': es_config['type'],
-                      'done': self.es_exists_check(es, end, index=es_config['index'],
-                                                   doc_type=es_config['type'])
+                      'done': es.exists(index=es_config['index'],
+                                        doc_type=es_config['type'],
+                                        id=end)
                       }
             print(params)
             job_params.append(params)
@@ -131,7 +120,5 @@ class ProcessTask(autobatch.AutoBatchTask):
 
 
 if __name__ == '__main__':
-    process = ProcessTask(batchable='aaa', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
+    process = ProcessTask(batchable='', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
     process.prepare()
-
-
