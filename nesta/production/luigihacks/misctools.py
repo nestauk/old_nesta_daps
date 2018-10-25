@@ -7,7 +7,7 @@ import os
 
 
 def get_config(file_name, header):
-    '''Get the configuration from a file in the LUIGI_CONFIG_PATH
+    '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`
     into a `dict`.
 
@@ -18,7 +18,7 @@ def get_config(file_name, header):
     Returns:
         :obj:`dict`
     '''
-    conf_dir_path, _ = os.path.split(os.environ["LUIGI_CONFIG_PATH"])
+    conf_dir_path = find_filepath_from_pathstub("production/config/")
     conf_path = os.path.join(conf_dir_path, file_name)
     config = configparser.ConfigParser()
     config.read(conf_path)
@@ -59,5 +59,5 @@ def find_filepath_from_pathstub(path_stub):
         for path in get_paths_from_relative(relative):
             if path.rstrip("/") == os.environ["HOME"]:
                 raise FileNotFoundError(f"Could not find {path_stub}")
-            if path.endswith(path_stub):
+            if path.endswith(path_stub.rstrip("/")):
                 return path
