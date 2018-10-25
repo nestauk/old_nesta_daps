@@ -36,6 +36,7 @@ def mocked_query():
 
 
 def test_batch_limits_calls_database_correctly(mocked_query, process_task):
+    pass
     batches = process_task.batch_limits(mocked_query, 1000)
     batch = next(batches)
     expected_calls = [call.order_by(nih_process_task.Projects.application_id),
