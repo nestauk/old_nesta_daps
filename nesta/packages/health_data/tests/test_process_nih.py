@@ -105,7 +105,7 @@ class TestGeocodeDataFrame():
                           mock.call(city='Brussels', country='Belgium')]
 
         # Check expected behaviours
-        assert geocoded_dataframe.equals(expected_dataframe)
+        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
         assert mocked_geocode.mock_calls == expected_calls
 
     @mock.patch('nesta.packages.health_data.process_nih._geocode')
@@ -125,8 +125,9 @@ class TestGeocodeDataFrame():
                           mock.call('London UK'),
                           mock.call('Sheffield United Kingdom'),
                           mock.call('Brussels Belgium')]
+
         # Check expected behaviours
-        assert geocoded_dataframe.equals(expected_dataframe)
+        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
         assert mocked_geocode.mock_calls == expected_calls
 
     @mock.patch('nesta.packages.health_data.process_nih._geocode')
@@ -144,7 +145,8 @@ class TestGeocodeDataFrame():
                                            'country': ['UK', 'Belgium', 'UK', 'Belgium'],
                                            'coordinates': ['LON', 'BRU', 'LON', 'BRU']
                                            })
-        assert geocoded_dataframe.equals(expected_dataframe)
+        
+        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
         assert mocked_geocode.call_count == 2
 
 
@@ -178,7 +180,7 @@ class TestCountryIsoCodeDataframe():
                              'country_numeric': ['123', '875', '014']
                              })
         coded_df = country_iso_code_dataframe(test_df)
-        assert coded_df.equals(expected_dataframe)
+        assert coded_df.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
 
     @mock.patch('nesta.packages.health_data.process_nih.country_iso_code')
     def test_invalid_countries_data_is_none(self, mocked_country_iso_code):
@@ -194,4 +196,4 @@ class TestCountryIsoCodeDataframe():
                              'country_numeric': [None, None, None]
                              })
         coded_df = country_iso_code_dataframe(test_df)
-        assert coded_df.equals(expected_dataframe)
+        assert coded_df.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
