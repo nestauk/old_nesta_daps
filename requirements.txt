@@ -21,3 +21,5 @@ beautifulsoup4==4.6.3
 mysql_connector_repackaged==0.3.1
 pyshp==1.2.12
 PyMySQL==0.9.2
+scikit_learn==0.20.0
+urllib3==1.22
