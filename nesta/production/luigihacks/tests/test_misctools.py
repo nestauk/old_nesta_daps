@@ -12,6 +12,6 @@ class TestMiscTools(TestCase):
     #         get_config("mysqldb.confi", "mysqldb")
         
     def test_find_filepath_from_pathstub(self):
-        find_filepath_from_pathstub("mysqldb.config")
+        find_filepath_from_pathstub("nesta/packages")
         with self.assertRaises(FileNotFoundError):
-            find_filepath_from_pathstub("mysqldb.confi")
+            find_filepath_from_pathstub("nesta/package")
