@@ -38,11 +38,10 @@ def mocked_query():
 def test_batch_limits_calls_database_correctly(mocked_query, process_task):
     batches = process_task.batch_limits(mocked_query, 1000)
     batch = next(batches)
-    expected_calls = [call(),
-                      call().order_by(nih_process_task.Projects.application_id),
-                      call().order_by().filter(nih_process_task.Projects.application_id > 0),
-                      call().order_by().filter().limit(1000),
-                      call().order_by().filter().limit().all()
+    expected_calls = [call.order_by(nih_process_task.Projects.application_id),
+                      call.order_by().filter(nih_process_task.Projects.application_id > 0),
+                      call.order_by().filter().limit(1000),
+                      call.order_by().filter().limit().all()
                       ]
     assert batch[0].application_id == 0
     assert batch[-1].appliction_id == 100
