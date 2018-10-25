@@ -59,5 +59,5 @@ def find_filepath_from_pathstub(path_stub):
         for path in get_paths_from_relative(relative):
             if path.rstrip("/") == os.environ["HOME"]:
                 raise FileNotFoundError(f"Could not find {path_stub}")
-            if path_stub in path:
+            if path.endswith(path_stub):
                 return path
