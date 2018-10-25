@@ -34,15 +34,15 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
                           db_config_path=self.db_config_path,
-                          production=self.production
+                          production=self.production,
                           batchable="home/ec2user/nesta/nesta/production/"
-                                    "batchables/health_data/world_reporter_process/"
+                                    "batchables/health_data/world_reporter_process/",
                           env_files=["home/ec2user/nesta/nesta/production/schemas/tier1/schema_transformations/nih.json",
                                      "home/ec2user/nesta/nesta/production/config/mysqldb.config",
                                      "home/ec2user/nesta/nesta/production/config/elasticsearch.config",
                                      "home/ec2user/nesta/nesta/production/health_data/",
                                      "home/ec2user/nesta/nesta/production/orms/",
-                                     "home/ec2user/nesta/nesta/production/decorators/",
+                                     "home/ec2user/nesta/nesta/production/decorators/"]
                           # job_def="py36_amzn1_image",
                           # job_name="GroupDetails-%s" % _routine_id,
                           # job_queue="HighPriority",
