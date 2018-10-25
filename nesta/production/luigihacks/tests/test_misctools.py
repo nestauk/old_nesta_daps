@@ -1,6 +1,6 @@
 from unittest import TestCase
-from misctools import get_config
-from misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import get_config
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 class TestMiscTools(TestCase):
     
