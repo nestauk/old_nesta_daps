@@ -14,7 +14,7 @@ import logging
 import luigi
 from sqlalchemy.orm import sessionmaker
 
-from nih_collect_task import CollectTask
+from nesta.production.routines.health_data.nih_data.nih_collect_task import CollectTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_elasticsearch_config
