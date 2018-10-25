@@ -182,7 +182,7 @@ class MeetupCountryGroups:
         self.params['lat'] = lat
         self.params['lon'] = lon
         self.params['key'] = meetup_utils.get_api_key()
-
+        
         # Work out whether the task has failed or not
         failed = False
         try:
