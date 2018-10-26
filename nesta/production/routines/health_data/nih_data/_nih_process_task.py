@@ -11,6 +11,7 @@ processing and indexing the data to ElasticSearch.
 import luigi
 import datetime
 import logging
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 from nih_collect_task import CollectTask
 
@@ -34,10 +35,9 @@ class ProcessTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         _routine_id = "{}-{}".format(self.date, self.production)
 
-        yield CollectTask(batchable=("/home/ec2-user/nesta/nesta/production/"
-                                     "batchables/health_data/nih_collect_data"),
-                          env_files=["/home/ec2-user/nesta/nesta", 
-                                     "/home/ec2-user/nesta/nesta/production/config/mysqldb.config"],
+        yield CollectTask(batchable=find_filepath_from_pathstub("batchables/health_data/nih_collect_data"),
+                          env_files=[find_filepath_from_pathstub("nesta/nesta"),
+                                     find_filepath_from_pathstub("/production/config/mysqldb.config")],
                           job_def="py36_amzn1_image",
                           job_name="CollectTask-%s" % _routine_id,
                           job_queue="HighPriority",
