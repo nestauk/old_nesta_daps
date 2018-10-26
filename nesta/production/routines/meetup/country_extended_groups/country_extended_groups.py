@@ -11,7 +11,8 @@ original set of groups.
 from nesta.packages.meetup.country_groups import get_coordinate_data
 from nesta.packages.meetup.country_groups import assert_iso2_key
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks.misctools import get_config
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks import s3
 from nesta.production.orms.meetup_orm import Base
@@ -23,6 +24,7 @@ import time
 import logging 
 from botocore.errorfactory import ClientError
 import boto3
+import os
 
 
 # Define these globally since they are shared resources
@@ -30,7 +32,7 @@ import boto3
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-BATCHABLE = "/home/ec2-user/nesta/nesta/production/batchables/meetup/{}/"
+BATCHABLE = os.path.join(find_filepath_from_pathstub("production/batchables/meetup"),"{}")
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -52,7 +54,7 @@ class CountryGroupsTask(autobatch.AutoBatchTask):
     def output(self):
         '''Points to the input database target'''
         update_id = "meetup_groups-%s" % self._routine_id
-        db_config = misctools.get_config("mysqldb.config", "mysqldb")
+        db_config = get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups"
         return MySqlTarget(update_id=update_id, **db_config)
@@ -128,7 +130,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
     def output(self):
         '''Points to the DB target'''
         update_id = "meetup_groups_members-%s" % self._routine_id
-        db_config = misctools.get_config("mysqldb.config", "mysqldb")
+        db_config = get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups_members"
         return MySqlTarget(update_id=update_id, **db_config)
@@ -201,7 +203,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
     def output(self):
         '''Points to the DB target'''
         update_id = "meetup_members_groups-%s" % self._routine_id
-        db_config = misctools.get_config("mysqldb.config", "mysqldb")
+        db_config = get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_members_groups"
         return MySqlTarget(update_id=update_id, **db_config)
@@ -291,7 +293,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
     def output(self):
         '''Points to the DB target'''
         update_id = "meetup_group_details-%s" % self._routine_id
-        db_config = misctools.get_config("mysqldb.config", "mysqldb")
+        db_config = get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "meetup_groups"
         return MySqlTarget(update_id=update_id, **db_config)
@@ -364,8 +366,8 @@ class RootTask(luigi.WrapperTask):
                                category=self.category,
                                _routine_id=_routine_id,
                                batchable=BATCHABLE.format("group_details"),
-                               env_files=["/home/ec2-user/nesta/nesta",
-                                          "/home/ec2-user/nesta/nesta/production/config/mysqldb.config"],
+                               env_files=[find_filepath_from_pathstub("/nesta/nesta"),
+                                          find_filepath_from_pathstub("/config/mysqldb.config")],
                                job_def="py36_amzn1_image",
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
