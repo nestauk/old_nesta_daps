@@ -1,1 +1,1 @@
-.. include:: ../../nesta/production/elasticsearch/README.rst
+.. include:: ../../nesta/production/README-elasticsearch.rst
