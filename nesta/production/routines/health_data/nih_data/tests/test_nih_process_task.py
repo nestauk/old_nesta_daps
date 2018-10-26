@@ -1,7 +1,7 @@
 import os
 import pytest
 from unittest.mock import Mock, call
-from nesta.production.routines.health_data.nih_data import nih_process_task
+# from nesta.production.routines.health_data.nih_data import nih_process_task
 
 
 @pytest.fixture
@@ -12,6 +12,7 @@ def environs():
 
 @pytest.fixture
 def process_task(environs):
+    pass
     pt = nih_process_task.ProcessTask(batchable='',
                                       job_def='',
                                       job_name='',
@@ -23,6 +24,7 @@ def process_task(environs):
 
 @pytest.fixture
 def mocked_query():
+    pass
     mocked_first = Mock()
     mocked_first.application_id = 0
     mocked_last = Mock()
