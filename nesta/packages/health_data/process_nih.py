@@ -87,6 +87,8 @@ def geocode_dataframe(df):
     out_col = 'coordinates'
     # Only geocode unique city/country combos
     _df = df[in_cols].drop_duplicates()
+    _df.replace('', pd.np.nan, inplace=True)
+    _df = _df.dropna()
     # Attempt to geocode with city and country
     _df[out_col] = _df[in_cols].apply(lambda row: _geocode(**row), axis=1)
     # Attempt to geocode with query for those which failed
