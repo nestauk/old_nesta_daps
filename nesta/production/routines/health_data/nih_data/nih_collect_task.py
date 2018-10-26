@@ -36,17 +36,18 @@ class CollectTask(autobatch.AutoBatchTask):
     data in the MySQL server.
 
     Args:
-        date (datetime): Date used to label the outputs
+        date (datetime): Datetime used to label the outputs
+        _routine_id (str): String used to label the AWS task
         db_config_path: (str) The output database configuration
     '''
     date = luigi.DateParameter()
+    _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    production = luigi.BoolParameter()
 
     def output(self):
         '''Points to the output database engine'''
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = "production" if self.production else "dev"
+        db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "NIH <dummy>"  # Note, not a real table
         update_id = "NihCollectData_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
@@ -64,7 +65,7 @@ class CollectTask(autobatch.AutoBatchTask):
                 params = {"table_name": table_name,
                           "url": url,
                           "config": "mysqldb.config",
-                          "db_name": "production" if self.production else "dev",
+                          "db_name": "production" if not self.test else "dev",
                           "outinfo": "s3://nesta-production-intermediate/%s" % url,
                           "done": done}
                 job_params.append(params)

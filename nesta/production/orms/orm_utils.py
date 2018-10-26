@@ -142,26 +142,26 @@ def get_mysql_engine(db_env, section, database="production_tests"):
     return create_engine(url, connect_args={"charset":"utf8mb4"})
 
 
-def get_elasticsearch_config(es_env, section):
-    '''Loads local configuration for elasticsearch.
+# def get_elasticsearch_config(es_env, section):
+#     '''Loads local configuration for elasticsearch.
 
-    Args:
-        es_env (str): name of the environmental variable holding the path to the config
-        section (str): section of the document holding the relevent configuration
+#     Args:
+#         es_env (str): name of the environmental variable holding the path to the config
+#         section (str): section of the document holding the relevent configuration
 
-    Returns:
-        (dict): settings for elasticsearch
-    '''
-    conf_path = os.environ[es_env]
-    cp = ConfigParser()
-    cp.read(conf_path)
-    conf = dict(cp._sections[section])
-    es_config = {'host': conf['host'],
-                 'port': conf['port'],
-                 'index': conf['index'],
-                 'type': conf['type']
-                 }
-    return es_config
+#     Returns:
+#         (dict): settings for elasticsearch
+#     '''
+#     conf_path = os.environ[es_env]
+#     cp = ConfigParser()
+#     cp.read(conf_path)
+#     conf = dict(cp._sections[section])
+#     es_config = {'host': conf['host'],
+#                  'port': conf['port'],
+#                  'index': conf['index'],
+#                  'type': conf['type']
+#                  }
+#     return es_config
 
 
 def create_elasticsearch_index(index_name, es_client, config_path=None):
@@ -180,5 +180,4 @@ def create_elasticsearch_index(index_name, es_client, config_path=None):
         with open(config_path) as f:
             config = json.load(f)
     response = es_client.indices.create(index=index_name, body=config)
-    print(response)
     return response

@@ -50,13 +50,13 @@
 				"coordinate_of_organisation": {
 					"type": "geo_point"
 				},
-				"id_countryIso2_organisation": {
+				"id_iso2_country": {
 					"type": "keyword"
 				},
-				"id_countryIso3_organisation": {
+				"id_iso3_country": {
 					"type": "keyword"
 				},
-				"id_countryIsoNumeric_organisation": {
+				"id_isoNumeric_country": {
 					"type": "keyword"
 				}
 			}
