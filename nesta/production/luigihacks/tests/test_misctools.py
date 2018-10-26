@@ -14,5 +14,4 @@ class TestMiscTools(TestCase):
     def test_find_filepath_from_pathstub(self):
         find_filepath_from_pathstub("nesta/packages")
         with self.assertRaises(FileNotFoundError):
-            r = find_filepath_from_pathstub("nesta/package")
-            print(r)
+            find_filepath_from_pathstub("nesta/package")            
