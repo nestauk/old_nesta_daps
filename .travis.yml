@@ -7,6 +7,8 @@ install:
   - pip install -r requirements.txt
   - python -c "import sys; print(sys.path)"
 before_script:
+  - mkdir nesta/production/config/
+  - echo -e "[mysqldb]\nx=1" > nesta/production/config/mysqldb.config
   - sudo rm -f /etc/boto.cfg
   - mysql -e 'CREATE DATABASE production_tests;'
   - mysql_upgrade -u root --force
