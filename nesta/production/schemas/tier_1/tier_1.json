@@ -1,17 +1,17 @@
 [
     {
-	"term": "firstName",
-	"values": ["id", "year", "placeName", "title", "terms",
-		   "textBody", "date", "cost", "coordinate"]
+    "term": "firstName",
+    "values": ["id", "year", "placeName", "title", "terms",
+               "textBody", "date", "cost", "coordinate"]
     },
     {
-	"term": "middleName",
-	"values": ["of", "fiscal", "city", "country", "zipcode", "state", "total",
-		   "official", "start", "end", "descriptive", "abstract", "duns", "iso2",
-		   "iso3", "isoNumeric"]
+    "term": "middleName",
+    "values": ["of", "fiscal", "city", "country",  "state", "zipcode", "total",
+               "official", "start", "end", "descriptive", "abstract", "duns",
+               "iso2", "iso3", "isoNumeric"]
     },
     {
-	"term": "lastName",
-	"values": ["project", "funding", "organisation"]
+    "term": "lastName",
+    "values": ["project", "funding", "organisation", "country", "continent"]
     }
 ]

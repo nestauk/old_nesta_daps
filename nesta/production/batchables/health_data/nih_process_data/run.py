@@ -37,7 +37,8 @@ def run():
             "project_end",
             "project_terms",
             "project_title",
-            "total_cost"
+            "total_cost",
+            "phr"
             ]
     cols_attrs = [getattr(Projects, c) for c in cols]
     batch_selection = session.query(*cols_attrs).filter(
