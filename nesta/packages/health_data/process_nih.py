@@ -16,6 +16,7 @@ from nesta.packages.format_utils.datetools import extract_date
 from nesta.packages.format_utils.datetools import extract_year
 from nesta.packages.geo_utils.geocode import geocode
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
+from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 
 
 def _extract_date(date, date_format='%Y-%m-%d'):
@@ -105,14 +106,18 @@ def geocode_dataframe(df):
 def country_iso_code_dataframe(df):
     '''
     A wrapper for the country_iso_code function to apply it to a whole dataframe,
-    using the country name.
+    using the country name. Also appends the continent code based on the country.
 
     Args:
         df (dataframe): a dataframe containing a country field.
     Returns:
-        a dataframe with country_alpha_2, country_alpha_3, country_numeric columns appended.
+        a dataframe with country_alpha_2, country_alpha_3, country_numeric, and
+        continent columns appended.
     '''
     df['country_alpha_2'], df['country_alpha_3'], df['country_numeric'] = None, None, None
+    df['continent'] = None
+
+    continents = alpha2_to_continent_mapping()
 
     for idx, row in df.iterrows():
         try:
@@ -124,6 +129,7 @@ def country_iso_code_dataframe(df):
             df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
             df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
             df.at[idx, 'country_numeric'] = country_codes.numeric
+            df.at[idx, 'continent'] = continents.get(country_codes.alpha_2)
 
     return df
 
