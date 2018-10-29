@@ -58,6 +58,9 @@ def run():
     for col in ["project_start", "project_end"]:
         df[col] = df[col].apply(_extract_date)
 
+    # currency is the same for the whole dataset
+    df['total_cost_currency'] = 'USD'
+
     # apply schema
     df = schema_transformer(df, filename="nih.json",
                             from_key='tier_0', to_key='tier_1',

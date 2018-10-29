@@ -17,5 +17,6 @@
     {"tier_0": "country_alpha_2", "tier_1": "id_iso2_country"},
     {"tier_0": "country_alpha_3", "tier_1": "id_iso3_country"},
     {"tier_0": "country_numeric", "tier_1": "id_isoNumeric_country"},
-    {"tier_0": "continent", "tier_1": "id_of_continent"}
+    {"tier_0": "continent", "tier_1": "id_of_continent"},
+    {"tier_0": "total_cost_currency", "tier_1": "currency_total_cost"}
 ]
