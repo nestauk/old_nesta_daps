@@ -1,7 +1,7 @@
 [
     {
     "term": "firstName",
-    "values": ["id", "year", "placeName", "title", "terms",
+    "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate"]
     },
     {
@@ -12,6 +12,6 @@
     },
     {
     "term": "lastName",
-    "values": ["project", "funding", "organisation", "country", "continent"]
+    "values": ["project", "funding", "organisation", "country", "continent", "cost"]
     }
 ]
