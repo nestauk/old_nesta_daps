@@ -52,7 +52,7 @@ def extract_date(date, date_format='%Y-%m-%d'):
         try:
             date_object = dt.strptime(date.strip(), df)
             break
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
 
     if not date_object:

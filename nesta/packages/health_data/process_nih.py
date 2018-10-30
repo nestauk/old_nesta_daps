@@ -52,6 +52,7 @@ def _extract_date(date, date_format='%Y-%m-%d'):
 
 @retry(stop_max_attempt_number=10)
 @ratelimit(max_per_second=1)
+# def _geocode(q=None, city=None, country=None):
 def _geocode(q=None, city=None, country=None):
     '''
     Args:
@@ -62,15 +63,22 @@ def _geocode(q=None, city=None, country=None):
         dict of lat and lon.
     '''
     if city and country:
-        geo_data = geocode(country=country, city=city)
+        query_kwargs = {'country': country, 'city': city}
     elif q and not (city or country):
-        geo_data = geocode(q=q)
+        query_kwargs = {'q': q}
     else:
         raise TypeError("Missing argument: q or city and country required")
 
-    lat = geo_data[0]['lat']
-    lon = geo_data[0]['lon']
-    logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+    try:
+        geo_data = geocode(**query_kwargs)
+    except ValueError:
+        lat, lon = None, None
+        logging.debug(f"Unable to geocode {q or (city, country)}")
+    else:
+        lat = geo_data[0]['lat']
+        lon = geo_data[0]['lon']
+        logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+
     return {'lat': lat, 'lon': lon}
 
 
