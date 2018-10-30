@@ -72,12 +72,12 @@ def _geocode(q=None, city=None, country=None):
     try:
         geo_data = geocode(**query_kwargs)
     except ValueError:
-        lat, lon = None, None
         logging.debug(f"Unable to geocode {q or (city, country)}")
-    else:
-        lat = geo_data[0]['lat']
-        lon = geo_data[0]['lon']
-        logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+        return None  # converts to null and is accepted in elasticsearch
+
+    lat = geo_data[0]['lat']
+    lon = geo_data[0]['lon']
+    logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
 
     return {'lat': lat, 'lon': lon}
 
