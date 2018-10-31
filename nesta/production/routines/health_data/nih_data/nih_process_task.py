@@ -57,7 +57,7 @@ class ProcessTask(autobatch.AutoBatchTask):
                           poll_time=10,
                           test=self.test,
                           memory=2048,
-                          max_live_jobs=50)
+                          max_live_jobs=2)
 
     def output(self):
         '''Points to the input database target'''
