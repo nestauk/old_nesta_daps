@@ -51,8 +51,7 @@ def _extract_date(date, date_format='%Y-%m-%d'):
 
 
 @retry(stop_max_attempt_number=10)
-@ratelimit(max_per_second=1)
-# def _geocode(q=None, city=None, country=None):
+@ratelimit(max_per_second=0.5)
 def _geocode(q=None, city=None, country=None):
     '''
     Args:
