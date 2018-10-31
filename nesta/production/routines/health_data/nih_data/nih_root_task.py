@@ -49,4 +49,4 @@ class RootTask(luigi.WrapperTask):
                           job_queue="HighPriority",
                           region_name="eu-west-2",
                           poll_time=10,
-                          max_live_jobs=50)
+                          max_live_jobs=2)
