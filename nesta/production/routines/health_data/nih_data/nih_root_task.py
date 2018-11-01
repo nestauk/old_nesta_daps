@@ -11,8 +11,9 @@ processing and indexing the data to ElasticSearch.
 import luigi
 import datetime
 import logging
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from _nih_process_task import ProcessTask
+from nih_process_task import ProcessTask
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
@@ -31,21 +32,21 @@ class RootTask(luigi.WrapperTask):
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
+        _routine_id = "{}-{}".format(self.date, self.production)
+
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
+                          _routine_id=_routine_id,
                           db_config_path=self.db_config_path,
-                          production=self.production,
-                          batchable="home/ec2user/nesta/nesta/production/"
-                                    "batchables/health_data/world_reporter_process/",
-                          env_files=["home/ec2user/nesta/nesta/production/schemas/tier1/schema_transformations/nih.json",
-                                     "home/ec2user/nesta/nesta/production/config/mysqldb.config",
-                                     "home/ec2user/nesta/nesta/production/config/elasticsearch.config",
-                                     "home/ec2user/nesta/nesta/production/health_data/",
-                                     "home/ec2user/nesta/nesta/production/orms/",
-                                     "home/ec2user/nesta/nesta/production/decorators/"]
-                          # job_def="py36_amzn1_image",
-                          # job_name="GroupDetails-%s" % _routine_id,
-                          # job_queue="HighPriority",
-                          # region_name="eu-west-2",
-                          # poll_time=10,
-                          )
+                          test=(not self.production),
+                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
+                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                     find_filepath_from_pathstub("config/mysqldb.config"),
+                                     find_filepath_from_pathstub("config/elasticsearch.config"),
+                                     find_filepath_from_pathstub("nih.json")],
+                          job_def="py36_amzn1_image",
+                          job_name="ProcessTask-%s" % _routine_id,
+                          job_queue="HighPriority",
+                          region_name="eu-west-2",
+                          poll_time=10,
+                          max_live_jobs=2)

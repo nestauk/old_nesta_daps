@@ -8,20 +8,20 @@ from nesta.packages.health_data.process_nih import _extract_date
 from nesta.packages.health_data.process_nih import country_iso_code_dataframe
 from nesta.packages.health_data.process_nih import geocode_dataframe
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.world_reporter_orm import Projects
+from nesta.production.orms.nih_orm import Projects
 
 
 def run():
     start_index = os.environ["BATCHPAR_start_index"]
     end_index = os.environ["BATCHPAR_end_index"]
-    mysqldb_config = os.environ["BATCHPAR_config"]
+    #mysqldb_config = os.environ["BATCHPAR_config"]
     es_host = os.environ["BATCHPAR_outinfo"]
     es_port = os.environ["BATCHPAR_out_port"]
     es_index = os.environ["BATCHPAR_out_index"]
     es_type = os.environ["BATCHPAR_out_type"]
-    db = os.environ["BATCHPAR_database"]
+    db = os.environ["BATCHPAR_db"]
 
-    engine = get_mysql_engine(mysqldb_config, "mysqldb", db)
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -37,7 +37,8 @@ def run():
             "project_end",
             "project_terms",
             "project_title",
-            "total_cost"
+            "total_cost",
+            "phr"
             ]
     cols_attrs = [getattr(Projects, c) for c in cols]
     batch_selection = session.query(*cols_attrs).filter(
@@ -57,9 +58,11 @@ def run():
     for col in ["project_start", "project_end"]:
         df[col] = df[col].apply(_extract_date)
 
+    # currency is the same for the whole dataset
+    df['total_cost_currency'] = 'USD'
+
     # apply schema
-    schema = 'nesta/production/schemas/tier_1/schema_transformations/nih.json'
-    df = schema_transformer(df, filename=schema,
+    df = schema_transformer(df, filename="nih.json",
                             from_key='tier_0', to_key='tier_1',
                             ignore=['application_id'])
 

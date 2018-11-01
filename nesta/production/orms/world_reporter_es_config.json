@@ -1,65 +1,71 @@
 {
-	"mappings": {
-		"_doc": {
-			"dynamic": "strict",
-			"properties": {
-				"id_of_project": {
-					"type": "keyword"
-				},
-				"year_fiscal_funding": {
-					"type": "integer"
-				},
-				"placeName_city_organisation": {
-					"type": "text"
-				},
-				"placeName_country_organisation": {
-					"type": "keyword"
-				},
-				"placeName_state_organisation": {
-					"type": "keyword"
-				},
-				"placeName_zipcode_organisation": {
-					"type": "keyword"
-				},
-				"title_of_organisation": {
-					"type": "text"
-				},
-				"textBody_descriptive_project": {
-					"type": "text"
-				},
-				"title_of_project": {
-					"type": "text"
-				},
-				"cost_total_project": {
-					"type": "text"
-				},
-				"date_start_project": {
-					"type":   "date",
-		        	"format": "yyyy-MM-dd"
-				},
-				"date_end_project": {
-					"type":   "date",
-		        	"format": "yyyy-MM-dd"
-				},
-				"terms_descriptive_project": {
-					"type": "text"
-				},
-				"textBody_abstract_project": {
-					"type": "text"
-				},
-				"coordinate_of_organisation": {
-					"type": "geo_point"
-				},
-				"id_countryIso2_organisation": {
-					"type": "keyword"
-				},
-				"id_countryIso3_organisation": {
-					"type": "keyword"
-				},
-				"id_countryIsoNumeric_organisation": {
-					"type": "keyword"
-				}
-			}
-		}
-	}
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "id_of_project": {
+                    "type": "keyword"
+                },
+                "year_fiscal_funding": {
+                    "type": "integer"
+                },
+                "placeName_city_organisation": {
+                    "type": "keyword"
+                },
+                "placeName_country_organisation": {
+                    "type": "keyword"
+                },
+                "placeName_state_organisation": {
+                    "type": "keyword"
+                },
+                "placeName_zipcode_organisation": {
+                    "type": "keyword"
+                },
+                "title_of_organisation": {
+                    "type": "text"
+                },
+                "textBody_descriptive_project": {
+                    "type": "text"
+                },
+                "title_of_project": {
+                    "type": "text"
+                },
+                "cost_total_project": {
+                    "type": "integer"
+                },
+                "currency_total_cost": {
+                    "type": "keyword"
+                },
+                "date_start_project": {
+                    "type":   "date",
+                    "format": "yyyy-MM-dd"
+                },
+                "date_end_project": {
+                    "type":   "date",
+                    "format": "yyyy-MM-dd"
+                },
+                "terms_descriptive_project": {
+                    "type": "text"
+                },
+                "textBody_abstract_project": {
+                    "type": "text"
+                },
+                "coordinate_of_organisation": {
+                    "type": "geo_point"
+                },
+                "id_iso2_country": {
+                    "type": "keyword"
+                },
+                "id_iso3_country": {
+                    "type": "keyword"
+                },
+                "id_isoNumeric_country": {
+                    "type": "integer"
+                },
+                "id_of_continent": {
+                    "type": "keyword"
+                }
+            }
+        }
+    }
 }

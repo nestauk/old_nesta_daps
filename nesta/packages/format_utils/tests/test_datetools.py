@@ -45,6 +45,11 @@ class TestExtractDateFailure():
                 extract_date(d)
             assert 'No date conversion possible' in str(e)
 
+    def test_none_is_handled_and_raises_valueerror(self):
+        with pytest.raises(ValueError) as e:
+            extract_date(None)
+        assert 'No date conversion possible' in str(e)
+
 
 class TestYearExtraction():
     def test_valid_year_extract(self):
