@@ -8,26 +8,25 @@ transfers the data into the MySQL database before
 processing and indexing the data to ElasticSearch.
 '''
 
+import boto3
 import datetime
 from elasticsearch import Elasticsearch
 import logging
 import luigi
+import re
 from sqlalchemy.orm import sessionmaker
 
-from nesta.production.routines.health_data.nih_data.nih_collect_task import CollectTask
+from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.nih_orm import Projects
+from nesta.production.orms.nih_orm import Abstracts
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-BATCH_SIZE = 50000
-MYSQLDB_ENV = 'MYSQLDB'
 
-
-class ProcessTask(autobatch.AutoBatchTask):
-    '''A dummy root task, which collects the database configurations
-    and executes the central task.
+class AbstractsMeshTask(autobatch.AutoBatchTask):
+    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL and projects in
+    Elasticsearch.
 
     Args:
         date (str): Date used to label the outputs
@@ -42,14 +41,16 @@ class ProcessTask(autobatch.AutoBatchTask):
         '''Collects the database configurations
         and executes the central task.'''
         logging.getLogger().setLevel(logging.INFO)
-        yield CollectTask(date=self.date,
+        yield ProcessTask(date=self.date,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_collect_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta"),
-                                     find_filepath_from_pathstub("/production/config/mysqldb.config")],
+                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
+                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                     find_filepath_from_pathstub("config/mysqldb.config"),
+                                     find_filepath_from_pathstub("config/elasticsearch.config"),
+                                     find_filepath_from_pathstub("nih.json")],
                           job_def=self.job_def,
-                          job_name="CollectTask-%s" % self._routine_id,
+                          job_name="ProcessTask-%s" % self._routine_id,
                           job_queue=self.job_queue,
                           region_name=self.region_name,
                           poll_time=10,
@@ -62,49 +63,54 @@ class ProcessTask(autobatch.AutoBatchTask):
         update_id = "NihProcessData-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
-        db_config["table"] = "NIH process DUMMY"  # Note, not a real table
+        db_config["table"] = "NIH abstracts mesh DUMMY"  # Note, not a real table
         return MySqlTarget(update_id=update_id, **db_config)
 
-    def batch_limits(self, query, batch_size):
-        '''
-        Determines first and last ids for a batch.
+    @staticmethod
+    def get_abstract_file_keys(bucket, key_prefix):
+        s3 = boto3.resource('s3')
+        s3bucket = s3.Bucket(bucket)
+        return {b.key for b in s3bucket.objects.filter(Prefix=key_prefix)}
 
-        Args:
-            query (object): orm query object
-            batch_size (int): rows of data in a batch
+    @staticmethod
+    def done_check(es_client, index, doc_type, key):
+        pattern = r'(\d+)-(\d+)\.txt$'
+        match = re.search(pattern, key)
+        # start, end = match.groups()
+        for idx in match.groups():
+            res = es_client.get(index='rwjf_dev', doc_type='_doc', id=idx)
+            if res['_source'].get('MESH FIELD NAME') is None:
+                return False
+        return True
 
-        Returns:
-            first (int), last (int) application_ids
-        '''
-        if self.test:
-            batch_size = 20
 
-        batches = 0
-        last = 0
-        while True:
-            if self.test and batches > 1:  # break after 2 batches
-                break
-            rows = query.order_by(Projects.application_id).filter(Projects.application_id > last).limit(batch_size).all()
-            if len(rows) == 0:  # all rows have been collected
-                break
-            first = rows[0].application_id
-            last = rows[-1].application_id
-            yield first, last
-            batches += 1
+
+        # TODO: update the ES mapping for the mesh terms and then determine how to query to
+        # see if the start and end projects have mesh terms against them
+        # return bool
+        return start, end
 
     def prepare(self):
         # mysql setup
-        db = 'production' if not self.test else 'dev'
-        engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb", db)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        project_query = session.query(Projects)
+        # db = 'production' if not self.test else 'dev'
+        db = 'dev'  # *****just in case - remove after testing*******
 
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
+        # es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
+        es_mode = 'rwjf_dev'  # *****just in case - remove after testing*******
         es_config = misctools.get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
 
+        # s3 setup and file key collection
+        bucket = 'innovation-mapping-general'
+        key_prefix = 'nih_abstracts_processed/mti'
+        keys = self.get_abstract_file_keys(bucket, key_prefix)
+        for k in keys:
+            print(self.done_check(es, index=es_config['index'],
+                  doc_type=es_config['type'], key=k))
+            break  # just testing
+
+        # TODO: replace all this
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
         for start, end in batches:
@@ -129,5 +135,8 @@ class ProcessTask(autobatch.AutoBatchTask):
 
 
 if __name__ == '__main__':
-    process = ProcessTask(batchable='', job_def='', job_name='', job_queue='', region_name='', db_config_path='MYSQLDB')
+    date = datetime.date(year=2018, month=12, day=25)
+    process = AbstractsMeshTask(test=True, batchable='', job_def='', job_name='',
+            job_queue='', region_name='', db_config_path='MYSQLDB', date=date,
+            _routine_id='')
     process.prepare()

@@ -54,7 +54,6 @@ def retrieve_duplicate_map(bucket, abstract_file):
     Returns:
         (dict): duplicate doc_id: meshed doc_id
     """
-
     logging.debug("Retrieving duplicates map from s3")
     s3 = boto3.resource('s3')
     content_object = s3.Object(bucket, dupe_file)
