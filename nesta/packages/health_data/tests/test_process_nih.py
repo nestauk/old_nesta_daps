@@ -76,6 +76,12 @@ class TestGeocoding():
         mocked_request.return_value = mocked_response
         assert _geocode('best match') == mocked_response.json.return_value[0]
 
+    @mock.patch('nesta.packages.geo_utils.geocode')
+    def test_raised_valueerror_from_no_result_returns_none_for_coordinates(self, mocked_geocode):
+        mocked_geocode.side_effect = ValueError
+        expected_response = None
+        assert _geocode(q='no results') == expected_response
+
 
 class TestGeocodeDataFrame():
     @staticmethod
@@ -152,12 +158,13 @@ class TestGeocodeDataFrame():
 
 class TestCountryIsoCodeDataframe():
     @staticmethod
-    def _mocked_response(alpha_2, alpha_3, numeric):
+    def _mocked_response(alpha_2, alpha_3, numeric, continent):
         '''Builds a mocked response for the patched country_iso_code function.'''
         response = mock.Mock()
         response.alpha_2 = alpha_2
         response.alpha_3 = alpha_3
         response.numeric = numeric
+        response.continent = continent
         return response
 
     @mock.patch('nesta.packages.health_data.process_nih.country_iso_code')
@@ -165,9 +172,9 @@ class TestCountryIsoCodeDataframe():
         test_df = pd.DataFrame({'index': [0, 1, 2],
                                 'country': ['United Kingdom', 'Belgium', 'United States']
                                 })
-        mocked_response_uk = self._mocked_response('GB', 'GBR', '123')
-        mocked_response_be = self._mocked_response('BE', 'BEL', '875')
-        mocked_response_us = self._mocked_response('US', 'USA', '014')
+        mocked_response_uk = self._mocked_response('GB', 'GBR', '123', 'EU')
+        mocked_response_be = self._mocked_response('BE', 'BEL', '875', 'EU')
+        mocked_response_us = self._mocked_response('US', 'USA', '014', 'NA')
         mocked_country_iso_code.side_effect = [mocked_response_uk,
                                                mocked_response_be,
                                                mocked_response_us
@@ -177,7 +184,8 @@ class TestCountryIsoCodeDataframe():
                              'country': ['United Kingdom', 'Belgium', 'United States'],
                              'country_alpha_2': ['GB', 'BE', 'US'],
                              'country_alpha_3': ['GBR', 'BEL', 'USA'],
-                             'country_numeric': ['123', '875', '014']
+                             'country_numeric': ['123', '875', '014'],
+                             'continent': ['EU', 'EU', 'NA']
                              })
         coded_df = country_iso_code_dataframe(test_df)
         assert coded_df.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
@@ -193,7 +201,8 @@ class TestCountryIsoCodeDataframe():
                              'country': ['United Kingdom', 'Belgium', 'United States'],
                              'country_alpha_2': [None, None, None],
                              'country_alpha_3': [None, None, None],
-                             'country_numeric': [None, None, None]
+                             'country_numeric': [None, None, None],
+                             'continent': [None, None, None]
                              })
         coded_df = country_iso_code_dataframe(test_df)
         assert coded_df.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")

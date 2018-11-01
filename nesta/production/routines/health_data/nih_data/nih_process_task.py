@@ -17,13 +17,14 @@ from sqlalchemy.orm import sessionmaker
 from nesta.production.routines.health_data.nih_data.nih_collect_task import CollectTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.orms.orm_utils import get_elasticsearch_config
+#from nesta.production.orms.orm_utils import get_elasticsearch_config
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.world_reporter_orm import Projects
+from nesta.production.orms.nih_orm import Projects
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 BATCH_SIZE = 50000
 MYSQLDB_ENV = 'MYSQLDB'
-ESCONFIG_ENV = 'ESCONFIG'
+#ESCONFIG_ENV = 'ESCONFIG'
 
 
 class ProcessTask(autobatch.AutoBatchTask):
@@ -31,29 +32,39 @@ class ProcessTask(autobatch.AutoBatchTask):
     and executes the central task.
 
     Args:
-        date (datetime): Date used to label the outputs
+        date (str): Date used to label the outputs    
+        _routine_id (str): String used to label the AWS task
         db_config_path (str): Path to the MySQL database configuration
-        production (bool): Flag indicating whether running in testing
-                           mode (False, default), or production mode (True).
     '''
-    date = luigi.DateParameter(default=datetime.date.today())
+    date = luigi.DateParameter()
+    _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    production = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
         logging.getLogger().setLevel(logging.INFO)
         yield CollectTask(date=self.date,
+                          _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
-                          production=self.production)
+                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_collect_data"),
+                          env_files=[find_filepath_from_pathstub("nesta/nesta"),
+                                     find_filepath_from_pathstub("/production/config/mysqldb.config")],
+                          job_def=self.job_def,
+                          job_name="CollectTask-%s" % self._routine_id,
+                          job_queue=self.job_queue,
+                          region_name=self.region_name,
+                          poll_time=10,
+                          test=self.test,
+                          memory=2048,
+                          max_live_jobs=2)
 
     def output(self):
         '''Points to the input database target'''
-        update_id = "worldreporter-%s" % self._routine_id
+        update_id = "NihProcessData-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
-        db_config["database"] = "production"
-        db_config["table"] = "worldreporter"
+        db_config["database"] = "production" if not self.test else "dev"
+        db_config["table"] = "NIH process DUMMY"  # Note, not a real table
         return MySqlTarget(update_id=update_id, **db_config)
 
     def batch_limits(self, query, batch_size):
@@ -93,17 +104,18 @@ class ProcessTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = get_elasticsearch_config(ESCONFIG_ENV, es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'], sniff_on_start=True)
+        es_config = misctools.get_config('elasticsearch.config', es_mode)
+        #es_config = get_elasticsearch_config(ESCONFIG_ENV, es_mode)
+        es = Elasticsearch(es_config['external_host'], port=es_config['port']) #, sniff_on_start=True)
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
         for start, end in batches:
             params = {'start_index': start,
                       'end_index': end,
-                      'config': "mysqldb_config",
+                      'config': "mysqldb.config",
                       'db': db,
-                      'outinfo': es_config['host'],
+                      'outinfo': es_config['internal_host'],
                       'out_port': es_config['port'],
                       'out_index': es_config['index'],
                       'out_type': es_config['type'],
@@ -115,7 +127,7 @@ class ProcessTask(autobatch.AutoBatchTask):
             job_params.append(params)
         return job_params
 
-    def combine(self):
+    def combine(self, job_params):
         self.output().touch()
 
 

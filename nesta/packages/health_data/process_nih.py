@@ -16,6 +16,7 @@ from nesta.packages.format_utils.datetools import extract_date
 from nesta.packages.format_utils.datetools import extract_year
 from nesta.packages.geo_utils.geocode import geocode
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
+from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 
 
 def _extract_date(date, date_format='%Y-%m-%d'):
@@ -50,7 +51,7 @@ def _extract_date(date, date_format='%Y-%m-%d'):
 
 
 @retry(stop_max_attempt_number=10)
-@ratelimit(max_per_second=1)
+@ratelimit(max_per_second=0.5)
 def _geocode(q=None, city=None, country=None):
     '''
     Args:
@@ -61,15 +62,22 @@ def _geocode(q=None, city=None, country=None):
         dict of lat and lon.
     '''
     if city and country:
-        geo_data = geocode(country=country, city=city)
+        query_kwargs = {'country': country, 'city': city}
     elif q and not (city or country):
-        geo_data = geocode(q=q)
+        query_kwargs = {'q': q}
     else:
         raise TypeError("Missing argument: q or city and country required")
+
+    try:
+        geo_data = geocode(**query_kwargs)
+    except ValueError:
+        logging.debug(f"Unable to geocode {q or (city, country)}")
+        return None  # converts to null and is accepted in elasticsearch
 
     lat = geo_data[0]['lat']
     lon = geo_data[0]['lon']
     logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+
     return {'lat': lat, 'lon': lon}
 
 
@@ -105,14 +113,18 @@ def geocode_dataframe(df):
 def country_iso_code_dataframe(df):
     '''
     A wrapper for the country_iso_code function to apply it to a whole dataframe,
-    using the country name.
+    using the country name. Also appends the continent code based on the country.
 
     Args:
         df (dataframe): a dataframe containing a country field.
     Returns:
-        a dataframe with country_alpha_2, country_alpha_3, country_numeric columns appended.
+        a dataframe with country_alpha_2, country_alpha_3, country_numeric, and
+        continent columns appended.
     '''
     df['country_alpha_2'], df['country_alpha_3'], df['country_numeric'] = None, None, None
+    df['continent'] = None
+
+    continents = alpha2_to_continent_mapping()
 
     for idx, row in df.iterrows():
         try:
@@ -124,6 +136,7 @@ def country_iso_code_dataframe(df):
             df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
             df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
             df.at[idx, 'country_numeric'] = country_codes.numeric
+            df.at[idx, 'continent'] = continents.get(country_codes.alpha_2)
 
     return df
 
