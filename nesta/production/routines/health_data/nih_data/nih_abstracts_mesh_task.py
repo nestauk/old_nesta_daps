@@ -123,13 +123,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         for key in keys:
             params = {'s3_key': key,
                       's3_bucket': bucket,
+                      'dupe_file': "nih_abstracts/duplicate_mapping/duplicate_mapping.json",
                       'config': "mysqldb.config",
                       'db': db,
                       'outinfo': es_config,
-                      # 'outinfo': es_config['internal_host'],
-                      # 'out_port': es_config['port'],
-                      # 'out_index': es_config['index'],
-                      # 'out_type': es_config['type'],
                       'done': self.done_check(es, index=es_config['index'],
                                               doc_type=es_config['type'],
                                               key=key)

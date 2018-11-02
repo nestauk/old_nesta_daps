@@ -13,7 +13,7 @@ import datetime
 import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from nih_mesh_abstracts_task import AbstractsMeshTask
+from nih_abstract_mesh_task import AbstractsMeshTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -40,7 +40,7 @@ class RootTask(luigi.WrapperTask):
                   _routine_id=_routine_id,
                   db_config_path=self.db_config_path,
                   test=(not self.production),
-                  batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
+                  batchable=find_filepath_from_pathstub("batchables/health_data/nih_abstract_mesh_data"),
                   env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                              find_filepath_from_pathstub("config/mysqldb.config"),
                              find_filepath_from_pathstub("config/elasticsearch.config"),
