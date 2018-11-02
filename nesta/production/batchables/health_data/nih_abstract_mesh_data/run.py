@@ -58,6 +58,8 @@ def run():
 
     for doc in docs:
         uid = doc.pop("doc_id")
+        existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
+        doc = {**doc, **existing}
         es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
 
 
