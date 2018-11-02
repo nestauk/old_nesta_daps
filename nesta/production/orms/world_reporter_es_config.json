@@ -64,6 +64,9 @@
                 },
                 "id_of_continent": {
                     "type": "keyword"
+                },
+                "terms_mesh_abstract": {
+                    "type": "keyword"
                 }
             }
         }

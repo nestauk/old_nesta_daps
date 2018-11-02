@@ -14,13 +14,10 @@ from elasticsearch import Elasticsearch
 import logging
 import luigi
 import re
-from sqlalchemy.orm import sessionmaker
 
 from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.nih_orm import Abstracts
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -38,8 +35,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     db_config_path = luigi.Parameter()
 
     def requires(self):
-        '''Collects the database configurations
-        and executes the central task.'''
+        '''Collects the configurations and executes the previous task.'''
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
                           _routine_id=self._routine_id,
@@ -68,36 +64,52 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
     @staticmethod
     def get_abstract_file_keys(bucket, key_prefix):
+        '''Retrieves keys to meshed files from s3.
+
+        Args:
+            bucket (str): s3 bucket
+            key_prefix (str): prefix to identify the files, ie the folder and start of
+                                filename
+
+        Returns:
+            (set of str): keys of the files
+        '''
         s3 = boto3.resource('s3')
         s3bucket = s3.Bucket(bucket)
-        return {b.key for b in s3bucket.objects.filter(Prefix=key_prefix)}
+        return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
     @staticmethod
     def done_check(es_client, index, doc_type, key):
+        '''
+        Checks elasticsearch for mesh terms in the first and last documents in the
+        batch.
+
+        Args:
+            es_client (object): instantiated elasticsearch client
+            index (str): name of the index
+            doc_type (str): name of the document type
+            key (str): filepath in s3
+
+        Returns:
+            (bool): True if both are already existing, otherwise False
+        '''
         pattern = r'(\d+)-(\d+)\.txt$'
         match = re.search(pattern, key)
-        # start, end = match.groups()
+        if match.groups() is None:
+            raise ValueError("Could not extract start and end doc_ids from meshed file")
+
         for idx in match.groups():
-            res = es_client.get(index='rwjf_dev', doc_type='_doc', id=idx)
-            if res['_source'].get('MESH FIELD NAME') is None:
+            res = es_client.get(index=index, doc_type=doc_type, id=idx)
+            if res['_source'].get('terms_mesh_abstract') is None:
                 return False
         return True
 
-
-
-        # TODO: update the ES mapping for the mesh terms and then determine how to query to
-        # see if the start and end projects have mesh terms against them
-        # return bool
-        return start, end
-
     def prepare(self):
         # mysql setup
-        # db = 'production' if not self.test else 'dev'
-        db = 'dev'  # *****just in case - remove after testing*******
+        db = 'production' if not self.test else 'dev'
 
         # elasticsearch setup
-        # es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_mode = 'rwjf_dev'  # *****just in case - remove after testing*******
+        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
 
@@ -105,28 +117,24 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         bucket = 'innovation-mapping-general'
         key_prefix = 'nih_abstracts_processed/mti'
         keys = self.get_abstract_file_keys(bucket, key_prefix)
-        for k in keys:
-            print(self.done_check(es, index=es_config['index'],
-                  doc_type=es_config['type'], key=k))
-            break  # just testing
+        logging.info(f"Found keys: {keys}")
 
-        # TODO: replace all this
-        batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
-        for start, end in batches:
-            params = {'start_index': start,
-                      'end_index': end,
+        for key in keys:
+            params = {'s3_key': key,
+                      's3_bucket': bucket,
                       'config': "mysqldb.config",
                       'db': db,
-                      'outinfo': es_config['internal_host'],
-                      'out_port': es_config['port'],
-                      'out_index': es_config['index'],
-                      'out_type': es_config['type'],
-                      'done': es.exists(index=es_config['index'],
-                                        doc_type=es_config['type'],
-                                        id=end)
+                      'outinfo': es_config,
+                      # 'outinfo': es_config['internal_host'],
+                      # 'out_port': es_config['port'],
+                      # 'out_index': es_config['index'],
+                      # 'out_type': es_config['type'],
+                      'done': self.done_check(es, index=es_config['index'],
+                                              doc_type=es_config['type'],
+                                              key=key)
                       }
-            print(params)
+            logging.info(params)
             job_params.append(params)
         return job_params
 
@@ -135,6 +143,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
 
 if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
     date = datetime.date(year=2018, month=12, day=25)
     process = AbstractsMeshTask(test=True, batchable='', job_def='', job_name='',
             job_queue='', region_name='', db_config_path='MYSQLDB', date=date,
