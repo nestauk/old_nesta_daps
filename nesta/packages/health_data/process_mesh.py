@@ -43,7 +43,7 @@ def format_mesh_terms(df):
     return doc_terms
 
 
-def retrieve_duplicate_map(bucket, abstract_file):
+def retrieve_duplicate_map(bucket, dupe_file):
     """
     Retrieves the mapping between duplicate abstracts from s3 and processes it.
 

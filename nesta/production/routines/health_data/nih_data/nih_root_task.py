@@ -13,7 +13,7 @@ import datetime
 import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from nih_abstract_mesh_task import AbstractsMeshTask
+from nih_abstracts_mesh_task import AbstractsMeshTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -44,7 +44,7 @@ class RootTask(luigi.WrapperTask):
                   env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                              find_filepath_from_pathstub("config/mysqldb.config"),
                              find_filepath_from_pathstub("config/elasticsearch.config"),
-                             ],
+                             find_filepath_from_pathstub("nih.json")],
                   job_def="py36_amzn1_image",
                   job_name="AbstractsMeshTask-%s" % _routine_id,
                   job_queue="HighPriority",

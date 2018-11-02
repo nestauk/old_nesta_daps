@@ -84,8 +84,12 @@ def schema_transformer(data, *, filename, from_key, to_key, ignore=[]):
         data.rename(columns=transformer, inplace=True)
     # ... OR list of dicts
     elif type(data) == list and all(type(row) == dict for row in data):
-        data = [{transformer[k]:v for k, v in row.items()
-                 if k in transformer} for row in data]
+        transformed_data = []
+        for row in data:
+            transformed = {transformer[k]: v for k, v in row.items() if k in transformer}
+            ignored = {k: v for k, v in row.items if k in ignore}
+            transformed_data.append(**transformed, **ignored)
+
     # Otherwise throw an error
     else:
         raise ValueError("Schema transform expects EITHER a pandas.DataFrame "

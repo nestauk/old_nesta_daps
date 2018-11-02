@@ -56,7 +56,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
     def output(self):
         '''Points to the input database target'''
-        update_id = "NihProcessData-%s" % self._routine_id
+        update_id = "NihAbstractMeshData-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
         db_config["table"] = "NIH abstracts mesh DUMMY"  # Note, not a real table
