@@ -43,14 +43,13 @@ def run():
                      'mesh_terms': terms,
                      'abstract_text': abstract.abstract_text
                      })
-        duped_docs = dupes.get(doc_id)
-        if duped_docs:
-            logging.info(f'Found duplicates: {duped_docs}')
-            for duped_doc in duped_docs:
-                docs.append({'doc_id': duped_doc,
-                             'mesh_terms': terms,
-                             'abstract_text': abstract.abstract_text
-                             })
+        duped_docs = dupes.get(doc_id, [])
+        logging.info(f'Found {len(duped_docs)} duplicates')
+        for duped_doc in duped_docs:
+            docs.append({'doc_id': duped_doc,
+                         'mesh_terms': terms,
+                         'abstract_text': abstract.abstract_text
+                         })
 
     # apply schema
     docs = schema_transformer(docs, filename="nih.json",
