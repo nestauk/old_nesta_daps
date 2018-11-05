@@ -13,8 +13,25 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.nih_orm import Abstracts
 
 
+def clean_abstract(abstract):
+    '''Removes multiple spaces, tabs and newlines.
+
+    Args:
+        abstract (str): text to be cleaned
+
+    Returns
+        (str): cleaned text
+    '''
+    abstract = abstract.replace('\t', ' ')
+    abstract = abstract.replace('\n', ' ')
+    while '  ' in abstract:
+        abstract = abstract.replace('  ', ' ')
+
+    return abstract
+
+
 def run():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.WARNING)
 
     bucket = os.environ["BATCHPAR_s3_bucket"]
     abstract_file = os.environ["BATCHPAR_s3_key"]
@@ -30,7 +47,7 @@ def run():
     # retrieve a batch of meshed terms
     mesh_terms = retrieve_mesh_terms(bucket, abstract_file)
     mesh_terms = format_mesh_terms(mesh_terms)
-    logging.info(f'retrieved {len(mesh_terms)} meshed abstracts')
+    logging.warning(f'retrieved {len(mesh_terms)} meshed abstracts')
 
     # retrieve duplicate map
     dupes = retrieve_duplicate_map(bucket, dupe_file)
@@ -39,16 +56,17 @@ def run():
     docs = []
     for doc_id, terms in mesh_terms.items():
         abstract = session.query(Abstracts).filter(Abstracts.application_id == doc_id).one()
+        clean_abstract_text = clean_abstract(abstract.abstract_text)
         docs.append({'doc_id': doc_id,
                      'mesh_terms': terms,
-                     'abstract_text': abstract.abstract_text
+                     'abstract_text': clean_abstract_text
                      })
         duped_docs = dupes.get(doc_id, [])
         logging.info(f'Found {len(duped_docs)} duplicates')
         for duped_doc in duped_docs:
             docs.append({'doc_id': duped_doc,
                          'mesh_terms': terms,
-                         'abstract_text': abstract.abstract_text
+                         'abstract_text': clean_abstract_text
                          })
 
     # apply schema
@@ -58,14 +76,12 @@ def run():
 
     # output to elasticsearch
     es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
-    logging.info(f'writing {len(docs)} documents to elasticsearch')
+    logging.warning(f'writing {len(docs)} documents to elasticsearch')
     for doc in docs:
         uid = doc.pop("doc_id")
         existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
         doc = {**doc, **existing}
         es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
-
-    logging.info('finished')
 
 
 if __name__ == '__main__':
