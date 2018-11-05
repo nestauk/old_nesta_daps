@@ -3,6 +3,7 @@ from elasticsearch import Elasticsearch
 import logging
 import os
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
@@ -26,6 +27,7 @@ def clean_abstract(abstract):
     abstract = abstract.replace('\n', ' ')
     while '  ' in abstract:
         abstract = abstract.replace('  ', ' ')
+    abstract.strip()
 
     return abstract
 
@@ -47,7 +49,7 @@ def run():
     # retrieve a batch of meshed terms
     mesh_terms = retrieve_mesh_terms(bucket, abstract_file)
     mesh_terms = format_mesh_terms(mesh_terms)
-    logging.warning(f'retrieved {len(mesh_terms)} meshed abstracts')
+    logging.warning(f'batch {abstract_file} contains {len(mesh_terms)} meshed abstracts')
 
     # retrieve duplicate map
     dupes = retrieve_duplicate_map(bucket, dupe_file)
@@ -55,7 +57,10 @@ def run():
 
     docs = []
     for doc_id, terms in mesh_terms.items():
-        abstract = session.query(Abstracts).filter(Abstracts.application_id == doc_id).one()
+        try:
+            abstract = session.query(Abstracts).filter(Abstracts.application_id == doc_id).one()
+        except NoResultFound:
+            raise NoResultFound(doc_id)
         clean_abstract_text = clean_abstract(abstract.abstract_text)
         docs.append({'doc_id': doc_id,
                      'mesh_terms': terms,
@@ -80,7 +85,7 @@ def run():
     for doc in docs:
         uid = doc.pop("doc_id")
         existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
-        doc = {**doc, **existing}
+        doc = {**existing, **doc}
         es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
 
 
