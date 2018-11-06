@@ -1,5 +1,6 @@
 from ast import literal_eval
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import NotFoundError
 import logging
 import os
 from sqlalchemy.orm import sessionmaker
@@ -85,9 +86,13 @@ def run():
     logging.warning(f'writing {len(docs)} documents to elasticsearch')
     for doc in docs:
         uid = doc.pop("doc_id")
-        existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
-        doc = {**existing, **doc}
-        es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
+        try:
+            existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
+        except NotFoundError:
+            pass
+        else:
+            doc = {**existing, **doc}
+            es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
 
 
 if __name__ == '__main__':
