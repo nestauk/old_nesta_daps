@@ -89,7 +89,7 @@ def run():
         try:
             existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
         except NotFoundError:
-            pass
+            logging.warning(f"Missing project for abstract: {uid}")
         else:
             doc = {**existing, **doc}
             es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
