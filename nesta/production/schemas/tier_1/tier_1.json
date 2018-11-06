@@ -3,7 +3,8 @@
     "term": "firstName",
     "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate", "url", "address", "status",
-                  "count", "datetime", "type", "topics", "language", "company"]
+                  "count", "datetime", "type", "topics", "language", "company",
+                "name", "description"]
     },
     {
     "term": "middleName",
@@ -12,7 +13,7 @@
                "iso2", "iso3", "isoNumeric", "roles", "region", "summary", "subcategory",
                    "category", "rounds", "birth", "last", "death", "employee", "facebook",
                    "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created",
-                 "latitude", "longitude", "member", "forked", "login"]
+                 "latitude", "longitude", "member", "forked", "login", "forkedId"]
     },
     {
     "term": "lastName",
