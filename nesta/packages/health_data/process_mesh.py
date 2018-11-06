@@ -39,7 +39,7 @@ def format_mesh_terms(df):
     df.drop(df[df.term == 'PRC'].index, axis=0, inplace=True)
 
     # remove invalid error rows
-    df.drop(df[df.doc_id.str.contains('ERROR.*ERROR', na=False)].index, axis=0, inplace=True)
+    df.drop(df[df.doc_id.astype(str).str.contains('ERROR.*ERROR', na=False)].index, axis=0, inplace=True)
 
     # pivot and remove unrequired columns
     doc_terms = {doc_id: list(grouped.term) for doc_id, grouped in df.groupby("doc_id")}
