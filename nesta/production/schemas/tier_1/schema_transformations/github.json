@@ -7,7 +7,7 @@
       {"tier_0": "project_forked_from" , "tier_1": "id_forked_project"},
       {"tier_0": "project_id" , "tier_1": "id_of_project", "unique":true},
       {"tier_0": "user_login" , "tier_1": "name_login_user"},
-      {"tier_0": "user_company" , "tier_1": "company_of_user"},
+      {"tier_0": "user_company" , "tier_1": "name_of_organisation"},
       {"tier_0": "user_creation_date" , "tier_1": "datetime_created_user"},
       {"tier_0": "user_type" , "tier_1": "type_of_user"},
       {"tier_0": "user_longitude" , "tier_1": "coordinate_longitude_user"},
