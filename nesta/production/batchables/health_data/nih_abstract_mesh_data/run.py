@@ -71,7 +71,8 @@ def run():
         for duped_doc in duped_docs:
             docs.append({'doc_id': duped_doc,
                          'mesh_terms': terms,
-                         'abstract_text': clean_abstract_text
+                         'abstract_text': clean_abstract_text,
+                         'duplicate_abstract': True
                          })
 
     # apply schema

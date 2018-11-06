@@ -67,6 +67,10 @@
                 },
                 "terms_mesh_abstract": {
                     "type": "keyword"
+                },
+                "booleanFlag_duplicate_abstract": {
+                    "type": "boolean",
+                    "null_value": false
                 }
             }
         }
