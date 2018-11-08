@@ -1,5 +1,23 @@
 {
-    "mappings": {
+    "settings": {
+        "index": {
+            "number_of_shards": "5",
+            "number_of_replicas": "1"
+        },
+        "analysis": {
+            "analyzer": {
+                "mesh_terms_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                        ]
+                }
+            }
+        }
+    },"mappings": {
         "_doc": {
             "dynamic": "strict",
             "properties": {
@@ -66,7 +84,13 @@
                     "type": "keyword"
                 },
                 "terms_mesh_abstract": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
                 },
                 "booleanFlag_duplicate_abstract": {
                     "type": "boolean",
