@@ -76,7 +76,7 @@ def build_ngrams(documents, n=2, **kwargs):
     for doc in documents:
         sentences += doc
     # Get the bigrams
-    phrases = gensim.models.Phrases(sentences, min_count=2, delimiter=b'_')
+    phrases = gensim.models.Phrases(sentences, min_count=50, delimiter=b'_')
     bigram = gensim.models.phrases.Phraser(phrases)
     docs_bi = [[bigram[sentence] for sentence in doc] for doc in documents]
     # If finished
