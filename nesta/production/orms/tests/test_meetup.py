@@ -17,51 +17,51 @@ class TestMeetup(unittest.TestCase):
 
     def tearDown(self):
         '''Drop the temporary table'''
-        Base.metadata.drop_all(self.engine)        
+        Base.metadata.drop_all(self.engine)
 
     def test_good_relation(self):
         session = self.Session()
-        group = Group(id = 123,
-                      urlname = "something",
-                      category_name = "tech",
-                      category_shortname = "t",
-                      city = "london",
-                      country = "uk",
-                      created = 123,
-                      description = "something else",
-                      lat = 20.3,
-                      lon = -3.1,
-                      members = 23,
-                      name = "something",
-                      topics = {"something":["else"]},
-                      category_id = 12,
-                      country_name = "united kingdom",
-                      timestamp = "2018-02-17 12:12:12")
+        group = Group(id=123,
+                      urlname="something",
+                      category_name="tech",
+                      category_shortname="t",
+                      city="london",
+                      country="uk",
+                      created=123,
+                      description="something else",
+                      lat=20.3,
+                      lon=-3.1,
+                      members=23,
+                      name="something",
+                      topics={"something": ["else"]},
+                      category_id=12,
+                      country_name="united kingdom",
+                      timestamp="2018-02-17 12:12:12")
 
-        new_group = Group(id = 123,
-                          urlname = "something",
-                          category_name = "tech",
-                          category_shortname = "t",
-                          city = "london",
-                          country = "uk",
-                          created = 123,
-                          description = "something else",
-                          lat = 20.3,
-                          lon = -3.1,
-                          members = 23,
-                          name = "something",
-                          topics = {"something":["else"]},
-                          category_id = 12,
-                          country_name = "united kingdom",
-                          timestamp = "2018-02-17 12:12:12")
+        new_group = Group(id=123,
+                          urlname="something",
+                          category_name="tech",
+                          category_shortname="t",
+                          city="london",
+                          country="uk",
+                          created=123,
+                          description="something else",
+                          lat=20.3,
+                          lon=-3.1,
+                          members=23,
+                          name="something",
+                          topics={"something": ["else"]},
+                          category_id=12,
+                          country_name="united kingdom",
+                          timestamp="2018-02-17 12:12:12")
 
-        member = GroupMember(group_id = 123,
-                             group_urlname = "something",
-                             member_id = 1)
+        member = GroupMember(group_id=123,
+                             group_urlname="something",
+                             member_id=1)
 
-        new_member = GroupMember(group_id = 123,
-                                 group_urlname = "something",
-                                 member_id = 1)
+        new_member = GroupMember(group_id=123,
+                                 group_urlname="something",
+                                 member_id=1)
 
         # Add the group and member
         session.add(group)
