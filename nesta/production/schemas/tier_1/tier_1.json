@@ -8,7 +8,7 @@
     "term": "middleName",
     "values": ["of", "fiscal", "city", "country",  "state", "zipcode", "total",
                "official", "start", "end", "descriptive", "abstract", "duns",
-               "iso2", "iso3", "isoNumeric", "duplicate"]
+               "iso2", "iso3", "isoNumeric", "mesh", "duplicate"]
     },
     {
     "term": "lastName",
