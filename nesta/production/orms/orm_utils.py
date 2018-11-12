@@ -164,12 +164,12 @@ def get_mysql_engine(db_env, section, database="production_tests"):
 #     return es_config
 
 
-def create_elasticsearch_index(index_name, es_client, config_path=None):
+def create_elasticsearch_index(es_client, index, config_path=None):
     '''Wrapper for the elasticsearch library to create indices.
 
     Args:
-        index_name (str): name of the new index
         es_client (object): es client for the targer cluster
+        index_name (str): name of the new index
         config_path (str): local path to the .json file containing the mapping and settings
 
     Returns:
@@ -179,5 +179,5 @@ def create_elasticsearch_index(index_name, es_client, config_path=None):
     if config_path:
         with open(config_path) as f:
             config = json.load(f)
-    response = es_client.indices.create(index=index_name, body=config)
+    response = es_client.indices.create(index=index, body=config)
     return response

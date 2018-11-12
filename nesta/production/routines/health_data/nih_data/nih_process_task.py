@@ -17,14 +17,12 @@ from sqlalchemy.orm import sessionmaker
 from nesta.production.routines.health_data.nih_data.nih_collect_task import CollectTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-#from nesta.production.orms.orm_utils import get_elasticsearch_config
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.nih_orm import Projects
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 BATCH_SIZE = 50000
 MYSQLDB_ENV = 'MYSQLDB'
-#ESCONFIG_ENV = 'ESCONFIG'
 
 
 class ProcessTask(autobatch.AutoBatchTask):
@@ -32,7 +30,7 @@ class ProcessTask(autobatch.AutoBatchTask):
     and executes the central task.
 
     Args:
-        date (str): Date used to label the outputs    
+        date (str): Date used to label the outputs
         _routine_id (str): String used to label the AWS task
         db_config_path (str): Path to the MySQL database configuration
     '''
@@ -105,8 +103,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         # elasticsearch setup
         es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
-        #es_config = get_elasticsearch_config(ESCONFIG_ENV, es_mode)
-        es = Elasticsearch(es_config['external_host'], port=es_config['port']) #, sniff_on_start=True)
+        es = Elasticsearch(es_config['external_host'], port=es_config['port'])
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []

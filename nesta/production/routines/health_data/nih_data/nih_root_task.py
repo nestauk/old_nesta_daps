@@ -13,7 +13,8 @@ import datetime
 import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from nih_process_task import ProcessTask
+from nih_abstracts_mesh_task import AbstractsMeshTask
+
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
@@ -22,7 +23,7 @@ class RootTask(luigi.WrapperTask):
     Args:
         date (datetime): Date used to label the outputs
         db_config_path (str): Path to the MySQL database configuration
-        production (bool): Flag indicating whether running in testing 
+        production (bool): Flag indicating whether running in testing
                            mode (False, default), or production mode (True).
     '''
     date = luigi.DateParameter(default=datetime.date.today())
@@ -35,18 +36,19 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
-        yield ProcessTask(date=self.date,
-                          _routine_id=_routine_id,
-                          db_config_path=self.db_config_path,
-                          test=(not self.production),
-                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                     find_filepath_from_pathstub("config/mysqldb.config"),
-                                     find_filepath_from_pathstub("config/elasticsearch.config"),
-                                     find_filepath_from_pathstub("nih.json")],
-                          job_def="py36_amzn1_image",
-                          job_name="ProcessTask-%s" % _routine_id,
-                          job_queue="HighPriority",
-                          region_name="eu-west-2",
-                          poll_time=10,
-                          max_live_jobs=2)
+        yield AbstractsMeshTask(date=self.date,
+                  _routine_id=_routine_id,
+                  db_config_path=self.db_config_path,
+                  test=(not self.production),
+                  batchable=find_filepath_from_pathstub("batchables/health_data/nih_abstract_mesh_data"),
+                  env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                             find_filepath_from_pathstub("config/mysqldb.config"),
+                             find_filepath_from_pathstub("config/elasticsearch.config"),
+                             find_filepath_from_pathstub("nih.json")],
+                  job_def="py36_amzn1_image",
+                  job_name="AbstractsMeshTask-%s" % _routine_id,
+                  job_queue="HighPriority",
+                  region_name="eu-west-2",
+                  poll_time=10,
+                  memory=1024,
+                  max_live_jobs=50)
