@@ -9,6 +9,9 @@ from functools import reduce
 from sklearn.feature_extraction.text import TfidfVectorizer
 nltk.download('stopwords', quiet=True)
 nltk.download('punkt', quiet=True)
+import keras
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
 stop_words = set(stopwords.words('english') +
                  list(string.punctuation) +
@@ -124,15 +127,41 @@ def filter_by_idf(documents, lower_idf_limit, upper_idf_limit):
         new_docs.append(_new_doc)
     return new_docs
 
+def keras_tokenizer(texts, num_words=None, mode=None, maxlen=None, sequences=False):
+    """Preprocess text with Keras Tokenizer.
+    Args:
+        texts (:obj:`list`, str): Collections of documents to preprocess.
+        num_words (int): Length of the vocabulary.
+        mode (str): Can be "count" or "tfidf".
+    Returns:
+        encoded_docs (:obj:`array`, int | float): Can be Bag-of-Words or TF-IDF
+        weight matrix, depending on "mode".
+    """
+    t = Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^`{|}~ ', num_words=num_words)
+    t.fit_on_texts(texts)
+
+    if sequences:
+        seq = t.texts_to_sequences(texts)
+        encoded_docs = pad_sequences(seq, maxlen=maxlen)
+    else:
+        encoded_docs = t.texts_to_matrix(texts, mode=mode)
+    return encoded_docs
 
 if __name__ == '__main__':
     nltk.download("gutenberg")
     from nltk.corpus import gutenberg
-    docs = []
+    documents = []
     for fid in gutenberg.fileids():
         f = gutenberg.open(fid)
         docs.append(f.read())
         f.close()
-    docs = [tokenize_document(d) for d in docs]
+    docs = [tokenize_document(d) for d in documents]
     docs = build_ngrams(docs)
     docs = filter_by_idf(docs, 10, 90)
+
+    # Create sequences with the keras_tokenizer()
+    sequences = keras_tokenizer(documents, num_words=2000, maxlen=20,
+                                sequences=True)
+
+    # Create BoW or TFIDF matrix with keras_tokenizer()
+    tfidf_matrix = keras_tokenizer(documents, num_words=2000, mode='tfidf')

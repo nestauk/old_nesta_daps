@@ -39,6 +39,14 @@ class PreprocessTest(unittest.TestCase):
         self.assertLess(len(vocab_after), len(vocab_before))
         self.assertGreater(len(vocab_after), 1)
 
+    def test_keras_sequences(self):
+        sequences = keras_tokenizer(self.docs, num_words=2000, maxlen=20,
+        sequences=True)
+        self.assertTrue(sequences.shape[1]==20)
+
+    def test_keras_matrix(self):
+        tfidf_matrix = keras_tokenizer(self.docs, num_words=2000, mode='tfidf')
+        self.assertTrue(self.docs==tdidf_matrix.shape[1])
 
 if __name__ == "__main__":
     unittest.main()
