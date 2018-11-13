@@ -5,8 +5,8 @@ Batch Example
 An example of building a pipeline with batched tasks.
 '''
 
-from luigihacks import autobatch
-from luigihacks import s3
+from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks import s3
 import luigi
 import datetime
 import json
@@ -82,8 +82,8 @@ class FinalTask(luigi.Task):
     def requires(self):
         '''Get the output from the batchtask'''
         return SomeBatchTask(date=self.date,
-                             batchable=("/home/ec2-user/nesta/production/"
-                                        "batchables/examples/batch-example/"),
+                             batchable=("/home/ec2-user/nesta/nesta/production/"
+                                        "batchables/examples/batch_example/"),
                              job_def="standard_image",
                              job_name="batch-example-%s" % self.date,
                              job_queue="HighPriority",

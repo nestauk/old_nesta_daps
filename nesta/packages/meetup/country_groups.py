@@ -96,7 +96,7 @@ def get_coordinate_data(n):
                              for each country.
     '''
     
-    sf = shapefile.Reader(os.environ["WORLD_BORDERS"])
+    sf = shapefile.Reader(os.environ["WORLD_BORDERS"], encodingErrors='ignore')
     output = []
     for shape_info in sf.shapeRecords():
         # Zip together the field names and record values
@@ -182,7 +182,7 @@ class MeetupCountryGroups:
         self.params['lat'] = lat
         self.params['lon'] = lon
         self.params['key'] = meetup_utils.get_api_key()
-
+        
         # Work out whether the task has failed or not
         failed = False
         try:

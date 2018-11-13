@@ -7,8 +7,8 @@ An example of building a pipeline with database Targets
 
 import luigi
 import datetime
-from luigihacks import misctools
-from luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks.mysqldb import MySqlTarget
 
 
 class InputData(luigi.Task):
