@@ -1,7 +1,4 @@
 from nesta.packages.health_data.nih_abstract_yielder import AbstractYielder
-#from nesta.packages.nlp_utils.preprocess import tokenize_document
-#from nesta.packages.nlp_utils.preprocess import build_ngrams
-from nesta.packages.nlp_utils.ngrammer import Ngrammer    
 from nesta.packages.nlp_utils.preprocess import filter_by_idf
 from gensim.models import Word2Vec
 from jklearn.cluster.omnislash import Omnislash
