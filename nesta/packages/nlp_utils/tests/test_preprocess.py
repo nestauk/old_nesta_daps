@@ -1,6 +1,7 @@
 from nesta.packages.nlp_utils.preprocess import tokenize_document
 from nesta.packages.nlp_utils.preprocess import build_ngrams
 from nesta.packages.nlp_utils.preprocess import filter_by_idf
+from nesta.packages.nlp_utils.preprocess import keras_tokenizer
 import nltk
 from nltk.corpus import gutenberg
 import unittest
