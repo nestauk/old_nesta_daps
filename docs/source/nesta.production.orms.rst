@@ -5,4 +5,7 @@
     :undoc-members:
     :show-inheritance:
 
-
+.. automodule:: production.orms.nih_orm
+    :members:
+    :undoc-members:
+    :show-inheritance:

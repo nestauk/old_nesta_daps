@@ -1,5 +1,5 @@
 '''
-World RePORTER
+NIH schema
 ==============
 
 The schema for the World RePORTER data. Note that the schema
@@ -101,8 +101,17 @@ class Patents(Base):
     project_id = Column(VARCHAR(11), index=True)
     patent_org_name = Column(VARCHAR(50))
 
-class LinkTables(Base):
-    __tablename__ = 'nih_linktables'
+# class LinkTables(Base):
+#     __tablename__ = 'nih_linktables'
 
-    pmid = Column(INTEGER, primary_key=True)
-    project_number = Column(VARCHAR(11), index=True)
+#     pmid = Column(INTEGER, primary_key=True)
+#     project_number = Column(VARCHAR(11), index=True)
+
+
+# class ClinicalStudies(Base):
+#     __tablename__ = "nih_clinicalstudies"
+    
+#     core_project_number 
+#     clinicaltrials_govid
+#     study
+#     study_status

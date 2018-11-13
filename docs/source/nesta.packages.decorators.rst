@@ -7,3 +7,8 @@ Decorators
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: packages.decorators.schema_transform
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

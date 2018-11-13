@@ -2,6 +2,7 @@ import unittest
 import os
 from pycountry import countries as pycountries
 import pandas as pd
+from unittest import mock
 
 from nesta.packages.meetup.country_groups import MeetupCountryGroups
 from nesta.packages.meetup.country_groups import get_coordinate_data

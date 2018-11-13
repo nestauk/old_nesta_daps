@@ -8,7 +8,7 @@ An example of building a pipeline with S3 Targets
 import luigi
 import datetime
 import json
-from luigihacks import s3
+from nesta.production.luigihacks import s3
 import time
 
 S3PREFIX = "s3://nesta-dev/production_example_"
