@@ -64,6 +64,8 @@ def extract_ngrams(date):
                 continue
             if len(line) > 50:
                 continue
+            if line.decode('utf-8')[0].isnumeric():
+                continue
             ngrams.add(line.lower())
     return ngrams
 
