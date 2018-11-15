@@ -48,7 +48,7 @@ def request_token():
     is slow and not required.
 
     Returns:
-        (string): supplied resumtionToken
+        (str): supplied resumtionToken
     """
     root = _arxiv_request(API_URL, metadataPrefix='arXiv')
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
@@ -67,8 +67,8 @@ def xml_to_json(element, tag, prefix=''):
         prefix (str): schema prefix on the name of the tag
 
     Returns:
-        (str): json of the original object with the key as the tag and a list of all
-               instances
+        (str): json of the original object with the supplied tag as the key and a list of all
+               instances of this tag as the value.
     """
     tag = ''.join([prefix, tag])
     # is this too much compression...
