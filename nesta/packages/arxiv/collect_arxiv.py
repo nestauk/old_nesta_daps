@@ -72,8 +72,10 @@ def xml_to_json(element, tag, prefix=''):
     """
     tag = ''.join([prefix, tag])
 
-    all_data = [{field.tag[len(prefix):]: field.text for field in fields.getiterator()
-                if field.tag != tag} for fields in element.getiterator(tag)]
+    all_data = [{field.tag[len(prefix):]: field.text
+                for field in fields.getiterator()
+                if field.tag != tag}
+                for fields in element.getiterator(tag)]
     return json.dumps(all_data)
 
 
