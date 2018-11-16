@@ -40,6 +40,8 @@ class TypeDict(dict):
         return True
 
     def __setitem__(self, k, v):
+        if v == {'nil': 'true'}:
+            return super().__setitem__(k, None)
         # Don't bother if not a string
         if type(v) is not str:
             return super().__setitem__(k, v)
