@@ -121,8 +121,12 @@ def arxiv_batch(token, cursor):
 
     # extract cursor for next batch
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
-    resumption_cursor = int(token.text.split("|")[1])
-    logging.info(f"resumptionCursor: {resumption_cursor}")
+    if token:
+        resumption_cursor = int(token.text.split("|")[1])
+        logging.info(f"resumptionCursor: {resumption_cursor}")
+    else:
+        resumption_cursor = False
+        logging.info
 
     return output, resumption_cursor
 

@@ -203,6 +203,12 @@ def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
     assert cursor == 1001
 
 
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_returns_false_at_end_of_data(mocked_request, mock_response):
+    mocked_request.return_value = ET.fromstring(mock_response)
+    pytest.fail("write this test")
+
+
 def test_xml_to_json_conversion():
     test_xml = '''<?xml version="1.0" encoding="UTF-8"?>
                     <authors xmlns="http://arxiv.org/OAI/arXiv/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXiv/ http://arxiv.org/OAI/arXiv.xsd">
