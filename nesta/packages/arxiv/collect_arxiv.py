@@ -118,7 +118,13 @@ def arxiv_batch(token, cursor):
         row['authors'] = xml_to_json(info, 'author', prefix=ARXIV)
 
         output.append(row)
-    return output
+
+    # extract cursor for next batch
+    token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
+    resumption_cursor = int(token.text.split("|")[1])
+    logging.info(f"resumptionCursor: {resumption_cursor}")
+
+    return output, resumption_cursor
 
 
 if __name__ == '__main__':

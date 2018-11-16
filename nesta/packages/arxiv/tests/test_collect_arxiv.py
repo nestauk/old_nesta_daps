@@ -157,7 +157,7 @@ def test_total_articles_doesnt_override_delay(mocked_request, mock_response):
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
-    batch = arxiv_batch('111222444', 0)
+    batch, _ = arxiv_batch('111222444', 0)
     expected_fields = {'datestamp', 'id', 'created', 'updated', 'title', 'categories',
                        'journal-ref', 'doi', 'msc-class', 'abstract', 'authors'}
     assert set(batch[0]) == expected_fields
@@ -166,7 +166,7 @@ def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_handles_missing_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
-    batch = arxiv_batch('111222444', 0)
+    batch, _ = arxiv_batch('111222444', 0)
     expected_fields = {'datestamp', 'id', 'created', 'title', 'categories', 'abstract', 'authors'}
     assert set(batch[1]) == expected_fields
 
@@ -174,7 +174,7 @@ def test_arxiv_batch_handles_missing_fields(mocked_request, mock_response):
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_author_json_conversion(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
-    batch = arxiv_batch('111222444', 0)
+    batch, _ = arxiv_batch('111222444', 0)
 
     expected_authors = '[{"keyname": "Author", "forenames": "G."}]'
     assert batch[0]['authors'] == expected_authors
@@ -189,11 +189,18 @@ def test_arxiv_batch_author_json_conversion(mocked_request, mock_response):
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_ignores_articles_with_missing_metadata(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
-    batch = arxiv_batch('111222444', 0)
+    batch, _ = arxiv_batch('111222444', 0)
     assert len(batch) == 2
 
     datestamps = {row['datestamp'] for row in batch}
     assert '2088-01-01' not in datestamps
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
+    mocked_request.return_value = ET.fromstring(mock_response)
+    _, cursor = arxiv_batch('111222444', 0)
+    assert cursor == 1001
 
 
 def test_xml_to_json_conversion():
