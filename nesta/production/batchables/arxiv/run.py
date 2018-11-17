@@ -26,7 +26,7 @@ def parse_s3_path(path):
 
 
 def retrieve_rows(start_cursor, end_cursor, resumption_token):
-    while start_cursor and start_cursor < end_cursor:
+    while start_cursor is not None and start_cursor < end_cursor:
         batch, start_cursor = arxiv_batch(resumption_token, start_cursor)
         for row in batch:
             yield row

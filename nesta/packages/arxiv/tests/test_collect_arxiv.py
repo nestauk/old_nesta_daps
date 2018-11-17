@@ -204,9 +204,9 @@ def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
-def test_arxiv_batch_returns_false_at_end_of_data(mocked_request, mock_response):
+def test_arxiv_batch_returns_none_at_end_of_data(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
-    pytest.fail("write this test")
+    pytest.fail("write this test with paramaterize")
 
 
 def test_xml_to_json_conversion():

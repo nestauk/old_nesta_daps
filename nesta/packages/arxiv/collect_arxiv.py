@@ -125,8 +125,8 @@ def arxiv_batch(token, cursor):
         resumption_cursor = int(token.text.split("|")[1])
         logging.info(f"resumptionCursor: {resumption_cursor}")
     else:
-        resumption_cursor = False
-        logging.info
+        resumption_cursor = None
+        logging.info("End of data")
 
     return output, resumption_cursor
 
