@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import requests
@@ -114,6 +115,17 @@ def arxiv_batch(token, cursor):
             except AttributeError:
                 logging.info(f"{field} not found in article {header_id}")
 
+        for date_field in ['datestamp', 'created', 'updated']:
+            try:
+                date = row[date_field]
+                row[date_field] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+            except ValueError:
+                # date is not in the correct format
+                del row[date_field]
+            except KeyError:
+                # field not in this row
+                pass
+
         row['title'] = row['title'].strip()
         row['authors'] = xml_to_json(info, 'author', prefix=ARXIV)
 
@@ -121,7 +133,7 @@ def arxiv_batch(token, cursor):
 
     # extract cursor for next batch
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
-    if token:
+    if token.text is not None:
         resumption_cursor = int(token.text.split("|")[1])
         logging.info(f"resumptionCursor: {resumption_cursor}")
     else:

@@ -53,7 +53,7 @@ def mock_response():
             <metadata>
                 <arXiv xmlns="http://arxiv.org/OAI/arXiv/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXiv/ http://arxiv.org/OAI/arXiv.xsd">
                     <id>0704.1000</id>
-                    <created>2007-04-07</created>
+                    <created>2007-04-999</created>
                     <authors>
                         <author>
                             <keyname>AnotherAuthor</keyname>
@@ -167,7 +167,7 @@ def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
 def test_arxiv_batch_handles_missing_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444', 0)
-    expected_fields = {'datestamp', 'id', 'created', 'title', 'categories', 'abstract', 'authors'}
+    expected_fields = {'datestamp', 'id', 'title', 'categories', 'abstract', 'authors'}
     assert set(batch[1]) == expected_fields
 
 
@@ -197,6 +197,14 @@ def test_arxiv_batch_ignores_articles_with_missing_metadata(mocked_request, mock
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_converts_dates(mocked_request, mock_response):
+    mocked_request.return_value = ET.fromstring(mock_response)
+    batch, _ = arxiv_batch('111222444', 0)
+    assert {'datestamp', 'created', 'updated'} < batch[0].keys()
+    assert {'created', 'updated'}.isdisjoint(batch[1].keys())
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     _, cursor = arxiv_batch('111222444', 0)
@@ -204,9 +212,39 @@ def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
-def test_arxiv_batch_returns_none_at_end_of_data(mocked_request, mock_response):
+def test_arxiv_batch_returns_none_at_end_of_data(mocked_request):
+    mock_response = b'''<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2018-11-13T11:47:39Z</responseDate>
+    <request verb="ListRecords" metadataPrefix="arXiv">http://export.arxiv.org/oai2</request>
+    <ListRecords>
+        <record>
+            <header>
+                <identifier>oai:arXiv.org:0704.1000</identifier>
+                <datestamp>2008-11-26</datestamp>
+                <setSpec>physics:hep-ex</setSpec>
+            </header>
+            <metadata>
+                <arXiv xmlns="http://arxiv.org/OAI/arXiv/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXiv/ http://arxiv.org/OAI/arXiv.xsd">
+                    <id>0704.1000</id>
+                    <created>2007-04-999</created>
+                    <authors>
+                        <author>
+                            <keyname>Surname</keyname>
+                            <forenames>Some other</forenames>
+                        </author>
+                    </authors>
+                    <title> Measurement of something interesting</title>
+                    <abstract>This paper did something clever and interesting</abstract>
+                </arXiv>
+            </metadata>
+        </record>
+        <resumptionToken cursor="0" completeListSize="1463679"></resumptionToken>
+    </ListRecords>
+</OAI-PMH>'''
     mocked_request.return_value = ET.fromstring(mock_response)
-    pytest.fail("write this test with paramaterize")
+    _, cursor = arxiv_batch('7654321', 0)
+    assert cursor is None
 
 
 def test_xml_to_json_conversion():
