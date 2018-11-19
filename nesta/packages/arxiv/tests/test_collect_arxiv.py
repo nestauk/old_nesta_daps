@@ -35,7 +35,7 @@ def mock_response():
                         </author>
                     </authors>
                     <title>Generic character sheaves on disconnected groups and character values</title>
-                    <categories>math.RT</categories>
+                    <categories>math.PR math.RT</categories>
                     <comments>12 pages</comments>
                     <msc-class>05C85; 05C70; 68R10; 05B35</msc-class>
                     <journal-ref>Phys.Rev.Lett.99:131803,2007</journal-ref>
@@ -159,7 +159,7 @@ def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444', 0)
     expected_fields = {'datestamp', 'id', 'created', 'updated', 'title', 'categories',
-                       'journal-ref', 'doi', 'msc-class', 'abstract', 'authors'}
+                       'journal_ref', 'doi', 'msc_class', 'abstract', 'authors'}
     assert set(batch[0]) == expected_fields
 
 
@@ -184,6 +184,14 @@ def test_arxiv_batch_author_json_conversion(mocked_request, mock_response):
                         '{"keyname": "Surname", "forenames": "Some other"}, '
                         '{"keyname": "Collaboration", "forenames": "An important"}]')
     assert batch[1]['authors'] == expected_authors
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_converts_categories_to_list(mocked_request, mock_response):
+    mocked_request.return_value = ET.fromstring(mock_response)
+    batch, _ = arxiv_batch('111222444', 0)
+    assert batch[0]['categories'] == ['math.PR', 'math.RT']
+    assert batch[1]['categories'] == ['hep-ex']
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')

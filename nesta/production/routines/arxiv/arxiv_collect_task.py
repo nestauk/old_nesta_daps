@@ -49,8 +49,7 @@ class CollectTask(autobatch.AutoBatchTask):
         for batch_start in range(1, total_articles(), BATCH_SIZE):
             batch_done_key = '_'.join(['arxiv_collection_from', batch_start])
             done = batch_done_key in DONE_KEYS
-            params = {"table_name": "arxiv_articles",
-                      "config": "mysqldb.config",
+            params = {"config": "mysqldb.config",
                       "start_cursor": batch_start,
                       "end_cursor": batch_start + BATCH_SIZE,
                       "db_name": "production" if not self.test else "dev",

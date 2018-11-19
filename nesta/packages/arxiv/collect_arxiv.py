@@ -111,7 +111,7 @@ def arxiv_batch(token, cursor):
                   'journal-ref', 'doi', 'msc-class', 'abstract']
         for field in fields:
             try:
-                row[field] = info.find(ARXIV+field).text
+                row[field.replace('-', '_')] = info.find(ARXIV+field).text
             except AttributeError:
                 logging.info(f"{field} not found in article {header_id}")
 
@@ -123,6 +123,12 @@ def arxiv_batch(token, cursor):
                 # date is not in the correct format
                 del row[date_field]
             except KeyError:
+                # field not in this row
+                pass
+
+        try:
+            row['categories'] = row['categories'].split(' ')
+        except KeyError:
                 # field not in this row
                 pass
 
