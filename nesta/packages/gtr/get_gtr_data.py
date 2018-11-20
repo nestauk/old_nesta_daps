@@ -19,13 +19,77 @@ TOTALPAGES_KEY = "{http://gtr.rcuk.ac.uk/gtr/api}totalPages"
 REGEX = re.compile(r'\{(.*)\}(.*)')
 REGEX_API = re.compile(r'https://gtr.ukri.org:443/gtr/api/(.*)/(.*)')
 
+def extract_link_table(data):
+    """Iterate through the collected data and generate the link table
+    between entities and their associated project.
+
+    Args:
+        data (:obj:`defaultdict(list)`): Data holder, mapping entities to rows of data.
+                                         Note: data is unpacked into this object.
+    """
+    link_table = []
+    for table_name, rows in data.items():
+        for row in rows:
+            project_id, rel = None, None
+            if 'project_id' in row:
+                project_id = row.pop('project_id')
+            if 'rel' in row:
+                rel = row.pop('rel')
+            if project_id is None or rel is None:
+                continue
+            link_table.append(dict(project_id=project_id, rel=rel,
+                                   id=row['id'], table_name=f"gtr_{table_name}"))
+    data['link_table'] = link_table
+
+
+def is_list_entity(row_value):
+    """All list entities have the following structure:
+    
+         {"key": [{<data>}]}
+
+    so this function tests specifically this.
+    
+    Args:
+        row_value: Object to test
+    """
+    if not isinstance(row_value, dict):
+        return False
+    if len(row_value) != 1:
+        return False
+    nested_value = next(iter(row_value.values()))
+    return isinstance(nested_value, list)
+    
+
+def contains_key(d, search_key):        
+    """Does any generic mixed dict/list (i.e. json-like) object contain the key?
+
+    Args:
+        d (:obj:`json`): A mixed dict/list (i.e. json-like) object to query.
+        search_key (:obj:`hashable`): A key to search for.
+    Returns:
+        (:obj:`True` or :obj:`False`)
+    """
+    if isinstance(d, list):
+        return any(contains_key(item, search_key) for item in d)
+    elif not isinstance(d, dict):
+        return False
+    return (search_key in d
+            or any(contains_key(d[k], search_key) for k in d))
+
+
+def remove_last_occurence(s, to_remove):
+    """Remove last occurence of :obj:`to_remove` from :obj:`s`."""
+    li = s.rsplit(to_remove, 1)
+    return ''.join(li)
+
+
 def is_iterable(x):
+    """Is the argument an iterable?"""
     try:
         iter(x)
     except TypeError:
         return False
-    else:
-        return True
+    return True
  
 
 class TypeDict(dict):
@@ -43,21 +107,23 @@ class TypeDict(dict):
         if v == {'nil': 'true'}:
             return super().__setitem__(k, None)
         # Don't bother if not a string
-        if type(v) is not str:
+        # or if all characters are letters
+        if not isinstance(v, str) or v.replace(' ','').isalpha():
             return super().__setitem__(k, v)
         # Try int and float
         if self.set_and_cast_item(k, v, int):
             return
         if self.set_and_cast_item(k, v, float):
             return
-        # Try a couple of date formats
-        fmt = '%Y-%m-%dT%H:%M:%SZ'
-        if self.set_and_cast_item(k, v, lambda x: dt.strptime(x, fmt)):
-            return
-        fmt = '%Y-%m-%d%z'
-        if self.set_and_cast_item(k, v, lambda x: dt.strptime(x.replace(":",""), fmt)):
-            return
-        # Otherwise, set as normal
+        # # Cycle through date formats
+        # base_fmt = '%Y-%m-%d{}'
+        # for time_fmt in ('', 'T%H:%M:%S', 'T%H:%M:%S%z', 'Z', 
+        #                  'T%H:%M:%SZ', 'T%H:%M:%S%zZ', '%z'):
+        #     _v = remove_last_occurence(v, ':') if '%z' in time_fmt else v
+        #     fmt = base_fmt.format(time_fmt)
+        #     if self.set_and_cast_item(k, _v, lambda x: dt.strptime(x, fmt)):
+        #         return
+        # Otherwise, set as normal        
         super().__setitem__(k, v)
 
 
@@ -76,8 +142,10 @@ def deduplicate_participants(data):
         for _row in data['organisations']:
             if row['organisationId'] != _row['id']:
                 continue
+            # Extract the two specific bonus fields
             for key in ('projectCost', 'grantOffer'):
                 _row[key] = row[key]
+            # Stop iterating, since we've found the organisation
             break
 
 
@@ -87,74 +155,58 @@ def unpack_funding(row):
 
     Args:
         row (dict): A row of GtR data to unpack.
-                    Note, the row will be changed if any "text" keys are found.
+                    Note, the row will be changed if any "currencyCode" keys are found.
     """
-    to_pop = []
-    for k, v in row.items():
-        if type(v) is not dict:
-            continue
-        if "currencyCode" not in v:
-            continue
-        to_pop.append(k)
+    # Only unpack dicts
+    if not isinstance(row, dict):
+        return
+    # Extract the keys to remove
+    to_pop = [k for k, v in row.items()
+              if isinstance(v, dict) and
+              "currencyCode" in v]
+    # Iterate and flatten
     for k in to_pop:
         fund_data = row.pop(k)
         for field, value in fund_data.items():
             row[field] = value
 
 
-def unpack_list_data(list_items, data, project_id):
-    """Unpack data from GtR "links.link" and "participant.participantValues" entities,
-    and associate them with a project id.
+def unpack_list_data(row, data):
+    """Unpack from GtR list-like data, and infer entities from them,
+    with an associated project id for the link table.
 
     Args:
-        list_items (:obj:`xml.etree.ElementTree`): A GtR "links" or "participantValues"entity.
+        row (dict): A row of GtR project data, within which there may be lists to unpack.
         data (:obj:`defaultdict(list)`): Data holder, mapping entities to rows of data.
-        project_id (str): Unique ID of the project associated with these entities.
+                                         Note: data is unpacked into this object.
     """
-    key = list(list_items)[0]
-    if type(list_items[key]) is not list:
-        list_items[key] = [list_items[key]]
-    for item in list_items[key]:
-        item['project_id'] = project_id
-        if 'entity' in item:
-            key = item.pop('entity')
-        unpack_funding(item)
-        data[key].append(item)
-
-
-def unpack_topics(row):
-    """Any values stored under the key "text" in GtR are generally
-    'topic'-like values, so unpack them as such.
-
-    Args:
-        row (dict): A row of GtR data to unpack.
-                    Note, the row will be changed if any "text" keys are found.
-    """
-    topics = defaultdict(list)
-    for k, v in row.items():
-        # Case 1: the value is a list, so unpack from nested rows
-        if type(v) is list:
-            for nested_row in v:
-                topic = unpack_topics(nested_row)
-                # If anything has been found
-                if topic is not None:
-                    topics[k].append(topic)
-        # Case 2: the value is a dict, so unpack directly
-        elif type(v) is TypeDict:
-            # Return the topic if it exists
-            try:
-                return v['text']
-            # Otherwise, keep trying to unpack
-            except KeyError:
-                topic = unpack_topics(v)
-                if topic is not None:
-                    topics[k].append(topic)
-    # Finally, flatten the topics into the row, replacing
-    # any fields that existed before. The design choice for
-    # the storing this as a joined 'str' is not one I'm proud of,
-    # but it suits our downstream schema.
-    for k, v in topics.items():
-        row[k] = "|".join(v)
+    # Create a list of list-like data to unpack
+    to_pop = [k for k, v in row.items() if is_list_entity(v)]
+    # Iterate through keys
+    for k in to_pop:
+        # Pop out the entry, so that it can be entered into `data`
+        # as a standalone entity
+        dict_list = row.pop(k)
+        # Special case: entities containing 'text' are topics
+        is_topic = contains_key(dict_list, 'text')
+        # Iterate over the nested list
+        key, nested_list = next(iter(dict_list.items()))
+        for item in nested_list:
+            table_name = key
+            # Associate the table entry with a project id
+            item['project_id'] = row['id']
+            # If the entity type has been provided then overwrite
+            if 'entity' in item:
+                table_name = item.pop('entity')
+            # If this is a topic field then apply common rules
+            if is_topic:
+                # The percentage variable mucks up the schema
+                # and is anyway not super-interesting
+                if 'percentage' in item:
+                    item.pop('percentage')
+                item['topic_type'] = key 
+                table_name = 'topic'
+            data[table_name].append(item)
 
 
 def extract_link_data(url):
@@ -213,9 +265,8 @@ def extract_data(et, ignore=[]):
     # If there is any text data, unpack it into a fake field called "value"
     if et.text not in (None, ''):
         row["value"] = et.text
-    # If this row contains "value", and nothing else, then flatten it further
-    if "value" in row and len(row) == 1:
-        row = row["value"]
+    # If currency data is nested then unpack
+    unpack_funding(row)
     return entity, row
 
 
@@ -229,18 +280,26 @@ def extract_data_recursive(et, row, ignore=[]):
     """
     for c in et.getchildren():
         # Extract the shallow data for this row
-        entity, _row = extract_data(c, ignore)
+        entity, _row = extract_data(c, ignore)        
         if entity in ignore:
             continue
         # Unpack any deep data into the shallow _row that we just extracted
         extract_data_recursive(c, _row, ignore)
+        # If this row contains "value" or "item", and nothing else, then flatten it further
+        # as these are dummy fields in the GtR data
+        if isinstance(_row, dict):
+            for key in ("value", "item"):                
+                if key in _row and len(_row) == 1:
+                    _row = _row[key]
+                    break
         # Ignore duplicate entries
         if entity in row and _row == row[entity]:
-            continue
+            continue        
         # Treat 'link' objects differently: append as a list item to the parent row
-        if entity in row and entity in ('link', 'participant'):
-            if type(row[entity]) is not list:
-                row[entity] = [row[entity]]
+        is_topic_row = isinstance(_row, dict) and 'text' in _row
+        if entity in ('link', 'participant') or is_topic_row:
+            if entity not in row:
+                row[entity] = []
             row[entity].append(_row)
         # Otherwise, append any non-empty data to the parent row
         elif (not is_iterable(_row)) or len(_row) > 0:
@@ -286,15 +345,7 @@ if __name__ == "__main__":
             # Then recursively extract data from nested rows into the parent 'row'
             extract_data_recursive(project, row)
             # Flatten out any list data directly into 'data' under separate tables
-            unpack_list_data(row.pop('links'), data, row['id'])
-            if 'participantValues' in row:                
-                unpack_list_data(row.pop('participantValues'), data, row['id'])
-            # Flatten out any topic-like data (lists of strings) into the parent 'row'
-            unpack_topics(row)
-            # Flatten out any nested funding information into the parent 'row'
-            unpack_funding(row)
-            # 'identifiers' is the only very uninteresting data and it also
-            # mucks up the flat schema
+            unpack_list_data(row, data)
             row.pop('identifiers')
             # Append the row
             data[row.pop('entity')].append(row)
