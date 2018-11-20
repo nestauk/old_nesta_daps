@@ -3,6 +3,7 @@ import json
 import logging
 import pandas as pd
 import requests
+from retrying import retry
 import s3fs
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
@@ -40,6 +41,7 @@ def load_arxiv_categories(db_config, db, bucket, cat_file):
     session.close()
 
 
+@retry(stop_max_attempt_number=10)
 def _arxiv_request(url, delay=DELAY, **kwargs):
     """Make a request and convert the result to xml elements.
 
