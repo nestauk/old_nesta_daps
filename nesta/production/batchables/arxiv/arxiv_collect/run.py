@@ -5,10 +5,8 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
 # from nesta.production.orms.orm_utils import exists
 
-from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategories, Categories
-
-# from nesta.packages.health_data.collect_nih import iterrows
-from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch
+from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategories
+from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
 
 
 import os
@@ -25,6 +23,17 @@ def parse_s3_path(path):
 
 
 def retrieve_rows(start_cursor, end_cursor, resumption_token):
+    '''Iterate through batches and yield single rows until the end_cursor or end of data
+    is reached.
+
+    Args:
+        start_cursor (int): first record to return
+        end_cursor (int): start of the next batch, ie stop when this cursor is returned
+        resumption_token (int): token to supply the api
+
+    Returns:
+        (dict): a single row of data
+    '''
     while start_cursor is not None and start_cursor < end_cursor:
         batch, start_cursor = arxiv_batch(resumption_token, start_cursor)
         for row in batch:
@@ -42,6 +51,11 @@ def run():
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
+
+    # load arxiv subject categories to database
+    bucket = 'innovation-mapping-general'
+    cat_file = 'arxiv_classification/arxiv_subject_classifications.csv'
+    load_arxiv_categories("BATCHPAR_config", db_name, bucket, cat_file)
 
     # process data
     resumption_token = request_token()

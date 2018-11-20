@@ -281,3 +281,7 @@ def test_xml_to_json_conversion():
 
     root = ET.fromstring(test_xml)
     assert xml_to_json(root, 'author', '{http://arxiv.org/OAI/arXiv/}') == expected_output
+
+
+def test_arxiv_categories_retrieves_and_appends_to_db():
+    pytest.fail('implement this test')

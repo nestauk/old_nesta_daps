@@ -1,15 +1,43 @@
 import datetime
 import json
 import logging
+import pandas as pd
 import requests
+import s3fs
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 import time
 import xml.etree.ElementTree as ET
 
+
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
+from nesta.production.orms.arxiv_orm import Base, Categories
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
 DELAY = 10  # seconds between requests
 API_URL = 'http://export.arxiv.org/oai2'
+
+
+def load_arxiv_categories(db_config, db, bucket, cat_file):
+    target = f's3://{bucket}/{cat_file}'
+    categories = pd.read_csv(target)
+
+    # Setup the database connectors
+    engine = get_mysql_engine(db_config, "mysqldb", db)
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
+
+    logging.info(f'found {session.query(Categories).count()} existing categories')
+    for idx, data in categories.iterrows():
+        try:
+            session.query(Categories).filter(Categories.id == data['id']).one()
+        except NoResultFound:
+            session.add(Categories(id=data['id'], description=data['description']))
+            logging.info(f"adding {data['id']} to database")
+    session.commit()
+    session.close()
 
 
 def _arxiv_request(url, delay=DELAY, **kwargs):
@@ -150,12 +178,17 @@ def arxiv_batch(token, cursor):
 
 
 if __name__ == '__main__':
+
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    token = request_token()
-    batch = arxiv_batch(token, 1001)
-    with open('arxiv_batch.json', mode='w') as f:
-        json.dump(batch, f)
+    # token = request_token()
+    # batch = arxiv_batch(token, 1001)
+    # with open('arxiv_batch.json', mode='w') as f:
+    #     json.dump(batch, f)
+
+    bucket = 'innovation-mapping-general'
+    cat_file = 'arxiv_classification/arxiv_subject_classifications.csv'
+    cats = load_arxiv_categories('MYSQLDB', 'dev', bucket, cat_file)
