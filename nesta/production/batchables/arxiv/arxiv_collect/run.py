@@ -1,17 +1,14 @@
+import boto3
+import logging
+import os
 from sqlalchemy.orm import sessionmaker
-# from sqlalchemy import and_
+from urllib.parse import urlsplit
 
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
-# from nesta.production.orms.orm_utils import exists
-
 from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategories
 from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
 
-
-import os
-import boto3
-from urllib.parse import urlsplit
 
 
 def parse_s3_path(path):
@@ -43,8 +40,8 @@ def retrieve_rows(start_cursor, end_cursor, resumption_token):
 def run():
     db_name = os.environ["BATCHPAR_db_name"]
     s3_path = os.environ["BATCHPAR_outinfo"]
-    start_cursor = os.envoiron["BATCHPAR_start_cursor"]
-    end_cursor = os.envoiron["BATCHPAR_end_cursor"]
+    start_cursor = int(os.environ["BATCHPAR_start_cursor"])
+    end_cursor = int(os.environ["BATCHPAR_end_cursor"])
 
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -80,4 +77,8 @@ def run():
 
 
 if __name__ == "__main__":
+    log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=logging.INFO,
+                        format="%(asctime)s:%(levelname)s:%(message)s")
     run()

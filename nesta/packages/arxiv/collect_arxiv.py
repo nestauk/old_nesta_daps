@@ -127,7 +127,7 @@ def arxiv_batch(token, cursor):
         header = record.find(OAI+'header')
         header_id = header.find(OAI+'identifier').text
         row = dict(datestamp=header.find(OAI+'datestamp').text)
-        logging.info(f"article {header_id} datestamp: {row['datestamp']}")
+        logging.debug(f"article {header_id} datestamp: {row['datestamp']}")
 
         # collect all fields from the metadata section
         meta = record.find(OAI+'metadata')
@@ -141,7 +141,7 @@ def arxiv_batch(token, cursor):
             try:
                 row[field.replace('-', '_')] = info.find(ARXIV+field).text
             except AttributeError:
-                logging.info(f"{field} not found in article {header_id}")
+                logging.debug(f"{field} not found in article {header_id}")
 
         for date_field in ['datestamp', 'created', 'updated']:
             try:

@@ -43,8 +43,9 @@ class RootTask(luigi.WrapperTask):
                                      ],
                           job_def="py36_amzn1_image",
                           job_name="ArxivCollectTask-%s" % _routine_id,
-                          job_queue="HighPriority",
+                          job_queue="MinimalCpus",
                           region_name="eu-west-2",
+                          vcpus=2,
                           poll_time=10,
-                          memory=1024,
+                          memory=2048,
                           max_live_jobs=50)
