@@ -44,6 +44,7 @@ class AbstractYielder:
         '''Clean up the connection'''
         self.session.close()
 
+
     def iterrows(self, chunksize=1000, first_application_id=0):
         '''Iterate through the abstracts, using memory efficient chunks
 
@@ -53,6 +54,7 @@ class AbstractYielder:
         Yields:
             :obj:`tuple` of :obj:`(Abstracts.application_id, Abstracts.abstract_text`
         '''
+
         application_id = first_application_id
         ids = [0]
         while len(ids) > 0:
