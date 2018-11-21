@@ -43,6 +43,8 @@ def run():
     start_cursor = int(os.environ["BATCHPAR_start_cursor"])
     end_cursor = int(os.environ["BATCHPAR_end_cursor"])
 
+    logging.warning(f"Retrieving articles between {start_cursor}:{end_cursor - 1}")
+
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     try_until_allowed(Base.metadata.create_all, engine)
