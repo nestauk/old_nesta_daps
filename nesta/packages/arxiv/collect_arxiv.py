@@ -185,8 +185,6 @@ if __name__ == '__main__':
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     token = request_token()
-    import pdb; pdb.set_trace()
-    pass
     # batch = arxiv_batch(token, 1001)
     # with open('arxiv_batch.json', mode='w') as f:
     #     json.dump(batch, f)
