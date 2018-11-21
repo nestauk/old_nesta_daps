@@ -1,13 +1,17 @@
+import pandas as pd
 import pytest
+from sqlalchemy.orm.exc import NoResultFound
 import time
 from unittest import mock
 import xml.etree.ElementTree as ET
 
+from nesta.production.orms.arxiv_orm import Categories
 from nesta.packages.arxiv.collect_arxiv import _arxiv_request
 from nesta.packages.arxiv.collect_arxiv import request_token
 from nesta.packages.arxiv.collect_arxiv import total_articles
 from nesta.packages.arxiv.collect_arxiv import arxiv_batch
 from nesta.packages.arxiv.collect_arxiv import xml_to_json
+from nesta.packages.arxiv.collect_arxiv import load_arxiv_categories
 
 
 @pytest.fixture
@@ -283,5 +287,31 @@ def test_xml_to_json_conversion():
     assert xml_to_json(root, 'author', '{http://arxiv.org/OAI/arXiv/}') == expected_output
 
 
-def test_arxiv_categories_retrieves_and_appends_to_db():
-    pytest.fail('implement this test')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.try_until_allowed')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.pd')
+def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try, mocked_engine):
+    test_df = pd.DataFrame({'id': ['cs.IR', 'cs.IT', 'cs.LG'],
+                            'description': ['Information Retrieval',
+                                            'Information Theory',
+                                            'Machine Learning']})
+    mocked_pandas.read_csv.return_value = test_df
+    mocked_session = mock.Mock()
+    mocked_try.side_effect = [None, None, mocked_session]
+    mocked_session.query.side_effect = [mock.Mock(return_value=5),
+                                        mock.Mock(),
+                                        NoResultFound,
+                                        NoResultFound,
+                                        None, None]
+
+    load_arxiv_categories('config', 'db', 'bucket', 'file')
+    expected_calls = [mock.call.query(Categories),
+                      mock.call.query(Categories),
+                      mock.call.query(Categories),
+                      mock.call.add(Categories(id='cs.IR', description='Information Theory')),
+                      mock.call.query(Categories),
+                      mock.call.add(Categories(id='cs.LG', description='Machine Learning')),
+                      mock.call.commit(),
+                      mock.call.close()
+                      ]
+    assert mocked_session.mock_calls == expected_calls

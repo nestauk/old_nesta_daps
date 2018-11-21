@@ -184,11 +184,13 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    # token = request_token()
+    token = request_token()
+    import pdb; pdb.set_trace()
+    pass
     # batch = arxiv_batch(token, 1001)
     # with open('arxiv_batch.json', mode='w') as f:
     #     json.dump(batch, f)
 
-    bucket = 'innovation-mapping-general'
-    cat_file = 'arxiv_classification/arxiv_subject_classifications.csv'
-    cats = load_arxiv_categories('MYSQLDB', 'dev', bucket, cat_file)
+    # bucket = 'innovation-mapping-general'
+    # cat_file = 'arxiv_classification/arxiv_subject_classifications.csv'
+    # cats = load_arxiv_categories('MYSQLDB', 'dev', bucket, cat_file)
