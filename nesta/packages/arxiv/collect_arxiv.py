@@ -58,7 +58,7 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     try:
         root = ET.fromstring(r.text)
     except ET.ParseError as e:
-        logging.warning(r.text)
+        logging.error(r.text)
         raise e
     else:
         return root
