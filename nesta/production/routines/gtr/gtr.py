@@ -52,7 +52,7 @@ class GtrTask(autobatch.AutoBatchTask):
         job_params = []
         for page in range(1, total_pages+1):
             # Check whether the job has been done already
-            s3_key = f"gtr-{self.job_name}-{page}"
+            s3_key = f"{self.job_name}-{page}"
             s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
@@ -91,7 +91,7 @@ class RootTask(luigi.WrapperTask):
                       env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",
-                      job_name=f"{self.date}-{self.page_size}-{self.production}",
+                      job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
                       job_queue="HighPriority",
                       region_name="eu-west-2",
                       poll_time=10,
