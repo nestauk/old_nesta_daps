@@ -54,12 +54,11 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     """
     params = dict(verb='ListRecords', **kwargs)
     r = requests.get(url, params=params)
-    xml = r.text
     time.sleep(delay)
     try:
-        root = ET.fromstring(xml)
-    except xml.etree.ElementTree.ParseError as e:
-        logging.warning(xml)
+        root = ET.fromstring(r.text)
+    except ET.ParseError as e:
+        logging.warning(r.text)
         raise e
     else:
         return root
