@@ -16,10 +16,11 @@ class Article(Base):
     __tablename__ = 'arxiv_articles'
 
     id = Column(VARCHAR(20), primary_key=True, autoincrement=False)
+    datestamp = Column(DATE)
     created = Column(DATE)
     updated = Column(DATE)
     title = Column(TEXT)
-    journal_ref = Column(VARCHAR(200))
+    journal_ref = Column(TEXT)
     doi = Column(VARCHAR(200))
     abstract = Column(TEXT)
     authors = Column(JSON)
