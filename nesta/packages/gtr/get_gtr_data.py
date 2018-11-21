@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 import re
 from collections import defaultdict
 from datetime import datetime as dt
+from retrying import retry
+
 
 # Global constants
 TOP_URL = "https://gtr.ukri.org/gtr/api/projects"
@@ -306,6 +308,7 @@ def extract_data_recursive(et, row, ignore=[]):
             row[entity] = _row
 
 
+@retry(wait_random_min=120, wait_random_max=300, stop_max_attempt_number=10)
 def read_xml_from_url(url, **kwargs):
     """Read pure XML data directly from a URL.
 

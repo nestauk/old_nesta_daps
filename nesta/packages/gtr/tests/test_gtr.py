@@ -114,3 +114,6 @@ class TestGtr(TestCase):
         self.assertIn('generic_item', data)
         self.assertIn('topic', data)        
         self.assertNotIn('percentage', data['topic'][0])
+
+    def test_read_xml_from_url(self):
+        read_xml_from_url("https://gtr.ukri.org/gtr/api/projects")

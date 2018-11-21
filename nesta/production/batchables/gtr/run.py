@@ -48,20 +48,23 @@ def run():
         objs += insert_data("BATCHPAR_config", "mysqldb", db,
                             Base, _class, cleaned_rows)
 
-    # # Mark the task as done                    
-    # s3 = boto3.resource('s3')
-    # s3_obj = s3.Object(*parse_s3_path(s3_path))
-    # s3_obj.put(Body="")
-    # Mainly for testing   
+    # Mark the task as done
+    if s3_path != "":
+        s3 = boto3.resource('s3')
+        s3_obj = s3.Object(*parse_s3_path(s3_path))
+        s3_obj.put(Body="")
+
     return len(objs)
 
     
 
 if __name__ == "__main__":
-    # os.environ['BATCHPAR_TOPURL'] = "https://gtr.ukri.org/gtr/api/projects"
-    # os.environ['BATCHPAR_PAGESIZE'] = "100"
-    # os.environ['BATCHPAR_page'] = "1"
-    # os.environ["BATCHPAR_db"] = "dev"
-    # os.environ["BATCHPAR_outinfo"] = ""
-    # os.environ["BATCHPAR_config"] = os.environ["MYSQLDBCONF"]
+    # Local testing
+    if "BATCHPAR_outinfo" not in os.environ:
+        os.environ['BATCHPAR_TOPURL'] = "https://gtr.ukri.org/gtr/api/projects"
+        os.environ['BATCHPAR_PAGESIZE'] = "100"
+        os.environ['BATCHPAR_page'] = "1"
+        os.environ["BATCHPAR_db"] = "dev"
+        os.environ["BATCHPAR_outinfo"] = ""
+        os.environ["BATCHPAR_config"] = os.environ["MYSQLDBCONF"]
     run()

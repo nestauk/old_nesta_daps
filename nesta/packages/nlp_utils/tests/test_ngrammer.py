@@ -4,7 +4,7 @@ from nesta.packages.nlp_utils.ngrammer import Ngrammer
 
 class TestNgrammer(TestCase):
     def test_ngrammer(self):
-        ngrammer = Ngrammer()
+        ngrammer = Ngrammer(database="production_tests")
         ngrammer.ngrams.clear()
         ngrammer.ngrams[3].add('convolutional_neural_networks')
         ngrammer.ngrams[3].add('bed_and_breakfast')
