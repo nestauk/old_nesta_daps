@@ -4,12 +4,11 @@ import logging
 import pandas as pd
 import requests
 from retrying import retry
-import s3fs
+import s3fs  # required for pandas to use read_csv from s3
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 import time
 import xml.etree.ElementTree as ET
-
 
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Categories
@@ -57,7 +56,13 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     r = requests.get(url, params=params)
     xml = r.text
     time.sleep(delay)
-    return ET.fromstring(xml)
+    try:
+        root = ET.fromstring(xml)
+    except xml.etree.ElementTree.ParseError as e:
+        logging.warning(xml)
+        raise e
+    else:
+        return root
 
 
 def total_articles():
@@ -180,7 +185,6 @@ def arxiv_batch(token, cursor):
 
 
 if __name__ == '__main__':
-
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
