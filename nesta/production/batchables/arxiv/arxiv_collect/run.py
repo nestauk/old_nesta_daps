@@ -2,7 +2,8 @@ import boto3
 import logging
 import os
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError
 from urllib.parse import urlsplit
 
 from nesta.production.orms.orm_utils import get_mysql_engine
