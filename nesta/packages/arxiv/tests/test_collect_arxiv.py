@@ -5,13 +5,13 @@ import time
 from unittest import mock
 import xml.etree.ElementTree as ET
 
-from nesta.production.orms.arxiv_orm import Categories
 from nesta.packages.arxiv.collect_arxiv import _arxiv_request
 from nesta.packages.arxiv.collect_arxiv import request_token
 from nesta.packages.arxiv.collect_arxiv import total_articles
 from nesta.packages.arxiv.collect_arxiv import arxiv_batch
 from nesta.packages.arxiv.collect_arxiv import xml_to_json
 from nesta.packages.arxiv.collect_arxiv import load_arxiv_categories
+from nesta.packages.arxiv.collect_arxiv import _category_exists
 
 
 @pytest.fixture
@@ -287,31 +287,35 @@ def test_xml_to_json_conversion():
     assert xml_to_json(root, 'author', '{http://arxiv.org/OAI/arXiv/}') == expected_output
 
 
+def test__category_exists_returns_correct_bool():
+    mocked_session = mock.Mock()
+    mocked_session.query().filter().one.return_value = 'found it'
+    assert _category_exists(mocked_session, 1) == True
+
+    mocked_session.query().filter().one.side_effect = NoResultFound
+    assert _category_exists(mocked_session, 2) == False
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._add_category')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._category_exists')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.try_until_allowed')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.pd')
-def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try, mocked_engine):
+def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try,
+                                                      mocked_engine, mocked_exists,
+                                                      mocked_add):
     test_df = pd.DataFrame({'id': ['cs.IR', 'cs.IT', 'cs.LG'],
                             'description': ['Information Retrieval',
                                             'Information Theory',
                                             'Machine Learning']})
     mocked_pandas.read_csv.return_value = test_df
+
     mocked_session = mock.Mock()
     mocked_try.side_effect = [None, None, mocked_session]
-    mocked_session.query.side_effect = [mock.Mock(return_value=5),
-                                        mock.Mock(),
-                                        NoResultFound,
-                                        NoResultFound,
-                                        None, None]
+
+    mocked_exists.side_effect = [True, False, False]
+    expected_calls = [mock.call(mocked_session, cat_id='cs.IT', description='Information Theory'),
+                      mock.call(mocked_session, cat_id='cs.LG', description='Machine Learning')]
 
     load_arxiv_categories('config', 'db', 'bucket', 'file')
-    expected_calls = [mock.call.query(Categories),
-                      mock.call.query(Categories),
-                      mock.call.query(Categories),
-                      mock.call.add(Categories(id='cs.IR', description='Information Theory')),
-                      mock.call.query(Categories),
-                      mock.call.add(Categories(id='cs.LG', description='Machine Learning')),
-                      mock.call.commit(),
-                      mock.call.close()
-                      ]
-    assert mocked_session.mock_calls == expected_calls
+    assert mocked_add.mock_calls == expected_calls

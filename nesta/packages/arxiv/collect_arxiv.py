@@ -49,6 +49,14 @@ def _add_category(session, cat_id, description):
 
 
 def load_arxiv_categories(db_config, db, bucket, cat_file):
+    """Loads a file of categories and descriptions into mysql from a csv file on s3.
+
+    Args:
+        db_config (str): environmental variable pointing to mysql config file
+        db (str): config header to use from the mysql config file
+        bucket (str): s3 bucket where the csv is held
+        cat_file (str): path to the file on s3
+    """
     target = f's3://{bucket}/{cat_file}'
     categories = pd.read_csv(target)
 
@@ -126,8 +134,8 @@ def xml_to_json(element, tag, prefix=''):
         prefix (str): schema prefix on the name of the tag
 
     Returns:
-        (str): json of the original object with the supplied tag as the key and a list of all
-               instances of this tag as the value.
+        (str): json of the original object with the supplied tag as the key and a list
+               of all instances of this tag as the value.
     """
     tag = ''.join([prefix, tag])
 
@@ -178,17 +186,15 @@ def arxiv_batch(token, cursor):
                 date = row[date_field]
                 row[date_field] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
             except ValueError:
-                # date is not in the correct format
-                del row[date_field]
+                del row[date_field]  # date is not in the correct format
             except KeyError:
-                # field not in this row
-                pass
+                pass  # field not in this row
 
+        # split categories into a list for the link table in sql
         try:
             row['categories'] = row['categories'].split(' ')
         except KeyError:
-                # field not in this row
-                pass
+            pass  # field not in this row
 
         row['title'] = row['title'].strip()
         row['authors'] = xml_to_json(info, 'author', prefix=ARXIV)
@@ -199,7 +205,7 @@ def arxiv_batch(token, cursor):
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
     if token.text is not None:
         resumption_cursor = int(token.text.split("|")[1])
-        logging.info(f"resumptionCursor: {resumption_cursor}")
+        logging.info(f"next resumptionCursor: {resumption_cursor}")
     else:
         resumption_cursor = None
         logging.info("End of data")
@@ -212,18 +218,3 @@ if __name__ == '__main__':
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # token = request_token()
-
-    # engine = get_mysql_engine('MYSQLDB', "mysqldb", 'production')
-    # try_until_allowed(Base.metadata.create_all, engine)
-    # Session = try_until_allowed(sessionmaker, engine)
-    # session = try_until_allowed(Session)
-
-    # batch = arxiv_batch(token, 1001)
-    # with open('arxiv_batch.json', mode='w') as f:
-    #     json.dump(batch, f)
-
-    # bucket = 'innovation-mapping-general'
-    # cat_file = 'arxiv_classification/arxiv_subject_classifications.csv'
-    # cats = load_arxiv_categories('MYSQLDB', 'dev', bucket, cat_file)
