@@ -64,12 +64,12 @@ def run():
         try:
             categories = row.pop('categories')
             for cat in categories:
-                session.query(Categories).filter(id=cat).one()
+                session.query(Categories).filter(id == cat).one()
                 session.add(ArticleCategories(article_id=row['id'], category_id=cat))
         except KeyError:
             pass  # no categories in this row
         except NoResultFound as e:
-            logging.error(f"invalid/missing category: {cat}")
+            logging.error(f"invalid/missing category: '{cat}'")
             raise e
 
         session.add(Article(**row))
