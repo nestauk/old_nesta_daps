@@ -32,8 +32,7 @@ def _category_exists(session, cat_id):
         session.query(Categories).filter(Categories.id == cat_id).one()
     except NoResultFound:
         return False
-    else:
-        return True
+    return True
 
 
 def _add_category(session, cat_id, description):
@@ -86,8 +85,7 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     except ET.ParseError as e:
         logging.error(r.text)
         raise e
-    else:
-        return root
+    return root
 
 
 def total_articles():

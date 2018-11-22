@@ -46,7 +46,7 @@ class CollectTask(autobatch.AutoBatchTask):
     def prepare(self):
         '''Prepare the batch job parameters'''
         job_params = []
-        for batch_no, batch_start in enumerate(range(1, total_articles(), BATCH_SIZE)):
+        for count, batch_start in enumerate(range(1, total_articles(), BATCH_SIZE), 1):
             batch_done_key = '_'.join(['arxiv_collection_from', str(batch_start)])
             done = batch_done_key in DONE_KEYS
             params = {"config": "mysqldb.config",
@@ -55,7 +55,7 @@ class CollectTask(autobatch.AutoBatchTask):
                       "db_name": "production" if not self.test else "dev",
                       "outinfo": "s3://nesta-production-intermediate/%s" % batch_done_key,
                       "done": done}
-            print(f"Batch {batch_no}: {params}")
+            print(f"Batch {count}: {params}")
             job_params.append(params)
         return job_params
 
