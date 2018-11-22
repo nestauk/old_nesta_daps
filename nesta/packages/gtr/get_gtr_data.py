@@ -208,7 +208,7 @@ def unpack_list_data(row, data):
                     item.pop('percentage')
                 item['topic_type'] = key 
                 table_name = 'topic'
-            data[table_name].append(item)
+            data[table_name.replace("/","_")].append(item)
 
 
 def extract_link_data(url):
@@ -357,5 +357,10 @@ if __name__ == "__main__":
 
     # The 'participant' data is near duplicate
     # of 'organisation' data so merge them.
-    deduplicate_participants(data)
-    print(data)
+    if 'participant' in data:
+        deduplicate_participants(data)
+
+    for k, v in data.items():
+        print(k)
+        print(v)
+        print()

@@ -74,7 +74,7 @@ class Fund(Base):
 
 
 class KeyFinding(Base):
-    __tablename__ = "gtr_outcomes/keyfindings"
+    __tablename__ = "gtr_outcomes_keyfindings"
 
     id = Column(VARCHAR(36), primary_key=True)
     description = Column(TEXT)
@@ -92,7 +92,7 @@ class Topic(Base):
 
 
 class Collaboration(Base):
-    __tablename__ = "gtr_outcomes/collaborations"
+    __tablename__ = "gtr_outcomes_collaborations"
 
     id = Column(VARCHAR(36), primary_key=True)
     description = Column(TEXT)
@@ -107,13 +107,13 @@ class Collaboration(Base):
 
 
 class FurtherFunding(Base):
-    __tablename__ = "gtr_outcomes/furtherfundings"
+    __tablename__ = "gtr_outcomes_furtherfundings"
 
     id = Column(VARCHAR(36), primary_key=True)
     end = Column(DATETIME, index=True)
     description = Column(TEXT)
     organisation = Column(VARCHAR(200), index=True)
-    fundingId = Column(VARCHAR(36), primary_key=True)
+    fundingId = Column(VARCHAR(36), index=True)
     start = Column(DATETIME, index=True)
     amount = Column(INT)
     currencyCode = Column(VARCHAR(3))
@@ -123,7 +123,7 @@ class FurtherFunding(Base):
 
 
 class ImpactSummaries(Base):
-    __tablename__ = "gtr_outcomes/impactsummaries"
+    __tablename__ = "gtr_outcomes_impactsummaries"
 
     id = Column(VARCHAR(36), primary_key=True)
     description = Column(TEXT)
@@ -133,7 +133,7 @@ class ImpactSummaries(Base):
 
 
 class IntellectualProperty(Base):
-    __tablename__ = "gtr_outcomes/intellectualproperties"
+    __tablename__ = "gtr_outcomes_intellectualproperties"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -146,7 +146,7 @@ class IntellectualProperty(Base):
 
 
 class Spinouts(Base):
-    __tablename__ = "gtr_outcomes/spinouts"
+    __tablename__ = "gtr_outcomes_spinouts"
 
     id = Column(VARCHAR(36), primary_key=True)
     description = Column(TEXT)
@@ -157,7 +157,7 @@ class Spinouts(Base):
 
 
 class Publications(Base):
-    __tablename__ = "gtr_outcomes/publications"
+    __tablename__ = "gtr_outcomes_publications"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -177,7 +177,7 @@ class Publications(Base):
 
 
 class ResearchMaterial(Base):
-    __tablename__ = "gtr_outcomes/researchmaterials"
+    __tablename__ = "gtr_outcomes_researchmaterials"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -190,7 +190,7 @@ class ResearchMaterial(Base):
 
 
 class Dissemination(Base):
-    __tablename__ = "gtr_outcomes/disseminations"
+    __tablename__ = "gtr_outcomes_disseminations"
 
     id = Column(VARCHAR(36), primary_key=True)
     description = Column(TEXT)
@@ -205,7 +205,7 @@ class Dissemination(Base):
 
 
 class PolicyInfluence(Base):
-    __tablename__ = "gtr_outcomes/policyinfluences"
+    __tablename__ = "gtr_outcomes_policyinfluences"
     
     id = Column(VARCHAR(36), primary_key=True)
     influence = Column(TEXT)
@@ -217,7 +217,7 @@ class PolicyInfluence(Base):
 
 
 class Product(Base):
-    __tablename__ = "gtr_outcomes/products"
+    __tablename__ = "gtr_outcomes_products"
     
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -231,7 +231,7 @@ class Product(Base):
 
 
 class ArtisticAndCreativeProduct(Base):
-    __tablename__ = "gtr_outcomes/artisticandcreativeproducts"
+    __tablename__ = "gtr_outcomes_artisticandcreativeproducts"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -242,7 +242,7 @@ class ArtisticAndCreativeProduct(Base):
 
 
 class ResearchDatabaseModel(Base):
-    __tablename__ = "gtr_outcomes/researchdatabaseandmodels"
+    __tablename__ = "gtr_outcomes_researchdatabaseandmodels"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
@@ -255,7 +255,7 @@ class ResearchDatabaseModel(Base):
 
 
 class SoftwareAndTechnicalProducts(Base):
-    __tablename__ = "gtr_outcomes/softwareandtechnicalproducts"
+    __tablename__ = "gtr_outcomes_softwareandtechnicalproducts"
 
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))

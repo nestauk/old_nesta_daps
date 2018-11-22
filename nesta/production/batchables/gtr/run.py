@@ -1,6 +1,6 @@
 import os
 import boto3
-from urlib.parse import urlsplit
+from urllib.parse import urlsplit
 
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
 from nesta.packages.gtr.get_gtr_data import extract_data
