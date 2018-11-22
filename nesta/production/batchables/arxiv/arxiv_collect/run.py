@@ -3,14 +3,12 @@ import logging
 import os
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
 from urllib.parse import urlsplit
 
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategories, Categories
 from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
-
 
 
 def parse_s3_path(path):
@@ -64,13 +62,13 @@ def run():
         try:
             categories = row.pop('categories')
             for cat in categories:
-                session.query(Categories).filter(id == cat).one()
+                session.query(Categories).filter(Categories.id == cat).one()
                 session.add(ArticleCategories(article_id=row['id'], category_id=cat))
+        except NoResultFound as e:
+            logging.error(f"invalid/missing category: '{cat}' for article {row['id']} full data: {row}")
+            raise e
         except KeyError:
             pass  # no categories in this row
-        except NoResultFound as e:
-            logging.error(f"invalid/missing category: '{cat}'")
-            raise e
 
         session.add(Article(**row))
 
