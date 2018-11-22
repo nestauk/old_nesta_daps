@@ -59,18 +59,16 @@ def run():
     # process data
     resumption_token = request_token()
     for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
+        categories = row.pop('categories', [])
+        session.add(Article(**row))
         try:
-            categories = row.pop('categories')
             for cat in categories:
                 session.query(Categories).filter(Categories.id == cat).one()
                 session.add(ArticleCategories(article_id=row['id'], category_id=cat))
         except NoResultFound as e:
             logging.error(f"invalid/missing category: '{cat}' for article {row['id']} full data: {row}")
             raise e
-        except KeyError:
-            pass  # no categories in this row
 
-        session.add(Article(**row))
 
     session.commit()
     session.close()
