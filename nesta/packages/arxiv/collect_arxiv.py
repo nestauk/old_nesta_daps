@@ -19,6 +19,36 @@ DELAY = 10  # seconds between requests
 API_URL = 'http://export.arxiv.org/oai2'
 
 
+def _category_exists(session, cat_id):
+    """Checks if an arxiv category exists in the categories table.
+    Args:
+        session (:obj:`sqlalchemy.orm.session`): sqlalchemy session
+        cat_id (str): id of the arxiv category
+
+    Returns:
+        (bool): True if the id is already in the database, otherwise False
+    """
+    try:
+        session.query(Categories).filter(Categories.id == cat_id).one()
+    except NoResultFound:
+        return False
+    else:
+        return True
+
+
+def _add_category(session, cat_id, description):
+    """Adds new categories to the database and commits them.
+
+    Args:
+        session (:obj:`sqlalchemy.orm.session`): sqlalchemy session
+        cat_id (str): id of the arxiv category
+        description (str): description of the category
+    """
+    logging.info(f"adding {cat_id} to database")
+    session.add(Categories(id=cat_id, description=description))
+    session.commit()
+
+
 def load_arxiv_categories(db_config, db, bucket, cat_file):
     target = f's3://{bucket}/{cat_file}'
     categories = pd.read_csv(target)
@@ -31,12 +61,8 @@ def load_arxiv_categories(db_config, db, bucket, cat_file):
 
     logging.info(f'found {session.query(Categories).count()} existing categories')
     for idx, data in categories.iterrows():
-        try:
-            session.query(Categories).filter(Categories.id == data['id']).one()
-        except NoResultFound:
-            session.add(Categories(id=data['id'], description=data['description']))
-            logging.info(f"adding {data['id']} to database")
-    session.commit()
+        if not _category_exists(session, data['id']):
+            _add_category(session, cat_id=data['id'], description=data['description'])
     session.close()
 
 
@@ -189,7 +215,13 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    token = request_token()
+    # token = request_token()
+
+    # engine = get_mysql_engine('MYSQLDB', "mysqldb", 'production')
+    # try_until_allowed(Base.metadata.create_all, engine)
+    # Session = try_until_allowed(sessionmaker, engine)
+    # session = try_until_allowed(Session)
+
     # batch = arxiv_batch(token, 1001)
     # with open('arxiv_batch.json', mode='w') as f:
     #     json.dump(batch, f)

@@ -61,14 +61,13 @@ def run():
     for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
         categories = row.pop('categories', [])
         session.add(Article(**row))
-        try:
-            for cat in categories:
+        for cat in categories:
+            try:
                 session.query(Categories).filter(Categories.id == cat).one()
-                session.add(ArticleCategories(article_id=row['id'], category_id=cat))
-        except NoResultFound as e:
-            logging.error(f"invalid/missing category: '{cat}' for article {row['id']} full data: {row}")
-            raise e
-
+            except NoResultFound:
+                logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
+                session.add(Categories(id=cat))
+            session.add(ArticleCategories(article_id=row['id'], category_id=cat))
 
     session.commit()
     session.close()
