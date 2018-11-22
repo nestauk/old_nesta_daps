@@ -5,9 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from urllib.parse import urlsplit
 
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.orm_utils import try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategories, Categories
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data
+from nesta.production.orms.arxiv_orm import Base, Articles, ArticleCategories, Categories
 from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
 
 
@@ -57,20 +56,36 @@ def run():
     load_arxiv_categories("BATCHPAR_config", db_name, bucket, cat_file)
 
     # process data
+    articles = []
+    article_cats = []
     resumption_token = request_token()
     for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
         categories = row.pop('categories', [])
-        session.add(Article(**row))
+        articles.append(**row)
+        # session.add(Articles(**row))
         for cat in categories:
             try:
                 session.query(Categories).filter(Categories.id == cat).one()
             except NoResultFound:
                 logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
                 session.add(Categories(id=cat))
-            session.add(ArticleCategories(article_id=row['id'], category_id=cat))
-
+            article_cats.append(dict(article_id=row['id'], category_id=cat))
+            # session.add(ArticleCategories(article_id=row['id'], category_id=cat))
     session.commit()
     session.close()
+
+    inserted_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
+                                    Base, Articles, articles)
+    inserted_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
+                                        Base, ArticleCategories, article_cats)
+
+    # sanity checks before the batch is marked as done
+    article_discrepancies = set(articles) ^ set(inserted_articles)
+    if len(article_discrepancies) > 0:
+        raise ValueError(f'Inserted articles do not match original data: {article_discrepancies}')
+    article_cat_discrepancies = set(article_cats) ^ set(inserted_article_cats)
+    if len(article_cat_discrepancies) > 0:
+        raise ValueError(f'Inserted article categories do not match original data: {article_cat_discrepancies}')
 
     # Mark the task as done
     s3 = boto3.resource('s3')

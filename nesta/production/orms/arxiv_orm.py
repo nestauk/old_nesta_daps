@@ -11,7 +11,7 @@ from sqlalchemy.types import JSON, DATE
 Base = declarative_base()
 
 
-class Article(Base):
+class Articles(Base):
     """Arxiv articles and metadata."""
     __tablename__ = 'arxiv_articles'
 
