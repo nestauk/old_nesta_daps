@@ -76,9 +76,9 @@ class TestGeocoding():
         mocked_request.return_value = mocked_response
         assert _geocode('best match') == mocked_response.json.return_value[0]
 
-    @mock.patch('nesta.packages.geo_utils.geocode')
+    @mock.patch('nesta.packages.health_data.process_nih.geocode')
     def test_raised_valueerror_from_no_result_returns_none_for_coordinates(self, mocked_geocode):
-        mocked_geocode.side_effect = ValueError
+        mocked_geocode.side_effect = ValueError()
         expected_response = None
         assert _geocode(q='no results') == expected_response
 

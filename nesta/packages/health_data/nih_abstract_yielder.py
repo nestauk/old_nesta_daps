@@ -38,14 +38,14 @@ class AbstractYielder:
         Base.metadata.create_all(engine)
         self.session = Session()
         self.query_stub = self.session.query(Abstracts).order_by(Abstracts.application_id)
-        self.application_id = 0
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         '''Clean up the connection'''
         self.session.close()
 
-    def iterrows(self, chunksize=1000):
+
+    def iterrows(self, chunksize=1000, first_application_id=0):
         '''Iterate through the abstracts, using memory efficient chunks
 
         Args:
@@ -54,11 +54,13 @@ class AbstractYielder:
         Yields:
             :obj:`tuple` of :obj:`(Abstracts.application_id, Abstracts.abstract_text`
         '''
+
+        application_id = first_application_id
         ids = [0]
         while len(ids) > 0:
-            self.application_id = max(ids)
+            application_id = max(ids)
             ids = []
-            condition = Abstracts.application_id > self.application_id
+            condition = Abstracts.application_id > application_id
             query = self.query_stub.filter(condition).limit(chunksize)
             for row in query.all():
                 ids.append(row.application_id)

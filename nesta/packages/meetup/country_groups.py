@@ -96,7 +96,7 @@ def get_coordinate_data(n):
                              for each country.
     '''
     
-    sf = shapefile.Reader(os.environ["WORLD_BORDERS"])
+    sf = shapefile.Reader(os.environ["WORLD_BORDERS"], encodingErrors='ignore')
     output = []
     for shape_info in sf.shapeRecords():
         # Zip together the field names and record values

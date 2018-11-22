@@ -20,7 +20,7 @@ def geocode(**request_kwargs):
     Returns:
         JSON from API response.
     '''
-    # Explictly require json for ease of use                                                
+    # Explictly require json for ease of use
     request_kwargs["format"] = "json"
     response = requests.get("https://nominatim.openstreetmap.org/search",
                             params=request_kwargs,

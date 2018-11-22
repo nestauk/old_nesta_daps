@@ -1,6 +1,5 @@
 import os
 import boto3
-from collections import defaultdict
 from urllib.parse import urlsplit
 
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
@@ -14,6 +13,7 @@ from nesta.packages.gtr.get_gtr_data import TOP_URL
 from nesta.production.orms.orm_utils import insert_data
 from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.gtr_orm import Base
+from collections import defaultdict
 
 
 def parse_s3_path(path):
@@ -43,6 +43,7 @@ def run():
         unpack_list_data(row, data)
         # Append the row
         data[row.pop('entity')].append(row)
+
     # Much of the participant data is repeated so remove overlaps
     if 'participant' in data:
         deduplicate_participants(data)
