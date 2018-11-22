@@ -1,4 +1,7 @@
 import os
+import boto3
+from urlib.parse import urlsplit
+
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
 from nesta.packages.gtr.get_gtr_data import extract_data
 from nesta.packages.gtr.get_gtr_data import extract_data_recursive
@@ -11,6 +14,14 @@ from nesta.production.orms.orm_utils import insert_data
 from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.gtr_orm import Base
 from collections import defaultdict
+
+
+def parse_s3_path(path):
+    '''For a given S3 path, return the bucket and key values'''
+    parsed_path = urlsplit(path)
+    s3_bucket = parsed_path.netloc
+    s3_key = parsed_path.path.lstrip('/')
+    return (s3_bucket, s3_key)
 
 
 def run():
@@ -32,10 +43,10 @@ def run():
         unpack_list_data(row, data)
         # Append the row
         data[row.pop('entity')].append(row)
-        if len(data['projects']) > 5:
-            break
+
     # Much of the participant data is repeated so remove overlaps
-    deduplicate_participants(data)
+    if 'participant' in data:
+        deduplicate_participants(data)
     # Finally, extract links between entities and the core projects
     extract_link_table(data)
     
