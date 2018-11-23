@@ -78,7 +78,6 @@ def run():
         with db_session(engine) as session:
             categories = row.pop('categories', [])
             articles.append(row)
-            # session.add(Articles(**row))
             for cat in categories:
                 try:
                     session.query(Categories).filter(Categories.id == cat).one()
@@ -86,21 +85,22 @@ def run():
                     logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
                     session.add(Categories(id=cat))
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
-                # session.add(ArticleCategories(article_id=row['id'], category_id=cat))
-        # session.commit()
-        # session.close()
 
-    inserted_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
-                                    Base, Articles, articles)
-    inserted_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
-                                        Base, ArticleCategories, article_cats)
+    inserted_articles, existing_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
+                                                       Base, Articles, articles,
+                                                       return_existing=True)
+    inserted_article_cats, existing_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
+                                                               Base, ArticleCategories, article_cats,
+                                                               return_existing=True)
 
     # sanity checks before the batch is marked as done
-    article_discrepancies = {a['id'] for a in articles} ^ {ia.id for ia in inserted_articles}
+    all_article_ids = {a.id for a in inserted_articles} | {a['id'] for a in existing_articles}
+    article_discrepancies = {a['id'] for a in articles} ^ all_article_ids
     if len(article_discrepancies) > 0:
         raise ValueError(f'Inserted articles do not match original data: {article_discrepancies}')
 
-    article_cat_discrepancies = {ac['id'] for ac in article_cats} ^ {iac.id for iac in inserted_article_cats}
+    all_article_cat_ids = {ac.id for ac in inserted_article_cats} | {ac['id'] for ac in existing_article_cats}
+    article_cat_discrepancies = {ac['id'] for ac in article_cats} ^ all_article_cat_ids
     if len(article_cat_discrepancies) > 0:
         raise ValueError(f'Inserted article categories do not match original data: {article_cat_discrepancies}')
 

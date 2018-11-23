@@ -17,7 +17,7 @@ import logging
 import time
 
 
-def insert_data(db_env, section, database, Base, _class, data):
+def insert_data(db_env, section, database, Base, _class, data, return_existing=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -30,9 +30,12 @@ def insert_data(db_env, section, database, Base, _class, data):
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        return_existing (bool): Flag that when set will also return a list of rows that
+                                were in the supplied data but not imported (for checks)
 
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+        :obj:`list` of :obj:`dict` data found already existing in the database (optional)
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
@@ -41,6 +44,7 @@ def insert_data(db_env, section, database, Base, _class, data):
     # Add the data                                                       
     all_pks = set()
     objs = []
+    existing_objs = []
     pkey_cols = _class.__table__.primary_key.columns
     for row in data:
         # The data must contain all of the pkeys
@@ -50,17 +54,22 @@ def insert_data(db_env, section, database, Base, _class, data):
             continue
         # The row mustn't already exist in the db data
         if session.query(exists(_class, **row)).scalar():
+            existing_objs.append(row)
             continue
         # The row mustn't aleady exist in the input data
         pk = tuple([row[pkey.name] for pkey in pkey_cols])
         if pk in all_pks:
+            existing_objs.append(row)
             continue
         all_pks.add(pk)
         objs.append(_class(**row))
     logging.debug(f"all objects: {objs}")
+    logging.debug(f"all existing objects: {existing_objs}")
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
+    if return_existing:
+        return objs, existing_objs
     return objs
 
 
