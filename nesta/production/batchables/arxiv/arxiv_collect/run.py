@@ -1,4 +1,5 @@
 import boto3
+from contextlib import contextmanager
 import logging
 import os
 from sqlalchemy.orm import sessionmaker
@@ -36,6 +37,20 @@ def retrieve_rows(start_cursor, end_cursor, resumption_token):
             yield row
 
 
+@contextmanager
+def db_session(engine):
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def run():
     db_name = os.environ["BATCHPAR_db_name"]
     s3_path = os.environ["BATCHPAR_outinfo"]
@@ -47,8 +62,8 @@ def run():
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     try_until_allowed(Base.metadata.create_all, engine)
-    Session = try_until_allowed(sessionmaker, engine)
-    session = try_until_allowed(Session)
+    # Session = try_until_allowed(sessionmaker, engine)
+    # session = try_until_allowed(Session)
 
     # load arxiv subject categories to database
     bucket = 'innovation-mapping-general'
@@ -60,19 +75,20 @@ def run():
     article_cats = []
     resumption_token = request_token()
     for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
-        categories = row.pop('categories', [])
-        articles.append(row)
-        # session.add(Articles(**row))
-        for cat in categories:
-            try:
-                session.query(Categories).filter(Categories.id == cat).one()
-            except NoResultFound:
-                logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
-                session.add(Categories(id=cat))
-            article_cats.append(dict(article_id=row['id'], category_id=cat))
-            # session.add(ArticleCategories(article_id=row['id'], category_id=cat))
-    session.commit()
-    session.close()
+        with db_session(engine) as session:
+            categories = row.pop('categories', [])
+            articles.append(row)
+            # session.add(Articles(**row))
+            for cat in categories:
+                try:
+                    session.query(Categories).filter(Categories.id == cat).one()
+                except NoResultFound:
+                    logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
+                    session.add(Categories(id=cat))
+                article_cats.append(dict(article_id=row['id'], category_id=cat))
+                # session.add(ArticleCategories(article_id=row['id'], category_id=cat))
+        # session.commit()
+        # session.close()
 
     inserted_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                     Base, Articles, articles)
