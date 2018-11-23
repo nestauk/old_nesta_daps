@@ -48,4 +48,4 @@ class RootTask(luigi.WrapperTask):
                           vcpus=2,
                           poll_time=10,
                           memory=2048,
-                          max_live_jobs=1)
+                          max_live_jobs=10)
