@@ -62,8 +62,6 @@ def run():
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     try_until_allowed(Base.metadata.create_all, engine)
-    # Session = try_until_allowed(sessionmaker, engine)
-    # session = try_until_allowed(Session)
 
     # load arxiv subject categories to database
     bucket = 'innovation-mapping-general'
@@ -94,15 +92,11 @@ def run():
                                                                return_existing=True)
 
     # sanity checks before the batch is marked as done
-    all_article_ids = {a.id for a in inserted_articles} | {a['id'] for a in existing_articles}
-    article_discrepancies = {a['id'] for a in articles} ^ all_article_ids
-    if len(article_discrepancies) > 0:
-        raise ValueError(f'Inserted articles do not match original data: {article_discrepancies}')
+    if len(inserted_articles) + len(existing_articles) != len(articles):
+        raise ValueError(f'Inserted articles do not match original data')
 
-    all_article_cat_ids = {ac.id for ac in inserted_article_cats} | {ac['id'] for ac in existing_article_cats}
-    article_cat_discrepancies = {ac['id'] for ac in article_cats} ^ all_article_cat_ids
-    if len(article_cat_discrepancies) > 0:
-        raise ValueError(f'Inserted article categories do not match original data: {article_cat_discrepancies}')
+    if len(inserted_article_cats) + len(existing_article_cats) != len(articles):
+        raise ValueError(f'Inserted article categories do not match original data')
 
     # Mark the task as done
     s3 = boto3.resource('s3')
@@ -113,7 +107,7 @@ def run():
 if __name__ == "__main__":
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
-                        # level=logging.INFO,
-                        level=logging.DEBUG,
+                        level=logging.INFO,
+                        # level=logging.DEBUG,
                         format="%(asctime)s:%(levelname)s:%(message)s")
     run()
