@@ -96,11 +96,11 @@ def run():
                                         Base, ArticleCategories, article_cats)
 
     # sanity checks before the batch is marked as done
-    article_discrepancies = {a['id'] for a in articles} ^ {ia['id'] for ia in inserted_articles}
+    article_discrepancies = {a['id'] for a in articles} ^ {ia.id for ia in inserted_articles}
     if len(article_discrepancies) > 0:
         raise ValueError(f'Inserted articles do not match original data: {article_discrepancies}')
 
-    article_cat_discrepancies = {ac['id'] for ac in article_cats} ^ {iac['id'] for iac in inserted_article_cats}
+    article_cat_discrepancies = {ac['id'] for ac in article_cats} ^ {iac.id for iac in inserted_article_cats}
     if len(article_cat_discrepancies) > 0:
         raise ValueError(f'Inserted article categories do not match original data: {article_cat_discrepancies}')
 
@@ -113,6 +113,7 @@ def run():
 if __name__ == "__main__":
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
-                        level=logging.INFO,
+                        # level=logging.INFO,
+                        level=logging.DEBUG,
                         format="%(asctime)s:%(levelname)s:%(message)s")
     run()

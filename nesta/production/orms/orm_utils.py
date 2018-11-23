@@ -57,6 +57,7 @@ def insert_data(db_env, section, database, Base, _class, data):
             continue
         all_pks.add(pk)
         objs.append(_class(**row))
+    logging.debug(f"all objects: {objs}")
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
