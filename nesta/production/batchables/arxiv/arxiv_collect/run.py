@@ -61,7 +61,7 @@ def run():
     resumption_token = request_token()
     for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
         categories = row.pop('categories', [])
-        articles.append(**row)
+        articles.append(row)
         # session.add(Articles(**row))
         for cat in categories:
             try:
@@ -82,10 +82,10 @@ def run():
     # sanity checks before the batch is marked as done
     article_discrepancies = set(articles) ^ set(inserted_articles)
     if len(article_discrepancies) > 0:
-        raise ValueError(f'Inserted articles do not match original data: {article_discrepancies}')
+        raise ValueError(f'Inserted articles do not match original data {article_discrepancies}')
     article_cat_discrepancies = set(article_cats) ^ set(inserted_article_cats)
     if len(article_cat_discrepancies) > 0:
-        raise ValueError(f'Inserted article categories do not match original data: {article_cat_discrepancies}')
+        raise ValueError(f'Inserted article categories do not match original data {article_cat_discrepancies}')
 
     # Mark the task as done
     s3 = boto3.resource('s3')
