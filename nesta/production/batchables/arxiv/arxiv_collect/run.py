@@ -56,8 +56,9 @@ def run():
     s3_path = os.environ["BATCHPAR_outinfo"]
     start_cursor = int(os.environ["BATCHPAR_start_cursor"])
     end_cursor = int(os.environ["BATCHPAR_end_cursor"])
+    batch_size = end_cursor - start_cursor
 
-    logging.warning(f"Retrieving articles between {start_cursor}:{end_cursor - 1}")
+    logging.warning(f"Retrieving {batch_size} articles between {start_cursor - 1}:{end_cursor - 1}")
 
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -87,6 +88,8 @@ def run():
     inserted_articles, existing_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                        Base, Articles, articles,
                                                        return_existing=True)
+    total_article_cats = len(article_cats)
+    logging.warning(f"total article categories: {total_article_cats}")
     inserted_article_cats, existing_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                                Base, ArticleCategories, article_cats,
                                                                return_existing=True)
@@ -94,17 +97,15 @@ def run():
     # sanity checks before the batch is marked as done
     total_inserted_articles = len(inserted_articles)
     total_existing_articles = len(existing_articles)
-    total_articles = len(articles)
-    if total_inserted_articles + total_existing_articles != total_articles:
-        raise ValueError(f'Inserted articles do not match original data. total: {total_articles}'
-                         'inserted: {total_inserted_articles} existing: {total_existing_articles}')
+    if total_inserted_articles + total_existing_articles != batch_size:
+        raise ValueError(f'Inserted articles do not match original data. inserted:'
+                         '{total_inserted_articles} existing: {total_existing_articles}')
 
     total_inserted_article_cats = len(inserted_article_cats)
     total_existing_article_cats = len(existing_article_cats)
-    total_article_cats = len(article_cats)
     if total_inserted_article_cats + total_existing_article_cats != total_article_cats:
         raise ValueError(f'Inserted article categories do not match original data.'
-                         'total: {total_article_cats} inserted: {total_inserted_article_cats}'
+                         'inserted: {total_inserted_article_cats}'
                          'existing: {total_existing_article_cats}')
 
     # Mark the task as done
@@ -117,6 +118,5 @@ if __name__ == "__main__":
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
-                        # level=logging.DEBUG,
                         format="%(asctime)s:%(levelname)s:%(message)s")
     run()
