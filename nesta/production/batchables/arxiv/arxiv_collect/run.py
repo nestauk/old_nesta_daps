@@ -57,7 +57,6 @@ def run():
     start_cursor = int(os.environ["BATCHPAR_start_cursor"])
     end_cursor = int(os.environ["BATCHPAR_end_cursor"])
     batch_size = end_cursor - start_cursor
-
     logging.warning(f"Retrieving {batch_size} articles between {start_cursor - 1}:{end_cursor - 1}")
 
     # Setup the database connectors
@@ -88,25 +87,20 @@ def run():
     inserted_articles, existing_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                        Base, Articles, articles,
                                                        return_existing=True)
-    total_article_cats = len(article_cats)
-    logging.warning(f"total article categories: {total_article_cats}")
+    logging.warning(f"total article categories: {len(article_cats)}")
     inserted_article_cats, existing_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                                Base, ArticleCategories, article_cats,
                                                                return_existing=True)
 
     # sanity checks before the batch is marked as done
-    total_inserted_articles = len(inserted_articles)
-    total_existing_articles = len(existing_articles)
-    if total_inserted_articles + total_existing_articles != batch_size:
-        raise ValueError(f'Inserted articles do not match original data. inserted:'
-                         '{total_inserted_articles} existing: {total_existing_articles}')
-
-    total_inserted_article_cats = len(inserted_article_cats)
-    total_existing_article_cats = len(existing_article_cats)
-    if total_inserted_article_cats + total_existing_article_cats != total_article_cats:
+    if len(inserted_articles) + len(existing_articles) != batch_size:
+        raise ValueError(f'Inserted articles do not match original data.'
+                         'inserted: {len(inserted_articles)}'
+                         'existing: {len(existing_articles)}')
+    if len(inserted_article_cats) + len(existing_article_cats) != len(article_cats):
         raise ValueError(f'Inserted article categories do not match original data.'
-                         'inserted: {total_inserted_article_cats}'
-                         'existing: {total_existing_article_cats}')
+                         'inserted: {len(inserted_article_cats)}'
+                         'existing: {len(existing_article_cats)}')
 
     # Mark the task as done
     s3 = boto3.resource('s3')
