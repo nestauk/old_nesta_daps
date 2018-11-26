@@ -52,14 +52,14 @@ class CollectTask(autobatch.AutoBatchTask):
             done = batch_done_key in DONE_KEYS
             end_cursor = batch_start + BATCH_SIZE
             if end_cursor > total:
-                end_cursor = total
+                end_cursor = total + 1
             params = {"config": "mysqldb.config",
                       "start_cursor": batch_start,
                       "end_cursor": end_cursor,
                       "db_name": "production" if not self.test else "dev",
                       "outinfo": "s3://nesta-production-intermediate/%s" % batch_done_key,
                       "done": done}
-            print(f"Batch {count}: {params}")
+            logging.warning(f"Batch {count}: {params}")
             job_params.append(params)
         return job_params
 

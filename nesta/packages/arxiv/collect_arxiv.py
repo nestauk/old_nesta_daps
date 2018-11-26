@@ -171,33 +171,32 @@ def arxiv_batch(token, cursor):
         meta = record.find(OAI+'metadata')
         if meta is None:
             logging.warning(f"No metadata for article {header_id}")
-            continue
-        info = meta.find(ARXIV+'arXiv')
-        fields = ['id', 'created', 'updated', 'title', 'categories',
-                  'journal-ref', 'doi', 'msc-class', 'abstract']
-        for field in fields:
-            try:
-                row[field.replace('-', '_')] = info.find(ARXIV+field).text
-            except AttributeError:
-                logging.debug(f"{field} not found in article {header_id}")
+        else:
+            info = meta.find(ARXIV+'arXiv')
+            fields = ['id', 'created', 'updated', 'title', 'categories',
+                      'journal-ref', 'doi', 'msc-class', 'abstract']
+            for field in fields:
+                try:
+                    row[field.replace('-', '_')] = info.find(ARXIV+field).text
+                except AttributeError:
+                    logging.debug(f"{field} not found in article {header_id}")
 
-        for date_field in ['datestamp', 'created', 'updated']:
+            for date_field in ['datestamp', 'created', 'updated']:
+                try:
+                    date = row[date_field]
+                    row[date_field] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+                except ValueError:
+                    del row[date_field]  # date is not in the correct format
+                except KeyError:
+                    pass  # field not in this row
+
+            # split categories into a list for the link table in sql
             try:
-                date = row[date_field]
-                row[date_field] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-            except ValueError:
-                del row[date_field]  # date is not in the correct format
+                row['categories'] = row['categories'].split(' ')
+                row['title'] = row['title'].strip()
+                row['authors'] = xml_to_json(info, 'author', prefix=ARXIV)
             except KeyError:
                 pass  # field not in this row
-
-        # split categories into a list for the link table in sql
-        try:
-            row['categories'] = row['categories'].split(' ')
-        except KeyError:
-            pass  # field not in this row
-
-        row['title'] = row['title'].strip()
-        row['authors'] = xml_to_json(info, 'author', prefix=ARXIV)
 
         output.append(row)
 
