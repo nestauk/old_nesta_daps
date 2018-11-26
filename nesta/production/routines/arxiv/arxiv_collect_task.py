@@ -46,12 +46,16 @@ class CollectTask(autobatch.AutoBatchTask):
     def prepare(self):
         '''Prepare the batch job parameters'''
         job_params = []
-        for count, batch_start in enumerate(range(1, total_articles(), BATCH_SIZE), 1):
+        total = total_articles()
+        for count, batch_start in enumerate(range(1, total, BATCH_SIZE), 1):
             batch_done_key = '_'.join(['arxiv_collection_from', str(batch_start)])
             done = batch_done_key in DONE_KEYS
+            end_cursor = batch_start + BATCH_SIZE
+            if end_cursor > total:
+                end_cursor = total
             params = {"config": "mysqldb.config",
                       "start_cursor": batch_start,
-                      "end_cursor": batch_start + BATCH_SIZE,
+                      "end_cursor": end_cursor,
                       "db_name": "production" if not self.test else "dev",
                       "outinfo": "s3://nesta-production-intermediate/%s" % batch_done_key,
                       "done": done}
