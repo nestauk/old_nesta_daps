@@ -95,12 +95,12 @@ def run():
                                                 return_non_inserted=True)
 
     # sanity checks before the batch is marked as done
-    logging.warning(f'inserted articles: {len(inserted_articles)} ',
-                    f'existing articles: {len(existing_articles)} ',
-                    f'failed articles: {len(failed_articles)}')
-    logging.warning(f'inserted article categories: {len(inserted_article_cats)} '
-                    f'existing article categories: {len(existing_article_cats)} ',
-                    f'failed article categories: {len(failed_article_cats)}')
+    logging.warning((f'inserted articles: {len(inserted_articles)} ',
+                     f'existing articles: {len(existing_articles)} ',
+                     f'failed articles: {len(failed_articles)}'))
+    logging.warning((f'inserted article categories: {len(inserted_article_cats)} ',
+                     f'existing article categories: {len(existing_article_cats)} ',
+                     f'failed article categories: {len(failed_article_cats)}'))
     if len(inserted_articles) + len(existing_articles) + len(failed_articles) != batch_size:
         raise ValueError(f'Inserted articles do not match original data.')
     if len(inserted_article_cats) + len(existing_article_cats) + len(failed_article_cats) != len(article_cats):
