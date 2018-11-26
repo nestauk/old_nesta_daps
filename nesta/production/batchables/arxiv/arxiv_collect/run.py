@@ -95,12 +95,12 @@ def run():
     # sanity checks before the batch is marked as done
     if len(inserted_articles) + len(existing_articles) != batch_size:
         raise ValueError(f'Inserted articles do not match original data.'
-                         'inserted: {len(inserted_articles)}'
-                         'existing: {len(existing_articles)}')
+                         f'inserted: {len(inserted_articles)}'
+                         f'existing: {len(existing_articles)}')
     if len(inserted_article_cats) + len(existing_article_cats) != len(article_cats):
         raise ValueError(f'Inserted article categories do not match original data.'
-                         'inserted: {len(inserted_article_cats)}'
-                         'existing: {len(existing_article_cats)}')
+                         f'inserted: {len(inserted_article_cats)}'
+                         f'existing: {len(existing_article_cats)}')
 
     # Mark the task as done
     s3 = boto3.resource('s3')
