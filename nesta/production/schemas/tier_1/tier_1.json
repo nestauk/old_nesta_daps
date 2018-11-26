@@ -2,17 +2,20 @@
     {
     "term": "firstName",
     "values": ["id", "year", "placeName", "title", "terms", "currency",
-               "textBody", "date", "cost", "coordinate", "booleanFlag"]
+               "textBody", "date", "cost", "coordinate", "booleanFlag", "reference",
+               "author"]
     },
     {
     "term": "middleName",
     "values": ["of", "fiscal", "city", "country",  "state", "zipcode", "total",
                "official", "start", "end", "descriptive", "abstract", "duns",
-               "iso2", "iso3", "isoNumeric", "mesh", "duplicate"]
+               "iso2", "iso3", "isoNumeric", "mesh", "duplicate", "created", "updated",
+                "datestamp", "journal", "digitalObjectIdentifier",
+                "mathSubjectClassification", "arxivSubjectCategory"]
     },
     {
     "term": "lastName",
     "values": ["project", "funding", "organisation", "country", "continent",
-               "cost", "abstract"]
+               "cost", "abstract", "article"]
     }
 ]
