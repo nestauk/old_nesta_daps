@@ -30,12 +30,13 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
-        return_existing (bool): Flag that when set will also return a list of rows that
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                 were in the supplied data but not imported (for checks)
 
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
         :obj:`list` of :obj:`dict` data found already existing in the database (optional)
+        :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)

@@ -84,16 +84,18 @@ def run():
                     session.add(Categories(id=cat))
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
 
-    inserted_articles, existing_articles, failed_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
-                                                       Base, Articles, articles,
-                                                       return_non_inserted=True)
+    inserted_articles, existing_articles, failed_articles = insert_data(
+                                                "BATCHPAR_config", "mysqldb", db_name,
+                                                Base, Articles, articles,
+                                                return_non_inserted=True)
     logging.warning(f"total article categories: {len(article_cats)}")
-    inserted_article_cats, existing_article_cats, failed_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
-                                                               Base, ArticleCategories, article_cats,
-                                                               return_non_inserted=True)
+    inserted_article_cats, existing_article_cats, failed_article_cats = insert_data(
+                                                "BATCHPAR_config", "mysqldb", db_name,
+                                                Base, ArticleCategories, article_cats,
+                                                return_non_inserted=True)
 
     # sanity checks before the batch is marked as done
-    logging.warning(f'inserted articles: {len(inserted_articles)} '
+    logging.warning(f'inserted articles: {len(inserted_articles)} ',
                     f'existing articles: {len(existing_articles)} ',
                     f'failed articles: {len(failed_articles)}')
     logging.warning(f'inserted article categories: {len(inserted_article_cats)} '
