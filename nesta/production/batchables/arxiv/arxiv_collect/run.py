@@ -84,23 +84,25 @@ def run():
                     session.add(Categories(id=cat))
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
 
-    inserted_articles, existing_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
+    inserted_articles, existing_articles, failed_articles = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                        Base, Articles, articles,
-                                                       return_existing=True)
+                                                       return_non_inserted=True)
     logging.warning(f"total article categories: {len(article_cats)}")
-    inserted_article_cats, existing_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
+    inserted_article_cats, existing_article_cats, failed_article_cats = insert_data("BATCHPAR_config", "mysqldb", db_name,
                                                                Base, ArticleCategories, article_cats,
-                                                               return_existing=True)
+                                                               return_non_inserted=True)
 
     # sanity checks before the batch is marked as done
-    if len(inserted_articles) + len(existing_articles) != batch_size:
-        raise ValueError(f'Inserted articles do not match original data. '
-                         f'inserted: {len(inserted_articles)} '
-                         f'existing: {len(existing_articles)}')
-    if len(inserted_article_cats) + len(existing_article_cats) != len(article_cats):
-        raise ValueError(f'Inserted article categories do not match original data. '
-                         f'inserted: {len(inserted_article_cats)} '
-                         f'existing: {len(existing_article_cats)}')
+    logging.warning(f'inserted articles: {len(inserted_articles)} '
+                    f'existing articles: {len(existing_articles)} ',
+                    f'failed articles: {len(failed_articles)}')
+    logging.warning(f'inserted article categories: {len(inserted_article_cats)} '
+                    f'existing article categories: {len(existing_article_cats)} ',
+                    f'failed article categories: {len(failed_article_cats)}')
+    if len(inserted_articles) + len(existing_articles) + len(failed_articles) != batch_size:
+        raise ValueError(f'Inserted articles do not match original data.')
+    if len(inserted_article_cats) + len(existing_article_cats) + len(failed_article_cats) != len(article_cats):
+        raise ValueError(f'Inserted article categories do not match original data.')
 
     # Mark the task as done
     s3 = boto3.resource('s3')

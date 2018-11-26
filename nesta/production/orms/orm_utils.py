@@ -17,7 +17,7 @@ import logging
 import time
 
 
-def insert_data(db_env, section, database, Base, _class, data, return_existing=False):
+def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -45,12 +45,14 @@ def insert_data(db_env, section, database, Base, _class, data, return_existing=F
     all_pks = set()
     objs = []
     existing_objs = []
+    failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
     for row in data:
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
             logging.warning(f"{row} does not contain any of "
                             "{[pkey.name in row for pkey in pkey_cols]}")
+            failed_objs.append(row)
             continue
         # The row mustn't already exist in the db data
         if session.query(exists(_class, **row)).scalar():
@@ -68,8 +70,8 @@ def insert_data(db_env, section, database, Base, _class, data, return_existing=F
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
-    if return_existing:
-        return objs, existing_objs
+    if return_non_inserted:
+        return objs, existing_objs, failed_objs
     return objs
 
 
