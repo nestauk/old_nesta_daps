@@ -199,16 +199,6 @@ def test_arxiv_batch_converts_categories_to_list(mocked_request, mock_response):
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
-def test_arxiv_batch_ignores_articles_with_missing_metadata(mocked_request, mock_response):
-    mocked_request.return_value = ET.fromstring(mock_response)
-    batch, _ = arxiv_batch('111222444', 0)
-    assert len(batch) == 2
-
-    datestamps = {row['datestamp'] for row in batch}
-    assert '2088-01-01' not in datestamps
-
-
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
 def test_arxiv_batch_converts_dates(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444', 0)
