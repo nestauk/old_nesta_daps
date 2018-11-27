@@ -11,7 +11,7 @@
                "official", "start", "end", "descriptive", "abstract", "duns",
                "iso2", "iso3", "isoNumeric", "roles", "region", "summary", "subcategory",
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
-               "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created",
+               "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate"]
     },
     {
