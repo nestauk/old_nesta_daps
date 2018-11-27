@@ -3,7 +3,7 @@
     "term": "firstName",
     "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate", "url", "address", "status",
-               "count", "datetime", "type", "language", "name"]
+               "count", "datetime", "type", "language", "name", "booleanFlag"]
     },
     {
     "term": "middleName",
