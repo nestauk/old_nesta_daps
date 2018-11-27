@@ -5,16 +5,22 @@ geocode
 Tools for geocoding.
 '''
 
+import logging
+import pandas as pd
 import requests
+from retrying import retry
+
+from nesta.packages.decorators.ratelimit import ratelimit
+
 
 def geocode(**request_kwargs):
-    '''                                                                                     
-    Geocoder using the Open Street Map Nominatim API.                                       
-                                                                                            
+    '''
+    Geocoder using the Open Street Map Nominatim API.
+
     If there are multiple results the first one is returned (they are ranked by importance).
-    The API usage policy allows maximum 1 request per second and no multithreading:         
-    https://operations.osmfoundation.org/policies/nominatim/                                
-    
+    The API usage policy allows maximum 1 request per second and no multithreading:
+    https://operations.osmfoundation.org/policies/nominatim/
+
     Args:
         request_kwargs (dict): Parameters for OSM API.
     Returns:
@@ -30,3 +36,65 @@ def geocode(**request_kwargs):
     if len(geo_data) == 0:
         raise ValueError(f"No geocode match for {request_kwargs}")
     return geo_data
+
+
+@retry(stop_max_attempt_number=10)
+@ratelimit(max_per_second=0.5)
+def _geocode(q=None, city=None, country=None):
+    '''Extension of geocode to handle errors and attempt with the query method on
+    failure.
+
+    Args:
+        q (str): query string, multiple words should be separated with +
+        city (str): name of the city.
+        country (str): name of the country.
+    Returns:
+        dict of lat and lon.
+    '''
+    if city and country:
+        query_kwargs = {'country': country, 'city': city}
+    elif q and not (city or country):
+        query_kwargs = {'q': q}
+    else:
+        raise TypeError("Missing argument: q or city and country required")
+
+    try:
+        geo_data = geocode(**query_kwargs)
+    except ValueError:
+        logging.debug(f"Unable to geocode {q or (city, country)}")
+        return None  # converts to null and is accepted in elasticsearch
+
+    lat = geo_data[0]['lat']
+    lon = geo_data[0]['lon']
+    logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+
+    return {'lat': lat, 'lon': lon}
+
+
+def geocode_dataframe(df):
+    '''
+    A wrapper for the geocode function to process a supplied dataframe using
+    the city and country.
+
+    Args:
+        df (dataframe): a dataframe containing city and country fields.
+    Returns:
+        a dataframe with a 'coordinates' column appended.
+    '''
+    in_cols = ['city', 'country']
+    out_col = 'coordinates'
+    # Only geocode unique city/country combos
+    _df = df[in_cols].drop_duplicates()
+    _df.replace('', pd.np.nan, inplace=True)
+    _df = _df.dropna()
+    # Attempt to geocode with city and country
+    _df[out_col] = _df[in_cols].apply(lambda row: _geocode(**row), axis=1)
+    # Attempt to geocode with query for those which failed
+    null = pd.isnull(_df[out_col])
+    if null.sum() > 0:
+        query = "{city} {country}"
+        _df.loc[null, out_col] = _df.loc[null, in_cols].apply(lambda row:
+                                                              _geocode(query.format(**row)),
+                                                              axis=1)
+    # Merge the results again
+    return pd.merge(df, _df, how='left', left_on=in_cols, right_on=in_cols)
