@@ -12,7 +12,8 @@
                "iso2", "iso3", "isoNumeric", "roles", "region", "summary", "subcategory",
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
                "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
-               "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate"]
+               "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
+	       "programming"]
     },
     {
     "term": "lastName",
