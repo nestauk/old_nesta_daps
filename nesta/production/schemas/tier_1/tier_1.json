@@ -17,6 +17,6 @@
     {
     "term": "lastName",
     "values": ["project", "funding", "organisation", "country", "continent",
-               "group", "category", "member", "user",  "abstract"]
+               "group", "category", "member", "user",  "abstract", "cost"]
     }
 ]
