@@ -1,27 +1,48 @@
-import boto3
+from contextlib import contextmanager
 import logging
-import pandas as pd
-import s3fs
+import re
+import requests
+import tarfile
+from tempfile import NamedTemporaryFile
 
-from nesta.packages.geo_utils.geocode import geocode_dataframe
-from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
+from nesta.production.luigihacks import misctools
 
 
-def collect_file_from_s3(bucket, filepath, columns=None):
-    """Retrieves a file from s3 and loads it into a dataframe.
-
-    Args:
-        bucket (str): name of the s3 bucket
-        filepath (str): path to the file within the bucket
-        columns (list): list of columns to keep, if None, all are kept
+@contextmanager
+def crunchbase_tar():
+    """Downloads the tar archive of Crunchbase data.
 
     Returns:
-        :code:`pd.DataFrame` containing the whole csv file
+        :code:`tarfile.Tarfile`: opened tar archive
     """
-    target = f"s3://{bucket}/{filepath}"
-    # logging.debug(f"Retrieving mesh terms from S3: {target}")
+    crunchbase_config = misctools.get_config('crunchbase.config', 'crunchbase')
+    user_key = crunchbase_config['user_key']
+    url = 'https://api.crunchbase.com/v3.1/csv_export/csv_export.tar.gz?user_key='
+    with NamedTemporaryFile() as tmp_file:
+        r = requests.get(''.join([url, user_key]))
+        tmp_file.write(r.content)
+        try:
+            tmp_tar = tarfile.open(tmp_file.name)
+            yield tmp_tar
+        finally:
+            tmp_tar.close()
 
-    return pd.read_csv(target, usecols=columns)
+
+def get_csvs():
+    """Gets a list of csv files withing the Crunchbase tar archive.
+
+    Returns:
+        list: all .csv files int the archive
+    """
+    csvs = []
+    csv_pattern = re.compile(r'^(.*)\.csv$')
+    with crunchbase_tar() as tar:
+        names = tar.getnames()
+    for name in names:
+        tablename = csv_pattern.match(name)
+        if tablename is not None:
+            csvs.append(tablename.group(1))
+    return csvs
 
 
 if __name__ == '__main__':
@@ -31,6 +52,18 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    bucket = 'crunchbase-export'
-    target = 'organizations.csv'
-    # org_columns = [
+    # with crunchbase_tar() as tar:
+    #     names = tar.getnames()
+    # print(names)
+    # assert 'category_groups.csv' in names
+
+    # with crunchbase_tar() as tar:
+    #     cg_df = pd.read_csv(tar.extractfile('category_groups.csv'))
+    # print(cg_df.columns)
+
+    csvs = get_csvs()
+    print(csvs)
+
+
+
+
