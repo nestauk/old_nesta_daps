@@ -2,6 +2,7 @@ import boto3
 import logging
 import os
 import pandas as pd
+import pycountry
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from urllib.parse import urlsplit
@@ -21,11 +22,26 @@ def parse_s3_path(path):
     return (s3_bucket, s3_key)
 
 
+def _country_name(code):
+    """Converts country alpha_3 into name.
+
+    Args:
+        code (str): iso alpha 3 code
+
+    Returns:
+        str: name of the country
+    """
+    try:
+        return pycountry.countries.get(alpha_3=code).name
+    except KeyError:
+        return pd.np.nan
+
+
 def run():
     db_name = os.environ["BATCHPAR_db_name"]
     s3_path = os.environ["BATCHPAR_outinfo"]
     table_name = os.environ["BATCHPAR_table_name"]
-    # logging.warning(f"Retrieving {batch_size} articles between {start_cursor - 1}:{end_cursor - 1}")
+    logging.warning(f"Processing {table_name} file")
 
     # Setup the database connectors
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -33,6 +49,13 @@ def run():
 
     with crunchbase_tar() as tar:
         df = pd.read_csv(tar.extractfile(''.join([table_name, '.csv'])))
+
+    if {'city', 'country_code'}.issubset(df.columns):
+        df['country'] = df['country_code'].apply(_country_name)
+        df = geocode_dataframe(df)
+        df = country_iso_code_dataframe(df)
+        df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
+
 
 
     # Mark the task as done
