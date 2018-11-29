@@ -3,7 +3,7 @@
     "term": "firstName",
     "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate", "url", "address", "status",
-               "count", "datetime", "type", "language", "name", "booleanFlag"]
+               "count", "datetime", "type", "language", "name", "booleanFlag", "email"]
     },
     {
     "term": "middleName",
@@ -13,11 +13,11 @@
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
                "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
-	       "programming"]
+	       "programming", "installs", "contentRating", "adSupported", "permissions", "language", "ratings"]
     },
     {
     "term": "lastName",
     "values": ["project", "funding", "organisation", "country", "continent",
-               "group", "category", "member", "user",  "abstract", "cost"]
+               "group", "category", "member", "user",  "abstract", "cost", "app", "developer"]
     }
 ]

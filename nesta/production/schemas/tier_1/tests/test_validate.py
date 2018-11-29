@@ -1,3 +1,4 @@
+import pdb
 import os
 import json
 from collections import Counter
@@ -6,6 +7,7 @@ class TestValidate():
     def test_validate(self):
         # Load the ontology
         cwd = os.path.dirname(__file__)
+        #pdb.set_trace()
         filename = os.path.join(cwd, '../tier_1.json')
         with open(filename) as f:
             data = json.load(f)        
@@ -13,7 +15,7 @@ class TestValidate():
         # Assert the core structure of the ontology
         assert len(ontology) == 3
         for term_type in ["firstName", "middleName", "lastName"]:
-            assert term_type in ontology
+            assert term_type in ontology, f"term_type: '{term_type}' not in ontology"
 
         # Iterate over schema transformations
         dirname = os.path.join(cwd, '../schema_transformations/')
@@ -30,9 +32,9 @@ class TestValidate():
                 tier_0.append(row['tier_0'])
                 tier_1.append(row['tier_1'])
                 first, middle, last = row['tier_1'].split("_")
-                assert first in ontology["firstName"]
-                assert middle in ontology["middleName"]
-                assert last in ontology["lastName"]
+                assert first in ontology["firstName"], f"No firstName '{first}' ({filename})"
+                assert middle in ontology["middleName"], f"No middleName '{middle}' ({filename})"
+                assert last in ontology["lastName"], f"No lastName '{last}' ({filename})"
             # Assert no duplicates
             _, count = Counter(tier_0).most_common(1)[0]
             assert count == 1
