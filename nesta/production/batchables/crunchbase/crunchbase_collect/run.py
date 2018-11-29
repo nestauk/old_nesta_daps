@@ -37,6 +37,17 @@ def _country_name(code):
         return pd.np.nan
 
 
+def _total_records(data_dict):
+    totals = {}
+    total = 0
+    for k, v in data_dict.items():
+        length = len(v)
+        totals[k] = length
+        total += length
+    totals['total'] = total
+    return totals
+
+
 def run():
     db_name = os.environ["BATCHPAR_db_name"]
     s3_path = os.environ["BATCHPAR_outinfo"]
@@ -48,7 +59,9 @@ def run():
     try_until_allowed(Base.metadata.create_all, engine)
 
     with crunchbase_tar() as tar:
-        df = pd.read_csv(tar.extractfile(''.join([table_name, '.csv'])))
+        df = pd.read_csv(tar.extractfile(''.join([table_name, '.csv'])), low_memory=False)
+
+    df.rename(columns={'uuid': 'id'})
 
     if {'city', 'country_code'}.issubset(df.columns):
         df['country'] = df['country_code'].apply(_country_name)
@@ -56,7 +69,20 @@ def run():
         df = country_iso_code_dataframe(df)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
+    rows = df.to_dict(orient='records')
 
+    returned = {}
+    returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+                                                "BATCHPAR_config", "mysqldb", db_name,
+                                                Base, table_name, rows,
+                                                return_non_inserted=True)
+    totals = _total_records(returned)
+    for k, v in totals:
+        logging.warning(f"{k} rows: {v}")
+
+    # check before the task is marked as done
+    if totals['total'] != len(df):
+        raise ValueError("Inserted rows do not match existing data")
 
     # Mark the task as done
     s3 = boto3.resource('s3')
