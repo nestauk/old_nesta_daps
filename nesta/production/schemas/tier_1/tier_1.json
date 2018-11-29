@@ -13,7 +13,7 @@
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
                "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
-	       "programming"]
+	       "programming", "ashoka"]
     },
     {
     "term": "lastName",
