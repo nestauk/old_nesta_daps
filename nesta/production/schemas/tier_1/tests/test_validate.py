@@ -1,4 +1,3 @@
-import pdb
 import os
 import json
 from collections import Counter
@@ -7,7 +6,6 @@ class TestValidate():
     def test_validate(self):
         # Load the ontology
         cwd = os.path.dirname(__file__)
-        #pdb.set_trace()
         filename = os.path.join(cwd, '../tier_1.json')
         with open(filename) as f:
             data = json.load(f)        
