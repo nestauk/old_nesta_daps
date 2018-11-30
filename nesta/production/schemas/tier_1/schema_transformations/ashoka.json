@@ -1,0 +1,13 @@
+[
+    {"tier_0": "name", "tier_1": "name_of_member"},
+    {"tier_0": "country", "tier_1": "placeName_country_member"},
+    {"tier_0": "fellowship-date", "tier_1": "year_start_member"},
+    {"tier_0": "description", "tier_1": "textBody_descriptive_member"},
+    {"tier_0": "topics", "tier_1": "terms_topics_member"},
+    {"tier_0": "url", "tier_1": "url_ashoka_member"},
+    {"tier_0": "organization_name", "tier_1": "name_of_organisation"},
+    {"tier_0": "organization_url", "tier_1": "url_of_organisation"},
+    {"tier_0": "facebook_url", "tier_1": "url_facebook_member"},
+    {"tier_0": "twitter_url", "tier_1": "url_twitter_member"},
+    {"tier_0": "linkedIn_url", "tier_1": "url_linkedIn_member"}
+]
