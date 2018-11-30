@@ -1,0 +1,20 @@
+
+[
+    {"tier_0": "appId", "tier_1": "id_of_app", "unique": true},
+    {"tier_0": "appStore", "tier_1": "type_of_app"},
+    {"tier_0": "developerId", "tier_1": "id_of_developer"},
+    {"tier_0": "developerWebsite", "tier_1": "url_of_developer"},
+    {"tier_0": "title", "tier_1": "title_of_app"},
+    {"tier_0": "description", "tier_1": "textBody_descriptive_app"},
+    {"tier_0": "score", "tier_1": "count_ratings_app"},
+    {"tier_0": "price", "tier_1": "cost_of_app"},
+    {"tier_0": "currency", "tier_1": "currency_of_cost"},
+    {"tier_0": "primaryGenreId", "tier_1": "id_category_app"},
+    {"tier_0": "primaryGenre", "tier_1": "title_category_app"},
+    {"tier_0": "contentRating", "tier_1": "textBody_contentRating_app"},
+    {"tier_0": "released", "tier_1": "datetime_start_app"},
+    {"tier_0": "updated", "tier_1": "datetime_update_app"},
+    {"tier_0": "playstoreUrl", "tier_1": "url_of_app"},
+    {"tier_0": "languages", "tier_1": "terms_language_app"},
+    {"tier_0": "countries", "tier_1": "terms_country_app"}
+]
