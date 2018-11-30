@@ -4,7 +4,7 @@
     "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate", "url", "address", "status",
                "count", "datetime", "type", "language", "name", "booleanFlag",
-    "score", "labels"]
+	       "score"]
     },
     {
     "term": "middleName",
@@ -14,7 +14,7 @@
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
                "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
-	       "programming", "crossPollination", "growth", "sdgs"]
+	       "programming", "crossPollination", "growth", "sdg"]
     },
     {
     "term": "lastName",
