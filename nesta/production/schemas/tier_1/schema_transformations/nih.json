@@ -20,5 +20,8 @@
     {"tier_0": "continent", "tier_1": "id_of_continent"},
     {"tier_0": "total_cost_currency", "tier_1": "currency_total_cost"},
     {"tier_0": "mesh_terms", "tier_1": "terms_mesh_abstract"},
-    {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"}
+    {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"},
+    {"tier_0": "crosspollination", "tier_1": "score_crossPollination_project"},
+    {"tier_0": "growth", "tier_1": "score_growth_project"},
+    {"tier_0": "sdgs", "tier_1": "labels_sdgs_project"}
 ]
