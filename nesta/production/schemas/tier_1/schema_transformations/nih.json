@@ -23,5 +23,5 @@
     {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"},
     {"tier_0": "crosspollination", "tier_1": "score_crossPollination_project"},
     {"tier_0": "growth", "tier_1": "score_growth_project"},
-    {"tier_0": "sdgs", "tier_1": "labels_sdgs_project"}
+    {"tier_0": "sdgs", "tier_1": "terms_sdg_project"}
 ]
