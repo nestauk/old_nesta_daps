@@ -58,7 +58,8 @@ class GeocodeBatchTask(AutoBatchTask):
 
     def _get_uncoded(self):
         """Identifies all the locations in the geographic data table which have not
-        previously been processed.
+        previously been processed. If there are none to encode an empty list is
+        returned, as per SQLAlchemy convention for .all().
 
         Returns:
             (:obj:`list` of :obj:`Geographic`) records to process
@@ -113,7 +114,7 @@ class GeocodeBatchTask(AutoBatchTask):
             (:obj:`list` of :obj:`dict`) job parameters for each of the batch tasks
         """
         # set up database connectors
-        self.engine = get_mysql_engine(self.database_config, "mysqldb", self.database_name)
+        self.engine = get_mysql_engine(self.database_config, "mysqldb", self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # s3 setup
@@ -124,18 +125,21 @@ class GeocodeBatchTask(AutoBatchTask):
 
         # create batches from all locations which have not previously been coded
         uncoded_locations = self._get_uncoded()
-        job_params = []
-        for batch_file in self._create_batches(uncoded_locations):
-            params = {"batch_file": batch_file,
-                      "config": self.database_config,
-                      "db_name": self.database_name,
-                      "bucket": self.intermediate_bucket,
-                      "done": False,
-                      "outinfo": ''}
-            job_params.append(params)
-            logging.info(params)
-        logging.info(f"{len(job_params)} batches to run")
-        return job_params
+        if uncoded_locations:
+            job_params = []
+            for batch_file in self._create_batches(uncoded_locations):
+                params = {"batch_file": batch_file,
+                          "config": self.database_config,
+                          "db_name": self.database,
+                          "bucket": self.intermediate_bucket,
+                          "done": False,
+                          "outinfo": ''}
+                job_params.append(params)
+                logging.info(params)
+            logging.info(f"{len(job_params)} batches to run")
+            return job_params
+        else:
+            logging.warning(f"no new locations to geocode")
 
 
 if __name__ == '__main__':

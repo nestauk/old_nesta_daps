@@ -8,12 +8,13 @@ from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
 @pytest.fixture
 def geo_batch_task():
     class MyTask(GeocodeBatchTask):
-        """Empty subclass with the minimum methods to allow instantation."""
+        """Empty subclass with the minimum methods to allow instantiation."""
         def combine(self):
             pass
 
     return MyTask(job_def='', job_name='', job_queue='', region_name='', city_col='',
-                  country_col='', composite_key_col='', database_config='', database='')
+                  country_col='', composite_key_col='', database_config='',
+                  database='the_testing_database')
 
 
 @mock.patch('nesta.production.luigihacks.batchgeocode.insert_data')
@@ -75,19 +76,24 @@ def test_put_batch_filename(mocked_time, geo_batch_task):
     assert geo_batch_task._put_batch('some data') == 'geocoding_batch_1234567890123.json'
 
 
-def test_create_batches_in_production_mode(geo_batch_task):
+@pytest.fixture
+def create_uncoded_locations():
+    def _create_uncoded_locations(num):
+        uncoded_location = mock.Mock()
+        uncoded_location.id = 'comp_id'
+        uncoded_location.city = 'some city'
+        uncoded_location.country = 'some country'
+        return [uncoded_location for a in range(num)]
+    return _create_uncoded_locations
+
+
+def test_create_batches_in_production_mode(create_uncoded_locations, geo_batch_task):
     # patching and setup
     geo_batch_task._put_batch = mock.Mock()
     geo_batch_task.batch_size = 1000
     geo_batch_task.test = False
 
-    # create locations
-    uncoded_location = mock.Mock()
-    uncoded_location.id = 'comp_id'
-    uncoded_location.city = 'some city'
-    uncoded_location.country = 'some country'
-    uncoded_locations = [uncoded_location for a in range(2500)]
-
+    uncoded_locations = create_uncoded_locations(2500)
     batches = []
     for batch in geo_batch_task._create_batches(uncoded_locations):
         batches.append(batch)
@@ -95,21 +101,45 @@ def test_create_batches_in_production_mode(geo_batch_task):
     assert len(batches) == 3
 
 
-def test_create_batches_in_test_mode(geo_batch_task):
+def test_create_batches_in_test_mode(create_uncoded_locations, geo_batch_task):
     # patching and setup
     geo_batch_task._put_batch = mock.Mock()
     geo_batch_task.batch_size = 1000
     geo_batch_task.test = True
 
-    # create locations
-    uncoded_location = mock.Mock()
-    uncoded_location.id = 'comp_id'
-    uncoded_location.city = 'some city'
-    uncoded_location.country = 'some country'
-    uncoded_locations = [uncoded_location for a in range(540)]
-
+    uncoded_locations = create_uncoded_locations(540)
     batches = []
     for batch in geo_batch_task._create_batches(uncoded_locations):
         batches.append(batch)
 
     assert len(batches) == 11
+
+
+@mock.patch('nesta.production.luigihacks.batchgeocode.boto3')
+@mock.patch('nesta.production.luigihacks.batchgeocode.try_until_allowed')
+@mock.patch('nesta.production.luigihacks.batchgeocode.get_mysql_engine')
+def test_prepare_step_with_new_locations(mocked_sql_engine, mocked_try, mocked_boto,
+                                         create_uncoded_locations, geo_batch_task):
+    # patching and setup
+    geo_batch_task._insert_new_locations = mock.Mock()
+    geo_batch_task._get_uncoded = mock.Mock(return_value=['uncoded1', 'uncoded2'])
+    geo_batch_task._create_batches = mock.Mock(return_value=['bat1', 'bat2', 'bat3'])
+
+    job_params = geo_batch_task.prepare()
+    assert len(job_params) == 3
+    assert {'batch_file', 'db_name', 'bucket', 'config'}.issubset(job_params[0])
+
+
+@mock.patch('nesta.production.luigihacks.batchgeocode.boto3')
+@mock.patch('nesta.production.luigihacks.batchgeocode.try_until_allowed')
+@mock.patch('nesta.production.luigihacks.batchgeocode.get_mysql_engine')
+def test_prepare_step_with_no_new_locations(mocked_sql_engine, mocked_try, mocked_boto,
+                                            create_uncoded_locations, geo_batch_task):
+    # patching and setup
+    geo_batch_task._insert_new_locations = mock.Mock()
+    geo_batch_task._get_uncoded = mock.Mock(return_value=[])
+    geo_batch_task._create_batches = mock.Mock()
+
+    job_params = geo_batch_task.prepare()
+    assert job_params is None
+    geo_batch_task._create_batches.assert_not_called()
