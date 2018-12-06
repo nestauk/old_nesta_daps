@@ -103,9 +103,9 @@ class GeocodeBatchTask(AutoBatchTask):
         yield self._put_batch(batch)
 
     def prepare(self):
-        """Copies any new city/county combinations from the input table into the geographic_data
-        table. All rows which have previously not been processed will be split into
-        batches.
+        """Copies any new city/county combinations from the input table into the
+        geographic_data table. All rows which have previously not been processed will
+        be split into batches.
 
         Returns:
             (:obj:`list` of :obj:`dict`) job parameters for each of the batch tasks
