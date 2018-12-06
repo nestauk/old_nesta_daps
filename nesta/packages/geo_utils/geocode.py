@@ -98,3 +98,34 @@ def geocode_dataframe(df):
                                                               axis=1)
     # Merge the results again
     return pd.merge(df, _df, how='left', left_on=in_cols, right_on=in_cols)
+
+
+def geocode_batch_dataframe(df, city='city', country='country',
+                            latitude='latitude', longitude='longitude'):
+    """Geocodes a dataframe, first by supplying the city and country to the api, if this
+    fails a second attempt is made supplying the combination using the q= method.
+    The supplied dataframe df is returned with additional columns appended, containing
+    the latitude and longitude as floats.
+
+    Args:
+        df (:obj:`pandas.DataFrame`): input dataframe
+        city (str): name of the input column containing the city
+        country (str): name of the input column containing the country
+        latitude (str): name of the output column containing the latitude
+        longitude (str): name of the output column containing the longitude
+
+    Returns:
+        (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
+    """
+    df[latitude], df[longitude] = None, None
+
+    for idx, row in df.iterrows():
+        location = _geocode(city=row[city], country=row[country])
+        if location is None:
+            query = f"{row[city]} {row[country]}"
+            location = _geocode(q=query)
+        if location is not None:
+            df.loc[idx, latitude] = float(location['lat'])
+            df.loc[idx, longitude] = float(location['lon'])
+    return df
+

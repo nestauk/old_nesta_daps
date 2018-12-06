@@ -33,13 +33,14 @@ def country_iso_code(country):
     raise KeyError(f"{country} not found")
 
 
-def country_iso_code_dataframe(df):
+def country_iso_code_dataframe(df, country='country'):
     '''
     A wrapper for the country_iso_code function to apply it to a whole dataframe,
     using the country name. Also appends the continent code based on the country.
 
     Args:
-        df (dataframe): a dataframe containing a country field.
+        df (:obj:`pandas.DataFrame`): a dataframe containing a country field.
+        country (str): field in df containing the country name
     Returns:
         a dataframe with country_alpha_2, country_alpha_3, country_numeric, and
         continent columns appended.
@@ -51,7 +52,7 @@ def country_iso_code_dataframe(df):
 
     for idx, row in df.iterrows():
         try:
-            country_codes = country_iso_code(row['country'])
+            country_codes = country_iso_code(row[country])
         except KeyError:
             # some fallback method could go here
             pass

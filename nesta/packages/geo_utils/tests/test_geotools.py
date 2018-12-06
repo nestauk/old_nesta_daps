@@ -4,6 +4,7 @@ from unittest import mock
 
 from nesta.packages.geo_utils.geocode import geocode
 from nesta.packages.geo_utils.geocode import geocode_dataframe
+from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 
@@ -132,6 +133,72 @@ class TestGeocodeDataFrame():
 
         assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
         assert mocked_geocode.call_count == 2
+
+
+class TestGeocodeBatchDataframe():
+    @staticmethod
+    @pytest.fixture
+    def test_dataframe():
+        df = pd.DataFrame({'index': [0, 1, 2],
+                           'city': ['London', 'Sheffield', 'Brussels'],
+                           'country': ['UK', 'United Kingdom', 'Belgium'],
+                           })
+        return df
+
+    @mock.patch(_GEOCODE)
+    def test_underlying_geocoding_function_called_with_city_country(self, mocked_geocode,
+                                                                    test_dataframe):
+        # Generate dataframe using a mocked output
+        mocked_geocode.side_effect = [{'lat': '12.923432', 'lon': '-75.234569'},
+                                      {'lat': '99.999999', 'lon': '-88.888888'},
+                                      {'lat': '-2.202022', 'lon': '0.000000'}
+                                      ]
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe)
+
+        # Expected outputs
+        expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
+                                           'city': ['London', 'Sheffield', 'Brussels'],
+                                           'country': ['UK', 'United Kingdom', 'Belgium'],
+                                           'latitude': [12.923432, 99.999999, -2.202022],
+                                           'longitude': [-75.234569, -88.888888, 0.0]
+                                           })
+        expected_calls = [mock.call(city='London', country='UK'),
+                          mock.call(city='Sheffield', country='United Kingdom'),
+                          mock.call(city='Brussels', country='Belgium')]
+
+        # Check expected behaviours
+        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
+        assert mocked_geocode.mock_calls == expected_calls
+
+    @mock.patch(_GEOCODE)
+    def test_underlying_geocoding_function_called_with_query_fallback(self,
+                                                                      mocked_geocode,
+                                                                      test_dataframe):
+        mocked_geocode.side_effect = [None,
+                                      {'lat': 1, 'lon': 4},
+                                      None,
+                                      {'lat': 2, 'lon': 5},
+                                      None,
+                                      {'lat': 3, 'lon': 6}
+                                      ]
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe)
+        # Expected outputs
+        expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
+                                           'city': ['London', 'Sheffield', 'Brussels'],
+                                           'country': ['UK', 'United Kingdom', 'Belgium'],
+                                           'latitude': [1.0, 2.0, 3.0],
+                                           'longitude': [4.0, 5.0, 6.0],
+                                           })
+        expected_calls = [mock.call(city='London', country='UK'),
+                          mock.call(q='London UK'),
+                          mock.call(city='Sheffield', country='United Kingdom'),
+                          mock.call(q='Sheffield United Kingdom'),
+                          mock.call(city='Brussels', country='Belgium'),
+                          mock.call(q='Brussels Belgium')]
+
+        # Check expected behaviours
+        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
+        assert mocked_geocode.mock_calls == expected_calls
 
 
 class TestCountryIsoCode():
