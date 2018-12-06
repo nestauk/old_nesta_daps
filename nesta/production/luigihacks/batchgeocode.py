@@ -29,13 +29,13 @@ class GeocodeBatchTask(AutoBatchTask):
         batchable (str): location of the batchable run.py
     """
     city_col = luigi.Parameter()
-    country_col = luigi.Paramater()
+    country_col = luigi.Parameter()
     composite_key_col = luigi.Parameter()
     database_config = luigi.Parameter()
     database = luigi.Parameter()
-    batch_size = luigi.Parameter(default=1000)
-    intermediate_bucket = luigi.Paramater(default="nesta-production-intermediate")
-    batchable = luigi.paramater(default=find_filepath_from_pathstub("batchables/batchgeocode"))
+    batch_size = luigi.IntParameter(default=1000)
+    intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
+    batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))
 
     def _insert_new_locations(self):
         """Checks for new city/country combinations and appends them to the geographic
@@ -52,8 +52,9 @@ class GeocodeBatchTask(AutoBatchTask):
                     logging.info(f"new location {city}, {country}")
                     new_locations.append(dict(id=key, city=city, country=country))
 
-        insert_data(self.database_config, "mysqldb", self.database,
-                    Base, Geographic, new_locations)
+        if new_locations:
+            insert_data(self.database_config, "mysqldb", self.database,
+                        Base, Geographic, new_locations)
 
     def _get_uncoded(self):
         """Identifies all the locations in the geographic data table which have not
@@ -77,7 +78,8 @@ class GeocodeBatchTask(AutoBatchTask):
         Returns:
             (str): name of the file in the s3 bucket (key)
         """
-        filename = ''.join(['geocoding_batch_', time.time(), '.json'])
+        timestamp = str(time.time()).replace('.', '')
+        filename = ''.join(['geocoding_batch_', timestamp, '.json'])
         obj = self.s3.Object(self.intermediate_bucket, filename)
         obj.put(Body=json.dumps(data))
         return filename
@@ -134,3 +136,13 @@ class GeocodeBatchTask(AutoBatchTask):
             logging.info(params)
         logging.info(f"{len(job_params)} batches to run")
         return job_params
+
+
+if __name__ == '__main__':
+    class MyTask(GeocodeBatchTask):
+        def combine(self):
+            pass
+
+    geo = MyTask(job_def='', job_name='', job_queue='', region_name='',
+            city_col='', country_col='', composite_key_col='', database_config='',
+            database='')
