@@ -5,6 +5,7 @@ country iso codes
 tools for lookup of iso codes for countries
 '''
 
+import pandas as pd
 import pycountry
 
 from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
@@ -63,3 +64,18 @@ def country_iso_code_dataframe(df, country='country'):
             df.at[idx, 'continent'] = continents.get(country_codes.alpha_2)
 
     return df
+
+
+def country_iso_code_to_name(code):
+    """Converts country alpha_3 into name.
+
+    Args:
+        code (str): iso alpha 3 code
+
+    Returns:
+        str: name of the country or NaN if not valid
+    """
+    try:
+        return pycountry.countries.get(alpha_3=code).name
+    except KeyError:
+        return pd.np.nan

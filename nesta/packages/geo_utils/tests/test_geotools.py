@@ -7,6 +7,7 @@ from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
+from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 
 REQUESTS = 'nesta.packages.geo_utils.geocode.requests.get'
 PYCOUNTRY = 'nesta.packages.geo_utils.country_iso_code.pycountry.countries.get'
@@ -304,3 +305,15 @@ class TestCountryIsoCodeDataframe():
                              })
         coded_df = country_iso_code_dataframe(test_df)
         assert coded_df.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
+
+
+class TestCountryIsoCodeToName():
+    def test_valid_iso_code_returns_name(self):
+        assert country_iso_code_to_name('ITA') == 'Italy'
+        assert country_iso_code_to_name('DEU') == 'Germany'
+        assert country_iso_code_to_name('GBR') == 'United Kingdom'
+
+    def test_invalid_iso_code_returns_nan(self):
+        assert country_iso_code_to_name('FOO') is pd.np.nan
+        assert country_iso_code_to_name('ABC') is pd.np.nan
+        assert country_iso_code_to_name('ZZZ') is pd.np.nan
