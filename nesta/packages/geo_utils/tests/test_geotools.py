@@ -313,7 +313,7 @@ class TestCountryIsoCodeToName():
         assert country_iso_code_to_name('DEU') == 'Germany'
         assert country_iso_code_to_name('GBR') == 'United Kingdom'
 
-    def test_invalid_iso_code_returns_nan(self):
-        assert country_iso_code_to_name('FOO') is pd.np.nan
-        assert country_iso_code_to_name('ABC') is pd.np.nan
-        assert country_iso_code_to_name('ZZZ') is pd.np.nan
+    def test_invalid_iso_code_returns_none(self):
+        assert country_iso_code_to_name('FOO') is None
+        assert country_iso_code_to_name('ABC') is None
+        assert country_iso_code_to_name('ZZZ') is None

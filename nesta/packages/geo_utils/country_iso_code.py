@@ -73,9 +73,9 @@ def country_iso_code_to_name(code):
         code (str): iso alpha 3 code
 
     Returns:
-        str: name of the country or NaN if not valid
+        str: name of the country or None if not valid
     """
     try:
         return pycountry.countries.get(alpha_3=code).name
     except KeyError:
-        return pd.np.nan
+        return None
