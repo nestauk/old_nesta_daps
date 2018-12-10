@@ -5,7 +5,7 @@ Crunchbase
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, BIGINT, TEXT, DECIMAL
-from sqlalchemy.types import INT, DATE, DATETIME
+from sqlalchemy.types import INT, DATE, DATETIME, FLOAT
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -29,8 +29,6 @@ class Organization(Base):
     address = Column(VARCHAR(200))
     status = Column(VARCHAR(9))
     short_description = Column(VARCHAR(200))
-    # category_list = Column(TEXT)
-    # category_group_list = Column(TEXT)
     funding_rounds = Column(INT)
     funding_total_usd = Column(BIGINT)
     founded_on = Column(DATE)
@@ -51,6 +49,15 @@ class Organization(Base):
     type = Column(VARCHAR(50))
     long_description = Column(TEXT)
     parent_id = Column(VARCHAR(50))
+    categories = relationship('CategoryGroup',
+                              secondary='crunchbase_organizations_categories')
+
+
+class OrganizationCategory():
+    __tablename__ = 'crunchbase_organizations_categories'
+
+    organization_id = Column(VARCHAR(50), ForeignKey('crunchbase_organizations.id'), primary_key=True)
+    category_id = Column(VARCHAR(50), ForeignKey('crunchbase_category_groups.id'), primary_key=True)
 
 
 class CategoryGroup():
@@ -61,14 +68,8 @@ class CategoryGroup():
     category_group_list = Column(VARCHAR(150))
 
 
-class OrganizationCategory():
-    __tablename__ = 'crunchbase_organizations_categories'
-
-    organization_id = Column(VARCHAR(50), primary_key=True)
-    category_id = Column(VARCHAR(50), primary_key=True)
-
-
 # TODO: the below are automatically generated and need sense checking
+'''
 class Acquisition(Base):
     __tablename__ = 'acquisitions'
 
@@ -244,3 +245,4 @@ class People(Base):
     uuid = Column(VARCHAR(36))
     created_at = Column(VARCHAR(19))
     updated_at = Column(VARCHAR(19))
+'''

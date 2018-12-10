@@ -97,19 +97,12 @@ class OrgCollectTask(luigi.Task):
                                                                  'organization_descriptions'])
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
-        self._insert_data(cat_groups)
+        self._insert_data(CategoryGroup, cat_groups)
 
-        # process organizations
+        # process organizations and categories
         processed_orgs, org_cats = process_orgs(orgs, cat_groups, org_descriptions)
+        self.insert_data(Organization, processed_orgs)
+        self.insert_data(OrganizationCategory, org_cats)
 
-        job_params = []
-        for csv in get_csvs():
-            logging.info("Extracting table {}...".format(csv))
-            table_name = ''.join(["crunchbase_{}", csv])
-            done = table_name in DONE_KEYS
-            params = {"table_name": table_name,
-                      "config": "mysqldb.config",
-                      "db_name": "production" if not self.test else "dev",
-                      "done": done}
-            job_params.append(params)
-        return job_params
+        # mark as done
+        self.output.touch()

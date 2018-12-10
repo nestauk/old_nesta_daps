@@ -90,13 +90,46 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         (:obj:`pandas.Dataframe`): processed organization data
         (:obj:`pandas.Dataframe`): generated organization_category data
     """
+    # fix uuid column names
+    orgs = rename_uuid_columns(orgs)
+
+    # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
     orgs = orgs.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
-    orgs['location_id'] = generate_composite_key(orgs.city, orgs.country)
-    # split categories_list and lookup the cat_groups table to generate the link table
-    # remove category_list and category_group_list columns
-    # process org descriptions and add to long_description column
+    orgs['location_id'] = pd.np.nan
+    cat_groups = cat_groups.set_index(['category_name'])
+    org_cats = []
+    org_descriptions = org_descriptions.set_index(['uuid'])
+    orgs['long_description'] = pd.np.nan
+
+    for idx, row in orgs.iterrows():
+        # generate composite key for location lookup
+        try:
+            comp_key = generate_composite_key(row.city, row.country)
+        except ValueError:
+            pass
+        else:
+            orgs.at[idx, 'location_id'] = comp_key
+
+        # generate link table data for organization categories
+        for cat in row.category_list.split(','):
+            try:
+                org_cats.append({'organization_id': row.id,
+                                 'category_id': cat_groups.loc[cat].id})
+            except AttributeError:
+                logging.warning(f"Category {cat} not found in categories table")
+
+        # append long descriptions to organizations
+        try:
+            orgs['long_description'] = org_descriptions.loc[row.id].description
+        except AttributeError:
+            logging.warning(f"Long description for {row.id} not found")
+
+    # remove redundant category columns
+    orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
+
+    return orgs, org_cats
 
 
 def get_files_from_tar(files):
