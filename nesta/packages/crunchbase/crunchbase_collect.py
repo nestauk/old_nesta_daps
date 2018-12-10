@@ -30,7 +30,7 @@ def crunchbase_tar():
             tmp_tar.close()
 
 
-def get_csvs():
+def get_csv_list():
     """Gets a list of csv files within the Crunchbase tar archive.
 
     Returns:
@@ -45,6 +45,23 @@ def get_csvs():
         if tablename is not None:
             csvs.append(tablename.group(1))
     return csvs
+
+
+def get_files_from_tar(files):
+    """Converts csv files in the crunchbase tar into dataframes and returns them.
+
+    Args:
+        files (list): names of the files to extract (without .csv suffix)
+
+    Returns:
+        (:obj:`list` of :obj:`pandas.Dataframe`): the extracted files as dataframes
+    """
+    dfs = []
+    with crunchbase_tar() as tar:
+        for filename in files:
+            dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
+                                   low_memory=False))
+    return dfs
 
 
 def rename_uuid_columns(data):
@@ -97,11 +114,11 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
     orgs = orgs.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
-    orgs['location_id'] = pd.np.nan
+    orgs['location_id'] = None
     cat_groups = cat_groups.set_index(['category_name'])
     org_cats = []
     org_descriptions = org_descriptions.set_index(['uuid'])
-    orgs['long_description'] = pd.np.nan
+    orgs['long_description'] = None
 
     for idx, row in orgs.iterrows():
         # generate composite key for location lookup
@@ -117,36 +134,19 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             try:
                 org_cats.append({'organization_id': row.id,
                                  'category_id': cat_groups.loc[cat].id})
-            except AttributeError:
+            except KeyError:
                 logging.warning(f"Category {cat} not found in categories table")
 
         # append long descriptions to organizations
         try:
-            orgs['long_description'] = org_descriptions.loc[row.id].description
-        except AttributeError:
+            orgs.at[idx, 'long_description'] = org_descriptions.loc[row.id].description
+        except KeyError:
             logging.warning(f"Long description for {row.id} not found")
 
     # remove redundant category columns
     orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
 
-    return orgs, org_cats
-
-
-def get_files_from_tar(files):
-    """Converts csv files in the crunchbase tar into dataframes and returns them.
-
-    Args:
-        files (list): names of the files to extract (without .csv suffix)
-
-    Returns:
-        (:obj:`list` of :obj:`pandas.Dataframe`): the extracted files as dataframes
-    """
-    dfs = []
-    with crunchbase_tar() as tar:
-        for filename in files:
-            dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
-                                   low_memory=False))
-    return dfs
+    return orgs, pd.DataFrame(org_cats)
 
 
 if __name__ == '__main__':
@@ -165,8 +165,6 @@ if __name__ == '__main__':
     #     cg_df = pd.read_csv(tar.extractfile('category_groups.csv'))
     # print(cg_df.columns)
 
-    csvs = get_csvs()
-    print(csvs)
 
 
 

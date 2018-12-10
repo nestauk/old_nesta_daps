@@ -1,35 +1,27 @@
-'''
+"""
 Crunchbase data collection and processing
 ==================================
 
 Luigi routine to collect Crunchbase data exports and load the data into MySQL.
-'''
+"""
 
 import luigi
 import logging
 
-from nesta.packages.crunchbase.crunchbase_collect import crunchbase_tar, get_csvs
-from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, rename_uuid_columns
-from nesta.packages.crunchbase.crunchbase_collect import process_orgs
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub, get_config
+from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs, rename_uuid_columns
+from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data
 
-import boto3
-
-S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta-production-intermediate")
-DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-
 
 class OrgCollectTask(luigi.Task):
-    '''Download tar file of csvs and load them into the MySQL server.
+    """Download tar file of csvs and load them into the MySQL server.
 
     Args:
         _routine_id (str): String used to label the AWS task
         db_config_path: (str) The output database configuration
-    '''
+    """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
@@ -69,7 +61,7 @@ class OrgCollectTask(luigi.Task):
             raise ValueError(f"Inserted {table} data is not equal to original: {len(data)}")
 
     def output(self):
-        '''Points to the output database engine'''
+        """Points to the output database engine"""
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = self.database
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
@@ -77,15 +69,7 @@ class OrgCollectTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        '''Collect the organizations table and associated tables and process them.
-        - First process category_groups
-        - Organizations is next:
-            - Populate organization_category link table in place of the category column
-            - Convert country code into country name and rename column
-            - Composite key for the location generated and added as a new column
-        - Org_parents flattened and added as a new column in Organizations
-        - Organization_descriptions flattened and added as a new column in Organizations
-        '''
+        """Collect organizations and associated tables and process them."""
 
         # database setup
         self.engine = get_mysql_engine(self.db_config_path, 'mysqldb', self.database)
