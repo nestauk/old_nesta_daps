@@ -25,7 +25,7 @@ class OrgCollectTask(luigi.Task):
     """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
-    db_config_path = luigi.Parameter()
+    _db_config = luigi.Parameter()
     test = luigi.Parameter(default=True)
     database = 'production' if not test else 'dev'
 
