@@ -26,7 +26,7 @@ class OrgCollectTask(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
-    test = luigi.Parameter(default=True)
+    test = luigi.BoolParameter(default=True)
     database = 'production' if not test else 'dev'
 
     @staticmethod
@@ -51,7 +51,7 @@ class OrgCollectTask(luigi.Task):
         rows = data.to_dict(orient='records')
         returned = {}
         returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-                                                        self.db_config_path, 'mysqldb',
+                                                        self.db_config_env, 'mysqldb',
                                                         self.database,
                                                         Base, table, rows,
                                                         return_non_inserted=True)
