@@ -23,7 +23,7 @@ class RootTask(luigi.WrapperTask):
                            mode (False, default), or production mode (True).
     '''
     date = luigi.DateParameter(default=datetime.date.today())
-    _db_config = luigi.Parameter(default="MYSQLDB")
+    db_config_env = luigi.Parameter(default="MYSQLDB")
     production = luigi.BoolParameter(default=False)
 
     def requires(self):
@@ -33,5 +33,5 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield OrgCollectTask(date=self.date,
                              _routine_id=_routine_id,
-                             _db_config=self._db_config,
+                             db_config_env=self.db_config_env,
                              test=(not self.production))

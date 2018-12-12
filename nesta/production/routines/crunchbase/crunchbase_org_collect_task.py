@@ -25,7 +25,7 @@ class OrgCollectTask(luigi.Task):
     """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
-    _db_config = luigi.Parameter()
+    db_config_env = luigi.Parameter()
     test = luigi.Parameter(default=True)
     database = 'production' if not test else 'dev'
 
@@ -63,7 +63,7 @@ class OrgCollectTask(luigi.Task):
 
     def output(self):
         """Points to the output database engine"""
-        self.db_config_path = os.environ[self._db_config]
+        self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = self.database
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
@@ -74,7 +74,7 @@ class OrgCollectTask(luigi.Task):
         """Collect organizations and associated tables and process them."""
 
         # database setup
-        self.engine = get_mysql_engine(self._db_config, 'mysqldb', self.database)
+        self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # collect files
