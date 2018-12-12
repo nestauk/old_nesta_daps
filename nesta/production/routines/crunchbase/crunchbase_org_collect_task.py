@@ -7,6 +7,7 @@ Luigi routine to collect Crunchbase data exports and load the data into MySQL.
 
 import luigi
 import logging
+import os
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs, rename_uuid_columns
 from nesta.production.luigihacks.misctools import get_config
@@ -62,6 +63,7 @@ class OrgCollectTask(luigi.Task):
 
     def output(self):
         """Points to the output database engine"""
+        self.db_config_path = os.environ[self._db_config]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = self.database
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
