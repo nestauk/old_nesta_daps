@@ -61,6 +61,7 @@ def get_files_from_tar(files):
         for filename in files:
             dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
                                    low_memory=False))
+            logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
 
