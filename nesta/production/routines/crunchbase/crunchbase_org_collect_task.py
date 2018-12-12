@@ -46,14 +46,13 @@ class OrgCollectTask(luigi.Task):
 
         Args:
             table (:obj:`sqlalchemy.mapping`): table where the data should be written
-            data (:obj:`pandas.DataFrame`): data to be written
+            data (:obj:`list` of :obj:`dict`): data to be written
         """
-        rows = data.to_dict(orient='records')
         returned = {}
         returned['inserted'], returned['existing'], returned['failed'] = insert_data(
                                                         self.db_config_env, 'mysqldb',
                                                         self.database,
-                                                        Base, table, rows,
+                                                        Base, table, data,
                                                         return_non_inserted=True)
         totals = self._total_records(returned)
         for k, v in totals.items():
@@ -83,12 +82,14 @@ class OrgCollectTask(luigi.Task):
                                                                  'organization_descriptions'])
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
+        cat_groups = cat_groups.to_dict(orient='records')
         self._insert_data(CategoryGroup, cat_groups)
 
         # process organizations and categories
-        processed_orgs, org_cats = process_orgs(orgs, cat_groups, org_descriptions)
-        self.insert_data(Organization, processed_orgs)
-        self.insert_data(OrganizationCategory, org_cats)
+        processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
+        self._insert_data(CategoryGroup, missing_cat_groups)
+        self._insert_data(Organization, processed_orgs)
+        self._insert_data(OrganizationCategory, org_cats)
 
         # mark as done
         self.output.touch()

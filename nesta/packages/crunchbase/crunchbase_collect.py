@@ -105,8 +105,9 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         org_descriptions (:obj:`pandas.Dataframe`): long organization descriptions
 
     Returns:
-        (:obj:`pandas.Dataframe`): processed organization data
-        (:obj:`pandas.Dataframe`): generated organization_category data
+        (:obj:`list` of :obj:`dict`): processed organization data
+        (:obj:`list` of :obj:`dict`): generated organization_category data
+        (:obj:`list` of :obj:`dict`): names of missing categories from category_groups
     """
     # fix uuid column names
     orgs = rename_uuid_columns(orgs)
@@ -116,10 +117,11 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     orgs = orgs.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
     orgs['location_id'] = None
-    cat_groups = cat_groups.set_index(['category_name'])
-    org_cats = pd.DataFrame(columns=['organization_id', 'category_id'])
-    org_descriptions = org_descriptions.set_index(['uuid'])
     orgs['long_description'] = None
+    org_cats = []
+    cat_groups = cat_groups.set_index(['category_name'])
+    missing_cat_groups = set()
+    org_descriptions = org_descriptions.set_index(['uuid'])
 
     for idx, row in orgs.iterrows():
         # generate composite key for location lookup
@@ -131,25 +133,35 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             orgs.at[idx, 'location_id'] = comp_key
 
         # generate link table data for organization categories
-        row_org_cats = []
-        for cat in row.category_list.split(','):
-            try:
-                row_org_cats.append({'organization_id': row.id,
-                                     'category_id': cat_groups.loc[cat.lower()].id})
-            except KeyError:
-                logging.warning(f"Category {cat} not found in categories table")
-        org_cats = org_cats.append(row_org_cats, ignore_index=True)
+        try:
+            for cat in row.category_list.split(','):
+                org_cats.append({'organization_id': row.id,
+                                 'category': cat.lower()})
+        except AttributeError:
+            # ignore NaNs
+            pass
 
-        # append long descriptions to organizations
+        # append long descriptions to organization
         try:
             orgs.at[idx, 'long_description'] = org_descriptions.loc[row.id].description
         except KeyError:
             logging.warning(f"Long description for {row.id} not found")
 
+    # identify missing category_groups
+    for row in org_cats:
+        category_name = row['category']
+        try:
+            cat_groups.loc[category_name]
+        except KeyError:
+            logging.warning(f"Category '{category_name}' not found in categories table")
+            missing_cat_groups.add(category_name)
+    missing_cat_groups = [{'category_name': cat} for cat in missing_cat_groups]
+
     # remove redundant category columns
     orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
+    orgs = orgs.to_dict(orient='records')
 
-    return orgs, org_cats
+    return orgs, org_cats, missing_cat_groups
 
 
 if __name__ == '__main__':
