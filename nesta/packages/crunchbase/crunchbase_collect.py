@@ -135,7 +135,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         for cat in row.category_list.split(','):
             try:
                 row_org_cats.append({'organization_id': row.id,
-                                     'category_id': cat_groups.loc[cat].id})
+                                     'category_id': cat_groups.loc[cat.lower()].id})
             except KeyError:
                 logging.warning(f"Category {cat} not found in categories table")
         org_cats = org_cats.append(row_org_cats, ignore_index=True)
