@@ -82,8 +82,8 @@ class OrgCollectTask(luigi.Task):
                                                                  'organization_descriptions'])
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
-        cat_groups = cat_groups.to_dict(orient='records')
-        self._insert_data(CategoryGroup, cat_groups)
+        cat_groups_rows = cat_groups.to_dict(orient='records')
+        self._insert_data(CategoryGroup, cat_groups_rows)
 
         # process organizations and categories
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
