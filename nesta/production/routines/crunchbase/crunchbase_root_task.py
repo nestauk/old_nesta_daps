@@ -29,10 +29,10 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
-        # _routine_id = "{}-{}".format(self.date, self.production)
+        _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
         yield OrgCollectTask(date=self.date,
-                             # _routine_id=_routine_id,
+                             _routine_id=_routine_id,
                              db_config_path=self.db_config_path,
                              test=(not self.production))
