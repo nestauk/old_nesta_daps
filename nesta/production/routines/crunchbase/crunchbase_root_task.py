@@ -10,7 +10,7 @@ import datetime
 import logging
 # from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from crunchbase_collect_task import OrgCollectTask
+from crunchbase_org_collect_task import OrgCollectTask
 
 
 class RootTask(luigi.WrapperTask):
