@@ -56,7 +56,7 @@ class OrgCollectTask(luigi.Task):
                                                         Base, table, rows,
                                                         return_non_inserted=True)
         totals = self._total_records(returned)
-        for k, v in totals:
+        for k, v in totals.items():
             logging.warning(f"{k} rows: {v}")
         if totals['total'] != len(data):
             raise ValueError(f"Inserted {table} data is not equal to original: {len(data)}")
