@@ -8,7 +8,7 @@ Luigi routine to collect Crunchbase data exports and load the data into MySQL.
 import luigi
 import datetime
 import logging
-# from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 from crunchbase_org_collect_task import OrgCollectTask
 
@@ -34,5 +34,5 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield OrgCollectTask(date=self.date,
                              _routine_id=_routine_id,
-                             db_config_path=self.db_config_path,
+                             db_config_path=find_filepath_from_pathstub(self.db_config_path),
                              test=(not self.production))
