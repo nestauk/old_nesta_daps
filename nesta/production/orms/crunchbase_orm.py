@@ -53,14 +53,14 @@ class Organization(Base):
                               secondary='crunchbase_organizations_categories')
 
 
-class OrganizationCategory():
+class OrganizationCategory(Base):
     __tablename__ = 'crunchbase_organizations_categories'
 
     organization_id = Column(VARCHAR(50), ForeignKey('crunchbase_organizations.id'), primary_key=True)
     category_id = Column(VARCHAR(50), ForeignKey('crunchbase_category_groups.id'), primary_key=True)
 
 
-class CategoryGroup():
+class CategoryGroup(Base):
     __tablename__ = 'crunchbase_category_groups'
 
     id = Column(VARCHAR(50), primary_key=True)
