@@ -116,7 +116,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
 
     orgs['location_id'] = None
     cat_groups = cat_groups.set_index(['category_name'])
-    org_cats = []
+    org_cats = pd.DataFrame(columns=['organization_id', 'category_id'])
     org_descriptions = org_descriptions.set_index(['uuid'])
     orgs['long_description'] = None
 
@@ -130,12 +130,14 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             orgs.at[idx, 'location_id'] = comp_key
 
         # generate link table data for organization categories
+        row_org_cats = []
         for cat in row.category_list.split(','):
             try:
-                org_cats.append({'organization_id': row.id,
-                                 'category_id': cat_groups.loc[cat].id})
+                row_org_cats.append({'organization_id': row.id,
+                                     'category_id': cat_groups.loc[cat].id})
             except KeyError:
                 logging.warning(f"Category {cat} not found in categories table")
+        org_cats = org_cats.append(row_org_cats, ignore_index=True)
 
         # append long descriptions to organizations
         try:
@@ -146,7 +148,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     # remove redundant category columns
     orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
 
-    return orgs, pd.DataFrame(org_cats)
+    return orgs, org_cats
 
 
 if __name__ == '__main__':
