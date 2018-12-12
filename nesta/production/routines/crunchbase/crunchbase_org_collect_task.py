@@ -74,7 +74,7 @@ class OrgCollectTask(luigi.Task):
         """Collect organizations and associated tables and process them."""
 
         # database setup
-        self.engine = get_mysql_engine(self.db_config_path, 'mysqldb', self.database)
+        self.engine = get_mysql_engine(self._db_config, 'mysqldb', self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # collect files
