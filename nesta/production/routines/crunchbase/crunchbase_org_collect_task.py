@@ -28,7 +28,7 @@ class OrgCollectTask(luigi.Task):
     db_config_env = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     database = 'production' if not test else 'dev'
-    insert_batch_size = luigi.Parameter()
+    insert_batch_size = luigi.IntParameter()
 
     @staticmethod
     def _total_records(data_dict, append_to=None):
