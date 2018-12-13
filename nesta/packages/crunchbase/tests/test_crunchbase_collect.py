@@ -121,24 +121,24 @@ def test_process_orgs_inserts_none_if_composite_key_fails(invalid_org_data, vali
 
 def test_process_orgs_generates_org_cats_link_table(valid_org_data, valid_cat_groups, valid_org_descs):
     _, org_cats, _ = process_orgs(valid_org_data, valid_cat_groups, valid_org_descs)
-    expected_result = [{'organization_id': '1-1', 'category': 'data'},
-                       {'organization_id': '1-1', 'category': 'digital'},
-                       {'organization_id': '1-1', 'category': 'cats'},
-                       {'organization_id': '2-2', 'category': 'science'},
-                       {'organization_id': '2-2', 'category': 'cats'},
-                       {'organization_id': '3-3', 'category': 'data'}
+    expected_result = [{'organization_id': '1-1', 'category_name': 'data'},
+                       {'organization_id': '1-1', 'category_name': 'digital'},
+                       {'organization_id': '1-1', 'category_name': 'cats'},
+                       {'organization_id': '2-2', 'category_name': 'science'},
+                       {'organization_id': '2-2', 'category_name': 'cats'},
+                       {'organization_id': '3-3', 'category_name': 'data'}
                        ]
     assert org_cats == expected_result
 
 
 def test_process_orgs_returns_missing_cat_groups(invalid_org_data, valid_cat_groups, valid_org_descs):
     _, org_cats, missing_cat_groups = process_orgs(invalid_org_data, valid_cat_groups, valid_org_descs)
-    expected_org_cats = [{'organization_id': '1-1', 'category': 'data'},
-                         {'organization_id': '1-1', 'category': 'digital'},
-                         {'organization_id': '1-1', 'category': 'dogs'},
-                         {'organization_id': '2-2', 'category': 'science'},
-                         {'organization_id': '2-2', 'category': 'cats'},
-                         {'organization_id': '2-2', 'category': 'goats'}
+    expected_org_cats = [{'organization_id': '1-1', 'category_name': 'data'},
+                         {'organization_id': '1-1', 'category_name': 'digital'},
+                         {'organization_id': '1-1', 'category_name': 'dogs'},
+                         {'organization_id': '2-2', 'category_name': 'science'},
+                         {'organization_id': '2-2', 'category_name': 'cats'},
+                         {'organization_id': '2-2', 'category_name': 'goats'}
                          ]
     expected_missing_cat_groups = [{'category_name': 'dogs'},
                                    {'category_name': 'goats'}

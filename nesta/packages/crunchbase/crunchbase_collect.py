@@ -138,7 +138,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         try:
             for cat in row.category_list.split(','):
                 org_cats.append({'organization_id': row.id,
-                                 'category': cat.lower()})
+                                 'category_name': cat.lower()})
         except AttributeError:
             # ignore NaNs
             pass
@@ -156,7 +156,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
 
     # identify missing category_groups
     for row in org_cats:
-        category_name = row['category']
+        category_name = row['category_name']
         try:
             cat_groups.loc[category_name]
         except KeyError:

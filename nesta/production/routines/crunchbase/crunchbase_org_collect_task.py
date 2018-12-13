@@ -125,7 +125,7 @@ class OrgCollectTask(luigi.Task):
         self._insert_data(Organization, processed_orgs)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
-        org_cats = [OrganizationCategory(org_cat) for org_cat in org_cats]
+        org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
         with db_session(self.engine) as session:
             session.add_all(org_cats)
 
