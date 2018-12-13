@@ -103,7 +103,8 @@ class GeocodeBatchTask(AutoBatchTask):
             if len(batch) == batch_size:
                 yield self._put_batch(batch)
                 batch.clear()
-        yield self._put_batch(batch)
+        if len(batch) > 0:
+            yield self._put_batch(batch)
 
     def prepare(self):
         """Copies any new city/county combinations from the input table into the

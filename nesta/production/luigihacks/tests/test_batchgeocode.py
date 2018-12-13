@@ -115,6 +115,20 @@ def test_create_batches_in_test_mode(create_uncoded_locations, geo_batch_task):
     assert len(batches) == 11
 
 
+def test_create_batches_with_no_remainder(create_uncoded_locations, geo_batch_task):
+    # patching and setup
+    geo_batch_task._put_batch = mock.Mock()
+    geo_batch_task.batch_size = 100
+    geo_batch_task.test = False
+
+    uncoded_locations = create_uncoded_locations(200)
+    batches = []
+    for batch in geo_batch_task._create_batches(uncoded_locations):
+        batches.append(batch)
+
+    assert len(batches) == 2
+
+
 @mock.patch('nesta.production.luigihacks.batchgeocode.boto3')
 @mock.patch('nesta.production.luigihacks.batchgeocode.try_until_allowed')
 @mock.patch('nesta.production.luigihacks.batchgeocode.get_mysql_engine')
