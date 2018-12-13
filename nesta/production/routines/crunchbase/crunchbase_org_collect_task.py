@@ -62,7 +62,7 @@ class OrgCollectTask(luigi.Task):
             if len(batch) > 0:
                 yield batch
 
-    def _insert_data(self, table, data, batch_size=insert_batch_size):
+    def _insert_data(self, table, data, batch_size=int(insert_batch_size)):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:
