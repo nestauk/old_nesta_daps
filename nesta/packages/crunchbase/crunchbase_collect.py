@@ -145,7 +145,8 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         try:
             orgs.at[idx, 'long_description'] = org_descriptions.loc[row.id].description
         except KeyError:
-            logging.warning(f"Long description for {row.id} not found")
+            # many of these are missing
+            pass
 
     # identify missing category_groups
     for row in org_cats:
@@ -153,8 +154,9 @@ def process_orgs(orgs, cat_groups, org_descriptions):
         try:
             cat_groups.loc[category_name]
         except KeyError:
-            logging.warning(f"Category '{category_name}' not found in categories table")
+            logging.debug(f"Category '{category_name}' not found in categories table")
             missing_cat_groups.add(category_name)
+    logging.info(f"{len(missing_cat_groups)} missing category groups to add")
     missing_cat_groups = [{'category_name': cat} for cat in missing_cat_groups]
 
     # remove redundant category columns
