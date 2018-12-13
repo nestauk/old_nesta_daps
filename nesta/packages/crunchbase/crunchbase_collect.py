@@ -150,7 +150,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             # many of these are missing
             pass
 
-        if not idx % 10000:
+        if not (idx + 1) % 10000:
             logging.info(f"Processed {idx + 1} organizations")
     logging.info(f"Processed {idx + 1} organizations")
 

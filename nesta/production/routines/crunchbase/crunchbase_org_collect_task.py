@@ -28,7 +28,7 @@ class OrgCollectTask(luigi.Task):
     db_config_env = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     database = 'production' if not test else 'dev'
-    insert_batch_size = luigi.Parameter(default=5000)
+    insert_batch_size = luigi.Parameter()
 
     @staticmethod
     def _total_records(data_dict, append_to=None):
@@ -62,7 +62,7 @@ class OrgCollectTask(luigi.Task):
             if len(batch) > 0:
                 yield batch
 
-    def _insert_data(self, table, data, batch_size=5000):
+    def _insert_data(self, table, data, batch_size=insert_batch_size):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:
@@ -83,7 +83,7 @@ class OrgCollectTask(luigi.Task):
             totals = self._total_records(returned, totals)
             for k, v in totals.items():
                 logging.info(f"{k} rows: {v}")
-                logging.info("--------------")
+            logging.info("--------------")
             if totals['batch_total'] != len(batch):
                 raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
 
@@ -109,7 +109,9 @@ class OrgCollectTask(luigi.Task):
         # collect files
         cat_groups, orgs, org_descriptions = get_files_from_tar(['category_groups',
                                                                  'organizations',
-                                                                 'organization_descriptions'])
+                                                                 'organization_descriptions'
+                                                                 ],
+                                                                test=self.test)
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
         cat_groups_rows = cat_groups.to_dict(orient='records')
