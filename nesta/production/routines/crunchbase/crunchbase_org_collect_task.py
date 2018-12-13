@@ -16,6 +16,8 @@ from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organizati
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 
 
+BATCH_SIZE = 1000
+
 class OrgCollectTask(luigi.Task):
     """Download tar file of csvs and load them into the MySQL server.
 
@@ -28,7 +30,6 @@ class OrgCollectTask(luigi.Task):
     db_config_env = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     database = 'production' if not test else 'dev'
-    insert_batch_size = luigi.IntParameter()
 
     @staticmethod
     def _total_records(data_dict, append_to=None):
@@ -62,7 +63,7 @@ class OrgCollectTask(luigi.Task):
             if len(batch) > 0:
                 yield batch
 
-    def _insert_data(self, table, data, batch_size=int(insert_batch_size)):
+    def _insert_data(self, table, data, batch_size=BATCH_SIZE):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:

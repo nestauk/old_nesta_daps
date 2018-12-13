@@ -35,5 +35,4 @@ class RootTask(luigi.WrapperTask):
         yield OrgCollectTask(date=self.date,
                              _routine_id=_routine_id,
                              db_config_env=self.db_config_env,
-                             test=(not self.production),
-                             insert_batch_size=self.insert_batch_size)
+                             test=(not self.production))
