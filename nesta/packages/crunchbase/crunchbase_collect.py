@@ -148,6 +148,10 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             # many of these are missing
             pass
 
+        if not idx % 10000:
+            logging.info(f"Processed {idx} organizations")
+    logging.info(f"Processed {idx} organizations")
+
     # identify missing category_groups
     for row in org_cats:
         category_name = row['category']

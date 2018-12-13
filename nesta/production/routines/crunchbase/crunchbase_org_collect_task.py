@@ -69,7 +69,7 @@ class OrgCollectTask(luigi.Task):
             data (:obj:`list` of :obj:`dict`): data to be written
         """
         total_rows_in = len(data)
-        logging.info(f"Inserting {total_rows_in} rows of data into {table}")
+        logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
         totals = None
         for batch in self._split_batches(data, batch_size):
