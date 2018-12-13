@@ -30,7 +30,7 @@ class OrgCollectTask(luigi.Task):
     database = 'production' if not test else 'dev'
 
     @staticmethod
-    def _total_records(data_dict):
+    def _total_records(data_dict, append_to=None):
         """Calculates totals for a dictionary of records and appends a grand total."""
         totals = {}
         total = 0
@@ -39,26 +39,54 @@ class OrgCollectTask(luigi.Task):
             totals[k] = length
             total += length
         totals['total'] = total
+
+        if append_to is not None:
+            for k, v in totals.items():
+                totals[k] += append_to[k]
+        totals['batch_total'] = total
+
         return totals
 
-    def _insert_data(self, table, data):
+    @staticmethod
+    def _split_batches(data, batch_size):
+        if len(data) <= batch_size:
+            yield data
+        else:
+            batch = []
+            for row in data:
+                batch.append(row)
+                if len(batch) == batch_size:
+                    yield batch
+                    batch.clear()
+            if len(batch) > 0:
+                yield batch
+
+    def _insert_data(self, table, data, batch_size=10000):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:
             table (:obj:`sqlalchemy.mapping`): table where the data should be written
             data (:obj:`list` of :obj:`dict`): data to be written
         """
-        returned = {}
-        returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-                                                        self.db_config_env, 'mysqldb',
-                                                        self.database,
-                                                        Base, table, data,
-                                                        return_non_inserted=True)
-        totals = self._total_records(returned)
-        for k, v in totals.items():
-            logging.warning(f"{k} rows: {v}")
-        if totals['total'] != len(data):
-            raise ValueError(f"Inserted {table} data is not equal to original: {len(data)}")
+        total_rows_in = len(data)
+        logging.info(f"Inserting {total_rows_in} rows of data into {table}")
+
+        totals = None
+        for batch in self._split_batches(data, batch_size):
+            returned = {}
+            returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+                                                            self.db_config_env, 'mysqldb',
+                                                            self.database,
+                                                            Base, table, batch,
+                                                            return_non_inserted=True)
+            totals = self._total_records(returned, totals)
+            for k, v in totals.items():
+                logging.info(f"{k} rows: {v}")
+            if totals['batch_total'] != len(batch):
+                raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+
+        if totals['total'] != total_rows_in:
+            raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
     def output(self):
         """Points to the output database engine"""
@@ -70,7 +98,7 @@ class OrgCollectTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        """Collect organizations and associated tables and process them."""
+        """Collect and process organizations, categories and long descriptions."""
 
         # database setup
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
