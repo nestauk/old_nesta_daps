@@ -18,6 +18,7 @@ from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed,
 
 BATCH_SIZE = 1000
 
+
 class OrgCollectTask(luigi.Task):
     """Download tar file of csvs and load them into the MySQL server.
 
@@ -124,9 +125,9 @@ class OrgCollectTask(luigi.Task):
         self._insert_data(Organization, processed_orgs)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
-        cat_groups = [CategoryGroup(**cat_group) for cat_group in cat_groups]
-        with db_session() as session:
-            session.add_all(cat_groups)
+        org_cats = [OrganizationCategory(org_cat) for org_cat in org_cats]
+        with db_session(self.engine) as session:
+            session.add_all(org_cats)
 
         # mark as done
         self.output.touch()
