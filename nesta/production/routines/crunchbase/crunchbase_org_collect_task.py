@@ -13,7 +13,7 @@ from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, pro
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 
 
 class OrgCollectTask(luigi.Task):
@@ -28,6 +28,7 @@ class OrgCollectTask(luigi.Task):
     db_config_env = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     database = 'production' if not test else 'dev'
+    insert_batch_size = luigi.Parameter(default=5000)
 
     @staticmethod
     def _total_records(data_dict, append_to=None):
@@ -61,7 +62,7 @@ class OrgCollectTask(luigi.Task):
             if len(batch) > 0:
                 yield batch
 
-    def _insert_data(self, table, data, batch_size=10000):
+    def _insert_data(self, table, data, batch_size=5000):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:
@@ -82,6 +83,7 @@ class OrgCollectTask(luigi.Task):
             totals = self._total_records(returned, totals)
             for k, v in totals.items():
                 logging.info(f"{k} rows: {v}")
+                logging.info("--------------")
             if totals['batch_total'] != len(batch):
                 raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
 
@@ -116,8 +118,12 @@ class OrgCollectTask(luigi.Task):
         # process organizations and categories
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
         self._insert_data(CategoryGroup, missing_cat_groups)
-        self._insert_data(Organization, processed_orgs)
-        self._insert_data(OrganizationCategory, org_cats)
+        self._insert_data(Organization, processed_orgs, batch_size=self.insert_batch_size)
+
+        # link table needs to be inserted via non-bulk method to enforce relationship
+        cat_groups = [CategoryGroup(**cat_group) for cat_group in cat_groups]
+        with db_session() as session:
+            session.add_all(cat_groups)
 
         # mark as done
         self.output.touch()

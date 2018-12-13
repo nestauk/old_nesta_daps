@@ -47,20 +47,22 @@ def get_csv_list():
     return csvs
 
 
-def get_files_from_tar(files):
+def get_files_from_tar(files, test=False):
     """Converts csv files in the crunchbase tar into dataframes and returns them.
 
     Args:
         files (list): names of the files to extract (without .csv suffix)
+        test (bool): flag to reduce the number of records retrieved, for testing
 
     Returns:
         (:obj:`list` of :obj:`pandas.Dataframe`): the extracted files as dataframes
     """
+    nrows = 5000 if test else None
     dfs = []
     with crunchbase_tar() as tar:
         for filename in files:
             dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
-                                   low_memory=False))
+                                   low_memory=False, keep_default_na=False, nrows=nrows))
             logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
@@ -149,8 +151,8 @@ def process_orgs(orgs, cat_groups, org_descriptions):
             pass
 
         if not idx % 10000:
-            logging.info(f"Processed {idx} organizations")
-    logging.info(f"Processed {idx} organizations")
+            logging.info(f"Processed {idx + 1} organizations")
+    logging.info(f"Processed {idx + 1} organizations")
 
     # identify missing category_groups
     for row in org_cats:
