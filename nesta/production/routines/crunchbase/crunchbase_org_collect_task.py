@@ -130,4 +130,4 @@ class OrgCollectTask(luigi.Task):
             session.add_all(org_cats)
 
         # mark as done
-        self.output.touch()
+        self.output().touch()
