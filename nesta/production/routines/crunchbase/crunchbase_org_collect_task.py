@@ -121,7 +121,7 @@ class OrgCollectTask(luigi.Task):
         # process organizations and categories
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
         self._insert_data(CategoryGroup, missing_cat_groups)
-        self._insert_data(Organization, processed_orgs, batch_size=self.insert_batch_size)
+        self._insert_data(Organization, processed_orgs)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
         cat_groups = [CategoryGroup(**cat_group) for cat_group in cat_groups]
