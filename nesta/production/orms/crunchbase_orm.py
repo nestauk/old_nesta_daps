@@ -153,22 +153,22 @@ class InvestmentPartner(Base):
     __tablename__ = 'crunchbase_investment_partners'
 
     funding_round_id = Column(VARCHAR(36), primary_key=True)
-    investor_id = Column(VARCHAR(36, primary_key=True))
-    partner_id = Column(VARCHAR(36, primary_key=True))
+    investor_id = Column(VARCHAR(36), primary_key=True)
+    partner_id = Column(VARCHAR(36), primary_key=True)
 
 
 class Investment(Base):
     __tablename__ = 'crunchbase_investments'
 
-    funding_round_id = Column(VARCHAR(36, primary_key=True))
-    investor_id = Column(VARCHAR(36, primary_key=True))
+    funding_round_id = Column(VARCHAR(36), primary_key=True)
+    investor_id = Column(VARCHAR(36), primary_key=True)
     is_lead_investor = Column(BOOLEAN)
 
 
 class Investor(Base):
     __tablename__ = 'crunchbase_investors'
 
-    id = Column(VARCHAR(36, primary_key=True))
+    id = Column(VARCHAR(36), primary_key=True)
     investor_name = Column(VARCHAR(200))
     roles = Column(VARCHAR(23))
     domain = Column(VARCHAR(80))
@@ -191,7 +191,7 @@ class Investor(Base):
 class Ipo(Base):
     __tablename__ = 'ipos'
 
-    ipo_id = Column(VARCHAR(36, primary_key=True))
+    ipo_id = Column(VARCHAR(36), primary_key=True)
     name = Column(VARCHAR(100))
     country_code = Column(VARCHAR(3))
     company_state_code = Column(VARCHAR(2))
@@ -213,7 +213,7 @@ class Ipo(Base):
 class Job(Base):
     __tablename__ = 'crunchbase_jobs'
 
-    job_id = Column(VARCHAR(36, primary_key=True))
+    job_id = Column(VARCHAR(36), primary_key=True)
     person_id = Column(VARCHAR(36))
     org_id = Column(VARCHAR(36))
     started_on = Column(DATE)
@@ -226,7 +226,7 @@ class Job(Base):
 class People(Base):
     __tablename__ = 'crunchbase_people'
 
-    id = Column(VARCHAR(36, primary_key=True))
+    id = Column(VARCHAR(36), primary_key=True)
     first_name = Column(VARCHAR(100))
     last_name = Column(VARCHAR(100))
     country_code = Column(VARCHAR(3))
