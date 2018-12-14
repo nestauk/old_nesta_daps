@@ -62,7 +62,7 @@ def get_files_from_tar(files, test=False):
     with crunchbase_tar() as tar:
         for filename in files:
             dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
-                                   low_memory=False, keep_default_na=False, nrows=nrows))
+                                   low_memory=False, nrows=nrows))
             logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
@@ -113,6 +113,9 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     """
     # fix uuid column names
     orgs = rename_uuid_columns(orgs)
+
+    # change NaNs to None
+    orgs = orgs.where(orgs.notnull(), None)
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
@@ -179,6 +182,7 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
+    # orgs = get_files_from_tar(['organizations'], test=True)
     # with crunchbase_tar() as tar:
     #     names = tar.getnames()
     # print(names)
