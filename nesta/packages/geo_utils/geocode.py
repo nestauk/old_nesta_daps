@@ -129,3 +129,20 @@ def geocode_batch_dataframe(df, city='city', country='country',
             df.loc[idx, longitude] = float(location['lon'])
     return df
 
+
+def generate_composite_key(city=None, country=None):
+    """Generates a composite key to use as the primary key for the geographic data.
+
+    Args:
+        city (str): name of the city
+        country (str): name of the country
+
+    Returns:
+        (str): composite key
+    """
+    try:
+        city = city.replace(' ', '-').lower()
+        country = country.replace(' ', '-').lower()
+    except AttributeError:
+        raise ValueError(f"Invalid city or country name. City: {city} | Country: {country}")
+    return '_'.join([city, country])

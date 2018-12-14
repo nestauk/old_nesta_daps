@@ -8,6 +8,7 @@ from tempfile import NamedTemporaryFile
 
 from nesta.production.luigihacks import misctools
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
+from nesta.packages.geo_utils.geocode import generate_composite_key
 
 
 @contextmanager
@@ -78,24 +79,6 @@ def rename_uuid_columns(data):
     """
     renames = {col: col.replace('uuid', 'id') for col in data}
     return data.rename(columns=renames)
-
-
-def generate_composite_key(city=None, country=None):
-    """Generates a composite key to use as the primary key for the geographic data.
-
-    Args:
-        city (str): name of the city
-        country (str): name of the country
-
-    Returns:
-        (str): composite key
-    """
-    try:
-        city = city.replace(' ', '-').lower()
-        country = country.replace(' ', '-').lower()
-    except AttributeError:
-        raise ValueError(f"Invalid city or country name. City: {city} | Country: {country}")
-    return '_'.join([city, country])
 
 
 def total_records(data_dict, append_to=None):

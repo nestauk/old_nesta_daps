@@ -5,6 +5,7 @@ from unittest import mock
 from nesta.packages.geo_utils.geocode import geocode
 from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
+from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
@@ -317,3 +318,22 @@ class TestCountryIsoCodeToName():
         assert country_iso_code_to_name('FOO') is None
         assert country_iso_code_to_name('ABC') is None
         assert country_iso_code_to_name('ZZZ') is None
+
+
+def test_generate_composite_key():
+    assert generate_composite_key('London', 'United Kingdom') == 'london_united-kingdom'
+    assert generate_composite_key('Paris', 'France') == 'paris_france'
+    assert generate_composite_key('Name-with hyphen', 'COUNTRY') == 'name-with-hyphen_country'
+
+
+def test_generate_composite_key_raises_error_with_invalid_input():
+    with pytest.raises(ValueError):
+        generate_composite_key(None, 'UK')
+
+    with pytest.raises(ValueError):
+        generate_composite_key('city_only')
+
+    with pytest.raises(ValueError):
+        generate_composite_key(1, 2)
+
+
