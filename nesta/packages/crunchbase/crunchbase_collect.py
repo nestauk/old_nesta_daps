@@ -98,6 +98,59 @@ def generate_composite_key(city=None, country=None):
     return '_'.join([city, country])
 
 
+def total_records(data_dict, append_to=None):
+    """Calculates totals for a dictionary of records and appends a grand total.
+
+    Args:
+        data_dict (dict): data with description as the key, and list of dicts as the
+                value
+        append_to (dict): a previously returned dict from this function, will add
+                the values for batch operation
+
+    Returns:
+        (dict): labels as per the provided data_dict, with totals as the values.
+                `total` is appended with a sum of all values, plus `batch_total` if
+                append_to is provided
+    """
+    totals = {}
+    total = 0
+    for k, v in data_dict.items():
+        length = len(v)
+        totals[k] = length
+        total += length
+    totals['total'] = total
+
+    if append_to is not None:
+        for k, v in totals.items():
+            totals[k] += append_to[k]
+    totals['batch_total'] = total
+
+    return totals
+
+
+def split_batches(data, batch_size):
+    """Breaks batches down into chunks consumable by the database.
+
+    Args:
+        data (:obj:`list` of :obj:`dict`): list of rows of data
+        batch_size (int): number of rows per batch
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): yields a batch at a time
+    """
+    if len(data) <= batch_size:
+        yield data
+    else:
+        batch = []
+        for row in data:
+            batch.append(row)
+            if len(batch) == batch_size:
+                yield batch
+                batch.clear()
+        if len(batch) > 0:
+            yield batch
+
+
 def process_orgs(orgs, cat_groups, org_descriptions):
     """Processes the organizations data.
 

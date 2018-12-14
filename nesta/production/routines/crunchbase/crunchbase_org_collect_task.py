@@ -10,6 +10,7 @@ import logging
 import os
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs, rename_uuid_columns
+from nesta.packages.crunchbase.crunchbase_collect import total_records, split_batches
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
@@ -30,59 +31,6 @@ class OrgCollectTask(luigi.Task):
     database = 'production' if not test else 'dev'
     insert_batch_size = luigi.IntParameter(default=1000)
 
-    @staticmethod
-    def _total_records(data_dict, append_to=None):
-        """Calculates totals for a dictionary of records and appends a grand total.
-
-        Args:
-            data_dict (dict): data with description as the key, and list of dicts as the
-                value
-            append_to (dict): a previously returned dict from this function, will add
-                the values for batch operation
-
-        Returns:
-            (dict): labels as per the provided data_dict, with totals as the values.
-                `total` is appended with a sum of all values, plus `batch_total` if
-                append_to is provided
-        """
-        totals = {}
-        total = 0
-        for k, v in data_dict.items():
-            length = len(v)
-            totals[k] = length
-            total += length
-        totals['total'] = total
-
-        if append_to is not None:
-            for k, v in totals.items():
-                totals[k] += append_to[k]
-        totals['batch_total'] = total
-
-        return totals
-
-    @staticmethod
-    def _split_batches(data, batch_size):
-        """Breaks batches down into chunks consumable by the database.
-
-        Args:
-            data (:obj:`list` of :obj:`dict`): list of rows of data
-            batch_size (int): number of rows per batch
-
-        Returns:
-            (:obj:`list` of :obj:`dict`): yields a batch at a time
-        """
-        if len(data) <= batch_size:
-            yield data
-        else:
-            batch = []
-            for row in data:
-                batch.append(row)
-                if len(batch) == batch_size:
-                    yield batch
-                    batch.clear()
-            if len(batch) > 0:
-                yield batch
-
     def _insert_data(self, table, data, batch_size=1000):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
@@ -95,14 +43,14 @@ class OrgCollectTask(luigi.Task):
         logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
         totals = None
-        for batch in self._split_batches(data, batch_size):
+        for batch in split_batches(data, batch_size):
             returned = {}
             returned['inserted'], returned['existing'], returned['failed'] = insert_data(
                                                             self.db_config_env, 'mysqldb',
                                                             self.database,
                                                             Base, table, batch,
                                                             return_non_inserted=True)
-            totals = self._total_records(returned, totals)
+            totals = total_records(returned, totals)
             for k, v in totals.items():
                 logging.info(f"{k} rows: {v}")
             logging.info("--------------")
