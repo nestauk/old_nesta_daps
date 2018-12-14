@@ -187,8 +187,3 @@ if __name__ == '__main__':
     # with crunchbase_tar() as tar:
     #     cg_df = pd.read_csv(tar.extractfile('category_groups.csv'))
     # print(cg_df.columns)
-
-
-
-
-

@@ -17,7 +17,7 @@ from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed,
 
 
 class OrgCollectTask(luigi.Task):
-    """Download tar file of csvs and load them into the MySQL server.
+    """Download tar file of Organization csvs and load them into the MySQL server.
 
     Args:
         _routine_id (str): String used to label the AWS task
@@ -32,7 +32,19 @@ class OrgCollectTask(luigi.Task):
 
     @staticmethod
     def _total_records(data_dict, append_to=None):
-        """Calculates totals for a dictionary of records and appends a grand total."""
+        """Calculates totals for a dictionary of records and appends a grand total.
+
+        Args:
+            data_dict (dict): data with description as the key, and list of dicts as the
+                value
+            append_to (dict): a previously returned dict from this function, will add
+                the values for batch operation
+
+        Returns:
+            (dict): labels as per the provided data_dict, with totals as the values.
+                `total` is appended with a sum of all values, plus `batch_total` if
+                append_to is provided
+        """
         totals = {}
         total = 0
         for k, v in data_dict.items():
@@ -50,6 +62,15 @@ class OrgCollectTask(luigi.Task):
 
     @staticmethod
     def _split_batches(data, batch_size):
+        """Breaks batches down into chunks consumable by the database.
+
+        Args:
+            data (:obj:`list` of :obj:`dict`): list of rows of data
+            batch_size (int): number of rows per batch
+
+        Returns:
+            (:obj:`list` of :obj:`dict`): yields a batch at a time
+        """
         if len(data) <= batch_size:
             yield data
         else:
@@ -68,6 +89,7 @@ class OrgCollectTask(luigi.Task):
         Args:
             table (:obj:`sqlalchemy.mapping`): table where the data should be written
             data (:obj:`list` of :obj:`dict`): data to be written
+            batch_size (int): size of bulk inserts into the db
         """
         total_rows_in = len(data)
         logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
