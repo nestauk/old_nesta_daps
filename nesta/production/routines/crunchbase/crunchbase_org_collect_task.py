@@ -62,7 +62,7 @@ class OrgCollectTask(luigi.Task):
             if len(batch) > 0:
                 yield batch
 
-    def _insert_data(self, table, data, batch_size=insert_batch_size):
+    def _insert_data(self, table, data, batch_size=1000):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
         Args:
@@ -120,7 +120,7 @@ class OrgCollectTask(luigi.Task):
         # process organizations and categories
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
         self._insert_data(CategoryGroup, missing_cat_groups)
-        self._insert_data(Organization, processed_orgs)
+        self._insert_data(Organization, processed_orgs, self.insert_batch_size)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
         org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
