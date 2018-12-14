@@ -25,6 +25,7 @@ class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.date.today())
     db_config_env = luigi.Parameter(default="MYSQLDB")
     production = luigi.BoolParameter(default=False)
+    insert_batch_size = luigi.IntParameter(default=1000)
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
@@ -34,4 +35,5 @@ class RootTask(luigi.WrapperTask):
         yield OrgCollectTask(date=self.date,
                              _routine_id=_routine_id,
                              db_config_env=self.db_config_env,
-                             test=(not self.production))
+                             test=(not self.production),
+                             insert_batch_size=self.insert_batch_size)
