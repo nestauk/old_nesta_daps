@@ -7,6 +7,7 @@ import tarfile
 from tempfile import NamedTemporaryFile
 
 from nesta.production.luigihacks import misctools
+from nesta.production.orms.orm_utils import insert_data
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
 
@@ -132,6 +133,35 @@ def split_batches(data, batch_size):
                 batch.clear()
         if len(batch) > 0:
             yield batch
+
+
+def _insert_data(config, section, database, base, table, data, batch_size=1000):
+    """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
+
+    Args:
+        table (:obj:`sqlalchemy.mapping`): table where the data should be written
+        data (:obj:`list` of :obj:`dict`): data to be written
+        batch_size (int): size of bulk inserts into the db
+    """
+    total_rows_in = len(data)
+    logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
+
+    totals = None
+    for batch in split_batches(data, batch_size):
+        returned = {}
+        returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+                                                        config, section, database,
+                                                        base, table, batch,
+                                                        return_non_inserted=True)
+        totals = total_records(returned, totals)
+        for k, v in totals.items():
+            logging.info(f"{k} rows: {v}")
+        logging.info("--------------")
+        if totals['batch_total'] != len(batch):
+            raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+
+    if totals['total'] != total_rows_in:
+        raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
 
 def process_orgs(orgs, cat_groups, org_descriptions):

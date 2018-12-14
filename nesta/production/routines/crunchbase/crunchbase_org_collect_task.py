@@ -9,8 +9,8 @@ import luigi
 import logging
 import os
 
-from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs, rename_uuid_columns
-from nesta.packages.crunchbase.crunchbase_collect import total_records, split_batches
+from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs
+from nesta.packages.crunchbase.crunchbase_collect import _insert_data, rename_uuid_columns
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
@@ -30,40 +30,11 @@ class OrgCollectTask(luigi.Task):
     insert_batch_size = luigi.IntParameter(default=1000)
     test = luigi.BoolParameter()
 
-    def _insert_data(self, table, data, batch_size=1000):
-        """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
-
-        Args:
-            table (:obj:`sqlalchemy.mapping`): table where the data should be written
-            data (:obj:`list` of :obj:`dict`): data to be written
-            batch_size (int): size of bulk inserts into the db
-        """
-        total_rows_in = len(data)
-        logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
-
-        totals = None
-        for batch in split_batches(data, batch_size):
-            returned = {}
-            returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-                                                            self.db_config_env, 'mysqldb',
-                                                            self.database,
-                                                            Base, table, batch,
-                                                            return_non_inserted=True)
-            totals = total_records(returned, totals)
-            for k, v in totals.items():
-                logging.info(f"{k} rows: {v}")
-            logging.info("--------------")
-            if totals['batch_total'] != len(batch):
-                raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
-
-        if totals['total'] != total_rows_in:
-            raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
-
     def output(self):
         """Points to the output database engine"""
         self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = self.database
+        db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
         update_id = "CrunchbaseCollectOrgData_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
@@ -72,9 +43,9 @@ class OrgCollectTask(luigi.Task):
         """Collect and process organizations, categories and long descriptions."""
 
         # database setup
-        self.database = 'dev' if self.test else 'production'
-        logging.warning(f"Using {self.database} database")
-        self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
+        database = 'dev' if self.test else 'production'
+        logging.warning(f"Using {database} database")
+        self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # collect files
@@ -85,12 +56,15 @@ class OrgCollectTask(luigi.Task):
                                                                 test=self.test)
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
-        self._insert_data(CategoryGroup, cat_groups.to_dict(orient='records'))
+        _insert_data(self.db_config_env, 'mysqldb', database,
+                     Base, CategoryGroup, cat_groups.to_dict(orient='records'))
 
         # process organizations and categories
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
-        self._insert_data(CategoryGroup, missing_cat_groups)
-        self._insert_data(Organization, processed_orgs, self.insert_batch_size)
+        _insert_data(self.db_config_env, 'mysqldb', database,
+                     Base, CategoryGroup, missing_cat_groups)
+        _insert_data(self.db_config_env, 'mysqldb', database,
+                     Base, Organization, processed_orgs, self.insert_batch_size)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
         org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
