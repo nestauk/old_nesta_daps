@@ -71,6 +71,7 @@ class CategoryGroup(Base):
 class Acquisition(Base):
     __tablename__ = 'crunchbase_acquisitions'
 
+    acquisition_id = Column(VARCHAR(36), primary_key=True)
     acquiree_name = Column(VARCHAR(200))
     acquiree_country_code = Column(VARCHAR(3))
     state_code = Column(VARCHAR(2))
@@ -88,9 +89,8 @@ class Acquisition(Base):
     price_currency_code = Column(VARCHAR(3))
     acquiree_cb_url = Column(TEXT)
     acquirer_cb_url = Column(TEXT)
-    acquiree_uuid = Column(VARCHAR(36))
-    acquirer_uuid = Column(VARCHAR(36))
-    acquisition_uuid = Column(VARCHAR(36))
+    acquiree_id = Column(VARCHAR(36))
+    acquirer_id = Column(VARCHAR(36))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
 
@@ -98,21 +98,22 @@ class Acquisition(Base):
 class Degree(Base):
     __tablename__ = 'crunchbase_degrees'
 
-    degree_uuid = Column(VARCHAR(36))
-    institution_uuid = Column(VARCHAR(36))
-    person_uuid = Column(VARCHAR(36))
+    degree_id = Column(VARCHAR(36), primary_key=True)
+    institution_id = Column(VARCHAR(36))
+    person_id = Column(VARCHAR(36))
     degree_type = Column(VARCHAR(100))
     subject = Column(VARCHAR(100))
     started_on = Column(VARCHAR(10))
     completed_on = Column(VARCHAR(10))
     is_completed = Column(BOOLEAN)
-    created_at = Column(VARCHAR(19))
-    updated_at = Column(VARCHAR(19))
+    created_at = Column(DATETIME)
+    updated_at = Column(DATETIME)
 
 
 class FundingRound(Base):
     __tablename__ = 'funding_rounds'
 
+    funding_round_id = Column(VARCHAR(36), primary_key=True)
     company_name = Column(VARCHAR(200))
     country_code = Column(VARCHAR(3))
     state_code = Column(VARCHAR(2))
@@ -128,19 +129,18 @@ class FundingRound(Base):
     post_money_currency_code = Column(VARCHAR(3))
     investor_count = Column(BIGINT)
     cb_url = Column(TEXT)
-    company_uuid = Column(VARCHAR(36))
-    funding_round_uuid = Column(VARCHAR(36))
+    company_id = Column(VARCHAR(36))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
     investor_names = Column(TEXT)
-    investor_uuids = Column(TEXT)
+    investor_ids = Column(TEXT)
 
 
 class Fund(Base):
     __tablename__ = 'crunchbase_funds'
 
-    entity_uuid = Column(VARCHAR(36))
-    fund_uuid = Column(VARCHAR(36))
+    fund_id = Column(VARCHAR(36), primary_key=True)
+    entity_id = Column(VARCHAR(36))
     fund_name = Column(VARCHAR(200))
     announced_on = Column(DATE)
     raised_amount = Column(BIGINT)
@@ -152,22 +152,23 @@ class Fund(Base):
 class InvestmentPartner(Base):
     __tablename__ = 'crunchbase_investment_partners'
 
-    funding_round_uuid = Column(VARCHAR(36))
-    investor_uuid = Column(VARCHAR(36))
-    partner_uuid = Column(VARCHAR(36))
+    funding_round_id = Column(VARCHAR(36), primary_key=True)
+    investor_id = Column(VARCHAR(36, primary_key=True))
+    partner_id = Column(VARCHAR(36, primary_key=True))
 
 
 class Investment(Base):
     __tablename__ = 'crunchbase_investments'
 
-    funding_round_uuid = Column(VARCHAR(36))
-    investor_uuid = Column(VARCHAR(36))
+    funding_round_id = Column(VARCHAR(36, primary_key=True))
+    investor_id = Column(VARCHAR(36, primary_key=True))
     is_lead_investor = Column(BOOLEAN)
 
 
 class Investor(Base):
     __tablename__ = 'crunchbase_investors'
 
+    id = Column(VARCHAR(36, primary_key=True))
     investor_name = Column(VARCHAR(200))
     roles = Column(VARCHAR(23))
     domain = Column(VARCHAR(80))
@@ -184,13 +185,13 @@ class Investor(Base):
     logo_url = Column(TEXT)
     twitter_url = Column(TEXT)
     facebook_url = Column(TEXT)
-    uuid = Column(VARCHAR(36))
     updated_at = Column(DATETIME)
 
 
 class Ipo(Base):
     __tablename__ = 'ipos'
 
+    ipo_id = Column(VARCHAR(36, primary_key=True))
     name = Column(VARCHAR(100))
     country_code = Column(VARCHAR(3))
     company_state_code = Column(VARCHAR(2))
@@ -204,8 +205,7 @@ class Ipo(Base):
     price_currency_code = Column(VARCHAR(3))
     money_raised_usd = Column(BIGINT)
     cb_url = Column(TEXT)
-    ipo_uuid = Column(VARCHAR(36))
-    company_uuid = Column(VARCHAR(36))
+    company_id = Column(VARCHAR(36))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
 
@@ -213,9 +213,9 @@ class Ipo(Base):
 class Job(Base):
     __tablename__ = 'crunchbase_jobs'
 
-    person_uuid = Column(VARCHAR(36))
-    org_uuid = Column(VARCHAR(36))
-    job_uuid = Column(VARCHAR(36))
+    job_id = Column(VARCHAR(36, primary_key=True))
+    person_id = Column(VARCHAR(36))
+    org_id = Column(VARCHAR(36))
     started_on = Column(DATE)
     ended_on = Column(DATE)
     is_current = Column(BOOLEAN)
@@ -226,6 +226,7 @@ class Job(Base):
 class People(Base):
     __tablename__ = 'crunchbase_people'
 
+    id = Column(VARCHAR(36, primary_key=True))
     first_name = Column(VARCHAR(100))
     last_name = Column(VARCHAR(100))
     country_code = Column(VARCHAR(3))
@@ -238,8 +239,7 @@ class People(Base):
     linkedin_url = Column(TEXT)
     primary_affiliation_organization = Column(VARCHAR(100))
     primary_affiliation_title = Column(VARCHAR(100))
-    primary_organization_uuid = Column(VARCHAR(36))
+    primary_organization_id = Column(VARCHAR(36))
     gender = Column(VARCHAR(20))
-    uuid = Column(VARCHAR(36))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
