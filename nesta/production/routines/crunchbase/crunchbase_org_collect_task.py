@@ -27,9 +27,9 @@ class OrgCollectTask(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
-    test = luigi.BoolParameter(default=True)
-    database = 'production' if not test else 'dev'
     insert_batch_size = luigi.IntParameter(default=1000)
+    test = luigi.BoolParameter()
+    database = 'dev' if test else 'production'
 
     def _insert_data(self, table, data, batch_size=1000):
         """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
@@ -73,6 +73,7 @@ class OrgCollectTask(luigi.Task):
         """Collect and process organizations, categories and long descriptions."""
 
         # database setup
+        logging.warning(f"Using {self.database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
