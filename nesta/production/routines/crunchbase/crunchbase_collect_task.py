@@ -3,12 +3,15 @@ Crunchbase data collection and processing
 ==================================
 
 Luigi routine to collect Crunchbase data exports and load the data into MySQL.
+
+Organizations, category_groups, org_parents and organization_descriptions should have
+already been processed; this task picks up all other files to be imported.
 '''
 
 import luigi
 import logging
 
-from nesta.packages.crunchbase import get_csvs
+from nesta.packages.crunchbase import get_csv_list
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks import autobatch
@@ -42,18 +45,34 @@ class CollectTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        # Iterate through all csvs
+        tables = ['acquisitions',
+                  'degrees',
+                  'funding_rounds',
+                  'funds',
+                  'investment_partners',
+                  'investments',
+                  'investors',
+                  'ipos',
+                  'jobs',
+                  'people'
+                  ]
+
+        logging.info('Retrieving list of csvs in Crunchbase export')
+        all_csvs = get_csv_list()
+        logging.info(all_csvs)
+        if not all(table in all_csvs for table in tables):
+            raise ValueError("Crunchbase export is missing one or more required tables")
+
         job_params = []
-        for csv in get_csvs():
-            logging.info("Extracting table {}...".format(csv))
-            table_name = ''.join(["crunchbase_{}", csv])
-            done = table_name in DONE_KEYS
-            params = {"table_name": table_name,
+        for table in tables:
+            done = table in DONE_KEYS
+            params = {"table": table,
                       "config": "mysqldb.config",
                       "db_name": "production" if not self.test else "dev",
-                      "outinfo": "s3://nesta-production-intermediate/%s" % table_name,
+                      "outinfo": "s3://nesta-production-intermediate/%s" % table,
                       "done": done}
             job_params.append(params)
+        logging.info(job_params)
         return job_params
 
     def combine(self, job_params):
