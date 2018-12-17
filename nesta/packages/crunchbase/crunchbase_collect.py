@@ -268,17 +268,25 @@ def process_non_orgs(df):
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
-    for idx, row in df.iterrows():
-        # generate composite key for location lookup
-        try:
-            comp_key = generate_composite_key(row.city, row.country)
-        except ValueError:
-            pass
-        else:
-            df.at[idx, 'location_id'] = comp_key
+        for idx, row in df.iterrows():
+            # generate composite key for location lookup
+            try:
+                comp_key = generate_composite_key(row.city, row.country)
+            except ValueError:
+                pass
+            else:
+                df.at[idx, 'location_id'] = comp_key
 
     df = df.to_dict(orient='records')
     return df
+
+
+def bool_convert(value):
+    lookup = {'t': True, 'f': False}
+    try:
+        return lookup[value]
+    except KeyError:
+        logging.info(f"Not able to convert to a boolean: {value}")
 
 
 if __name__ == '__main__':
