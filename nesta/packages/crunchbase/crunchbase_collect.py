@@ -182,6 +182,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
 
     # change NaNs to None
     orgs = orgs.where(orgs.notnull(), None)
+    org_descriptions = org_descriptions.where(orgs.notnull(), None)
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
