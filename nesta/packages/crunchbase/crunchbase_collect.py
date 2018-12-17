@@ -164,11 +164,12 @@ def _insert_data(config, section, database, base, table, data, batch_size=1000):
         raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
 
-def process_orgs(orgs, cat_groups, org_descriptions):
+def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     """Processes the organizations data.
 
     Args:
         orgs (:obj:`pandas.Dataframe`): organizations data
+        existing_orgs (set): ids of orgs already in the database
         cat_groups (:obj:`pandas.Dataframe`): category groups data
         org_descriptions (:obj:`pandas.Dataframe`): long organization descriptions
 
@@ -181,8 +182,8 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     orgs = rename_uuid_columns(orgs)
 
     # change NaNs to None
-    orgs = orgs.where(orgs.notnull(), None)
-    org_descriptions = org_descriptions.where(org_descriptions.notnull(), None)
+    orgs.loc[pd.isnull(orgs)] = None
+    org_descriptions.loc[pd.isnull(org_descriptions)] = None
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
@@ -237,6 +238,10 @@ def process_orgs(orgs, cat_groups, org_descriptions):
 
     # remove redundant category columns
     orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
+
+    # remove existing orgs
+    drop_mask = orgs['id'].apply(lambda x: x in existing_orgs)
+    orgs = orgs.loc[~drop_mask]
     orgs = orgs.to_dict(orient='records')
 
     return orgs, org_cats, missing_cat_groups
@@ -259,8 +264,21 @@ def process_non_orgs(df):
     df = df.where(df.notnull(), None)
 
     # lookup country name and add as a column
-    df['country'] = df['country_code'].apply(country_iso_code_to_name)
-    df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
+    if {'city', 'country_code'}.issubset(df.columns):
+        df['country'] = df['country_code'].apply(country_iso_code_to_name)
+        df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
+
+    for idx, row in df.iterrows():
+        # generate composite key for location lookup
+        try:
+            comp_key = generate_composite_key(row.city, row.country)
+        except ValueError:
+            pass
+        else:
+            df.at[idx, 'location_id'] = comp_key
+
+    df = df.to_dict(orient='records')
+    return df
 
 
 if __name__ == '__main__':

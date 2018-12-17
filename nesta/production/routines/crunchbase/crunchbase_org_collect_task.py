@@ -60,7 +60,14 @@ class OrgCollectTask(luigi.Task):
                      Base, CategoryGroup, cat_groups.to_dict(orient='records'))
 
         # process organizations and categories
-        processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs, cat_groups, org_descriptions)
+        with db_session(self.engine) as session:
+            existing_orgs = session.query(Organization.id).all()
+        existing_orgs = {o[0] for o in existing_orgs}
+
+        processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs,
+                                                                    existing_orgs,
+                                                                    cat_groups,
+                                                                    org_descriptions)
         _insert_data(self.db_config_env, 'mysqldb', database,
                      Base, CategoryGroup, missing_cat_groups)
         _insert_data(self.db_config_env, 'mysqldb', database,
