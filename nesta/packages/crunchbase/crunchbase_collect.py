@@ -182,8 +182,8 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     orgs = rename_uuid_columns(orgs)
 
     # change NaNs to None
-    orgs.loc[pd.isnull(orgs)] = None
-    org_descriptions.loc[pd.isnull(org_descriptions)] = None
+    orgs = orgs.where(orgs.notnull(), None)
+    org_descriptions = org_descriptions.where(org_descriptions.notnull(), None)
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
