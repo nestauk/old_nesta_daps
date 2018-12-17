@@ -146,22 +146,24 @@ def _insert_data(config, section, database, base, table, data, batch_size=1000):
     total_rows_in = len(data)
     logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
-    totals = None
+    # totals = None
     for batch in split_batches(data, batch_size):
-        returned = {}
-        returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-                                                        config, section, database,
-                                                        base, table, batch,
-                                                        return_non_inserted=True)
-        totals = total_records(returned, totals)
-        for k, v in totals.items():
-            logging.info(f"{k} rows: {v}")
-        logging.info("--------------")
-        if totals['batch_total'] != len(batch):
-            raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+        insert_data(config, section, database, base, table, batch)
+        # returned = {}
+        # returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+        #                                                 config, section, database,
+        #                                                 base, table, batch,
+        #                                                 return_non_inserted=True)
 
-    if totals['total'] != total_rows_in:
-        raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
+        # totals = total_records(returned, totals)
+        # for k, v in totals.items():
+        #     logging.info(f"{k} rows: {v}")
+        # logging.info("--------------")
+        # if totals['batch_total'] != len(batch):
+        #     raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+
+    # if totals['total'] != total_rows_in:
+        # raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
 
 def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
@@ -248,8 +250,8 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
 
 
 def process_non_orgs(df):
-    """Processes any crunchbase table, other than organizations, which are handled by
-    the process_orgs function.
+    """Processes any crunchbase table, other than organizations, which are already
+    handled by the process_orgs function.
 
     Args:
         df (:obj: `pd.DataFrame`): data from one table
