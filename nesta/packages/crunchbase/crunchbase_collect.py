@@ -151,7 +151,7 @@ def _insert_data(config, section, database, base, table, data, batch_size=1000):
     for batch in split_batches(data, batch_size):
         insert_data(config, section, database, base, table, batch)
         total += len(batch)
-        logging.info(f"Inserted {total} records")
+        logging.info(f"Inserted {total} rows")
         # returned = {}
         # returned['inserted'], returned['existing'], returned['failed'] = insert_data(
         #                                                 config, section, database,
@@ -281,6 +281,11 @@ def process_non_orgs(df):
                 pass
             else:
                 df.at[idx, 'location_id'] = comp_key
+
+    # convert any boolean columns to correct values
+    bool_columns = [col for col in df.columns if re.match(r'^is_.+', col)]
+    for column in bool_columns:
+        df[column] = df[column].apply(bool_convert)
 
     df = df.to_dict(orient='records')
     return df
