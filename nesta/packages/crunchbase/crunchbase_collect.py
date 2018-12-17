@@ -147,8 +147,11 @@ def _insert_data(config, section, database, base, table, data, batch_size=1000):
     logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
     # totals = None
+    total = 0
     for batch in split_batches(data, batch_size):
         insert_data(config, section, database, base, table, batch)
+        total += len(batch)
+        logging.info(f"Inserted {total} records")
         # returned = {}
         # returned['inserted'], returned['existing'], returned['failed'] = insert_data(
         #                                                 config, section, database,
