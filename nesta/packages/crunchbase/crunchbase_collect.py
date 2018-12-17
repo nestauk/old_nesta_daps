@@ -182,7 +182,7 @@ def process_orgs(orgs, cat_groups, org_descriptions):
 
     # change NaNs to None
     orgs = orgs.where(orgs.notnull(), None)
-    org_descriptions = org_descriptions.where(orgs.notnull(), None)
+    org_descriptions = org_descriptions.where(org_descriptions.notnull(), None)
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
@@ -240,6 +240,27 @@ def process_orgs(orgs, cat_groups, org_descriptions):
     orgs = orgs.to_dict(orient='records')
 
     return orgs, org_cats, missing_cat_groups
+
+
+def process_non_orgs(df):
+    """Processes any crunchbase table, other than organizations, which are handled by
+    the process_orgs function.
+
+    Args:
+        df (:obj: `pd.DataFrame`): data from one table
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): processed table
+    """
+    # fix uuid column names
+    df = rename_uuid_columns(df)
+
+    # change NaNs to None
+    df = df.where(df.notnull(), None)
+
+    # lookup country name and add as a column
+    df['country'] = df['country_code'].apply(country_iso_code_to_name)
+    df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
 
 if __name__ == '__main__':
