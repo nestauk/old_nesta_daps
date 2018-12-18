@@ -111,7 +111,7 @@ class Degree(Base):
 
 
 class FundingRound(Base):
-    __tablename__ = 'funding_rounds'
+    __tablename__ = 'crunchbase_funding_rounds'
 
     funding_round_id = Column(VARCHAR(36), primary_key=True)
     company_name = Column(VARCHAR(200))
@@ -189,7 +189,7 @@ class Investor(Base):
 
 
 class Ipo(Base):
-    __tablename__ = 'ipos'
+    __tablename__ = 'crunchbase_ipos'
 
     ipo_id = Column(VARCHAR(36), primary_key=True)
     name = Column(VARCHAR(100))
