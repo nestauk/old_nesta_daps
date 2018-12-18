@@ -95,6 +95,13 @@
                 "booleanFlag_duplicate_abstract": {
                     "type": "boolean",
                     "null_value": false
+                },
+                "date_unsdg_model": {
+                    "type": "date",
+                    "format": "yyyy-MM-dd"
+                },
+                "terms_unsdg_abstract": {
+                    "type": "keyword"
                 }
             }
         }
