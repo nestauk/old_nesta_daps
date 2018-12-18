@@ -132,6 +132,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
                     'id_key': id_key_prefix.format(chunk_key_id),
                     'id_bucket': id_bucket,
                     'model_bucket': model_bucket,
+                    'model_key_prefix': model_key_prefix,
                     'model_date': model_date,
                     'outinfo': es_config,
                     'done': False
