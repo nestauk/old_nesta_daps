@@ -14,7 +14,7 @@ from nesta.packages.crunchbase.crunchbase_collect import _insert_data, rename_uu
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
 
 
 class OrgCollectTask(luigi.Task):
@@ -27,7 +27,7 @@ class OrgCollectTask(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
-    insert_batch_size = luigi.IntParameter(default=1000)
+    insert_batch_size = luigi.IntParameter(default=500)
     test = luigi.BoolParameter()
 
     def output(self):

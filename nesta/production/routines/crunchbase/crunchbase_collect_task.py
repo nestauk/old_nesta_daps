@@ -23,7 +23,7 @@ _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
-class CollectTask(autobatch.AutoBatchTask):
+class CollectNonOrgsTask(autobatch.AutoBatchTask):
     '''Download tar file of csvs and load them into the MySQL server.
 
     Args:
@@ -34,6 +34,7 @@ class CollectTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
+    insert_batch_size = luigi.IntParameter(default=500)
 
     def output(self):
         '''Points to the output database engine'''
@@ -69,6 +70,7 @@ class CollectTask(autobatch.AutoBatchTask):
             params = {"table": table,
                       "config": "mysqldb.config",
                       "db_name": "production" if not self.test else "dev",
+                      "batch_size": self.insert_batch_size,
                       "outinfo": "s3://nesta-production-intermediate/%s" % table,
                       "test": self.test,
                       "done": done}
