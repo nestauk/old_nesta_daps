@@ -135,7 +135,7 @@ def split_batches(data, batch_size):
             yield batch
 
 
-def _insert_data(config, section, database, base, table, data, batch_size=1000):
+def _insert_data(config, section, database, base, table, data, batch_size=500):
     """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
     Args:
@@ -146,27 +146,23 @@ def _insert_data(config, section, database, base, table, data, batch_size=1000):
     total_rows_in = len(data)
     logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
-    # totals = None
-    total = 0
+    totals = None
     for batch in split_batches(data, batch_size):
-        insert_data(config, section, database, base, table, batch)
-        total += len(batch)
-        logging.info(f"Inserted {total} rows")
-        # returned = {}
-        # returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-        #                                                 config, section, database,
-        #                                                 base, table, batch,
-        #                                                 return_non_inserted=True)
+        returned = {}
+        returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+                                                        config, section, database,
+                                                        base, table, batch,
+                                                        return_non_inserted=True)
 
-        # totals = total_records(returned, totals)
-        # for k, v in totals.items():
-        #     logging.info(f"{k} rows: {v}")
-        # logging.info("--------------")
-        # if totals['batch_total'] != len(batch):
-        #     raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+        totals = total_records(returned, totals)
+        for k, v in totals.items():
+            logging.info(f"{k} rows: {v}")
+        logging.info("--------------")
+        if totals['batch_total'] != len(batch):
+            raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
 
-    # if totals['total'] != total_rows_in:
-        # raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
+    if totals['total'] != total_rows_in:
+        raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
 
 def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
@@ -252,23 +248,31 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     return orgs, org_cats, missing_cat_groups
 
 
-def process_non_orgs(df):
+def process_non_orgs(df, existing, pks):
     """Processes any crunchbase table, other than organizations, which are already
     handled by the process_orgs function.
 
     Args:
         df (:obj: `pd.DataFrame`): data from one table
+        existing (:obj: `set` of :obj: `tuple`): tuples of primary keys that are already in the database
+        pks (list): names of primary key columns in the dataframe
 
     Returns:
-        (:obj:`list` of :obj:`dict`): processed table
+        (:obj:`list` of :obj:`dict`): processed table with existing records removed
     """
     # fix uuid column names
     df = rename_uuid_columns(df)
 
+    # drop any rows already existing in the database
+    total_records = len(df)
+    drop_mask = df[pks].apply(lambda row: tuple(row[pks]) in existing, axis=1)
+    df = df.loc[~drop_mask]
+    logging.info(f"Dropped {total_records - len(df)} rows already existing in database")
+
     # change NaNs to None
     df = df.where(df.notnull(), None)
 
-    # lookup country name and add as a column
+    # convert country name and add composite key if locations in table
     if {'city', 'country_code'}.issubset(df.columns):
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
@@ -278,13 +282,11 @@ def process_non_orgs(df):
             try:
                 comp_key = generate_composite_key(row.city, row.country)
             except ValueError:
-                pass
-            else:
-                df.at[idx, 'location_id'] = comp_key
+                continue
+            df.at[idx, 'location_id'] = comp_key
 
     # convert any boolean columns to correct values
-    bool_columns = [col for col in df.columns if re.match(r'^is_.+', col)]
-    for column in bool_columns:
+    for column in (col for col in df.columns if re.match(r'^is_.+', col)):
         df[column] = df[column].apply(bool_convert)
 
     df = df.to_dict(orient='records')
