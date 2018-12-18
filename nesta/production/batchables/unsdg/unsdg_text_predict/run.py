@@ -37,7 +37,7 @@ def put_unsdg_terms(labels):
     pass
 
 def run():
-    logging.getLogger.setLevel(logging.WARNING)
+    logging.getLogger().setLevel(logging.WARNING)
 
     id_bucket = os.environ["BATCHPAR_id_bucket"]
     id_file = os.environ["BATCHPAR_id_key"]
@@ -68,3 +68,7 @@ def run():
 #            from_key="tier_0", to_key="tier_1", ignore=["doc_id"]
 #            )
 
+    logging.info('finished')
+
+if __name__ == '__main__':
+    run()

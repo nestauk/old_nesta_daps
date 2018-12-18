@@ -1,5 +1,7 @@
 import boto3
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import scan
+from itertools import zip_longest
 import logging
 import luigi
 
@@ -18,6 +20,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
     '''
 
     date = luigi.DateParameter()
+    db_config_path = luigi.Parameter()
     _routine_id = luigi.Parameter()
 
     def output(self):
@@ -56,29 +59,29 @@ class QueryGroupTask(autobatch.AutoBatchTask):
 #                 }
 #             }
         query = {
-	    "query": {
-		"bool": {
-		    "should": [
-			{ "range" : {
-			    "date_unsdg_model" : {
-				"lt" :  model_date
-			    }
-			}},
-			{ "bool": {
-			    "must_not": {
-				"exists": {
-				    "field": "date_unsdg_model"
-				}
-			    }
-			}}
-		    ]
-		}
-	    }
-	}
+            "query": {
+                "bool": {
+                    "should": [
+                        { "range" : {
+                            "date_unsdg_model" : {
+                                "lt" :  model_date
+                            }
+                        }},
+                        { "bool": {
+                            "must_not": {
+                                "exists": {
+                                    "field": "date_unsdg_model"
+                                }
+                            }
+                        }}
+                    ]
+                }
+            }
+        }
         return scan(es_client, query, index=index, doc_type='_doc')
 
     @staticmethod
-    def chunk_ids_to_s3(query_result, bucket, key_prefix, n=10000):
+    def chunk_ids_to_s3(query_result, bucket, key_prefix, n=10000, test=False):
         ''' chunk_ids
         Gets ids from all documents returned by a query and chunks them into
         groups of size n.
@@ -89,26 +92,32 @@ class QueryGroupTask(autobatch.AutoBatchTask):
             key_prefix (str): s3 key prefix for naming files
             n (int): size of id groups
         '''
+        def grouper(iterable, n, fillvalue=None):
+            "Collect data into fixed-length chunks or blocks"
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
 
         s3_client = boto3.client('s3')
 
-        ids = (str(q['_source']['_id']) for q in query_result)
+        ids = (str(q['_id']) for q in query_result)
         chunks = grouper(ids, n , '')
 
         for i, chunk in enumerate(chunks):
             id_string = '\n'.join(chunk).strip()
             key = key_prefix.format(i)
-            response = client.put_object(
+            response = s3_client.put_object(
                     Bucket=bucket,
                     Key=key,
                     Body=id_string
                     )
             yield key
+            if test and i ==2:
+                break
+
 
     def prepare(self):
-        
         # elasticsearch setup
-        es_mode = 'rwjf' if not self.test else 'rwjf_test'
+        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
         es_index = 'rwjf' if not self.test else 'rwjf_test'
@@ -121,11 +130,11 @@ class QueryGroupTask(autobatch.AutoBatchTask):
 
         model_date = "2018-01-01"
         # model_date = get_model_date(model_bucket, model_key_prefix)
-        
-        query_results = all_unlabelled(es, model_date, es_mode)
 
-        chunk_key_ids = chunk_ids_to_s3(query_results, id_bucket, id_key_prefix)
-        
+        query_results = self.all_unlabelled(es, model_date, es_mode)
+
+        chunk_key_ids = self.chunk_ids_to_s3(query_results, id_bucket, id_key_prefix, test=self.test)
+
         job_params = []
         for chunk_key_id in chunk_key_ids:
             params =  {

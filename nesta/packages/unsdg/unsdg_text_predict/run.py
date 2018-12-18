@@ -53,7 +53,7 @@ def get_text_with_id(doc_id):
     return 'dummy text'
 
 def run():
-    logging.getLogger()setLevel(logging.WARNINNG)
+    logging.getLogger().setLevel(logging.WARNING)
 
     id_bucket = os.environ["BATCHPAR_id_bucket"]
     id_key = os.environ["BATCHPAR_id_key"]
@@ -79,13 +79,13 @@ def run():
                     }
                 )
 
-	es = Elasticsearch(
+        es = Elasticsearch(
                 es_config['internal_host'],
                 port=es_config['port'],
                 sniff_on_start=True
                 )
-	logging.warning(f'writing {len(unsdg_docs)} documents to elasticsearch')
-	for doc in unsdg_docs:
+        logging.warning(f'writing {len(unsdg_docs)} documents to elasticsearch')
+        for doc in unsdg_docs:
             uid = doc.pop("doc_id")
             existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
             doc = {**existing, **doc}
