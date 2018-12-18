@@ -22,20 +22,22 @@ class QueryGroupTask(autobatch.AutoBatchTask):
 
     def output(self):
         '''Points to the input database target'''
-        update_id = "QueryGroup-%s" % self._routine_id
+        update_id = "QueryGroupTask-%s" % self._routine_id
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
         db_config["database"] = "production" if not self.test else "dev"
-        db_config["table"] = "NIH sdg roup query DUMMY"  # Note, not a real table
+        db_config["table"] = "NIH sdg group query DUMMY"  # Note, not a real table
         return MySqlTarget(update_id=update_id, **db_config)
 
     @staticmethod
     def get_model_date(model_bucket, model_key_prefix):
+        ''' get_model_date
+        Gets date of most recent model from S3.
+        '''
         pass
 
     @staticmethod
     def all_unlabelled(es_client, model_date, index):
         ''' all_unlabelled
-
         Scans through all documents labelled with UNSDGs by a previous model.
 
         Args:
@@ -44,16 +46,35 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         Returns:
             (generator): yields a document at a time
         '''
-        #TODO
+#         query = {
+#                 "query": {
+#                     "bool": {
+#                     "filter": [
+#                         {"range": {"unsdg_model_date": {"gte": model_date}}}
+#                         ]
+#                     }
+#                 }
+#             }
         query = {
-                "query": {
-                    "bool": {
-                    "filter": [
-                        {"range": {"unsdg_model_date": {"gte": model_date}}}
-                        ]
-                    }
-                }
-            }
+	    "query": {
+		"bool": {
+		    "should": [
+			{ "range" : {
+			    "date_unsdg_model" : {
+				"lt" :  model_date
+			    }
+			}},
+			{ "bool": {
+			    "must_not": {
+				"exists": {
+				    "field": "date_unsdg_model"
+				}
+			    }
+			}}
+		    ]
+		}
+	    }
+	}
         return scan(es_client, query, index=index, doc_type='_doc')
 
     @staticmethod
@@ -87,7 +108,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
     def prepare(self):
         
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
+        es_mode = 'rwjf' if not self.test else 'rwjf_test'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
         es_index = 'rwjf' if not self.test else 'rwjf_test'
@@ -124,5 +145,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    process = QueryGroupTask(test=True)
+    process = QueryGroupTask(test=True, batchable='', job_def='', job_name='',
+            job_queue='', region_name='', db_config_path='MYSQLDB', date=date,
+            _routine_id='')
     process.prepare()
