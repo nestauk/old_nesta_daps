@@ -49,13 +49,13 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
-        update_id = "CrunchbaseCollectData_{}".format(self.date)
+        update_id = "CrunchbaseCollectNonOrgData_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        tables = ['acquisitions',
-                  'degrees',
+        tables = [#'acquisitions',
+                  #'degrees',
                   'funding_rounds',
                   'funds',
                   'investment_partners',
