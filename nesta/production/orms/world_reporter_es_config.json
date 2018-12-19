@@ -98,7 +98,7 @@
                 },
                 "date_unsdg_model": {
                     "type": "date",
-                    "format": "yyyy-MM-dd"
+                    "format": "date_hour_minute_second"
                 },
                 "terms_unsdg_abstract": {
                     "type": "keyword"
