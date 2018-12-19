@@ -120,7 +120,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         model_bucket = 'nesta-sdg-classifier'
         model_key_prefix = 'models'
 
-        model_date = "2018-01-01"
+        model_date = "2018-01-01T12:59:59"
         # model_date = get_model_date(model_bucket, model_key_prefix)
 
         query_results = self.all_unlabelled(es, model_date, es_mode)

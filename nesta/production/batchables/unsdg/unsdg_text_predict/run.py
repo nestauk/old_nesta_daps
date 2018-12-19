@@ -39,14 +39,14 @@ def put_unsdg_terms(labels):
 def run():
     logging.getLogger().setLevel(logging.WARNING)
 
-    id_bucket = os.environ["BATCHPAR_id_bucket"]
-    id_file = os.environ["BATCHPAR_id_key"]
+    ids_bucket = os.environ["BATCHPAR_id_bucket"]
+    ids_key = os.environ["BATCHPAR_id_key"]
     model_bucket = os.environ["BATCHPAR_model_bucket"]
     model_key_prefix = os.environ["BATCHPAR_model_key_prefix"]
     model_date = os.environ["BATCHPAR_model_date"]
     es_config = os.environ["BATCHPAR_outinfo"]
     
-    ids = retrieve_id_file(id_bucket, id_key)
+    ids = retrieve_id_file(ids_bucket, ids_key)
     
     doc_predictions = []
     for doc_id in ids:
