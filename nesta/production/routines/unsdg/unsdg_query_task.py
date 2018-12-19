@@ -130,7 +130,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         job_params = []
         for chunk_key_id in chunk_key_ids:
             params =  {
-                    'id_key': id_key_prefix.format(chunk_key_id),
+                    'id_key': chunk_key_id,
                     'id_bucket': id_bucket,
                     'model_bucket': model_bucket,
                     'model_key_prefix': model_key_prefix,
