@@ -85,6 +85,14 @@ def rename_uuid_columns(data):
     return data.rename(columns=renames)
 
 
+def bool_convert(value):
+    lookup = {'t': True, 'f': False}
+    try:
+        return lookup[value]
+    except KeyError:
+        logging.info(f"Not able to convert to a boolean: {value}")
+
+
 def total_records(data_dict, append_to=None):
     """Calculates totals for a dictionary of records and appends a grand total.
 
@@ -280,6 +288,7 @@ def process_non_orgs(df, existing, pks):
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
+        df['location_id'] = None
         for idx, row in df.iterrows():
             # generate composite key for location lookup
             try:
@@ -294,14 +303,6 @@ def process_non_orgs(df, existing, pks):
 
     df = df.to_dict(orient='records')
     return df
-
-
-def bool_convert(value):
-    lookup = {'t': True, 'f': False}
-    try:
-        return lookup[value]
-    except KeyError:
-        logging.info(f"Not able to convert to a boolean: {value}")
 
 
 if __name__ == '__main__':
