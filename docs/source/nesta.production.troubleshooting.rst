@@ -35,11 +35,11 @@ In AWS SES the sender and receiver email addresses need to be verified
 How do I add a new user to the server?
 --------------------------------------
 
-- add the user with `useradd --create-home username`
-- set a temp password with `passwd username`
-- copy `.bashrc` to their home directory
-- copy and chown `.ssh/authorized_keys` to their username and group
+- add the user with :code:`useradd --create-home username`
+- set a temp password with :code:`passwd username`
+- copy :code:`.bashrc` to their home directory
+- copy and chown :code:`.ssh/authorized_keys` to their username and group
 - clone the nesta repo
-- copy `production/config` files
-- set password to be changed next login `chage -d 0 username`
+- copy :code:`production/config` files
+- set password to be changed next login :code:`chage -d 0 username`
 - share the temp password and core pem file
