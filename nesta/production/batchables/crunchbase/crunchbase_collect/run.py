@@ -38,6 +38,7 @@ def run():
 
     # collect file
     df = get_files_from_tar(table, test=test)[0]
+    logging.info(f"{len(df)} rows in file")
 
     # get primary keys and set of all existing in the db
     pk_cols = list(table_class.__table__.primary_key.columns)
