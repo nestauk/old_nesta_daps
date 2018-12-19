@@ -49,15 +49,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         Returns:
             (generator): yields a document at a time
         '''
-#         query = {
-#                 "query": {
-#                     "bool": {
-#                     "filter": [
-#                         {"range": {"unsdg_model_date": {"gte": model_date}}}
-#                         ]
-#                     }
-#                 }
-#             }
+
         query = {
             "query": {
                 "bool": {
