@@ -76,7 +76,7 @@ def run():
         doc_predictions.append(
                 {'doc_id': doc_id,
                  'date_unsdg_model': model_date,
-                 'terms_unsdg_': predictions,
+                 'terms_unsdg_asbtract': predictions,
                  }
             )
 
