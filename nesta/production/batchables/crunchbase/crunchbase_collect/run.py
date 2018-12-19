@@ -22,7 +22,6 @@ def parse_s3_path(path):
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
-    db_config = os.environ["BATCHPAR_config"]
     db_name = os.environ["BATCHPAR_db_name"]
     table = os.environ["BATCHPAR_table"]
     batch_size = int(os.environ["BATCHPAR_batch_size"])
@@ -48,7 +47,7 @@ def run():
 
     # process and insert data
     processed_rows = process_non_orgs(df, existing_rows, pk_names)
-    _insert_data(db_config, 'mysqldb', db_name, Base, table_class,
+    _insert_data("BATCHPAR_config", 'mysqldb', db_name, Base, table_class,
                  processed_rows, batch_size=batch_size)
 
     # Mark the task as done
