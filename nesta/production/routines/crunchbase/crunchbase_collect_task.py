@@ -11,7 +11,6 @@ already been processed; this task picks up all other files to be imported.
 import boto3
 import logging
 import luigi
-from random import shuffle
 
 from nesta.packages.crunchbase.crunchbase_collect import get_csv_list
 from nesta.production.luigihacks import autobatch, misctools
@@ -59,11 +58,11 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
                   'funding_rounds',
                   'funds',
                   'investment_partners',
-                  'investments',
+                  #'investments',
                   'investors',
                   'ipos',
                   'jobs',
-                  'people'
+                  #'people'
                   ]
 
         logging.info('Retrieving list of csvs in Crunchbase export')
@@ -73,8 +72,6 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
             raise ValueError("Crunchbase export is missing one or more required tables")
 
         job_params = []
-        if self.test:
-            shuffle(tables)
         for table in tables:
             done = table in DONE_KEYS
             params = {"table": table,
