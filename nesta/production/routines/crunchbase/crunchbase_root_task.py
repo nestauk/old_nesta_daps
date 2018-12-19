@@ -33,18 +33,18 @@ class RootTask(luigi.WrapperTask):
 
         logging.getLogger().setLevel(logging.INFO)
         yield NonOrgCollectTask(date=self.date,
-                _routine_id=_routine_id,
-                test=not self.production,
-                db_config_path=find_filepath_from_pathstub("mysqldb.config")
-                insert_batch_size=self.insert_batch_size,
-                batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
-                env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                           find_filepath_from_pathstub("config/mysqldb.config"),
-                           find_filepath_from_pathstub("config/crunchbase.config")],
-                job_def="py36_amzn1_image",
-                job_name=f"CrunchBaseNonOrgCollectTask-{_routine_id}",
-                job_queue="HighPriority",
-                region_name="eu-west-2",
-                poll_time=10,
-                memory=1024,
-                max_live_jobs=20)
+                                _routine_id=_routine_id,
+                                test=not self.production,
+                                db_config_path=find_filepath_from_pathstub("mysqldb.config"),
+                                insert_batch_size=self.insert_batch_size,
+                                batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
+                                env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                           find_filepath_from_pathstub("config/mysqldb.config"),
+                                           find_filepath_from_pathstub("config/crunchbase.config")],
+                                job_def="py36_amzn1_image",
+                                job_name=f"CrunchBaseNonOrgCollectTask-{_routine_id}",
+                                job_queue="HighPriority",
+                                region_name="eu-west-2",
+                                poll_time=10,
+                                memory=1024,
+                                max_live_jobs=20)
