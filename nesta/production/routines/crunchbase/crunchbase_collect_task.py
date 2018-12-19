@@ -12,7 +12,7 @@ import boto3
 import logging
 import luigi
 
-from nesta.packages.crunchbase import get_csv_list
+from nesta.packages.crunchbase.crunchbase_collect import get_csv_list
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from crunchbase_org_collect_task import OrgCollectTask
