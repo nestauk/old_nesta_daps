@@ -59,7 +59,11 @@ def get_files_from_tar(files, test=False):
     Returns:
         (:obj:`list` of :obj:`pandas.Dataframe`): the extracted files as dataframes
     """
-    nrows = 1000 if test else None
+    if test:
+        nrows = 1000
+        logging.info("Limiting rows whilst in test mode")
+    else:
+        nrows = None
     dfs = []
     with crunchbase_tar() as tar:
         for filename in files:
