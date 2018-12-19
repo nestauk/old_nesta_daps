@@ -53,16 +53,16 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        tables = [#'acquisitions',
-                  #'degrees',
+        tables = ['acquisitions',
+                  'degrees',
                   'funding_rounds',
                   'funds',
                   'investment_partners',
-                  #'investments',
+                  'investments',
                   'investors',
                   'ipos',
                   'jobs',
-                  #'people'
+                  'people'
                   ]
 
         logging.info('Retrieving list of csvs in Crunchbase export')

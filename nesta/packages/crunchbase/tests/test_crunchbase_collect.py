@@ -1,12 +1,14 @@
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 import pytest
+from unittest import mock
 
 from nesta.packages.crunchbase.crunchbase_collect import rename_uuid_columns
 from nesta.packages.crunchbase.crunchbase_collect import process_orgs
 from nesta.packages.crunchbase.crunchbase_collect import split_batches
 from nesta.packages.crunchbase.crunchbase_collect import total_records
 from nesta.packages.crunchbase.crunchbase_collect import bool_convert
+from nesta.packages.crunchbase.crunchbase_collect import process_non_orgs
 
 
 def test_rename_uuid_columns():
@@ -261,9 +263,98 @@ class TestProcessOrgs():
         assert_series_equal(processed_orgs['id'], expected_result, check_names=False)
 
 
-def test_process_non_orgs_renames_uuid_columns():
-    pass
+class TestProcessNonOrgs():
+    @staticmethod
+    @pytest.fixture
+    def valid_table():
+        return pd.DataFrame({'id': ['111', '222', '333'],
+                             'other': ['cat', 'dog', 'frog']})
 
+    @staticmethod
+    @pytest.fixture
+    def location_table():
+        return pd.DataFrame({'uuid': ['111', '222', '333'],
+                             'city': ['London', 'Paris', 'New York'],
+                             'country_code': ['GBR', 'FRA', 'USA']})
 
-def test_process_non_orgs():
-    pass
+    def test_process_non_orgs_renames_uuid_columns(self, valid_table):
+        expected_result = [{'id': '111', 'other': 'cat'},
+                           {'id': '222', 'other': 'dog'},
+                           {'id': '333', 'other': 'frog'}]
+
+        assert process_non_orgs(valid_table, set(), ['id']) == expected_result
+
+    def test_process_non_orgs_drops_existing_rows_with_one_primary_key(self, valid_table):
+        existing = {('111',), ('222',)}
+        pks = ['id']
+        expected_result = [{'id': '333', 'other': 'frog'}]
+
+        assert process_non_orgs(valid_table, existing, pks) == expected_result
+
+    def test_process_non_orgs_drops_existing_rows_with_multiple_primary_keys(self, valid_table):
+        existing = {('111', 'cat'), ('222', 'dog')}
+        pks = ['id', 'other']
+        expected_result = [{'id': '333', 'other': 'frog'}]
+
+        assert process_non_orgs(valid_table, existing, pks) == expected_result
+
+    def test_process_non_orgs_changes_nans_to_none(self):
+        df = pd.DataFrame({'uuid': ['111', '222', '333'],
+                           'other': [pd.np.nan, 'dog', None]})
+
+        expected_result = [{'id': '111', 'other': None},
+                           {'id': '222', 'other': 'dog'},
+                           {'id': '333', 'other': None}]
+
+        assert process_non_orgs(df, set(), ['id']) == expected_result
+
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')
+    def test_process_non_orgs_changes_country_code_column_name(self, mocked_iso_code,
+                                                               mocked_comp_key, location_table):
+        mocked_iso_code.side_effect = ['One', 'Two', 'Three']
+        mocked_comp_key.side_effect = ValueError
+
+        keys = {k for k, _ in process_non_orgs(location_table, set(), ['id'])[0].items()}
+
+        assert 'country_code' not in keys
+        assert 'country' in keys
+
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')
+    def test_process_non_orgs_inserts_none_when_location_id_fails(self, mocked_iso_code,
+                                                                  mocked_comp_key, location_table):
+        mocked_iso_code.side_effect = ['One', 'Two', 'Three']
+        mocked_comp_key.side_effect = ValueError
+
+        expected_result = [{'id': '111', 'city': 'London', 'country': 'One', 'location_id': None},
+                           {'id': '222', 'city': 'Paris', 'country': 'Two', 'location_id': None},
+                           {'id': '333', 'city': 'New York', 'country': 'Three', 'location_id': None}]
+
+        assert process_non_orgs(location_table, set(), ['id']) == expected_result
+
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')
+    def test_process_non_orgs_inserts_location_comp_key(self, mocked_iso_code,
+                                                        mocked_comp_key, location_table):
+        mocked_iso_code.side_effect = ['One', 'Two', 'Three']
+        mocked_comp_key.side_effect = ['london_one', 'paris_two', 'new-york_three']
+
+        expected_result = [{'id': '111', 'city': 'London', 'country': 'One', 'location_id': 'london_one'},
+                           {'id': '222', 'city': 'Paris', 'country': 'Two', 'location_id': 'paris_two'},
+                           {'id': '333', 'city': 'New York', 'country': 'Three', 'location_id': 'new-york_three'}]
+
+        assert process_non_orgs(location_table, set(), ['id']) == expected_result
+
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.bool_convert')
+    def test_process_non_orgs_converts_boolean_columns(self, mocked_bool_convert):
+        df = pd.DataFrame({'uuid': ['111', '222', '333'],
+                           'is_cool': ['t', 'f', 'bar']})
+
+        mocked_bool_convert.side_effect = [True, False, None]
+
+        expected_result = [{'id': '111', 'is_cool': True},
+                           {'id': '222', 'is_cool': False},
+                           {'id': '333', 'is_cool': None}]
+
+        assert process_non_orgs(df, set(), ['id']) == expected_result
