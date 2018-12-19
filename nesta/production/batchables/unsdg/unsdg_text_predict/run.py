@@ -1,3 +1,4 @@
+import boto3
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError
 import logging
