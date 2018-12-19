@@ -9,6 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import (clean_and_tokenize,
         build_ngrams, filter_by_idf)
+from nesta.packages.s3_utils.s3_transfer import 
 
 def dummy_model(text):
     ''' dummy_model
@@ -24,8 +25,21 @@ def dummy_model(text):
     return predictions
 
 def retrieve_id_file(bucket, key):
-    #TODO
-    pass
+    ''' retrieve_id_file
+    Returns list of doc ids from a text file.
+    
+    Args:
+        bucket (str): s3 bucket
+        key (str): key for an s3 object
+
+    Returns:
+        ids (:obj:`list` of :obj:`int`): list of ids
+    '''
+    s3 = boto3.resource('s3')
+    obj = s3.Object(bucket, key)
+    filestream = obj.get()['Body']
+    ids = [int(i) for i in filestream.read().splitlines()]
+    return ids
 
 def get_abstract_by_id():
     pass
