@@ -36,6 +36,8 @@ How do I add a new user to the server?
 --------------------------------------
 
 - add the user with :code:`useradd --create-home username`
+- add sudo privileges
+- add to ec2 user group with :code:`sudo usermod -a -G ec2-user username`
 - set a temp password with :code:`passwd username`
 - copy :code:`.bashrc` to their home directory
 - copy and chown :code:`.ssh/authorized_keys` to their username and group
@@ -43,3 +45,6 @@ How do I add a new user to the server?
 - copy :code:`production/config` files
 - set password to be changed next login :code:`chage -d 0 username`
 - share the temp password and core pem file
+
+If necessary:
+- :code:`sudo chmod g+w /var/tmp/batch`
