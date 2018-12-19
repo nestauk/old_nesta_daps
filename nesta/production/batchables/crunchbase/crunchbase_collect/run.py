@@ -31,7 +31,7 @@ def run():
     logging.info(f"Processing {table} file")
 
     # database setup
-    engine = get_mysql_engine(db_config, "mysqldb", db_name)
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     try_until_allowed(Base.metadata.create_all, engine)
     table_name = f"crunchbase_{table}"
     table_class = get_class_by_tablename(Base, table_name)

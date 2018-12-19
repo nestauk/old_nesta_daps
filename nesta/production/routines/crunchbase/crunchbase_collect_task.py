@@ -76,7 +76,7 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
             done = table in DONE_KEYS
             params = {"table": table,
                       "config": "mysqldb.config",
-                      "db_name": "production" if not self.test else "dev",
+                      "db_name": "dev" if self.test else "production",
                       "batch_size": self.insert_batch_size,
                       "outinfo": "s3://nesta-production-intermediate/%s" % table,
                       "test": self.test,
