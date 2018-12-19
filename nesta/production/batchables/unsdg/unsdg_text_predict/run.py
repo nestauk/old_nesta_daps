@@ -9,7 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import (clean_and_tokenize,
         build_ngrams, filter_by_idf)
-from nesta.packages.s3_utils.s3_transfer import 
+
 
 def dummy_model(text):
     ''' dummy_model
