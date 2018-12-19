@@ -25,7 +25,6 @@ class RootTask(luigi.WrapperTask):
     '''
     date = luigi.DateParameter(default=datetime.date.today())
     production = luigi.BoolParameter(default=False)
-    db_config_path = luigi.Parameter(default='mysqldb.config')
     insert_batch_size = luigi.IntParameter(default=500)
 
     def requires(self):
@@ -36,7 +35,7 @@ class RootTask(luigi.WrapperTask):
         yield NonOrgCollectTask(date=self.date,
                 _routine_id=_routine_id,
                 test=not self.production,
-                db_config_path=self.db_config_path,
+                db_config_path=find_filepath_from_pathstub("mysqldb.config")
                 insert_batch_size=self.insert_batch_size,
                 batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
                 env_files=[find_filepath_from_pathstub("nesta/nesta/"),
