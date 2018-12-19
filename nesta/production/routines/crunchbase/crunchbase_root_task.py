@@ -25,6 +25,7 @@ class RootTask(luigi.WrapperTask):
     '''
     date = luigi.DateParameter(default=datetime.date.today())
     production = luigi.BoolParameter(default=False)
+    db_config_path = luigi.Parameter(default='mysqldb.config')
     insert_batch_size = luigi.IntParameter(default=500)
 
     def requires(self):
