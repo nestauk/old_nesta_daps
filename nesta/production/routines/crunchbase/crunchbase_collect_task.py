@@ -8,22 +8,22 @@ Organizations, category_groups, org_parents and organization_descriptions should
 already been processed; this task picks up all other files to be imported.
 '''
 
-import luigi
+import boto3
 import logging
+import luigi
 
 from nesta.packages.crunchbase import get_csv_list
-from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks import autobatch
+from crunchbase_org_collect_task import OrgCollectTask
 
-import boto3
 
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
-class CollectNonOrgsTask(autobatch.AutoBatchTask):
+class NonOrgCollectTask(autobatch.AutoBatchTask):
     '''Download tar file of csvs and load them into the MySQL server.
 
     Args:
@@ -36,10 +36,17 @@ class CollectNonOrgsTask(autobatch.AutoBatchTask):
     db_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
 
+    def requires(self):
+        yield OrgCollectTask(date=self.date,
+                             _routine_id=self._routine_id,
+                             test=self.test,
+                             insert_batch_size=self.insert_batch_size,
+                             db_config_env='MYSQLDB')
+
     def output(self):
         '''Points to the output database engine'''
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = "production" if not self.test else "dev"
+        db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
         update_id = "CrunchbaseCollectData_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)

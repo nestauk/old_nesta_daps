@@ -26,9 +26,9 @@ class OrgCollectTask(luigi.Task):
     """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
-    db_config_env = luigi.Parameter()
-    insert_batch_size = luigi.IntParameter(default=500)
     test = luigi.BoolParameter()
+    insert_batch_size = luigi.IntParameter(default=500)
+    db_config_env = luigi.Parameter()
 
     def output(self):
         """Points to the output database engine"""
