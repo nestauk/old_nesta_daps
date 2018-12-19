@@ -103,17 +103,17 @@ def exists(_class, **kwargs):
 
 
 def get_class_by_tablename(Base, tablename):
-  """Return class reference mapped to table.
+    """Return class reference mapped to table.
 
-  Args:
-      tablename (str): Name of table.
+    Args:
+        tablename (str): Name of table.
 
-  Returns:
-      reference or None.
-  """
-  for c in Base._decl_class_registry.values():
-      if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-          return c
+    Returns:
+        reference or None.
+    """
+    for c in Base._decl_class_registry.values():
+        if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
+            return c
 
 
 def try_until_allowed(f, *args, **kwargs):
@@ -137,12 +137,12 @@ def try_until_allowed(f, *args, **kwargs):
 
 def get_mysql_engine(db_env, section, database="production_tests"):
     '''Generates the MySQL DB engine for tests
-    
+
     Args:
-        db_env (str): Name of environmental variable 
+        db_env (str): Name of environmental variable
                       describing the path to the DB config.
         section (str): Section of the DB config to use.
-        database (str): Which database to use 
+        database (str): Which database to use
                         (default is a database called 'production_tests')
     '''
 
@@ -163,7 +163,7 @@ def get_mysql_engine(db_env, section, database="production_tests"):
                   port=conf['port'],
                   database=database)
     # Create the database
-    return create_engine(url, connect_args={"charset":"utf8mb4"})
+    return create_engine(url, connect_args={"charset": "utf8mb4"})
 
 
 def create_elasticsearch_index(es_client, index, config_path=None):
