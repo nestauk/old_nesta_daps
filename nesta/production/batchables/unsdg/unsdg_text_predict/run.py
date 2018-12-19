@@ -20,7 +20,7 @@ def dummy_model(text):
     n_goals = randint(1, 3)
 
     predictions = []
-    for _ in n_goals:
+    for _ in range(n_goals):
         predictions.append(goals.pop(randint(len(goals))))
 
     return predictions
