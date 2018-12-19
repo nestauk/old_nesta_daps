@@ -69,7 +69,7 @@ def run():
         # preprocess text
         text = preprocess('dummy text')
         # predict SDGs
-        predictions = dummy_model()
+        predictions = dummy_model(text)
         # insert into ES
         put_unsdg_terms(predictions)
         doc_predictions.append(
@@ -78,10 +78,19 @@ def run():
                  'terms_unsdg_': predictions,
                  }
             )
-       # not sure if needed
-#    doc_predictions = schema_transformer(doc_predictions, filename="unsdg.json",
-#            from_key="tier_0", to_key="tier_1", ignore=["doc_id"]
-#            )
+
+    es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
+    logging.warning(f'writing {len(doc_predictions)} documents to elasticsearch')
+    for doc in doc_predictions:
+        uid = doc.pop("doc_id")
+        try:
+            existing = es.get(es_config['index'], doc_type=es_config['type'], id=uid)['_source']
+        except NotFoundError:
+            logging.warning(f"Missing project for abstract: {uid}")
+        else:
+            doc = {**existing, **doc}
+            es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
+
 
     logging.info('finished')
 
