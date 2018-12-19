@@ -1,3 +1,4 @@
+import ast
 import boto3
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError
@@ -59,7 +60,7 @@ def run():
     model_bucket = os.environ["BATCHPAR_model_bucket"]
     model_key_prefix = os.environ["BATCHPAR_model_key_prefix"]
     model_date = os.environ["BATCHPAR_model_date"]
-    es_config = os.environ["BATCHPAR_outinfo"]
+    es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
     
     ids = retrieve_id_file(ids_bucket, ids_key)
     
