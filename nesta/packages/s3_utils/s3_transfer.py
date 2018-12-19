@@ -1,6 +1,7 @@
 import boto3
+import math
 
-from nesta.packages.misc_tools.misc import chunks
+from nesta.packages.misc_tools.misc import chunker
 
 
 def get_latest(bucket, key=None):
@@ -27,6 +28,31 @@ def get_latest(bucket, key=None):
     return latest
 
 def chunk_iterable_to_txt(iterable, bucket, key_prefix, n=10000):
+    ''' chunk_iterable_to_txt
+    Groups the elements of an iterable into n-sized chunks and writes them to
+    newline delimited text files in S3.
+
+    Args:
+        iterable (iter): an iterable
+        bucket (str): s3 bucket name
+        key_prefix (str): key prefix for the files. Can include braces which
+            will be formatted with the chunk number.
+
+    '''
     s3_client = boto3.client('s3')
 
-    chunks = chunks(iterable, n)
+    chunks = chunker(iterable, n)
+
+    for i, chunk in enumerate(chunks):
+        body = '\n'.join(chunk).strip()
+        if '{}' in key_prefix:
+            key = key_prefix.format(i)
+        else:
+            key = key_prefix + f'_{i}'
+        response = s3_client.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=body,
+                )
+        yield key
+
