@@ -75,12 +75,13 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
 
         job_params = []
         for table in tables:
-            done = table in DONE_KEYS
+            key = f"{table}_{db_name}"
+            done = key in DONE_KEYS
             params = {"table": table,
                       "config": "mysqldb.config",
                       "db_name": db_name,
                       "batch_size": self.insert_batch_size,
-                      "outinfo": f"s3://nesta-production-intermediate/{table}_{db_name}",
+                      "outinfo": f"s3://nesta-production-intermediate/{key}",
                       "test": self.test,
                       "done": done}
             job_params.append(params)
