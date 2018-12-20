@@ -5,12 +5,16 @@ from elasticsearch.exceptions import NotFoundError
 import logging
 from numpy.random import randint
 import os
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
-from nesta.packages.nlp_utils.preprocess import (clean_and_tokenize,
-        build_ngrams, filter_by_idf)
+from nesta.packages.nlp_utils.preprocess import clean_and_tokenize
+from nesta.packages.s3_utils.s3_transfer import get_pkl_object
 
 
 def dummy_model(text):
@@ -58,11 +62,12 @@ def run():
     ids_bucket = os.environ["BATCHPAR_id_bucket"]
     ids_key = os.environ["BATCHPAR_id_key"]
     model_bucket = os.environ["BATCHPAR_model_bucket"]
-    model_key_prefix = os.environ["BATCHPAR_model_key_prefix"]
+    model_key = os.environ["BATCHPAR_model_key"]
     model_date = os.environ["BATCHPAR_model_date"]
     es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
     
     ids = retrieve_id_file(ids_bucket, ids_key)
+    model = get_pkl_object(model_bucket, model_key) 
     
     doc_predictions = []
     for doc_id in ids:

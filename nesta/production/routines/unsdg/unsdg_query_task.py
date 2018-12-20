@@ -9,6 +9,8 @@ from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
+from nesta.packages.s3_utils.s3_tranfer import get_latest 
+
 
 class QueryGroupTask(autobatch.AutoBatchTask):
     ''' Queries Elasticsearch for entries which do not have up-to-date UNSDG
@@ -118,14 +120,21 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         id_bucket = 'nesta-production-intermediate'
         id_key_prefix = 'unsdg_prediction/ids_{}.txt'
         model_bucket = 'nesta-sdg-classifier'
-        model_key_prefix = 'models'
+        model_key_prefix = 'models/sdg_classifier'
 
-        model_date = "2018-01-01T12:59:59"
-        # model_date = get_model_date(model_bucket, model_key_prefix)
+#        model_date = "2018-01-01T12:59:59"
+
+        latest_model = get_latest(model_bucket, key=model_key_prefix)
+        model_date = latest_model.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
+        model_key = latest_model.key
 
         query_results = self.all_unlabelled(es, model_date, es_mode)
-
-        chunk_key_ids = self.chunk_ids_to_s3(query_results, id_bucket, id_key_prefix, test=self.test)
+        chunk_key_ids = self.chunk_ids_to_s3(
+                query_results,
+                id_bucket,
+                id_key_prefix,
+                test=self.test
+                )
 
         job_params = []
         for chunk_key_id in chunk_key_ids:
@@ -133,7 +142,7 @@ class QueryGroupTask(autobatch.AutoBatchTask):
                     'id_key': chunk_key_id,
                     'id_bucket': id_bucket,
                     'model_bucket': model_bucket,
-                    'model_key_prefix': model_key_prefix,
+                    'model_key': model_key,
                     'model_date': model_date,
                     'outinfo': es_config,
                     'done': False

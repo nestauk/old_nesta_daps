@@ -1,7 +1,9 @@
 import boto3
+from io import BytesIO
 import math
+import pickle
 
-from nesta.packages.misc_tools.misc import chunker
+from nesta.packages.misc_utils.misc import chunker
 
 
 def get_latest(bucket, key=None):
@@ -56,3 +58,24 @@ def chunk_iterable_to_txt(iterable, bucket, key_prefix, n=10000):
                 )
         yield key
 
+def get_pkl_object(bucket, key):
+    ''' get_pkl_object
+    Retrieves an object from S3 and unpickles it.
+
+    Args:
+        bucket (str): s3 bucket
+        key (str): s3 key
+
+    Returns:
+        model: an unpickled model
+    '''
+    s3 = boto3.resource('s3')
+
+    model_obj = s3.Object(bucket, key)
+
+    with BytesIO() as model:
+        model_obj.download_fileobj(model)
+        model.seek(0)
+        model = pickle.load(model)
+
+    return model
