@@ -2,7 +2,6 @@ import pytest
 from unittest import mock
 import datetime
 import pandas as pd
-import os
 
 from nesta.packages.nomis.nomis import get_base
 from nesta.packages.nomis.nomis import get_code_pairs
@@ -33,6 +32,11 @@ def df(columns):
 @pytest.fixture
 def dummy_row():
     return [{'TypeName': 'test', 'nomis_id': 1}]
+
+@pytest.fixture
+def nomis_config():
+    return {"date_format": "%Y-%m", "geography_type":"1,2,3", "dataset": 1}
+
 
 def test_get_base():
     x = "something"
@@ -75,19 +79,17 @@ def test_failed_find_geographies(mocked, dummy_row):
         find_geographies("_test_")
 
 @mock.patch("nesta.packages.nomis.nomis.find_geographies")
-def test_process_config(mocked, columns):
-    mocked.side_effect = lambda x,y: columns
-    this_dir = os.path.dirname(__file__)
-    dirname = os.path.join(this_dir, '../../../production/config/official_data/')
-    for filename in os.listdir(dirname):        
-        if not filename.endswith(".config"):
-            continue
-        filename = filename.replace(".config", "")
-        config, geogs_list, dataset_id, date_format = process_config(filename)
-        for geogs in geogs_list:
-            assert len(geogs) == len(columns)
+@mock.patch("nesta.packages.nomis.nomis.get_config")
+def test_process_config(mocked_get_config, mocked_find_geographies, columns, nomis_config):
+    mocked_find_geographies.side_effect = lambda x,y: columns
+    mocked_get_config.side_effect = lambda x,y: nomis_config.copy()
 
-        config, geogs_list, dataset_id, date_format = process_config(filename, test=True)
-        for geogs in geogs_list:
-            assert len(geogs) == 1
+    config, geogs_list, dataset_id, date_format = process_config("dummy")
+    assert len(geogs_list) == len(nomis_config["geography_type"].split(","))
+    for geogs in geogs_list:
+        assert len(geogs) == len(columns)
+        
+    config, geogs_list, dataset_id, date_format = process_config("dummy", test=True)
+    for geogs in geogs_list:
+        assert len(geogs) == 1
         
