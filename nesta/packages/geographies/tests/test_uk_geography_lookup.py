@@ -26,9 +26,9 @@ def pars_for_get_children():
 def side_effect_for_get_children():
     return ([1, 2], [2, 3], ["A", 3], ["5", 4], [])
 
-@mock.patch("nesta.packages.geographies.uk_geography_lookup.CONFIG", "dummy.config")
+@mock.patch("nesta.packages.geographies.uk_geography_lookup.find_filepath_from_pathstub", return_value=None)
 @mock.patch("builtins.open", new_callable=mock.mock_open, read_data=SPARQL_QUERY)
-def test_get_gss_codes(mocked_open):
+def test_get_gss_codes(mocked_open, mocked_find_filepath_from_pathstub):
     codes = get_gss_codes(test=True)
     assert len(codes) > 100
 

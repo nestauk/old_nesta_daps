@@ -9,7 +9,6 @@ COLLECTION = "http://statistics.data.gov.uk/def/geography/collection/{}"
 WITHIN = "http://statistics.data.gov.uk/id/statistical-geography/{}"
 OFFICIAL_NAME = "http://statistics.data.gov.uk/def/statistical-geography#officialname"
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
-CONFIG = find_filepath_from_pathstub("fetch_geography_codes.sparql")
 
 
 def _get_children(base, geocode):
@@ -62,6 +61,7 @@ def get_gss_codes(test=False):
     Returns:
         List of UK geography codes.
     """
+    CONFIG = find_filepath_from_pathstub("fetch_geography_codes.sparql")
     with open(CONFIG) as f:
         query = f.read().replace("\n", " ")
     data = sparql_query(ENDPOINT, query, test=test)
