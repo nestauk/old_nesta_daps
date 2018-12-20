@@ -322,6 +322,20 @@ class TestProcessNonOrgs():
 
     @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
     @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')
+    def test_process_non_orgs_calls_generate_composite_key_correctly(self, mocked_iso_code,
+                                                                     mocked_comp_key, location_table):
+        mocked_iso_code.side_effect = ['One', 'Two', 'Three']
+        mocked_comp_key.side_effect = ['london_one', 'paris_two', 'new-york_three']
+
+        expected_calls = [mock.call(city='London', country='One'),
+                          mock.call(city='Paris', country='Two'),
+                          mock.call(city='New York', country='Three')]
+
+        process_non_orgs(location_table, set(), ['id'])
+        assert mocked_comp_key.mock_calls == expected_calls
+
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
+    @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')
     def test_process_non_orgs_inserts_none_when_location_id_fails(self, mocked_iso_code,
                                                                   mocked_comp_key, location_table):
         mocked_iso_code.side_effect = ['One', 'Two', 'Three']

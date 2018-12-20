@@ -86,11 +86,32 @@ def rename_uuid_columns(data):
 
 
 def bool_convert(value):
+    """Converter from string representations of bool to python bools.
+
+    Args:
+        value (str): t or f
+
+    Returns:
+        (bool): boolean representation of the field, or None on failure
+    """
     lookup = {'t': True, 'f': False}
     try:
         return lookup[value]
     except KeyError:
         logging.info(f"Not able to convert to a boolean: {value}")
+
+
+def _generate_composite_key(**kwargs):
+    """Wrapper around generate_composite_key to treat errors and therefore allow it to
+    be used with pd.apply
+
+    Returns:
+        (str): composite key if able to generate, otherwise None
+    """
+    try:
+        return generate_composite_key(**kwargs)
+    except ValueError:
+        return None
 
 
 def total_records(data_dict, append_to=None):
@@ -201,22 +222,17 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
     orgs = orgs.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
 
-    orgs['location_id'] = None
     orgs['long_description'] = None
     org_cats = []
     cat_groups = cat_groups.set_index(['category_name'])
     missing_cat_groups = set()
     org_descriptions = org_descriptions.set_index(['uuid'])
 
-    for idx, row in orgs.iterrows():
-        # generate composite key for location lookup
-        try:
-            comp_key = generate_composite_key(row.city, row.country)
-        except ValueError:
-            pass
-        else:
-            orgs.at[idx, 'location_id'] = comp_key
+    # generate composite key for location lookup
+    logging.info("Generating composite keys for location")
+    orgs['location_id'] = orgs[['city', 'country']].apply(lambda row: _generate_composite_key(**row), axis=1)
 
+    for idx, row in orgs.iterrows():
         # generate link table data for organization categories
         try:
             for cat in row.category_list.split(','):
@@ -285,20 +301,14 @@ def process_non_orgs(df, existing, pks):
 
     # convert country name and add composite key if locations in table
     if {'city', 'country_code'}.issubset(df.columns):
+        logging.info("Locations found in table. Generating composite keys.")
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
-
-        df['location_id'] = None
-        for idx, row in df.iterrows():
-            # generate composite key for location lookup
-            try:
-                comp_key = generate_composite_key(row.city, row.country)
-            except ValueError:
-                continue
-            df.at[idx, 'location_id'] = comp_key
+        df['location_id'] = df[['city', 'country']].apply(lambda row: _generate_composite_key(**row), axis=1)
 
     # convert any boolean columns to correct values
     for column in (col for col in df.columns if re.match(r'^is_.+', col)):
+        logging.info(f"Converting boolean field {column}")
         df[column] = df[column].apply(bool_convert)
 
     df = df.to_dict(orient='records')
