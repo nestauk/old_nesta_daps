@@ -68,7 +68,7 @@ def get_files_from_tar(files, test=False):
         for filename in files:
             dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
                                    low_memory=False, nrows=nrows))
-            logging.info(f"Collected {filename} from crunchbase tarfile")
+            logging.warning(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
 
@@ -176,7 +176,7 @@ def _insert_data(config, section, database, base, table, data, batch_size=500):
         batch_size (int): size of bulk inserts into the db
     """
     total_rows_in = len(data)
-    logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
+    logging.warning(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
     totals = None
     for batch in split_batches(data, batch_size):
@@ -188,8 +188,8 @@ def _insert_data(config, section, database, base, table, data, batch_size=500):
 
         totals = total_records(returned, totals)
         for k, v in totals.items():
-            logging.info(f"{k} rows: {v}")
-        logging.info("--------------")
+            logging.debug(f"{k} rows: {v}")
+        logging.debug("--------------")
         if totals['batch_total'] != len(batch):
             raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
 
@@ -294,21 +294,21 @@ def process_non_orgs(df, existing, pks):
     total_records = len(df)
     drop_mask = df[pks].apply(lambda row: tuple(row[pks]) in existing, axis=1)
     df = df.loc[~drop_mask]
-    logging.info(f"Dropped {total_records - len(df)} rows already existing in database")
+    logging.warning(f"Dropped {total_records - len(df)} rows already existing in database")
 
     # change NaNs to None
     df = df.where(df.notnull(), None)
 
     # convert country name and add composite key if locations in table
     if {'city', 'country_code'}.issubset(df.columns):
-        logging.info("Locations found in table. Generating composite keys.")
+        logging.warning("Locations found in table. Generating composite keys.")
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
         df['location_id'] = df[['city', 'country']].apply(lambda row: _generate_composite_key(**row), axis=1)
 
     # convert any boolean columns to correct values
     for column in (col for col in df.columns if re.match(r'^is_.+', col)):
-        logging.info(f"Converting boolean field {column}")
+        logging.warning(f"Converting boolean field {column}")
         df[column] = df[column].apply(bool_convert)
 
     df = df.to_dict(orient='records')
