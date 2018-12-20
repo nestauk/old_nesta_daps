@@ -39,7 +39,7 @@ def run():
     df = get_files_from_tar([table], test=test)[0]
     logging.warning(f"{len(df)} rows in file")
 
-    # get primary keys and set of all existing in the db
+    # get primary key fields and set of all those already existing in the db
     pk_cols = list(table_class.__table__.primary_key.columns)
     pk_names = [pk.name for pk in pk_cols]
     with db_session(engine) as session:
@@ -50,10 +50,12 @@ def run():
     _insert_data("BATCHPAR_config", 'mysqldb', db_name, Base, table_class,
                  processed_rows, batch_size=batch_size)
 
-    # Mark the task as done
+    logging.warning(f"Marking task as done to {s3_path}")
     s3 = boto3.resource('s3')
     s3_obj = s3.Object(*parse_s3_path(s3_path))
     s3_obj.put(Body="")
+
+    logging.warning("Batch job complete.")
 
 
 if __name__ == "__main__":
