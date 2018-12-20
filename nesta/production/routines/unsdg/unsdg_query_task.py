@@ -9,7 +9,7 @@ from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from nesta.packages.s3_utils.s3_tranfer import get_latest 
+from nesta.packages.s3_utils.s3_transfer import get_latest 
 
 
 class QueryGroupTask(autobatch.AutoBatchTask):
