@@ -91,10 +91,8 @@ def run():
         if abstract is not None:
         # preprocess text
             abstract_clean = ' '.join(clean_and_tokenize(abstract, remove_stops=True))
-            # text = preprocess('dummy text')
             # predict SDGs
-            predictions = [model.predict([abstract_clean])]
-            # predictions = dummy_model(text)
+            predictions = model.predict([abstract_clean]).tolist()
             # insert into ES
             doc_predictions.append(
                     {'doc_id': doc_id,
