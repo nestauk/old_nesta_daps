@@ -71,18 +71,20 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
         if not all(table in all_csvs for table in tables):
             raise ValueError("Crunchbase export is missing one or more required tables")
 
+        db_name = 'dev' if self.test else 'production'
+
         job_params = []
         for table in tables:
             done = table in DONE_KEYS
             params = {"table": table,
                       "config": "mysqldb.config",
-                      "db_name": "dev" if self.test else "production",
+                      "db_name": db_name,
                       "batch_size": self.insert_batch_size,
-                      "outinfo": "s3://nesta-production-intermediate/%s" % table,
+                      "outinfo": f"s3://nesta-production-intermediate/{table}_{db_name}",
                       "test": self.test,
                       "done": done}
             job_params.append(params)
-        logging.info(job_params)
+            logging.info(params)
         return job_params
 
     def combine(self, job_params):
