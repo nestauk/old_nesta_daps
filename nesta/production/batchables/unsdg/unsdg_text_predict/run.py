@@ -96,7 +96,6 @@ def run():
             predictions = [model.predict([abstract_clean])]
             # predictions = dummy_model(text)
             # insert into ES
-            put_unsdg_terms(predictions)
             doc_predictions.append(
                     {'doc_id': doc_id,
                      'date_unsdg_model': model_date,
