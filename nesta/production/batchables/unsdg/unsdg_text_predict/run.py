@@ -90,7 +90,7 @@ def run():
                 )
         if abstract is not None:
         # preprocess text
-            abstract_clean = ' '.join(clean_and_tokenize(abstract))
+            abstract_clean = ' '.join(clean_and_tokenize(abstract, remove_stops=True))
             # text = preprocess('dummy text')
             # predict SDGs
             predictions = [model.predict([abstract_clean])]
