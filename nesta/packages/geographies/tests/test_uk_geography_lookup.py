@@ -4,6 +4,20 @@ from nesta.packages.geographies.uk_geography_lookup import get_gss_codes
 from nesta.packages.geographies.uk_geography_lookup import get_children
 from nesta.packages.geographies.uk_geography_lookup import _get_children
 
+SPARQL_QUERY = '''
+PREFIX entity: <http://statistics.data.gov.uk/def/statistical-entity#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?area_code
+WHERE {
+    ?area_entity entity:code ?area_code_entity;
+    rdfs:label ?area_code .
+    ?area_code_entity rdfs:label ?area_code_type;
+    FILTER(SUBSTR(?area_code_type, 2, 2) > "01").
+}
+'''
+    
+
 @pytest.fixture
 def pars_for_get_children():
     return dict(base="dummy", geocodes="dummy", max_attempts=3)
@@ -12,7 +26,9 @@ def pars_for_get_children():
 def side_effect_for_get_children():
     return ([1, 2], [2, 3], ["A", 3], ["5", 4], [])
 
-def test_get_gss_codes():
+@mock.patch("nesta.packages.geographies.uk_geography_lookup.CONFIG", "dummy.config")
+@mock.patch("builtins.open", new_callable=mock.mock_open, read_data=SPARQL_QUERY)
+def test_get_gss_codes(mocked_open):
     codes = get_gss_codes(test=True)
     assert len(codes) > 100
 
