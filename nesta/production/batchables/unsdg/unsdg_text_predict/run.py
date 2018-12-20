@@ -47,14 +47,22 @@ def retrieve_id_file(bucket, key):
     ids = [int(i) for i in filestream.read().splitlines()]
     return ids
 
-def get_abstract_by_id():
-    pass
+def get_abstract_by_id(es_client, index, doc_type, doc_id):
+    ''' get_abstract_by_id
 
-def preprocess(text):
-    return text
+    Args:
+        es_client (object): instantiated elasticsearch client
+	index (str): name of the index
+	doc_type (str): name of the document type
+	idx (int): id of the document
+    
+    Returns:
+        abstract (str): abstract of the document
+    '''
 
-def put_unsdg_terms(labels):
-    pass
+    res = es_client.get(index=index, doc_type=doc_type, id=doc_id)
+    abstract = res['_source'].get('textBody_abstract_project')
+    return abstract
 
 def run():
     logging.getLogger().setLevel(logging.WARNING)
@@ -67,25 +75,35 @@ def run():
     es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
     
     ids = retrieve_id_file(ids_bucket, ids_key)
-    model = get_pkl_object(model_bucket, model_key) 
+    model = get_pkl_object(model_bucket, model_key)
+
+    es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
     
     doc_predictions = []
     for doc_id in ids:
         # query ES for text of record with id
+        abstract = get_abstract_by_id(
+                es, 
+                index=es_config['index'], 
+                doc_type=['type'], 
+                doc_id=doc_id
+                )
+        if abstract is not None:
         # preprocess text
-        text = preprocess('dummy text')
-        # predict SDGs
-        predictions = dummy_model(text)
-        # insert into ES
-        put_unsdg_terms(predictions)
-        doc_predictions.append(
-                {'doc_id': doc_id,
-                 'date_unsdg_model': model_date,
-                 'terms_unsdg_abstract': predictions,
-                 }
-            )
+            abstract_clean = ' '.join(clean_and_tokenize(abstract))
+            # text = preprocess('dummy text')
+            # predict SDGs
+            predictions = [model.predict([abstract_clean])]
+            # predictions = dummy_model(text)
+            # insert into ES
+            put_unsdg_terms(predictions)
+            doc_predictions.append(
+                    {'doc_id': doc_id,
+                     'date_unsdg_model': model_date,
+                     'terms_unsdg_abstract': predictions,
+                     }
+                )
 
-    es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
     logging.warning(f'writing {len(doc_predictions)} documents to elasticsearch')
     for doc in doc_predictions:
         uid = doc.pop("doc_id")
