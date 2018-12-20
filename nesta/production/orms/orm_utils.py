@@ -16,8 +16,7 @@ import json
 import logging
 import time
 
-
-def insert_data(db_env, section, database, Base, _class, data):
+def insert_data(db_env, section, database, Base, _class, data, low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -30,6 +29,9 @@ def insert_data(db_env, section, database, Base, _class, data):
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): To speed things up significantly, you can read
+                           all pkeys into memory first, but this will blow
+                           up for heavy pkeys or large tables.
 
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
@@ -38,25 +40,35 @@ def insert_data(db_env, section, database, Base, _class, data):
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    # Add the data                                                       
+    # Add the data
     all_pks = set()
     objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    for row in data:
+    # Read all pks if in low_memory mode
+    if low_memory:
+        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+        all_pks = set(session.query(*fields).all())
+    for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
             logging.warning(f"{row} does not contain any of "
                             "{[pkey.name in row for pkey in pkey_cols]}")
             continue
-        # The row mustn't already exist in the db data
-        if session.query(exists(_class, **row)).scalar():
-            continue
+        # Generate the pkey for this row
+        pk = tuple([row[pkey.name]                       # Cast to str if required, since
+                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
+                    else str(row[pkey.name])             # the type as int
+                    for pkey in pkey_cols])
+
         # The row mustn't aleady exist in the input data
-        pk = tuple([row[pkey.name] for pkey in pkey_cols])
         if pk in all_pks:
             continue
         all_pks.add(pk)
+        # Nor should the row exist in the DB
+        if not low_memory and session.query(exists(_class, **row)).scalar():
+            continue
         objs.append(_class(**row))
+
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
@@ -79,17 +91,18 @@ def exists(_class, **kwargs):
 
 
 def get_class_by_tablename(Base, tablename):
-  """Return class reference mapped to table.
+    """Return class reference mapped to table.
 
-  Args:
-      tablename (str): Name of table.
+    Args:
+        tablename (str): Name of table.
 
-  Returns:
-      reference or None.
-  """
-  for c in Base._decl_class_registry.values():
-      if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-          return c
+    Returns:
+        reference or None.
+    """
+    for c in Base._decl_class_registry.values():
+        if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
+            return c
+    raise NameError(tablename)
 
 
 def try_until_allowed(f, *args, **kwargs):
@@ -113,12 +126,12 @@ def try_until_allowed(f, *args, **kwargs):
 
 def get_mysql_engine(db_env, section, database="production_tests"):
     '''Generates the MySQL DB engine for tests
-    
+
     Args:
-        db_env (str): Name of environmental variable 
+        db_env (str): Name of environmental variable
                       describing the path to the DB config.
         section (str): Section of the DB config to use.
-        database (str): Which database to use 
+        database (str): Which database to use
                         (default is a database called 'production_tests')
     '''
 
