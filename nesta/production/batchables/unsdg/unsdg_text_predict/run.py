@@ -85,7 +85,7 @@ def run():
         abstract = get_abstract_by_id(
                 es, 
                 index=es_config['index'], 
-                doc_type=['type'], 
+                doc_type=es_config['type'], 
                 doc_id=doc_id
                 )
         if abstract is not None:

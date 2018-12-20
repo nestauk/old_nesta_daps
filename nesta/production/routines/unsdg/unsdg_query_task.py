@@ -122,8 +122,6 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         model_bucket = 'nesta-sdg-classifier'
         model_key_prefix = 'models/sdg_classifier'
 
-#        model_date = "2018-01-01T12:59:59"
-
         latest_model = get_latest(model_bucket, key=model_key_prefix)
         model_date = latest_model.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
         model_key = latest_model.key
