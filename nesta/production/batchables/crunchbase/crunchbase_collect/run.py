@@ -27,7 +27,7 @@ def run():
     batch_size = int(os.environ["BATCHPAR_batch_size"])
     s3_path = os.environ["BATCHPAR_outinfo"]
 
-    logging.info(f"Processing {table} file")
+    logging.warning(f"Processing {table} file")
 
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -37,7 +37,7 @@ def run():
 
     # collect file
     df = get_files_from_tar([table], test=test)[0]
-    logging.info(f"{len(df)} rows in file")
+    logging.warning(f"{len(df)} rows in file")
 
     # get primary keys and set of all existing in the db
     pk_cols = list(table_class.__table__.primary_key.columns)
