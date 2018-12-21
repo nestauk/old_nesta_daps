@@ -5,10 +5,11 @@ Crunchbase geocoding
 Luigi routine to geocode the organizations table.
 '''
 
-import boto3
-import datetime
+# import boto3
+# import datetime
 import logging
 import luigi
+import os
 
 from crunchbase_non_org_collect_task import NonOrgCollectTask
 from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
@@ -21,11 +22,11 @@ class OrgGeocodeTask(GeocodeBatchTask):
     date = luigi.DateParameter()
     production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
-    insert_batch_size = luigi.IntParameter(default=100)
+    insert_batch_size = luigi.IntParameter()
 
     def output(self):
         '''Points to the output database engine'''
-        db_config = get_config(self.db_config_path, "mysqldb")
+        db_config = get_config(os.environ[self.db_config_env], "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
         update_id = "CrunchbaseCollectNonOrgData_{}".format(self.date)

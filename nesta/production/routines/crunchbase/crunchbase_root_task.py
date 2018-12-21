@@ -40,7 +40,7 @@ class RootTask(luigi.WrapperTask):
                              city_col=Organization.city,
                              country_col=Organization.country,
                              location_key_col=Organization.location_id,
-
+                             insert_batch_size=self.insert_batch_size,
                              # batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
                              env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                                         find_filepath_from_pathstub("config/mysqldb.config"),
