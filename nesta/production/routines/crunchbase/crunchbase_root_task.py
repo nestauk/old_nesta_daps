@@ -9,8 +9,9 @@ import luigi
 import datetime
 import logging
 
-from crunchbase_collect_task import NonOrgCollectTask
+from crunchbase_geocode_orgs_task import OrgGeocodeTask
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.orms.crunchbase_orm import Organization
 
 
 class RootTask(luigi.WrapperTask):
@@ -32,19 +33,22 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
-        yield NonOrgCollectTask(date=self.date,
-                                _routine_id=_routine_id,
-                                test=not self.production,
-                                db_config_path=find_filepath_from_pathstub("mysqldb.config"),
-                                insert_batch_size=self.insert_batch_size,
-                                batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
-                                env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                           find_filepath_from_pathstub("config/mysqldb.config"),
-                                           find_filepath_from_pathstub("config/crunchbase.config")],
-                                job_def="py36_amzn1_image",
-                                job_name=f"CrunchBaseNonOrgCollectTask-{_routine_id}",
-                                job_queue="HighPriority",
-                                region_name="eu-west-2",
-                                poll_time=10,
-                                memory=4096,
-                                max_live_jobs=20)
+        yield OrgGeocodeTask(date=self.date,
+                             _routine_id=_routine_id,
+                             test=not self.production,
+                             db_config_env="mysqldb",
+                             city_col=Organization.city,
+                             country_col=Organization.country,
+                             location_key_col=Organization.location_id,
+
+                             # batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
+                             env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                        find_filepath_from_pathstub("config/mysqldb.config"),
+                                        find_filepath_from_pathstub("config/crunchbase.config")],
+                             job_def="py36_amzn1_image",
+                             job_name=f"CrunchBaseNonOrgCollectTask-{_routine_id}",
+                             job_queue="HighPriority",
+                             region_name="eu-west-2",
+                             poll_time=10,
+                             memory=4096,
+                             max_live_jobs=20)
