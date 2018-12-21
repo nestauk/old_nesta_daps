@@ -29,7 +29,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
         db_config = get_config(os.environ[self.db_config_env], "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
-        update_id = "CrunchbaseCollectNonOrgData_{}".format(self.date)
+        update_id = "CrunchbaseGeocodeOrgs_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
@@ -47,7 +47,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
                                            find_filepath_from_pathstub("config/mysqldb.config"),
                                            find_filepath_from_pathstub("config/crunchbase.config")],
                                 job_def="py36_amzn1_image",
-                                job_name=f"CrunchBaseNonOrgCollectTask-{self._routine_id}",
+                                job_name=f"CrunchBaseGeocodeOrgs_routine_id}",
                                 job_queue="HighPriority",
                                 region_name="eu-west-2",
                                 poll_time=10,
