@@ -115,7 +115,7 @@ class GeocodeBatchTask(AutoBatchTask):
             (:obj:`list` of :obj:`dict`) job parameters for each of the batch tasks
         """
         # set up database connectors
-        self.database = 'test' if self.test else 'production'
+        self.database = 'dev' if self.test else 'production'
         self.engine = get_mysql_engine(self.db_config_env, "mysqldb", self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
