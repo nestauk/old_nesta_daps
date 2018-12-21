@@ -36,7 +36,7 @@ class RootTask(luigi.WrapperTask):
         yield OrgGeocodeTask(date=self.date,
                              _routine_id=_routine_id,
                              test=not self.production,
-                             db_config_env="mysqldb",
+                             db_config_env="MYSQLDB",
                              city_col=Organization.city,
                              country_col=Organization.country,
                              location_key_col=Organization.location_id,
