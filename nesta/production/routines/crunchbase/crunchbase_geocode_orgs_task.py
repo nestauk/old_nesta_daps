@@ -20,6 +20,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
     production = luigi.BoolParameter(default=False)
+    _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=100)
 
     def output(self):
@@ -32,11 +33,11 @@ class OrgGeocodeTask(GeocodeBatchTask):
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
-        _routine_id = "{}-{}".format(self.date, self.production)
+        # _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
         yield NonOrgCollectTask(date=self.date,
-                                _routine_id=_routine_id,
+                                _routine_id=self._routine_id,
                                 test=not self.production,
                                 db_config_path=find_filepath_from_pathstub("mysqldb.config"),
                                 insert_batch_size=self.insert_batch_size,
@@ -45,7 +46,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
                                            find_filepath_from_pathstub("config/mysqldb.config"),
                                            find_filepath_from_pathstub("config/crunchbase.config")],
                                 job_def="py36_amzn1_image",
-                                job_name=f"CrunchBaseNonOrgCollectTask-{_routine_id}",
+                                job_name=f"CrunchBaseNonOrgCollectTask-{self._routine_id}",
                                 job_queue="HighPriority",
                                 region_name="eu-west-2",
                                 poll_time=10,
