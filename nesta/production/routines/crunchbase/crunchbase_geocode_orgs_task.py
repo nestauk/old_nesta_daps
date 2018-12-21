@@ -20,7 +20,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
     production = luigi.BoolParameter(default=False)
-    insert_batch_size = luigi.IntParameter()
+    insert_batch_size = luigi.IntParameter(default=100)
 
     def output(self):
         '''Points to the output database engine'''
