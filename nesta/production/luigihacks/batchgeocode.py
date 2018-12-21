@@ -47,7 +47,7 @@ class GeocodeBatchTask(AutoBatchTask):
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
                                                     self.location_key_col):
-                if key not in existing_location_ids:
+                if key not in existing_location_ids and key is not None:
                     logging.info(f"new location {city}, {country}")
                     new_locations.append(dict(id=key, city=city, country=country))
                     existing_location_ids.add(key)
