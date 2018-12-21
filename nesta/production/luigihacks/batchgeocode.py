@@ -53,6 +53,7 @@ class GeocodeBatchTask(AutoBatchTask):
                     existing_location_ids.add(key)
 
         if new_locations:
+            logging.warning(f"Adding {len(new_locations)} new locations to database")
             insert_data(self.db_config_env, "mysqldb", self.database,
                         Base, Geographic, new_locations)
 
