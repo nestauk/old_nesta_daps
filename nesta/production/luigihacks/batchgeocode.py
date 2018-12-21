@@ -42,15 +42,15 @@ class GeocodeBatchTask(AutoBatchTask):
         data table in mysql.
         """
         with db_session(self.engine) as session:
+            existing_location_ids = set(session.query(Geographic.id).all())
             new_locations = []
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
                                                     self.location_key_col):
-                try:
-                    session.query(Geographic).filter(Geographic.id == key).one()
-                except NoResultFound:
+                if key not in existing_location_ids:
                     logging.info(f"new location {city}, {country}")
                     new_locations.append(dict(id=key, city=city, country=country))
+                    existing_location_ids.add(key)
 
         if new_locations:
             insert_data(self.db_config_env, "mysqldb", self.database,

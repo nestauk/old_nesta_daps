@@ -27,20 +27,16 @@ def test_insert_new_locations(mocked_db_session, mocked_insert_data, geo_batch_t
     mocked_query = mock.Mock()
 
     mocked_session.query.side_effect = [
+                            mocked_query,
                             [('London', 'United Kingdom', 'london-united_kingdom'),
                              ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Paris', 'France', 'paris-france'),
-                             ], mocked_query, mocked_query, mocked_query
+                             ('Paris', 'France', 'paris-france')]
                              ]
 
-    mocked_query.filter().one.side_effect = ['london-united_kingdom',
-                                             NoResultFound,
-                                             NoResultFound
-                                             ]
+    mocked_query.all.return_value = [('london-united_kingdom'), ('some-other_place')]
 
     expected_calls = [{'id': 'berlin-germany', 'city': 'Berlin', 'country': 'Germany'},
-                      {'id': 'paris-france', 'city': 'Paris', 'country': 'France'}
-                      ]
+                      {'id': 'paris-france', 'city': 'Paris', 'country': 'France'}]
 
     geo_batch_task._insert_new_locations()
     assert mocked_insert_data.mock_calls[0][1][5] == expected_calls
@@ -55,19 +51,44 @@ def test_insert_no_new_locations(mocked_db_session, mocked_insert_data, geo_batc
     mocked_query = mock.Mock()
 
     mocked_session.query.side_effect = [
+                            mocked_query,
                             [('London', 'United Kingdom', 'london-united_kingdom'),
                              ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Paris', 'France', 'paris-france'),
-                             ], mocked_query, mocked_query, mocked_query
+                             ('Paris', 'France', 'paris-france')]
                              ]
 
-    mocked_query.filter().one.side_effect = ['london-united_kingdom',
-                                             'berlin-germany',
-                                             'paris-france'
-                                             ]
+    mocked_query.all.return_value = [('london-united_kingdom'),
+                                     ('berlin-germany'),
+                                     ('paris-france')]
 
     geo_batch_task._insert_new_locations()
     mocked_insert_data.assert_not_called()
+
+
+@mock.patch('nesta.production.luigihacks.batchgeocode.insert_data')
+@mock.patch('nesta.production.luigihacks.batchgeocode.db_session')
+def test_insert_no_duplicate_locations(mocked_db_session, mocked_insert_data, geo_batch_task):
+    geo_batch_task.engine = ''
+    mocked_session = mock.Mock()
+    mocked_db_session().__enter__.return_value = mocked_session
+    mocked_query = mock.Mock()
+
+    mocked_session.query.side_effect = [
+                            mocked_query,
+                            [('London', 'United Kingdom', 'london-united_kingdom'),
+                             ('Berlin', 'Germany', 'berlin-germany'),
+                             ('Berlin', 'Germany', 'berlin-germany'),
+                             ('Paris', 'France', 'paris-france'),
+                             ('Paris', 'France', 'paris-france')]
+                             ]
+
+    mocked_query.all.return_value = [('london-united_kingdom')]
+
+    expected_calls = [{'id': 'berlin-germany', 'city': 'Berlin', 'country': 'Germany'},
+                      {'id': 'paris-france', 'city': 'Paris', 'country': 'France'}]
+
+    geo_batch_task._insert_new_locations()
+    assert mocked_insert_data.mock_calls[0][1][5] == expected_calls
 
 
 @mock.patch('nesta.production.luigihacks.batchgeocode.time.time')
