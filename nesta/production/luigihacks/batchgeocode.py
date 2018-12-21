@@ -19,20 +19,20 @@ class GeocodeBatchTask(AutoBatchTask):
     when it is subclassed.
 
     Args:
+        test (bool): in test or production mode
+        db_config_env (str): environmental variable pointing to the db config file
         city_col (:obj:`sqlalchemy.Column`): column containing the city
         country_col (:obj:`sqlalchemy.Column`): column containing the full name of the country
-        composite_key_col (:obj:`sqlalchemy.Column`): column containing the generated composite key
-        database_config (str): environmental variable pointing to the db config file
-        database (str): name of the database, ie dev or production
+        location_key_col (:obj:`sqlalchemy.Column`): column containing the generated composite key
         batch_size (int): number of locations to geocode in a batch
         intermediate_bucket (str): s3 bucket where the batch data will be stored
         batchable (str): location of the batchable run.py
     """
+    test = luigi.BoolParameter()
+    db_config_env = luigi.Parameter()
     city_col = luigi.Parameter()
     country_col = luigi.Parameter()
-    composite_key_col = luigi.Parameter()
-    database_config = luigi.Parameter()
-    database = luigi.Parameter()
+    location_key_col = luigi.Parameter()
     batch_size = luigi.IntParameter(default=1000)
     intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
     batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))
@@ -45,7 +45,7 @@ class GeocodeBatchTask(AutoBatchTask):
             new_locations = []
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
-                                                    self.composite_key_col):
+                                                    self.location_key_col):
                 try:
                     session.query(Geographic).filter(Geographic.id == key).one()
                 except NoResultFound:
@@ -53,7 +53,7 @@ class GeocodeBatchTask(AutoBatchTask):
                     new_locations.append(dict(id=key, city=city, country=country))
 
         if new_locations:
-            insert_data(self.database_config, "mysqldb", self.database,
+            insert_data(self.db_config_env, "mysqldb", self.database,
                         Base, Geographic, new_locations)
 
     def _get_uncoded(self):
@@ -115,7 +115,8 @@ class GeocodeBatchTask(AutoBatchTask):
             (:obj:`list` of :obj:`dict`) job parameters for each of the batch tasks
         """
         # set up database connectors
-        self.engine = get_mysql_engine(self.database_config, "mysqldb", self.database)
+        self.database = 'test' if self.test else 'production'
+        self.engine = get_mysql_engine(self.db_config_env, "mysqldb", self.database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # s3 setup
@@ -130,11 +131,12 @@ class GeocodeBatchTask(AutoBatchTask):
             job_params = []
             for batch_file in self._create_batches(uncoded_locations):
                 params = {"batch_file": batch_file,
-                          "config": self.database_config,
+                          "config": 'mysqldb.conf',
                           "db_name": self.database,
                           "bucket": self.intermediate_bucket,
                           "done": False,
-                          "outinfo": ''}
+                          "outinfo": '',
+                          "test": self.test}
                 job_params.append(params)
                 logging.info(params)
             logging.info(f"{len(job_params)} batches to run")
@@ -149,5 +151,5 @@ if __name__ == '__main__':
             pass
 
     geo = MyTask(job_def='', job_name='', job_queue='', region_name='',
-            city_col='', country_col='', composite_key_col='', database_config='',
+            city_col='', country_col='', location_key_col='', database_config='',
             database='')

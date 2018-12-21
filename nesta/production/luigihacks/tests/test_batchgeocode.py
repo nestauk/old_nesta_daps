@@ -9,12 +9,13 @@ from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
 def geo_batch_task():
     class MyTask(GeocodeBatchTask):
         """Empty subclass with the minimum methods to allow instantiation."""
+        database = 'the test database'
+
         def combine(self):
             pass
 
     return MyTask(job_def='', job_name='', job_queue='', region_name='', city_col='',
-                  country_col='', composite_key_col='', database_config='',
-                  database='the_testing_database')
+                  country_col='', location_key_col='', db_config_env='', test=True)
 
 
 @mock.patch('nesta.production.luigihacks.batchgeocode.insert_data')
