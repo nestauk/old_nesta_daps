@@ -47,7 +47,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
                                            find_filepath_from_pathstub("config/mysqldb.config"),
                                            find_filepath_from_pathstub("config/crunchbase.config")],
                                 job_def="py36_amzn1_image",
-                                job_name=f"CrunchBaseGeocodeOrgs_routine_id}",
+                                job_name=f"CrunchBaseGeocodeOrgs-{self._routine_id}",
                                 job_queue="HighPriority",
                                 region_name="eu-west-2",
                                 poll_time=10,
