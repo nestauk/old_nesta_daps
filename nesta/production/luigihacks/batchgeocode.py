@@ -2,7 +2,6 @@ import boto3
 import json
 import logging
 import luigi
-from sqlalchemy.orm.exc import NoResultFound
 import time
 
 from nesta.production.luigihacks.autobatch import AutoBatchTask
@@ -41,7 +40,7 @@ class GeocodeBatchTask(AutoBatchTask):
         """Checks for new city/country combinations and appends them to the geographic
         data table in mysql.
         """
-        limit = 50 if self.test else None
+        limit = 100 if self.test else None
         with db_session(self.engine) as session:
             existing_location_ids = set(session.query(Geographic.id).all())
             new_locations = []
@@ -134,7 +133,7 @@ class GeocodeBatchTask(AutoBatchTask):
             job_params = []
             for batch_file in self._create_batches(uncoded_locations):
                 params = {"batch_file": batch_file,
-                          "config": 'mysqldb.conf',
+                          "config": 'mysqldb.config',
                           "db_name": self.database,
                           "bucket": self.intermediate_bucket,
                           "done": False,
