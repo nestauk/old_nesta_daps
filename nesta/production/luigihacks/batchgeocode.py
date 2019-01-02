@@ -128,9 +128,9 @@ class GeocodeBatchTask(AutoBatchTask):
         self._insert_new_locations()
 
         # create batches from all locations which have not previously been coded
+        job_params = []
         uncoded_locations = self._get_uncoded()
         if uncoded_locations:
-            job_params = []
             for batch_file in self._create_batches(uncoded_locations):
                 params = {"batch_file": batch_file,
                           "config": 'mysqldb.config',
@@ -142,9 +142,10 @@ class GeocodeBatchTask(AutoBatchTask):
                 job_params.append(params)
                 logging.info(params)
             logging.info(f"{len(job_params)} batches to run")
-            return job_params
         else:
             logging.warning(f"no new locations to geocode")
+
+        return job_params
 
 
 if __name__ == '__main__':
