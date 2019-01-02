@@ -111,8 +111,8 @@ def geocode_batch_dataframe(df, city='city', country='country',
         df (:obj:`pandas.DataFrame`): input dataframe
         city (str): name of the input column containing the city
         country (str): name of the input column containing the country
-        latitude (str): name of the output column containing the latitude
-        longitude (str): name of the output column containing the longitude
+        latitude (float): name of the output column containing the latitude
+        longitude (float): name of the output column containing the longitude
 
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats

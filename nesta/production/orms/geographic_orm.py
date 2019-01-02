@@ -21,6 +21,6 @@ class Geographic(Base):
     country_alpha_3 = Column(VARCHAR(3))
     country_numeric = Column(VARCHAR(3))
     continent = Column(VARCHAR(2))
-    latitude = Column(DECIMAL)
-    longitude = Column(DECIMAL)
+    latitude = Column(DECIMAL(20))
+    longitude = Column(DECIMAL(20))
     done = Column(BOOLEAN, default=False)
