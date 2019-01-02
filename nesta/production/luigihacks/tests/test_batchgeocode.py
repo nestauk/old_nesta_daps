@@ -26,14 +26,14 @@ def test_insert_new_locations(mocked_db_session, mocked_insert_data, geo_batch_t
     mocked_db_session().__enter__.return_value = mocked_session
     mocked_query = mock.Mock()
 
-    mocked_session.query.side_effect = [
-                            mocked_query,
-                            [('London', 'United Kingdom', 'london-united_kingdom'),
-                             ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Paris', 'France', 'paris-france')]
-                             ]
+    mocked_session.query.return_value = mocked_query
+    mocked_session.query().limit.return_value = [
+                            ('London', 'United Kingdom', 'london-united_kingdom'),
+                            ('Berlin', 'Germany', 'berlin-germany'),
+                            ('Paris', 'France', 'paris-france')
+                            ]
 
-    mocked_query.all.return_value = [('london-united_kingdom'), ('some-other_place')]
+    mocked_query.all.return_value = [('london-united_kingdom',), ('some-other_place',)]
 
     expected_calls = [{'id': 'berlin-germany', 'city': 'Berlin', 'country': 'Germany'},
                       {'id': 'paris-france', 'city': 'Paris', 'country': 'France'}]
@@ -50,16 +50,16 @@ def test_insert_no_new_locations(mocked_db_session, mocked_insert_data, geo_batc
     mocked_db_session().__enter__.return_value = mocked_session
     mocked_query = mock.Mock()
 
-    mocked_session.query.side_effect = [
-                            mocked_query,
-                            [('London', 'United Kingdom', 'london-united_kingdom'),
-                             ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Paris', 'France', 'paris-france')]
-                             ]
+    mocked_session.query.return_value = mocked_query
+    mocked_session.query().limit.return_value = [
+                            ('London', 'United Kingdom', 'london-united_kingdom'),
+                            ('Berlin', 'Germany', 'berlin-germany'),
+                            ('Paris', 'France', 'paris-france')
+                            ]
 
-    mocked_query.all.return_value = [('london-united_kingdom'),
-                                     ('berlin-germany'),
-                                     ('paris-france')]
+    mocked_query.all.return_value = [('london-united_kingdom',),
+                                     ('berlin-germany',),
+                                     ('paris-france',)]
 
     geo_batch_task._insert_new_locations()
     mocked_insert_data.assert_not_called()
@@ -73,16 +73,16 @@ def test_insert_no_duplicate_locations(mocked_db_session, mocked_insert_data, ge
     mocked_db_session().__enter__.return_value = mocked_session
     mocked_query = mock.Mock()
 
-    mocked_session.query.side_effect = [
-                            mocked_query,
-                            [('London', 'United Kingdom', 'london-united_kingdom'),
-                             ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Berlin', 'Germany', 'berlin-germany'),
-                             ('Paris', 'France', 'paris-france'),
-                             ('Paris', 'France', 'paris-france')]
-                             ]
+    mocked_session.query.return_value = mocked_query
+    mocked_session.query().limit.return_value = [
+                            ('London', 'United Kingdom', 'london-united_kingdom'),
+                            ('Berlin', 'Germany', 'berlin-germany'),
+                            ('Berlin', 'Germany', 'berlin-germany'),
+                            ('Paris', 'France', 'paris-france'),
+                            ('Paris', 'France', 'paris-france')
+                            ]
 
-    mocked_query.all.return_value = [('london-united_kingdom')]
+    mocked_query.all.return_value = [('london-united_kingdom',)]
 
     expected_calls = [{'id': 'berlin-germany', 'city': 'Berlin', 'country': 'Germany'},
                       {'id': 'paris-france', 'city': 'Paris', 'country': 'France'}]
