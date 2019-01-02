@@ -1,11 +1,12 @@
+import logging
 import os
 import pandas as pd
 import s3fs
 
-from nesta.production.orms.geographic_orm import Geographic
-from nesta.production.orms.orm_utils import get_mysql_engine, db_session
-from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
+from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
+from nesta.production.orms.geographic_orm import Geographic
+from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 
 
 def run():
@@ -19,12 +20,15 @@ def run():
     # collect data
     target = f"s3://{bucket}/{batch_file}"
     df = pd.read_json(target, orient='records')
+    logging.info(f"{len(df)} locations to geocode")
 
     # append country iso codes and continent
     df = country_iso_code_dataframe(df)
+    logging.info("Country ISO codes appended")
 
     # geocode, appending latitude and longitude columns
     df = geocode_batch_dataframe(df)
+    logging.info("Geocoding complete")
 
     # remove city and country columns and append done column
     df = df.drop(['city', 'country'], axis=1)
@@ -32,9 +36,16 @@ def run():
 
     # convert to list of dict and output to database
     rows = df.to_dict(orient='records')
+    logging.info(f"Writing {len(rows)} rows to database")
     with db_session(engine) as session:
         session.bulk_update_mappings(Geographic, rows)
 
+    logging.warning("Batch task complete")
+
 
 if __name__ == '__main__':
+    log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=logging.INFO,
+                        format="%(asctime)s:%(levelname)s:%(message)s")
     run()
