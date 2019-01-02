@@ -18,7 +18,7 @@ def run():
 
     # collect data
     target = f"s3://{bucket}/{batch_file}"
-    df = pd.read_csv(target)
+    df = pd.read_json(target, orient='records')
 
     # append country iso codes and continent
     df = country_iso_code_dataframe(df)
