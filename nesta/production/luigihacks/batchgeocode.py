@@ -42,7 +42,7 @@ class GeocodeBatchTask(AutoBatchTask):
         """
         limit = 100 if self.test else None
         with db_session(self.engine) as session:
-            existing_location_ids = set(session.query(Geographic.id).all())
+            existing_location_ids = {i[0] for i in session.query(Geographic.id).all()}
             new_locations = []
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
