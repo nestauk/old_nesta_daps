@@ -41,8 +41,9 @@ class GeocodeBatchTask(AutoBatchTask):
         """Checks for new city/country combinations and appends them to the geographic
         data table in mysql.
         """
+        limit = 50 if self.test else None
         with db_session(self.engine) as session:
-            existing_location_ids = set(session.query(Geographic.id).all())
+            existing_location_ids = set(session.query(Geographic.id).limit(limit).all())
             new_locations = []
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
@@ -60,15 +61,37 @@ class GeocodeBatchTask(AutoBatchTask):
     def _get_uncoded(self):
         """Identifies all the locations in the geographic data table which have not
         previously been processed. If there are none to encode an empty list is
-        returned, as per SQLAlchemy convention for .all().
+        returned.
 
         Returns:
-            (:obj:`list` of :obj:`Geographic`) records to process
+            (:obj:`list` of :obj:`dict`) records to process
         """
         with db_session(self.engine) as session:
-            uncoded = session.query(Geographic).filter(Geographic.done == False).all()
-            logging.info(f"{len(uncoded)} locations to geocode")
-            return uncoded
+            uncoded = session.query(Geographic.id, Geographic.city, Geographic.country).filter(Geographic.done == False)
+            uncoded = [u._asdict() for u in uncoded]
+        logging.info(f"{len(uncoded)} locations to geocode")
+        return uncoded
+
+    def _create_batches(self, uncoded_locations):
+        """Generate batches of records. A small batch is generated if in test mode.
+
+        Args:
+            uncoded_locations (:obj:`list` of :obj:`dict`): all locations requiring coding
+
+        Returns:
+            (str): name of each file in the s3 bucket (key)
+        """
+        batch_size = 50 if self.test else self.batch_size
+        logging.info(f"batch size: {batch_size}")
+        batch = []
+        for location in uncoded_locations:
+            batch.append(location)
+            if len(batch) == batch_size:
+                yield self._put_batch(batch)
+                batch.clear()
+        # catch any remainder
+        if len(batch) > 0:
+            yield self._put_batch(batch)
 
     def _put_batch(self, data):
         """Writes out a batch of data to s3 as json, so it can be picked up by the
@@ -85,27 +108,6 @@ class GeocodeBatchTask(AutoBatchTask):
         obj = self.s3.Object(self.intermediate_bucket, filename)
         obj.put(Body=json.dumps(data))
         return filename
-
-    def _create_batches(self, uncoded_locations):
-        """Generate batches of records. A small batch is generated if in test mode.
-
-        Args:
-            uncoded_locations (:obj:`list` of :obj:`Geographic`): all records,
-                as returned from sqlalchemy
-
-        Returns:
-            (str): name of each file in the s3 bucket (key)
-        """
-        batch_size = 50 if self.test else self.batch_size
-        logging.info(f"batch size: {batch_size}")
-        batch = []
-        for location in uncoded_locations:
-            batch.append(dict(id=location.id, city=location.city, country=location.country))
-            if len(batch) == batch_size:
-                yield self._put_batch(batch)
-                batch.clear()
-        if len(batch) > 0:
-            yield self._put_batch(batch)
 
     def prepare(self):
         """Copies any new city/county combinations from the input table into the
