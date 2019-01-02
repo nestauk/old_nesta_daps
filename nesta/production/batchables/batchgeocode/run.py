@@ -3,7 +3,7 @@ import pandas as pd
 import s3fs
 
 from nesta.production.orms.geographic_orm import Geographic
-from nesta.production.orms.orms_utils import get_mysql_engine, db_session
+from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 

@@ -43,11 +43,11 @@ class GeocodeBatchTask(AutoBatchTask):
         """
         limit = 50 if self.test else None
         with db_session(self.engine) as session:
-            existing_location_ids = set(session.query(Geographic.id).limit(limit).all())
+            existing_location_ids = set(session.query(Geographic.id).all())
             new_locations = []
             for city, country, key in session.query(self.city_col,
                                                     self.country_col,
-                                                    self.location_key_col):
+                                                    self.location_key_col).limit(limit):
                 if key not in existing_location_ids and key is not None:
                     logging.info(f"new location {city}, {country}")
                     new_locations.append(dict(id=key, city=city, country=country))
