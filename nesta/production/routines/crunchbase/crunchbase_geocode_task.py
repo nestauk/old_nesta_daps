@@ -36,7 +36,7 @@ class OrgGeocodeTask(GeocodeBatchTask):
             logging.getLogger().setLevel(logging.INFO)
             yield FundingRoundGeocodeTask(date=self.date,
                                           _routine_id=self._routine_id,
-                                          test=not self.production,
+                                          test=self.test,
                                           db_config_env="MYSQLDB",
                                           city_col=FundingRound.city,
                                           country_col=FundingRound.country,
@@ -78,7 +78,7 @@ class FundingRoundGeocodeTask(GeocodeBatchTask):
             logging.getLogger().setLevel(logging.INFO)
             yield InvestorGeocodeTask(date=self.date,
                                       _routine_id=self._routine_id,
-                                      test=not self.production,
+                                      test=self.test,
                                       db_config_env="MYSQLDB",
                                       city_col=Investor.city,
                                       country_col=Investor.country,
@@ -120,7 +120,7 @@ class InvestorGeocodeTask(GeocodeBatchTask):
             logging.getLogger().setLevel(logging.INFO)
             yield IpoGeocodeTask(date=self.date,
                                  _routine_id=self._routine_id,
-                                 test=not self.production,
+                                 test=self.test,
                                  db_config_env="MYSQLDB",
                                  city_col=Ipo.city,
                                  country_col=Ipo.country,
@@ -162,7 +162,7 @@ class IpoGeocodeTask(GeocodeBatchTask):
             logging.getLogger().setLevel(logging.INFO)
             yield PeopleGeocodeTask(date=self.date,
                                     _routine_id=self._routine_id,
-                                    test=not self.production,
+                                    test=self.test,
                                     db_config_env="MYSQLDB",
                                     city_col=People.city,
                                     country_col=People.country,
@@ -204,7 +204,7 @@ class PeopleGeocodeTask(GeocodeBatchTask):
             logging.getLogger().setLevel(logging.INFO)
             yield NonOrgCollectTask(date=self.date,
                                     _routine_id=self._routine_id,
-                                    test=not self.production,
+                                    test=self.test,
                                     db_config_path=find_filepath_from_pathstub("mysqldb.config"),
                                     insert_batch_size=self.insert_batch_size,
                                     batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
