@@ -27,7 +27,7 @@ def test_insert_new_locations(mocked_db_session, mocked_insert_data, geo_batch_t
     mocked_query = mock.Mock()
 
     mocked_session.query.return_value = mocked_query
-    mocked_session.query().limit.return_value = [
+    mocked_session.query().distinct().limit.return_value = [
                             ('London', 'United Kingdom', 'london-united_kingdom'),
                             ('Berlin', 'Germany', 'berlin-germany'),
                             ('Paris', 'France', 'paris-france')
@@ -51,7 +51,7 @@ def test_insert_no_new_locations(mocked_db_session, mocked_insert_data, geo_batc
     mocked_query = mock.Mock()
 
     mocked_session.query.return_value = mocked_query
-    mocked_session.query().limit.return_value = [
+    mocked_session.query().distinct().limit.return_value = [
                             ('London', 'United Kingdom', 'london-united_kingdom'),
                             ('Berlin', 'Germany', 'berlin-germany'),
                             ('Paris', 'France', 'paris-france')
@@ -74,7 +74,7 @@ def test_insert_no_duplicate_locations(mocked_db_session, mocked_insert_data, ge
     mocked_query = mock.Mock()
 
     mocked_session.query.return_value = mocked_query
-    mocked_session.query().limit.return_value = [
+    mocked_session.query().distinct().limit.return_value = [
                             ('London', 'United Kingdom', 'london-united_kingdom'),
                             ('Berlin', 'Germany', 'berlin-germany'),
                             ('Berlin', 'Germany', 'berlin-germany'),
@@ -177,5 +177,5 @@ def test_prepare_step_with_no_new_locations(mocked_sql_engine, mocked_try, mocke
     geo_batch_task._create_batches = mock.Mock()
 
     job_params = geo_batch_task.prepare()
-    assert job_params is None
+    assert job_params == []
     geo_batch_task._create_batches.assert_not_called()
