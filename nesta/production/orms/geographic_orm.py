@@ -14,7 +14,7 @@ Base = declarative_base()
 class Geographic(Base):
     __tablename__ = 'geographic_data'
 
-    id = Column(VARCHAR(400), primary_key=True)  # composite key of city & country
+    id = Column(VARCHAR(400, collation='utf8_bin'), primary_key=True)  # composite key of city & country
     city = Column(VARCHAR(200))
     country = Column(VARCHAR(200))
     country_alpha_2 = Column(VARCHAR(2))

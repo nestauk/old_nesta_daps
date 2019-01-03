@@ -2,6 +2,7 @@ import boto3
 import json
 import logging
 import luigi
+from sqlalchemy import collate
 import time
 
 from nesta.production.luigihacks.autobatch import AutoBatchTask
@@ -44,10 +45,12 @@ class GeocodeBatchTask(AutoBatchTask):
         with db_session(self.engine) as session:
             existing_location_ids = {i[0] for i in session.query(Geographic.id).all()}
             new_locations = []
-            for city, country, key in session.query(self.city_col,
-                                                    self.country_col,
-                                                    self.location_key_col
-                                                    ).distinct(self.location_key_col).limit(limit):
+            for city, country, key in (session.query(
+                                            self.city_col,
+                                            self.country_col,
+                                            self.location_key_col)
+                                       .distinct(self.location_key_col)
+                                       .limit(limit)):
                 if key not in existing_location_ids and key is not None:
                     logging.info(f"new location {city}, {country}")
                     new_locations.append(dict(id=key, city=city, country=country))
@@ -150,10 +153,14 @@ class GeocodeBatchTask(AutoBatchTask):
 
 
 if __name__ == '__main__':
+    from nesta.production.orms.crunchbase_orm import Organization
+
     class MyTask(GeocodeBatchTask):
         def combine(self):
             pass
 
     geo = MyTask(job_def='', job_name='', job_queue='', region_name='',
-            city_col='', country_col='', location_key_col='', database_config='',
-            database='')
+                 city_col=Organization.city, country_col=Organization.country,
+                 location_key_col=Organization.location_id, db_config_env='MYSQLDB',
+                 test=False)
+    geo.prepare()
