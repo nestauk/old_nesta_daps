@@ -19,7 +19,6 @@ from nesta.production.orms.crunchbase_orm import FundingRound, Investor, Ipo, Pe
 class OrgGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
-    production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter()
 
@@ -62,7 +61,6 @@ class OrgGeocodeTask(GeocodeBatchTask):
 class FundingRoundGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
-    production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter()
 
@@ -105,7 +103,6 @@ class FundingRoundGeocodeTask(GeocodeBatchTask):
 class InvestorGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
-    production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter()
 
@@ -148,7 +145,6 @@ class InvestorGeocodeTask(GeocodeBatchTask):
 class IpoGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
-    production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter()
 
@@ -191,7 +187,6 @@ class IpoGeocodeTask(GeocodeBatchTask):
 class PeopleGeocodeTask(GeocodeBatchTask):
 
     date = luigi.DateParameter()
-    production = luigi.BoolParameter(default=False)
     _routine_id = luigi.Parameter()
     insert_batch_size = luigi.IntParameter()
 
