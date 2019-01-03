@@ -9,7 +9,7 @@ import luigi
 import datetime
 import logging
 
-from crunchbase_geocode_orgs_task import OrgGeocodeTask
+from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.orms.crunchbase_orm import Organization
 
