@@ -35,7 +35,7 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield OrgGeocodeTask(date=self.date,
                              _routine_id=_routine_id,
-                             test=self.test,
+                             test=not self.production,
                              db_config_env="MYSQLDB",
                              city_col=Organization.city,
                              country_col=Organization.country,
