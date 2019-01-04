@@ -45,7 +45,7 @@ def get_children(base, geocodes, max_attempts=5):
     output = []
     found = False
     for icode, code in enumerate(geocodes):
-        if icode > max_attempts and not found:
+        if icode >= max_attempts and not found:
             break
         children = _get_children(base, code)
         n = len(children)

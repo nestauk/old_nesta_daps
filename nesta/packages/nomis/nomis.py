@@ -81,6 +81,8 @@ def batch_request(config, dataset_id, geographies, date_format,
         dataset_id (str): NOMIS dataset ID
         geographies (list): Return object from :obj:`discovery_iter`.
         date_format (str): Formatting string for dates in the dataset
+        record_offset (int): Record to start from
+        max_api_calls (int): Number of requests allowed
     Returns:                                                            
         dfs (:obj:`list` of :obj:`pd.DataFrame`): Batch return results.      
     """
@@ -93,7 +95,8 @@ def batch_request(config, dataset_id, geographies, date_format,
     dfs = []
     offset = 25000
     icalls = 0
-    while offset > 0 and icalls < max_api_calls:
+    done = False
+    while (not done) and icalls < max_api_calls:
         #logging.debug(f"\t\t {offset}")
         # Build the request payload
         params = "&".join(f"{k}={v}" for k,v in config.items())
@@ -102,7 +105,7 @@ def batch_request(config, dataset_id, geographies, date_format,
         # Read the data
         with StringIO(r.text) as sio:
             _df = pd.read_csv(sio, parse_dates=["DATE"], date_parser=date_parser)
-            offset = len(_df)
+            done = len(_df) < offset
         # Increment the offset
         config["RecordOffset"] += offset
         # Ignore empty fields
@@ -112,7 +115,6 @@ def batch_request(config, dataset_id, geographies, date_format,
     # Combine and return
     df = pd.concat(dfs)
     df.columns = [c.lower() for c in df.columns]
-    done = offset == 0
     return df, done, config["RecordOffset"]
 
 
