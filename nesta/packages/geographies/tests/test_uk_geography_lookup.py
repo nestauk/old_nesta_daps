@@ -40,7 +40,7 @@ def test_get_children():
 def test_get_children_max_out(mocked, pars_for_get_children):
     mocked.side_effect = ([], [], [], [], [])
     get_children(**pars_for_get_children)    
-    assert mocked.call_count == pars_for_get_children["max_attempts"] + 1
+    assert mocked.call_count == pars_for_get_children["max_attempts"]
 
 
 @mock.patch("nesta.packages.geographies.uk_geography_lookup._get_children")
