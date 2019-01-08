@@ -11,7 +11,7 @@
                "official", "start", "end", "descriptive", "abstract", "duns",
                "iso2", "iso3", "isoNumeric", "roles", "region", "summary", "subcategory",
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
-               "linkedIn", "crunchBase", "twitter", "alias", "updated", "short", "created", "topics",
+               "linkedIn", "crunchBase", "twitter", "alias", "update", "updated", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
 	             "programming", "datestamp", "journalReference", "digitalObjectIdentifier",
                "mathSubjectClassification", "arxivSubjectCategory"]
