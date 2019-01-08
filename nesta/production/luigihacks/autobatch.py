@@ -88,7 +88,7 @@ class AutoBatchTask(luigi.Task, ABC):
     poll_time = luigi.IntParameter(default=60)
     success_rate = luigi.FloatParameter(default=0.95)
     test = luigi.BoolParameter(default=True)
-    max_live_jobs = luigi.IntParameter(default=500)
+    max_live_jobs = luigi.IntParameter(default=25)
     worker_timeout = float('inf')
     
     def __init__(self, *args, **kwargs):

@@ -13,7 +13,9 @@ NON_BRACKET_PATTERN = re.compile(b"[\(\[].*?[\)\]]")
 
 def find_latest_wikidump():
     '''Identify the date (in the wikimedia dumps format)
-    of the most recent wiktionary dump.
+    of the most recent wiktionary dump. Actually returns the secondmost
+    recent date, as this is found to be more stable (e.g. if we make the
+    request during the upload)
 
     Returns:
         wikidate (str): The most recent date (in the wikimedia dumps format)
@@ -22,6 +24,7 @@ def find_latest_wikidump():
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "lxml")
     max_date, max_date_str = None, None
+    second_max_date_str = None
     for anchor in soup.find_all("a", href=True):
         raw_date = anchor.text.rstrip("/")
         try:
@@ -29,8 +32,11 @@ def find_latest_wikidump():
         except ValueError:
             continue
         if max_date is None or date > max_date:
+            second_max_date_str = max_date_str
             max_date = date
             max_date_str = raw_date
+    if second_max_date_str is not None:
+        return second_max_date_str
     return max_date_str
 
 
@@ -64,11 +70,13 @@ def extract_ngrams(date):
                 continue
             if len(line) > 50:
                 continue
+            if line.decode('utf-8')[0].isnumeric():
+                continue
             ngrams.add(line.lower())
     return ngrams
 
 
 if __name__ == "__main__":
-    wiki_date = find_latest_wikidump()
+    wiki_date = find_latest_wikidump()        
     ngrams = extract_ngrams(wiki_date)
     print(f"Found {len(ngrams)} n-grams")

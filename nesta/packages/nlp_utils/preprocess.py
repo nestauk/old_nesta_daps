@@ -30,21 +30,23 @@ tokens_re = re.compile(r'('+'|'.join(regex_str)+')',
                        re.VERBOSE | re.IGNORECASE)
 
 
-def tokenize_document(text):
+def tokenize_document(text, remove_stops=False):
     """Preprocess a whole raw document.
     Args:
         text (str): Raw string of text.
+        remove_stops (bool): Flag to remove english stopwords
     Return:
         List of preprocessed and tokenized documents
     """
-    return [clean_and_tokenize(sentence)
+    return [clean_and_tokenize(sentence, remove_stops)
             for sentence in nltk.sent_tokenize(text)]
 
 
-def clean_and_tokenize(text):
+def clean_and_tokenize(text, remove_stops):
     """Preprocess a raw string/sentence of text.
     Args:
        text (str): Raw string of text.
+       remove_stops (bool): Flag to remove english stopwords
     Return:
        tokens (list, str): Preprocessed tokens.
     """
@@ -53,7 +55,7 @@ def clean_and_tokenize(text):
     _tokens = [t.lower() for t in tokens]
     filtered_tokens = [token.replace('-', '_') for token in _tokens
                        if len(token) > 2
-                       and token not in stop_words
+                       and (not remove_stops or token not in stop_words)
                        and not any(x in token for x in string.digits)
                        and any(x in token for x in string.ascii_lowercase)]
     return filtered_tokens
