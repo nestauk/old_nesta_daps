@@ -10,7 +10,8 @@ install:
 before_script:
   - mkdir nesta/production/config/
   - echo -e "[mysqldb]\nx=1" > nesta/production/config/mysqldb.config  # create dummy file with just the config x=1
-  - echo -e "[worker]\nt=1" > nesta/production/config/luigi.cfg  # create dummy file for luigi
+  - echo -e "[worker]\nx=1" > nesta/production/config/luigi.cfg  # create dummy file for luigi
+  - echo -e "[crunchbase]\nx=1" > nesta/production/config/crunchbase.config  # create dummy file for crunchbase
   - sudo rm -f /etc/boto.cfg
   - mysql -e 'CREATE DATABASE production_tests;'
   - mysql_upgrade -u root --force
