@@ -11,7 +11,7 @@ from sqlalchemy.types import JSON, DATE
 Base = declarative_base()
 
 
-class Articles(Base):
+class Article(Base):
     """Arxiv articles and metadata."""
     __tablename__ = 'arxiv_articles'
 
@@ -28,7 +28,7 @@ class Articles(Base):
     categories = relationship('ArticleCategories')
 
 
-class ArticleCategories(Base):
+class ArticleCategory(Base):
     """Association table for Arxiv articles and their categories."""
     __tablename__ = 'arxiv_article_categories'
 
@@ -36,7 +36,7 @@ class ArticleCategories(Base):
     category_id = Column(VARCHAR(40), ForeignKey('arxiv_categories.id'), primary_key=True)
 
 
-class Categories(Base):
+class Category(Base):
     """Lookup table for Arxiv category descriptions."""
     __tablename__ = 'arxiv_categories'
 

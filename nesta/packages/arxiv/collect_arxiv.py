@@ -11,7 +11,7 @@ import time
 import xml.etree.ElementTree as ET
 
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Categories
+from nesta.production.orms.arxiv_orm import Base, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -29,7 +29,7 @@ def _category_exists(session, cat_id):
         (bool): True if the id is already in the database, otherwise False
     """
     try:
-        session.query(Categories).filter(Categories.id == cat_id).one()
+        session.query(Category).filter(Category.id == cat_id).one()
     except NoResultFound:
         return False
     return True
@@ -44,7 +44,7 @@ def _add_category(session, cat_id, description):
         description (str): description of the category
     """
     logging.info(f"adding {cat_id} to database")
-    session.add(Categories(id=cat_id, description=description))
+    session.add(Category(id=cat_id, description=description))
     session.commit()
 
 
@@ -66,7 +66,7 @@ def load_arxiv_categories(db_config, db, bucket, cat_file):
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
 
-    logging.info(f'found {session.query(Categories).count()} existing categories')
+    logging.info(f'found {session.query(Category).count()} existing categories')
     for idx, data in categories.iterrows():
         if not _category_exists(session, data['id']):
             _add_category(session, cat_id=data['id'], description=data['description'])

@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from urllib.parse import urlsplit
 
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data
-from nesta.production.orms.arxiv_orm import Base, Articles, ArticleCategories, Categories
+from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategory, Category
 from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
 
 
@@ -78,20 +78,20 @@ def run():
             articles.append(row)
             for cat in categories:
                 try:
-                    session.query(Categories).filter(Categories.id == cat).one()
+                    session.query(Category).filter(Category.id == cat).one()
                 except NoResultFound:
-                    logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Categories table")
-                    session.add(Categories(id=cat))
+                    logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Category table")
+                    session.add(Category(id=cat))
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
 
     inserted_articles, existing_articles, failed_articles = insert_data(
                                                 "BATCHPAR_config", "mysqldb", db_name,
-                                                Base, Articles, articles,
+                                                Base, Article, articles,
                                                 return_non_inserted=True)
     logging.warning(f"total article categories: {len(article_cats)}")
     inserted_article_cats, existing_article_cats, failed_article_cats = insert_data(
                                                 "BATCHPAR_config", "mysqldb", db_name,
-                                                Base, ArticleCategories, article_cats,
+                                                Base, ArticleCategory, article_cats,
                                                 return_non_inserted=True)
 
     # sanity checks before the batch is marked as done

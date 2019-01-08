@@ -12,86 +12,14 @@ from nesta.packages.arxiv.collect_arxiv import arxiv_batch
 from nesta.packages.arxiv.collect_arxiv import xml_to_json
 from nesta.packages.arxiv.collect_arxiv import load_arxiv_categories
 from nesta.packages.arxiv.collect_arxiv import _category_exists
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def mock_response():
-    return b'''<?xml version="1.0" encoding="UTF-8"?>
-<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
-    <responseDate>2018-11-13T11:47:39Z</responseDate>
-    <request verb="ListRecords" metadataPrefix="arXiv">http://export.arxiv.org/oai2</request>
-    <ListRecords>
-        <record>
-            <header>
-                <identifier>oai:arXiv.org:0704.0999</identifier>
-                <datestamp>2007-05-23</datestamp>
-                <setSpec>math</setSpec>
-            </header>
-            <metadata>
-                <arXiv xmlns="http://arxiv.org/OAI/arXiv/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXiv/ http://arxiv.org/OAI/arXiv.xsd">
-                    <id>0704.0999</id>
-                    <created>2007-04-07</created>
-                    <updated>2007-06-21</updated>
-                    <authors>
-                        <author>
-                            <keyname>Author</keyname>
-                            <forenames>G.</forenames>
-                        </author>
-                    </authors>
-                    <title>Generic character sheaves on disconnected groups and character values</title>
-                    <categories>math.PR math.RT</categories>
-                    <comments>12 pages</comments>
-                    <msc-class>05C85; 05C70; 68R10; 05B35</msc-class>
-                    <journal-ref>Phys.Rev.Lett.99:131803,2007</journal-ref>
-                    <doi>10.1103/PhysRevLett.99.131803</doi>
-                    <abstract>  This is the summary of the article. </abstract>
-                </arXiv>
-            </metadata>
-        </record>
-        <record>
-            <header>
-                <identifier>oai:arXiv.org:0704.1000</identifier>
-                <datestamp>2008-11-26</datestamp>
-                <setSpec>physics:hep-ex</setSpec>
-            </header>
-            <metadata>
-                <arXiv xmlns="http://arxiv.org/OAI/arXiv/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXiv/ http://arxiv.org/OAI/arXiv.xsd">
-                    <id>0704.1000</id>
-                    <created>2007-04-999</created>
-                    <authors>
-                        <author>
-                            <keyname>AnotherAuthor</keyname>
-                            <forenames>L. M.</forenames>
-                            <suffix>II</suffix>
-                            <affiliation>CREST, Japan Science and Technology Agency</affiliation>
-                        </author>
-                        <author>
-                            <keyname>Surname</keyname>
-                            <forenames>Some other</forenames>
-                        </author>
-                        <author>
-                            <keyname>Collaboration</keyname>
-                            <forenames>An important</forenames>
-                        </author>
-                    </authors>
-                    <title> Measurement of something interesting</title>
-                    <categories>hep-ex</categories>
-                    <comments>6 pages, 4 figures, Submitted to Physical Review Letters</comments>
-                    <report-no>BELLE-CONF-0702</report-no>
-                    <abstract>This paper did something clever and interesting</abstract>
-                </arXiv>
-            </metadata>
-        </record>
-        <record>
-            <header>
-                <identifier>missing_meta</identifier>
-                <datestamp>2088-01-01</datestamp>
-                <setSpec>physics:hep-ex</setSpec>
-            </header>
-        </record>
-        <resumptionToken cursor="0" completeListSize="1463679">3132962|1001</resumptionToken>
-    </ListRecords>
-</OAI-PMH>'''
+    test_file = find_filepath_from_pathstub('mocked_arxiv_response.json')
+    with open(test_file, mode='rb') as f:
+        return f.read()
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv.requests.get')

@@ -4,10 +4,10 @@
     {"tier_0": "created", "tier_1": "date_created_article"},
     {"tier_0": "updated", "tier_1": "date_updated_article"},
     {"tier_0": "title", "tier_1": "title_of_article"},
-    {"tier_0": "journal_ref", "tier_1": "reference_journal_article"},
+    {"tier_0": "journal_ref", "tier_1": "id_journalReference_article"},
     {"tier_0": "doi", "tier_1": "id_digitalObjectIdentifier_article"},
     {"tier_0": "abstract", "tier_1": "textBody_abstract_article"},
-    {"tier_0": "authors", "tier_1": "author_of_article"},
+    {"tier_0": "authors", "tier_1": "personName_of_author"},
     {"tier_0": "msc_class", "tier_1": "id_mathSubjectClassification_article"},
     {"tier_0": "categories", "tier_1": "id_arxivSubjectCategory_article"}
 ]
