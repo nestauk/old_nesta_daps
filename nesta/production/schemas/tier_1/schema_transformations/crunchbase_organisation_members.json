@@ -24,6 +24,6 @@
     {"tier_0": "twitter_url", "tier_1": "url_twitter_organisation"},
     {"tier_0": "aliases", "tier_1": "terms_alias_organisation"},
     {"tier_0": "uuid", "tier_1": "id_of_organisation", "unique":true},
-    {"tier_0": "updated_at", "tier_1": "datetime_update_organisation"},
+    {"tier_0": "updated_at", "tier_1": "datetime_updated_organisation"},
     {"tier_0": "primary_role", "tier_1": "type_of_organisation"}
 ]
