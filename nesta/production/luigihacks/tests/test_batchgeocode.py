@@ -120,7 +120,7 @@ def test_create_batches_in_production_mode(create_uncoded_locations, geo_batch_t
     for batch in geo_batch_task._create_batches(uncoded_locations):
         batches.append(batch)
 
-    assert len(batches) == 3
+    assert len(batches) == 3  # 2500 records with batch size of 1000 = 3 batches
 
 
 def test_create_batches_in_test_mode(create_uncoded_locations, geo_batch_task):
@@ -134,7 +134,7 @@ def test_create_batches_in_test_mode(create_uncoded_locations, geo_batch_task):
     for batch in geo_batch_task._create_batches(uncoded_locations):
         batches.append(batch)
 
-    assert len(batches) == 11
+    assert len(batches) == 11  # test mode has batch size 50, so 540/50 = 11 batches
 
 
 def test_create_batches_with_no_remainder(create_uncoded_locations, geo_batch_task):
@@ -148,7 +148,7 @@ def test_create_batches_with_no_remainder(create_uncoded_locations, geo_batch_ta
     for batch in geo_batch_task._create_batches(uncoded_locations):
         batches.append(batch)
 
-    assert len(batches) == 2
+    assert len(batches) == 2  # 200 locations with batch size 100 = exactly 2 batches
 
 
 @mock.patch('nesta.production.luigihacks.batchgeocode.boto3')

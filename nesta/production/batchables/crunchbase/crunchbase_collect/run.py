@@ -36,7 +36,8 @@ def run():
     table_class = get_class_by_tablename(Base, table_name)
 
     # collect file
-    df = get_files_from_tar([table], test=test)[0]
+    nrows = 1000 if test else None
+    df = get_files_from_tar([table], nrows=nrows)[0]
     logging.warning(f"{len(df)} rows in file")
 
     # get primary key fields and set of all those already existing in the db

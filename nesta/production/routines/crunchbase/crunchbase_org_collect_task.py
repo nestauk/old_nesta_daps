@@ -49,11 +49,12 @@ class OrgCollectTask(luigi.Task):
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # collect files
+        nrows = 1000 if self.test else None
         cat_groups, orgs, org_descriptions = get_files_from_tar(['category_groups',
                                                                  'organizations',
                                                                  'organization_descriptions'
                                                                  ],
-                                                                test=self.test)
+                                                                nrows=nrows)
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
         _insert_data(self.db_config_env, 'mysqldb', database,
