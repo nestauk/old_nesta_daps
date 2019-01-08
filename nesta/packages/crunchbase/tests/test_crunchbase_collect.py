@@ -1,6 +1,8 @@
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 import pytest
+import tarfile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
 from nesta.packages.crunchbase.crunchbase_collect import rename_uuid_columns
@@ -9,6 +11,63 @@ from nesta.packages.crunchbase.crunchbase_collect import split_batches
 from nesta.packages.crunchbase.crunchbase_collect import total_records
 from nesta.packages.crunchbase.crunchbase_collect import bool_convert
 from nesta.packages.crunchbase.crunchbase_collect import process_non_orgs
+from nesta.packages.crunchbase.crunchbase_collect import crunchbase_tar
+from nesta.packages.crunchbase.crunchbase_collect import get_csv_list
+from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar
+
+
+@pytest.fixture
+def crunchbase_tarfile():
+    tar = NamedTemporaryFile(suffix='.tar.gz')
+    print(tar.name)
+    temp_tar = tarfile.open(tar.name, mode='w:gz')
+    with TemporaryDirectory() as temp_dir:
+        # add 3 test csv files
+        for i in range(3):
+            with open(f'{temp_dir}/test_{i}.csv', mode='w') as f:
+                f.write("id,data\n111,aaa\n222,bbb")
+            temp_tar.add(f.name, f'test_{i}.csv')  # rename to remove temp folder structure from filename
+    temp_tar.close()
+    yield tar
+    tar.close()
+
+
+@mock.patch('nesta.packages.crunchbase.crunchbase_collect.NamedTemporaryFile')
+@mock.patch('nesta.packages.crunchbase.crunchbase_collect.requests.get')
+def test_crunchbase_tar(mocked_requests, mocked_temp_file, crunchbase_tarfile):
+    mocked_temp_file().__enter__.return_value = crunchbase_tarfile
+    crunchbase_tarfile.write = lambda x: None  # patch write method to do nothing
+
+    with crunchbase_tar() as test_tar:
+        assert type(test_tar) == tarfile.TarFile
+        assert test_tar.getnames() == ['test_0.csv', 'test_1.csv', 'test_2.csv']
+
+
+@mock.patch('nesta.packages.crunchbase.crunchbase_collect.crunchbase_tar')
+def test_get_csv_list(mocked_crunchbase_tar, crunchbase_tarfile):
+    mocked_crunchbase_tar.return_value = tarfile.open(crunchbase_tarfile.name)
+
+    expected_result = ['test_0', 'test_1', 'test_2']
+    assert get_csv_list() == expected_result
+
+
+@mock.patch('nesta.packages.crunchbase.crunchbase_collect.crunchbase_tar')
+def test_get_files_from_tar(mocked_crunchbase_tar, crunchbase_tarfile):
+    mocked_crunchbase_tar.return_value = tarfile.open(crunchbase_tarfile.name)
+
+    expected_result = pd.DataFrame({'id': [111, 222], 'data': ['aaa', 'bbb']})
+    dfs = get_files_from_tar(['test_0'])
+    assert type(dfs) == list
+    assert_frame_equal(dfs[0], expected_result, check_like=True)
+
+
+@mock.patch('nesta.packages.crunchbase.crunchbase_collect.crunchbase_tar')
+def test_get_files_from_tar_limits_rows(mocked_crunchbase_tar, crunchbase_tarfile):
+    mocked_crunchbase_tar.return_value = tarfile.open(crunchbase_tarfile.name)
+
+    expected_result = pd.DataFrame({'id': [111], 'data': ['aaa']})
+    dfs = get_files_from_tar(['test_0'], nrows=1)  # only return 1 row
+    assert_frame_equal(dfs[0], expected_result, check_like=True)
 
 
 def test_rename_uuid_columns():

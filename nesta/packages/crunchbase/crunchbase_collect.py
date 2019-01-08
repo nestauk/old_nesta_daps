@@ -17,7 +17,7 @@ def crunchbase_tar():
     """Downloads the tar archive of Crunchbase data.
 
     Returns:
-        :code:`tarfile.Tarfile`: opened tar archive
+        :code:`tarfile.TarFile`: opened tar archive
     """
     crunchbase_config = misctools.get_config('crunchbase.config', 'crunchbase')
     user_key = crunchbase_config['user_key']
@@ -25,18 +25,18 @@ def crunchbase_tar():
     with NamedTemporaryFile() as tmp_file:
         r = requests.get(''.join([url, user_key]))
         tmp_file.write(r.content)
-        try:
-            tmp_tar = tarfile.open(tmp_file.name)
-            yield tmp_tar
-        finally:
-            tmp_tar.close()
+        tmp_tar = tarfile.open(tmp_file.name, mode='r:gz')
+    try:
+        yield tmp_tar
+    finally:
+        tmp_tar.close()
 
 
 def get_csv_list():
     """Gets a list of csv files within the Crunchbase tar archive.
 
     Returns:
-        list: all .csv files int the archive
+        list: all .csv files in the archive
     """
     csvs = []
     csv_pattern = re.compile(r'^(.*)\.csv$')
@@ -49,12 +49,13 @@ def get_csv_list():
     return csvs
 
 
-def get_files_from_tar(files, test=False):
+def get_files_from_tar(files, nrows=None):
     """Converts csv files in the crunchbase tar into dataframes and returns them.
 
     Args:
         files (list): names of the files to extract (without .csv suffix)
-        test (bool): flag to reduce the number of records retrieved, for testing
+        nrows (int): limit the number of rows extracted from each file, for testing.
+                     Default of None will return all rows
 
     Returns:
         (:obj:`list` of :obj:`pandas.Dataframe`): the extracted files as dataframes
@@ -62,13 +63,12 @@ def get_files_from_tar(files, test=False):
     if type(files) != list:
         raise TypeError("Files must be provided as a list")
 
-    nrows = 1000 if test else None
     dfs = []
     with crunchbase_tar() as tar:
         for filename in files:
-            dfs.append(pd.read_csv(tar.extractfile(''.join([filename, '.csv'])),
+            dfs.append(pd.read_csv(tar.extractfile(f'{filename}.csv'),
                                    low_memory=False, nrows=nrows))
-            logging.warning(f"Collected {filename} from crunchbase tarfile")
+            logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
 
@@ -92,7 +92,8 @@ def bool_convert(value):
         value (str): t or f
 
     Returns:
-        (bool): boolean representation of the field, or None on failure
+        (bool): boolean representation of the field, or None on failure so pd.apply can
+                be used and unconvertable fields will be empty
     """
     lookup = {'t': True, 'f': False}
     try:
@@ -154,17 +155,14 @@ def split_batches(data, batch_size):
     Returns:
         (:obj:`list` of :obj:`dict`): yields a batch at a time
     """
-    if len(data) <= batch_size:
-        yield data
-    else:
-        batch = []
-        for row in data:
-            batch.append(row)
-            if len(batch) == batch_size:
-                yield batch
-                batch.clear()
-        if len(batch) > 0:
+    batch = []
+    for row in data:
+        batch.append(row)
+        if len(batch) == batch_size:
             yield batch
+            batch.clear()
+    if len(batch) > 0:
+        yield batch
 
 
 def _insert_data(config, section, database, base, table, data, batch_size=500):
@@ -176,7 +174,7 @@ def _insert_data(config, section, database, base, table, data, batch_size=500):
         batch_size (int): size of bulk inserts into the db
     """
     total_rows_in = len(data)
-    logging.warning(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
+    logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
     totals = None
     for batch in split_batches(data, batch_size):
@@ -291,24 +289,24 @@ def process_non_orgs(df, existing, pks):
     df = rename_uuid_columns(df)
 
     # drop any rows already existing in the database
-    total_records = len(df)
+    total_rows = len(df)
     drop_mask = df[pks].apply(lambda row: tuple(row[pks]) in existing, axis=1)
     df = df.loc[~drop_mask]
-    logging.warning(f"Dropped {total_records - len(df)} rows already existing in database")
+    logging.info(f"Dropped {total_rows - len(df)} rows already existing in database")
 
     # change NaNs to None
     df = df.where(df.notnull(), None)
 
     # convert country name and add composite key if locations in table
     if {'city', 'country_code'}.issubset(df.columns):
-        logging.warning("Locations found in table. Generating composite keys.")
+        logging.info("Locations found in table. Generating composite keys.")
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
         df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
         df['location_id'] = df[['city', 'country']].apply(lambda row: _generate_composite_key(**row), axis=1)
 
     # convert any boolean columns to correct values
     for column in (col for col in df.columns if re.match(r'^is_.+', col)):
-        logging.warning(f"Converting boolean field {column}")
+        logging.info(f"Converting boolean field {column}")
         df[column] = df[column].apply(bool_convert)
 
     df = df.to_dict(orient='records')
