@@ -30,6 +30,7 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                 were in the supplied data but not imported (for checks)
+
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
         :obj:`list` of :obj:`dict` data found already existing in the database (optional)
