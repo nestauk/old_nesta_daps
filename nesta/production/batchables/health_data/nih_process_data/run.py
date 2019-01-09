@@ -5,8 +5,8 @@ from sqlalchemy.orm import sessionmaker
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.health_data.process_nih import _extract_date
-from nesta.packages.health_data.process_nih import country_iso_code_dataframe
-from nesta.packages.health_data.process_nih import geocode_dataframe
+from nesta.packages.geo_utils.geocode import geocode_dataframe
+from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.nih_orm import Projects
 

@@ -3,7 +3,7 @@
     "term": "firstName",
     "values": ["id", "year", "placeName", "title", "terms", "currency",
                "textBody", "date", "cost", "coordinate", "url", "address", "status",
-               "count", "datetime", "type", "language", "name", "booleanFlag"]
+               "count", "datetime", "type", "language", "name", "booleanFlag", "personName"]
     },
     {
     "term": "middleName",
@@ -11,13 +11,15 @@
                "official", "start", "end", "descriptive", "abstract", "duns",
                "iso2", "iso3", "isoNumeric", "roles", "region", "summary", "subcategory",
                "category", "rounds", "birth", "last", "death", "employee", "facebook",
-               "linkedIn", "crunchBase", "twitter", "alias", "update", "short", "created", "topics",
+               "linkedIn", "crunchBase", "twitter", "alias", "update", "updated", "short", "created", "topics",
                "latitude", "longitude", "member", "forked", "login", "forkedFrom", "mesh", "duplicate",
-	       "programming"]
+	             "programming", "datestamp", "journalReference", "digitalObjectIdentifier",
+               "mathSubjectClassification", "arxivSubjectCategory"]
     },
     {
     "term": "lastName",
     "values": ["project", "funding", "organisation", "country", "continent",
+               "article", "author",
                "group", "category", "member", "user",  "abstract", "cost"]
     }
 ]
