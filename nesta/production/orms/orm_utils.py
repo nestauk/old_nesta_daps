@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
@@ -9,19 +10,16 @@ from sqlalchemy.sql.expression import and_
 import pymysql
 import os
 
-from sqlalchemy.exc import OperationalError
-from elasticsearch import Elasticsearch
 import json
 
 import logging
 import time
 
-def insert_data(db_env, section, database, Base, _class, data, low_memory=False):
+def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
     and that no duplicate primary keys are inserted.
-
     Args:
         db_env: See :obj:`get_mysql_engine`
         section: See :obj:`get_mysql_engine`
@@ -32,28 +30,39 @@ def insert_data(db_env, section, database, Base, _class, data, low_memory=False)
         low_memory (bool): To speed things up significantly, you can read
                            all pkeys into memory first, but this will blow
                            up for heavy pkeys or large tables.
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
+                                were in the supplied data but not imported (for checks)
 
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+        :obj:`list` of :obj:`dict` data found already existing in the database (optional)
+        :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
+    
     # Add the data
     all_pks = set()
     objs = []
+    existing_objs = []
+    failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
+    
     # Read all pks if in low_memory mode
     if low_memory:
         fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
+    
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
             logging.warning(f"{row} does not contain any of "
                             "{[pkey.name in row for pkey in pkey_cols]}")
+            failed_objs.append(row)
             continue
+            
         # Generate the pkey for this row
         pk = tuple([row[pkey.name]                       # Cast to str if required, since
                     if pkey.type.python_type is not str  # pandas may have incorrectly guessed
@@ -62,17 +71,36 @@ def insert_data(db_env, section, database, Base, _class, data, low_memory=False)
 
         # The row mustn't aleady exist in the input data
         if pk in all_pks:
+            existing_objs.append(row)
             continue
         all_pks.add(pk)
         # Nor should the row exist in the DB
         if not low_memory and session.query(exists(_class, **row)).scalar():
+            existing_objs.append(row)
             continue
         objs.append(_class(**row))
 
+    # save and commit
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
+    if return_non_inserted:
+        return objs, existing_objs, failed_objs
     return objs
+
+
+@contextmanager
+def db_session(engine):
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def exists(_class, **kwargs):
@@ -152,29 +180,7 @@ def get_mysql_engine(db_env, section, database="production_tests"):
                   port=conf['port'],
                   database=database)
     # Create the database
-    return create_engine(url, connect_args={"charset":"utf8mb4"})
-
-
-# def get_elasticsearch_config(es_env, section):
-#     '''Loads local configuration for elasticsearch.
-
-#     Args:
-#         es_env (str): name of the environmental variable holding the path to the config
-#         section (str): section of the document holding the relevent configuration
-
-#     Returns:
-#         (dict): settings for elasticsearch
-#     '''
-#     conf_path = os.environ[es_env]
-#     cp = ConfigParser()
-#     cp.read(conf_path)
-#     conf = dict(cp._sections[section])
-#     es_config = {'host': conf['host'],
-#                  'port': conf['port'],
-#                  'index': conf['index'],
-#                  'type': conf['type']
-#                  }
-#     return es_config
+    return create_engine(url, connect_args={"charset": "utf8mb4"})
 
 
 def create_elasticsearch_index(es_client, index, config_path=None):
