@@ -1,10 +1,10 @@
 import unittest
 from sqlalchemy.orm import sessionmaker
-from nesta.production.orms.gtr_orm import Base
+from nesta.production.orms.nomis_orm import Base
 from nesta.production.orms.orm_utils import get_mysql_engine
 
 
-class TestGtr(unittest.TestCase):
+class TestNomis(unittest.TestCase):
     '''Check that the WiktionaryNgram ORM works as expected'''
     engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
     Session = sessionmaker(engine)

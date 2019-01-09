@@ -15,8 +15,7 @@ import json
 import logging
 import time
 
-
-def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False):
+def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -28,6 +27,9 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): To speed things up significantly, you can read
+                           all pkeys into memory first, but this will blow
+                           up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                 were in the supplied data but not imported (for checks)
 
@@ -40,32 +42,45 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
+    
     # Add the data
     all_pks = set()
     objs = []
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    for row in data:
+    
+    # Read all pks if in low_memory mode
+    if low_memory:
+        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+        all_pks = set(session.query(*fields).all())
+    
+    for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
             logging.warning(f"{row} does not contain any of "
                             "{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
-        # The row mustn't already exist in the db data
-        if session.query(exists(_class, **row)).scalar():
-            existing_objs.append(row)
-            continue
+            
+        # Generate the pkey for this row
+        pk = tuple([row[pkey.name]                       # Cast to str if required, since
+                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
+                    else str(row[pkey.name])             # the type as int
+                    for pkey in pkey_cols])
+
         # The row mustn't aleady exist in the input data
-        pk = tuple([row[pkey.name] for pkey in pkey_cols])
         if pk in all_pks:
             existing_objs.append(row)
             continue
         all_pks.add(pk)
+        # Nor should the row exist in the DB
+        if not low_memory and session.query(exists(_class, **row)).scalar():
+            existing_objs.append(row)
+            continue
         objs.append(_class(**row))
-    logging.debug(f"all objects: {objs}")
-    logging.debug(f"all existing objects: {existing_objs}")
+
+    # save and commit
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
@@ -115,6 +130,7 @@ def get_class_by_tablename(Base, tablename):
     for c in Base._decl_class_registry.values():
         if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
             return c
+    raise NameError(tablename)
 
 
 def try_until_allowed(f, *args, **kwargs):
