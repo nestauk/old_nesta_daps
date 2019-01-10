@@ -1,8 +1,8 @@
-import spacy as sp
-nlp = sp.load('en', disable=['ner'])
+import spacy
+nlp = spacy.load('en', disable=['ner'])
 
 def convert(text):
-    
+
     return str(text).replace('“',"").replace('”',"").replace('‘',"'").replace('’',"'")
 
 def spacy_nlp_vocab_update(stop_word_list): #put in main function or leave it here?
