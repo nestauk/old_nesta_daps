@@ -3,6 +3,7 @@ import pytest
 from unittest import mock
 
 from nesta.packages.geo_utils.geocode import geocode
+from nesta.packages.geo_utils.geocode import _geocode
 from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
 from nesta.packages.geo_utils.geocode import generate_composite_key
@@ -62,6 +63,40 @@ class TestGeocoding():
     def test_coordinates_extracted_from_json_with_one_result(self, mocked_request, mocked_osm_response):
         mocked_request.return_value = mocked_osm_response
         assert geocode(q='somewhere') == [{'lat': '12.923432', 'lon': '-75.234569'}]
+
+    @mock.patch('nesta.packages.geo_utils.geocode.geocode')
+    def test_geocode_wrapper_rejects_invalid_query_parameters(self, mocked_geocode):
+        with pytest.raises(ValueError) as e:
+            _geocode(cat='dog', city='Nice')
+        assert "Invalid query parameter" in str(e.value)
+
+    @mock.patch('nesta.packages.geo_utils.geocode.geocode')
+    def test_geocode_wrapper_rejects_both_q_and_kwargs_supplied(self, mocked_geocode):
+        with pytest.raises(ValueError) as e:
+            _geocode(city='London', q='somewhere')
+        assert "Supply either q OR other query parameters, they cannot be combined." in str(e.value)
+
+    @mock.patch('nesta.packages.geo_utils.geocode.geocode')
+    def test_geocode_wrapper_errors_if_no_query_parameters_supplied(self, mocked_geocode):
+        with pytest.raises(ValueError) as e:
+            _geocode()
+        assert "No query parameters supplied" in str(e.value)
+
+    @mock.patch('nesta.packages.geo_utils.geocode.geocode')
+    def test_geocode_wrapper_calls_geocode_properly(self, mocked_geocode):
+        mocked_geocode.return_value = [{'lat': 1.1, 'lon': 2.2}]
+
+        _geocode('my place')
+        _geocode(q='somewhere')
+        _geocode(city='London', country='UK')
+        _geocode(postalcode='ABC 123')
+
+        expected_calls = [mock.call(q='my place'),
+                          mock.call(q='somewhere'),
+                          mock.call(city='London', country='UK'),
+                          mock.call(postalcode='ABC 123')
+                          ]
+        assert mocked_geocode.mock_calls == expected_calls
 
 
 class TestGeocodeDataFrame():

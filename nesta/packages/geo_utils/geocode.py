@@ -38,35 +38,51 @@ def geocode(**request_kwargs):
     return geo_data
 
 
-@retry(stop_max_attempt_number=10)
+def retry_if_not_value_error(exception):
+    """Forces retry to exit if a valueError is returned. Supplied to the
+    'retry_on_exception' argument in the retry decorator.
+
+    Args:
+        exception (Exception): the raised exception, to check
+
+    Returns:
+        (bool): False if a ValueError, else True
+    """
+    return not isinstance(exception, ValueError)
+
+
+@retry(stop_max_attempt_number=10, retry_on_exception=retry_if_not_value_error)
 @ratelimit(max_per_second=0.5)
-def _geocode(q=None, city=None, country=None):
+def _geocode(q=None, **kwargs):
     '''Extension of geocode to handle errors and attempt with the query method on
     failure.
 
     Args:
         q (str): query string, multiple words should be separated with +
-        city (str): name of the city.
-        country (str): name of the country.
+        kwargs (str): name and value of any other valid query paramater
+
     Returns:
-        dict of lat and lon.
+        dict: lat and lon.
     '''
-    if city and country:
-        query_kwargs = {'country': country, 'city': city}
-    elif q and not (city or country):
-        query_kwargs = {'q': q}
-    else:
-        raise TypeError("Missing argument: q or city and country required")
+    valid_kwargs = ['street', 'city', 'county', 'state', 'country', 'postalcode']
+    if not all(kwarg in valid_kwargs for kwarg in kwargs):
+        raise ValueError(f"Invalid query parameter. Not in: {valid_kwargs}")
+    if q and kwargs:
+        raise ValueError("Supply either q OR other query parameters, they cannot be combined.")
+    if not q and not kwargs:
+        raise ValueError("No query parameters supplied")
+
+    query_kwargs = {'q': q} if q else kwargs
 
     try:
         geo_data = geocode(**query_kwargs)
     except ValueError:
-        logging.debug(f"Unable to geocode {q or (city, country)}")
+        logging.debug(f"Unable to geocode {query_kwargs}")
         return None  # converts to null and is accepted in elasticsearch
 
     lat = geo_data[0]['lat']
     lon = geo_data[0]['lon']
-    logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+    logging.debug(f"Successfully geocoded {query_kwargs} to {lat, lon}")
 
     return {'lat': lat, 'lon': lon}
 
