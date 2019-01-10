@@ -6,6 +6,7 @@ import gensim
 import logging
 from numpy.random import randint
 import os
+import pickle
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -17,8 +18,9 @@ from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import clean_and_tokenize
 from nesta.packages.s3_utils.s3_transfer import get_pkl_object
 
-from nesta.packages.unsdg_nlp_utils.bigram_gensim_creation import generate_bigrams, rid_of_stopword_bigrams
-from nesta.packages.unsdg_nlp_utils.preprocess_spacy import convert, spacy_nlp_vocab_update, word_tokenise
+from nesta.packages.unsdg_nlp_utils.bigram_gensim_creation import generate_bigrams, clean_bigrams
+from nesta.packages.unsdg_nlp_utils.preprocess_spacy import *
+from nesta.packages.nlp_utils.topic_distribution_lda import get_distribution_probabilities
 
 def dummy_model(text):
     ''' dummy_model
@@ -32,6 +34,17 @@ def dummy_model(text):
         predictions.append(goals.pop(randint(len(goals))))
 
     return predictions
+
+def predict_sdg_labels(topic_dist, model_dictionary):
+
+    sd_labels_predictions = []
+    for sdg_label,model in model_dictionary.items():
+        prediction = model.predict(topic_dist)
+        sd_labels_predictions.extend(list(prediction))
+
+    indices = [i for i, x in enumerate(sdg_labels_predict) if x == 1]
+    sdg_list = [i+1 for i in indices]
+    return sdg_list
 
 def retrieve_id_file(bucket, key):
     ''' retrieve_id_file
@@ -75,12 +88,30 @@ def run():
     model_bucket = os.environ["BATCHPAR_model_bucket"]
     model_key = os.environ["BATCHPAR_model_key"]
     model_date = os.environ["BATCHPAR_model_date"]
+
+    dictionary_bucket = os.environ[]
+    dictionary_key = os.environ[]
+
+    phraser_bucket = os.environ[]
+    phraser_key = os.environ[]
+
+    topic_model_bucket = os.environ[]
+    topic_model_key = os.environ[]
+
+    stop_words_bucket = os.environ[]
+    stop_words_key = os.environ[]
+
     es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
 
     ids = retrieve_id_file(ids_bucket, ids_key)
     model = get_pkl_object(model_bucket, model_key)
 
     es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
+
+    #load stop words and update nlp vocab
+    #load stopwords
+    spacy_nlp_vocab_update(stop_words)
+
 
     doc_predictions = []
     for doc_id in ids:
@@ -92,10 +123,22 @@ def run():
                 doc_id=doc_id
                 )
         if abstract is not None:
-        # preprocess text
-            abstract_clean = ' '.join(clean_and_tokenize(abstract, remove_stops=True))
-            # predict SDGs
-            predictions = model.predict([abstract_clean]).tolist()
+            # preprocess text
+            abstract_tokens = word_tokenise(abstract)
+
+            #load bigram model
+
+            tokens_unigrams_bigrams = generate_bigrams(abstract_tokens, bigram_mod)
+            clean_tokens = clean_bigrams(tokens_unigrams_bigrams, stop_words)
+
+            #load lda model and dictionary
+            doc_term_vec = [dictionary.doc2bow(doc) for doc in [clean_tokens]]
+            ct = lda_model[doc_term_vec]
+            topic_distrib = get_distribution_probabilities(ct)
+
+            #load models and predict SDGs
+            predictions = predict_sdg_labels(topic_distrib, models)
+
             # insert into ES
             doc_predictions.append(
                     {'doc_id': doc_id,
