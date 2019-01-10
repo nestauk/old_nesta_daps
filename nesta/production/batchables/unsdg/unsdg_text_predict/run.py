@@ -134,7 +134,7 @@ def run():
             topic_distrib = get_distribution_probabilities(ct)
 
             #load models and predict SDGs
-            predictions = predict_sdg_labels(topic_distrib, models)
+            predictions = predict_sdg_labels(topic_distrib, model)
 
             # insert into ES
             doc_predictions.append(
