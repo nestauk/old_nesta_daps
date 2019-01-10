@@ -2,6 +2,7 @@ import ast
 import boto3
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError
+import gensim
 import logging
 from numpy.random import randint
 import os
@@ -16,6 +17,8 @@ from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import clean_and_tokenize
 from nesta.packages.s3_utils.s3_transfer import get_pkl_object
 
+from nesta.packages.unsdg_nlp_utils.bigram_gensim_creation import generate_bigrams, rid_of_stopword_bigrams
+from nesta.packages.unsdg_nlp_utils.preprocess_spacy import convert, spacy_nlp_vocab_update, word_tokenise
 
 def dummy_model(text):
     ''' dummy_model
@@ -33,7 +36,7 @@ def dummy_model(text):
 def retrieve_id_file(bucket, key):
     ''' retrieve_id_file
     Returns list of doc ids from a text file.
-    
+
     Args:
         bucket (str): s3 bucket
         key (str): key for an s3 object
@@ -55,7 +58,7 @@ def get_abstract_by_id(es_client, index, doc_type, doc_id):
 	index (str): name of the index
 	doc_type (str): name of the document type
 	idx (int): id of the document
-    
+
     Returns:
         abstract (str): abstract of the document
     '''
@@ -73,19 +76,19 @@ def run():
     model_key = os.environ["BATCHPAR_model_key"]
     model_date = os.environ["BATCHPAR_model_date"]
     es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
-    
+
     ids = retrieve_id_file(ids_bucket, ids_key)
     model = get_pkl_object(model_bucket, model_key)
 
     es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
-    
+
     doc_predictions = []
     for doc_id in ids:
         # query ES for text of record with id
         abstract = get_abstract_by_id(
-                es, 
-                index=es_config['index'], 
-                doc_type=es_config['type'], 
+                es,
+                index=es_config['index'],
+                doc_type=es_config['type'],
                 doc_id=doc_id
                 )
         if abstract is not None:
