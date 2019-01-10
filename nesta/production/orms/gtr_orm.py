@@ -8,11 +8,12 @@ sampling the first 100 projects.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import VARCHAR, TEXT
+from sqlalchemy.dialects.mysql import VARCHAR, TEXT, DECIMAL
 from sqlalchemy.types import JSON, INT, DATETIME, FLOAT
 from sqlalchemy import Column
 
 Base = declarative_base()
+
 
 class Projects(Base):
     """The spine of the dataset, connected to all other objects via LinkTable"""
@@ -60,6 +61,13 @@ class Organisation(Base):
     addresses = Column(JSON)
     projectCost = Column(FLOAT)
     grantOffer = Column(FLOAT)
+    country_name = Column(VARCHAR(200))
+    country_alpha_2 = Column(VARCHAR(2))
+    country_alpha_3 = Column(VARCHAR(3))
+    country_numeric = Column(VARCHAR(3))
+    continent = Column(VARCHAR(2))
+    latitude = Column(DECIMAL(precision=8, scale=6))
+    longitude = Column(DECIMAL(precision=9, scale=6))
 
 
 class Fund(Base):
