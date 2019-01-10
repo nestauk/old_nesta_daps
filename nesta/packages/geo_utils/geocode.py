@@ -59,10 +59,10 @@ def _geocode(q=None, **kwargs):
 
     Args:
         q (str): query string, multiple words should be separated with +
-        kwargs (str): name and value of any other valid query paramater
+        kwargs (str): name and value of any other valid query parameters
 
     Returns:
-        dict: lat and lon.
+        dict: lat and lon
     '''
     valid_kwargs = ['street', 'city', 'county', 'state', 'country', 'postalcode']
     if not all(kwarg in valid_kwargs for kwarg in kwargs):
