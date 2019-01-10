@@ -121,10 +121,30 @@ class QueryGroupTask(autobatch.AutoBatchTask):
         id_key_prefix = 'unsdg_prediction/ids_{}.txt'
         model_bucket = 'nesta-sdg-classifier'
         model_key_prefix = 'models/sdg_classifier'
+        dictioanry_key_prefix = 'dictionary/nesta-sdg'
+        topic_model_prefix = 'topic_model/nesta-sdg'
+        phraser_prefix = 'phraser/nesta-sdg'
+        stop_words_prefix = 'stop_words/nesta-sdg'
 
         latest_model = get_latest(model_bucket, key=model_key_prefix)
         model_date = latest_model.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
         model_key = latest_model.key
+
+        latest_dictionary = get_latest(model_bucket, key=dictionary_key_prefix)
+        dictionary_date = latest_dictionary.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
+        dictionary_key = latest_dictionary.key
+
+        latest_topic_model = get_latest(model_bucket, key=topic_model_key_prefix)
+        topic_model_date = latest_topic_model.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
+        topic_model_key = latest_topic_model.key
+
+        latest_phraser = get_latest(model_bucket, key=phraser_key_prefix)
+        phraser_date = latest_phraser.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
+        phraser_key = latest_phraser.key
+
+        latest_stop_words = get_latest(model_bucket, key=stop_words_key_prefix)
+        stop_words_date = latest_stop_words.last_modified.strftime('%Y-%m-%dT%H:%M:%S')
+        stop_words_key = latest_stop_words.key
 
         query_results = self.all_unlabelled(es, model_date, es_mode)
         chunk_key_ids = self.chunk_ids_to_s3(
@@ -141,6 +161,10 @@ class QueryGroupTask(autobatch.AutoBatchTask):
                     'id_bucket': id_bucket,
                     'model_bucket': model_bucket,
                     'model_key': model_key,
+                    'dictionary_key': dictionary_key,
+                    'topic_model_key': topic_model_key,
+                    'phraser_key': phraser_key,
+                    'stop_words_key': stop_words_key,
                     'model_date': model_date,
                     'outinfo': es_config,
                     'done': False
