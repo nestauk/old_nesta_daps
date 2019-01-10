@@ -2,11 +2,11 @@ import ast
 import boto3
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError
-import gensim
 import logging
 from numpy.random import randint
 import os
 import pickle
+from gensim.models.ldamodel import LdaModel
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -97,6 +97,7 @@ def run():
 
     ids = retrieve_id_file(ids_bucket, ids_key)
     model = get_pkl_object(model_bucket, model_key)
+    lda_model = LdaModel.load(get_presigned_url(model_bucket, topic_model_key))
 
 
     es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
