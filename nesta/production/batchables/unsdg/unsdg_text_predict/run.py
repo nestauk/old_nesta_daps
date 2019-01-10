@@ -88,27 +88,20 @@ def run():
     model_bucket = os.environ["BATCHPAR_model_bucket"]
     model_key = os.environ["BATCHPAR_model_key"]
     model_date = os.environ["BATCHPAR_model_date"]
-
-    dictionary_bucket = os.environ[]
-    dictionary_key = os.environ[]
-
-    phraser_bucket = os.environ[]
-    phraser_key = os.environ[]
-
-    topic_model_bucket = os.environ[]
-    topic_model_key = os.environ[]
-
-    stop_words_bucket = os.environ[]
-    stop_words_key = os.environ[]
+    dictionary_key = os.environ["BATCHPAR_dictionary_key"]
+    phraser_key = os.environ["BATCHPAR_phraser_key"]
+    topic_model_key = os.environ["BATCHPAR_topic_model_key"]
+    stop_words_key = os.environ["BATCHPAR_stop_words_key"]
 
     es_config = ast.literal_eval(os.environ["BATCHPAR_outinfo"])
 
     ids = retrieve_id_file(ids_bucket, ids_key)
     model = get_pkl_object(model_bucket, model_key)
 
+
     es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
 
-    #load stop words and update nlp vocab
+    #load stop words and update spacy.nlp vocab
     #load stopwords
     spacy_nlp_vocab_update(stop_words)
 
