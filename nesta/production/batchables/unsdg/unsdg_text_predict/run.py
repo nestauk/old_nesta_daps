@@ -16,7 +16,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import clean_and_tokenize
-from nesta.packages.s3_utils.s3_transfer import get_pkl_object
+from nesta.packages.s3_utils.s3_transfer import get_pkl_object, get_presigned_url
 
 from nesta.packages.unsdg_nlp_utils.bigram_gensim_creation import generate_bigrams, clean_bigrams
 from nesta.packages.unsdg_nlp_utils.preprocess_spacy import *
@@ -97,6 +97,9 @@ def run():
 
     ids = retrieve_id_file(ids_bucket, ids_key)
     model = get_pkl_object(model_bucket, model_key)
+    dictionary = get_pkl_object(model_bucket, dictionary_key)
+    bigram_phraser = get_pkl_object(model_bucket, phraser_key)
+    sdg_stop_words = get_pkl_object(model_bucket, stop_words_key)
     lda_model = LdaModel.load(get_presigned_url(model_bucket, topic_model_key))
 
 
@@ -104,7 +107,7 @@ def run():
 
     #load stop words and update spacy.nlp vocab
     #load stopwords
-    spacy_nlp_vocab_update(stop_words)
+    spacy_nlp_vocab_update(sdg_stop_words)
 
 
     doc_predictions = []
@@ -122,8 +125,8 @@ def run():
 
             #load bigram model
 
-            tokens_unigrams_bigrams = generate_bigrams(abstract_tokens, bigram_mod)
-            clean_tokens = clean_bigrams(tokens_unigrams_bigrams, stop_words)
+            tokens_unigrams_bigrams = generate_bigrams(abstract_tokens, bigram_phraser)
+            clean_tokens = clean_bigrams(tokens_unigrams_bigrams, sdg_stop_words)
 
             #load lda model and dictionary
             doc_term_vec = [dictionary.doc2bow(doc) for doc in [clean_tokens]]
