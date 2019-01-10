@@ -54,7 +54,7 @@ def retry_if_not_value_error(exception):
 @retry(stop_max_attempt_number=10, retry_on_exception=retry_if_not_value_error)
 @ratelimit(max_per_second=0.5)
 def _geocode(q=None, **kwargs):
-    '''Extension of geocode to handle errors and attempt with the query method on
+    '''Extension of geocode to catch invalid requests to the api and handle errors.
     failure.
 
     Args:
@@ -78,7 +78,7 @@ def _geocode(q=None, **kwargs):
         geo_data = geocode(**query_kwargs)
     except ValueError:
         logging.debug(f"Unable to geocode {query_kwargs}")
-        return None  # converts to null and is accepted in elasticsearch
+        return None  # converts to null which is accepted in elasticsearch
 
     lat = geo_data[0]['lat']
     lon = geo_data[0]['lon']
