@@ -79,3 +79,22 @@ def get_pkl_object(bucket, key):
         model = pickle.load(model)
 
     return model
+
+def get_presigned_url(bucket, key):
+    '''get_presigned_url
+    Gets a presigned url from an object in S3.
+
+    Args:
+        bucket (str): s3 bucket
+        key (str): s3 key
+
+    Returns:
+        url (str): a url
+    '''
+    client = boto3.client('s3')
+    url = client.generate_presigned_url(
+            'get_object',
+            ExpiresIn=0,
+            Params={'Bucket': bucket, 'Key': key},
+            )
+    return url
