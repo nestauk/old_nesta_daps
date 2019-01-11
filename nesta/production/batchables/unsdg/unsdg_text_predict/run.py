@@ -128,7 +128,7 @@ def run():
             clean_tokens = clean_bigrams(tokens_unigrams_bigrams, sdg_stop_words)
 
             #load lda model and dictionary
-            doc_term_vec = [dictionary.doc2bow(doc) for doc in [clean_tokens]]
+            doc_term_vec = dictionary.doc2bow(clean_tokens)
             ct = lda_model[doc_term_vec]
             topic_distrib = get_distribution_probabilities(ct)
 
