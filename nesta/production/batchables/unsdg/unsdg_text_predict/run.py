@@ -38,7 +38,7 @@ def dummy_model(text):
 def predict_sdg_labels(topic_dist, model_dictionary):
 
     sd_labels_predictions = []
-    for sdg_label,model in model_dictionary.items():
+    for sdg_label, model in model_dictionary.items():
         prediction = model.predict(topic_dist)
         sd_labels_predictions.extend(list(prediction))
 
