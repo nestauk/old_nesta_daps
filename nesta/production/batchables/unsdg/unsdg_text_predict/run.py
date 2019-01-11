@@ -42,7 +42,7 @@ def predict_sdg_labels(topic_dist, model_dictionary):
         prediction = model.predict(topic_dist)
         sd_labels_predictions.extend(list(prediction))
 
-    indices = [i for i, x in enumerate(sdg_labels_predict) if x == 1]
+    sdg_list = [i+1 for i, x in enumerate(sdg_labels_predict) if x == 1]
     sdg_list = [i+1 for i in indices]
     return sdg_list
 
