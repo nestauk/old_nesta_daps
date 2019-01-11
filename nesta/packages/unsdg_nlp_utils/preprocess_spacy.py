@@ -30,7 +30,6 @@ def word_tokenise(text):
             continue
         if t.is_digit:
             continue
-
         if t.pos_ == 'ADV':
             continue
         if t.pos_ == 'ADP':
