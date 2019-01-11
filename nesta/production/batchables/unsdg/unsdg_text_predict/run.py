@@ -124,7 +124,7 @@ def run():
 
             #load bigram model
 
-            tokens_unigrams_bigrams = generate_bigrams(abstract_tokens, bigram_phraser)
+            tokens_unigrams_bigrams = bigram_phraser[abstract_tokens]
             clean_tokens = clean_bigrams(tokens_unigrams_bigrams, sdg_stop_words)
 
             #load lda model and dictionary
