@@ -61,6 +61,12 @@ class Organisation(Base):
     addresses = Column(JSON)
     projectCost = Column(FLOAT)
     grantOffer = Column(FLOAT)
+
+
+class OrganisationLocation(Base):
+    __tablename__ = "gtr_organisations_locations"
+
+    id = Column(VARCHAR(36), primary_key=True)
     country_name = Column(VARCHAR(200))
     country_alpha_2 = Column(VARCHAR(2))
     country_alpha_3 = Column(VARCHAR(3))
