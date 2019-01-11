@@ -11,8 +11,14 @@ import requests
 import xml.etree.ElementTree as ET
 import re
 from collections import defaultdict
-from datetime import datetime as dt
+# from datetime import datetime as dt
 from retrying import retry
+
+from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
+from nesta.packages.geo_utils.country_iso_code import country_iso_code
+from nesta.packages.geo_utils.geocode import _geocode
+from nesta.production.orms.orm_utils import db_session
+from nesta.production.orms.gtr_orm import Organisation, OrganisationLocation
 
 
 # Global constants
@@ -20,6 +26,7 @@ TOP_URL = "https://gtr.ukri.org/gtr/api/projects"
 TOTALPAGES_KEY = "{http://gtr.rcuk.ac.uk/gtr/api}totalPages"
 REGEX = re.compile(r'\{(.*)\}(.*)')
 REGEX_API = re.compile(r'https://gtr.ukri.org:443/gtr/api/(.*)/(.*)')
+
 
 def extract_link_table(data):
     """Iterate through the collected data and generate the link table
@@ -46,11 +53,11 @@ def extract_link_table(data):
 
 def is_list_entity(row_value):
     """All list entities have the following structure:
-    
+
          {"key": [{<data>}]}
 
     so this function tests specifically this.
-    
+
     Args:
         row_value: Object to test
     """
@@ -60,9 +67,9 @@ def is_list_entity(row_value):
         return False
     nested_value = next(iter(row_value.values()))
     return isinstance(nested_value, list)
-    
 
-def contains_key(d, search_key):        
+
+def contains_key(d, search_key):
     """Does any generic mixed dict/list (i.e. json-like) object contain the key?
 
     Args:
@@ -92,7 +99,7 @@ def is_iterable(x):
     except TypeError:
         return False
     return True
- 
+
 
 class TypeDict(dict):
     """dict-like class which converts string values to an
@@ -110,7 +117,7 @@ class TypeDict(dict):
             return super().__setitem__(k, None)
         # Don't bother if not a string
         # or if all characters are letters
-        if not isinstance(v, str) or v.replace(' ','').isalpha():
+        if not isinstance(v, str) or v.replace(' ', '').isalpha():
             return super().__setitem__(k, v)
         # Try int and float
         if self.set_and_cast_item(k, v, int):
@@ -206,9 +213,9 @@ def unpack_list_data(row, data):
                 # and is anyway not super-interesting
                 if 'percentage' in item:
                     item.pop('percentage')
-                item['topic_type'] = key 
+                item['topic_type'] = key
                 table_name = 'topic'
-            data[table_name.replace("/","_")].append(item)
+            data[table_name.replace("/", "_")].append(item)
 
 
 def extract_link_data(url):
@@ -282,7 +289,7 @@ def extract_data_recursive(et, row, ignore=[]):
     """
     for c in et.getchildren():
         # Extract the shallow data for this row
-        entity, _row = extract_data(c, ignore)        
+        entity, _row = extract_data(c, ignore)
         if entity in ignore:
             continue
         # Unpack any deep data into the shallow _row that we just extracted
@@ -290,13 +297,13 @@ def extract_data_recursive(et, row, ignore=[]):
         # If this row contains "value" or "item", and nothing else, then flatten it further
         # as these are dummy fields in the GtR data
         if isinstance(_row, dict):
-            for key in ("value", "item"):                
+            for key in ("value", "item"):
                 if key in _row and len(_row) == 1:
                     _row = _row[key]
                     break
         # Ignore duplicate entries
         if entity in row and _row == row[entity]:
-            continue        
+            continue
         # Treat 'link' objects differently: append as a list item to the parent row
         is_topic_row = isinstance(_row, dict) and 'text' in _row
         if entity in ('link', 'participant') or is_topic_row:
@@ -322,6 +329,70 @@ def read_xml_from_url(url, **kwargs):
     r.raise_for_status()
     et = ET.fromstring(r.text)
     return et
+
+
+def get_orgs_to_geocode(all_orgs, existing_orgs):
+    """Extracts organisations and addresses and removes any that have prevously been
+    processed.
+
+    Args:
+        all_orgs(:obj:`list` of :obj:`tuple`): organisation id and addresses
+        existing_orgs(:obj:`list` of :obj:`tuple`): organisation ids
+
+    Returns:
+        (:obj: `list` of :obj:`dict`): organisations to process
+    """
+    # convert list of 1-tuples to a set
+    existing_ids = {org_id for (org_id,) in existing_orgs}
+
+    orgs_to_process = []
+    for org in all_orgs:
+        org_id, address = org
+
+        if org_id not in existing_ids:
+            org_details = {'id': org_id}
+            if address is not None:
+                org_details = {**address['address'], **org_details}  # address also contains an 'id' which we discard
+
+            orgs_to_process.append(org_details)
+
+    return orgs_to_process
+
+
+def geocode_uk_with_postcode(org_details):
+    """Wrapper for the geocoder that will process any organisations that are in the UK
+    and have a postcode.
+
+    Args:
+        orgs_details (dict): organisation details, without latitude and longitude
+
+    Returns
+        (dict): processed org details with latitude, longitude appended
+    """
+    org_details['latitude'] = None
+    org_details['longitude'] = None
+
+    if org_details.get('region') != 'Outside UK' and org_details.get('postCode') is not None:
+        coordinates = _geocode(postalcode=org_details['postCode'])
+
+        if coordinates is not None:
+            org_details['latitude'] = coordinates['lat']
+            org_details['longitude'] = coordinates['lon']
+
+    return org_details
+
+
+def add_country_details(org_details):
+    """If country is valid attempt to append iso codes and continent.
+
+    Args:
+        org_details (dict): organisation details, without iso codes and continent
+
+    Returns:
+        (dict): processed org with extra data appended or None if failure
+    """
+    pass
+
 
 
 if __name__ == "__main__":
