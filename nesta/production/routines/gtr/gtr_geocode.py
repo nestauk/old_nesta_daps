@@ -38,7 +38,6 @@ class GtrGeocode(luigi.Task):
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
-        logging.getLogger().setLevel(logging.INFO)
         yield GtrTask(date=self.date,
                       page_size=self.page_size,
                       batchable=find_filepath_from_pathstub("production/batchables/gtr/"),
