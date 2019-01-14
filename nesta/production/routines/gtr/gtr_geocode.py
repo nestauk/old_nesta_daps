@@ -72,7 +72,7 @@ class GtrGeocode(luigi.Task):
 
         with db_session(self.engine) as session:
             all_orgs = session.query(Organisation.id, Organisation.addresses).limit(limit).all()
-            existing_org_location_ids = session.query(OrganisationLocation.id).limit(limit).all()
+            existing_org_location_ids = session.query(OrganisationLocation.id).all()
         logging.info(f"{len(all_orgs)} organisations retrieved from database")
         logging.info(f"{len(existing_org_location_ids)} organisations have previously been processed")
 
