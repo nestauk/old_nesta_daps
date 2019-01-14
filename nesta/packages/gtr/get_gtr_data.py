@@ -331,7 +331,7 @@ def read_xml_from_url(url, **kwargs):
     return et
 
 
-def get_orgs_to_geocode(all_orgs, existing_orgs):
+def get_orgs_to_process(all_orgs, existing_orgs):
     """Extracts organisations and addresses and removes any that have prevously been
     processed.
 

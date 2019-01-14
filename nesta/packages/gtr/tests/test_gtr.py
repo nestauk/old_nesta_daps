@@ -14,7 +14,7 @@ from nesta.packages.gtr.get_gtr_data import unpack_list_data
 # from nesta.packages.gtr.get_gtr_data import extract_data
 # from nesta.packages.gtr.get_gtr_data import extract_data_recursive
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
-from nesta.packages.gtr.get_gtr_data import get_orgs_to_geocode
+from nesta.packages.gtr.get_gtr_data import get_orgs_to_process
 from nesta.packages.gtr.get_gtr_data import geocode_uk_with_postcode
 from nesta.packages.gtr.get_gtr_data import add_country_details
 
@@ -143,16 +143,16 @@ class TestGeocoding():
                 {'id': 4}  # no address
                 ]
 
-    def test_get_orgs_to_geocode(self, raw_org_data, unpacked_orgs):
-        assert get_orgs_to_geocode(raw_org_data, []) == unpacked_orgs
+    def test_get_orgs_to_process(self, raw_org_data, unpacked_orgs):
+        assert get_orgs_to_process(raw_org_data, []) == unpacked_orgs
 
-    def test_get_orgs_to_geocode_excludes_existing(self, raw_org_data):
+    def test_get_orgs_to_process_excludes_existing(self, raw_org_data):
         existing = [(1,), (2,), (4,)]
 
         expected = [{'id': 0, 'line1': 'some street', 'postCode': 'ABC 123'},
                     {'id': 3, 'line1': 'my road'}
                     ]
-        assert get_orgs_to_geocode(raw_org_data, existing) == expected
+        assert get_orgs_to_process(raw_org_data, existing) == expected
 
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
     def test_geocode_correctly_calls_geocoder(self, mocked_geocode, unpacked_orgs):
