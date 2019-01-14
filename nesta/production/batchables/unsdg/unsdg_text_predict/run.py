@@ -18,9 +18,9 @@ from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.nlp_utils.preprocess import clean_and_tokenize
 from nesta.packages.s3_utils.s3_transfer import get_pkl_object, get_presigned_url
 
-from nesta.packages.unsdg_nlp_utils.bigram_gensim_creation import generate_bigrams, clean_bigrams
-from nesta.packages.unsdg_nlp_utils.preprocess_spacy import *
-from nesta.packages.nlp_utils.topic_distribution_lda import get_distribution_probabilities
+from nesta.packages.spacy_utils.ngram_tools import remove_stop_word_ngrams
+from nesta.packages.spacy_utils.preprocess_spacy import *
+from nesta.packages.gensim_utils.topic_modelling import get_distribution_probabilities
 
 def dummy_model(text):
     ''' dummy_model
@@ -125,7 +125,7 @@ def run():
             #load bigram model
 
             tokens_unigrams_bigrams = bigram_phraser[abstract_tokens]
-            clean_tokens = clean_bigrams(tokens_unigrams_bigrams, sdg_stop_words)
+            clean_tokens = remove_stop_word_ngrams(tokens_unigrams_bigrams, sdg_stop_words)
 
             #load lda model and dictionary
             doc_term_vec = dictionary.doc2bow(clean_tokens)
