@@ -69,7 +69,7 @@ class GtrGeocode(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
         limit = 2000 if self.test else None
-        batch_size = 50 if self.test else 1000
+        batch_size = 30 if self.test else 1000
 
         with db_session(self.engine) as session:
             all_orgs = session.query(Organisation.id, Organisation.addresses).limit(limit).all()
@@ -93,6 +93,7 @@ class GtrGeocode(luigi.Task):
             batch = [{k: v for k, v in org.items() if k in org_location_cols}
                      for org in orgs]
 
+            logging.debug(batch)
             insert_data(self.db_config_env, 'mysqldb', database,
                         Base, OrganisationLocation, batch)
             completed_batches += 1
