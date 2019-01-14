@@ -7,28 +7,18 @@ Add country name, iso codes and continent.
 """
 import logging
 import luigi
+from math import ceil
 import os
 
-from nesta.packages.geo_utils.geocode import geocode
-from nesta.packages.geo_utils.country_iso_code import country_iso_code
-from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
-from nesta.packages.gtr.get_gtr_data import get_orgs_to_geocode
+from nesta.packages.gtr.get_gtr_data import add_country_details
+from nesta.packages.gtr.get_gtr_data import geocode_uk_with_postcode
+from nesta.packages.gtr.get_gtr_data import get_orgs_to_process
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.production.orms.orm_utils import db_session, get_mysql_engine
+from nesta.production.orms.orm_utils import insert_data, try_until_allowed
 from nesta.production.orms.gtr_orm import Base, Organisation, OrganisationLocation
-"""
-- Identify all rows in the organisations table that have not been processed (id in the
-  organisations locations table)
-
-- Geocode any that have a postcode and are not region='Outside UK'
-
-- Populate country_name from the address or to 'United Kingdom' if geocoding attempted
-
-- Apply country_iso_code and continent mapping
-
-- Append this data to the organisations locations table
-"""
 
 
 class GtrGeocode(luigi.Task):
@@ -62,6 +52,7 @@ class GtrGeocode(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
         limit = 2000 if self.test else None
+        batch_size = 30 if self.test else 1000
 
         with db_session(self.engine) as session:
             all_orgs = session.query(OrganisationLocation.id, Organisation.Addresses).limit(limit).all()
@@ -70,46 +61,30 @@ class GtrGeocode(luigi.Task):
         logging.info(f"{len(existing_org_location_ids)} organisations have previously been processed")
 
         # convert to a list of dictionaries with the nested addresses unpacked
-        orgs = get_orgs_to_geocode(all_orgs, existing_org_location_ids)
+        orgs = get_orgs_to_process(all_orgs, existing_org_location_ids)
         logging.info(f"{len(orgs)} new organisations to geocode")
 
+        total_batches = ceil(len(orgs)/batch_size)
+        logging.info(f"{total_batches} batches")
+        completed_batches = 0
+        for batch in split_batches(orgs, batch_size=batch_size):
+            map(add_country_details, batch)
+            map(geocode_uk_with_postcode, batch)
 
+            # remove data not in OrganisationLocation columns
+            org_location_cols = OrganisationLocation.__table__.columns.keys()
+            batch = [{k: v for k, v in org.items() if k in org_location_cols}
+                     for org in orgs]
 
+            insert_data(self.db_config_env, 'mysqldb', database,
+                        Base, OrganisationLocation, batch)
+            completed_batches += 1
+            logging.info(f"Completed {completed_batches} of {total_batches} batches")
 
-
-
-
-
-        # # collect files
-        # nrows = 1000 if self.test else None
-        # cat_groups, orgs, org_descriptions = get_files_from_tar(['category_groups',
-        #                                                          'organizations',
-        #                                                          'organization_descriptions'
-        #                                                          ],
-        #                                                         nrows=nrows)
-        # # process category_groups
-        # cat_groups = rename_uuid_columns(cat_groups)
-        # _insert_data(self.db_config_env, 'mysqldb', database,
-        #              Base, CategoryGroup, cat_groups.to_dict(orient='records'))
-
-        # # process organizations and categories
-        # with db_session(self.engine) as session:
-        #     existing_orgs = session.query(Organization.id).all()
-        # existing_orgs = {o[0] for o in existing_orgs}
-
-        # processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs,
-        #                                                             existing_orgs,
-        #                                                             cat_groups,
-        #                                                             org_descriptions)
-        # _insert_data(self.db_config_env, 'mysqldb', database,
-        #              Base, CategoryGroup, missing_cat_groups)
-        # _insert_data(self.db_config_env, 'mysqldb', database,
-        #              Base, Organization, processed_orgs, self.insert_batch_size)
-
-        # # link table needs to be inserted via non-bulk method to enforce relationship
-        # org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
-        # with db_session(self.engine) as session:
-        #     session.add_all(org_cats)
+            if self.test:
+                logging.warning("Breaking after 1 batch in test mode")
+                break
 
         # mark as done
+        logging.warning("Finished task")
         self.output().touch()
