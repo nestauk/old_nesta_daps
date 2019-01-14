@@ -213,48 +213,119 @@ class TestAddCountryDetails():
     @pytest.fixture
     def continent_map(self):
         return {'FR': 'EU',
-                'UK': 'EU',
+                'GB': 'EU',
                 'HM': 'AN'}
+
+    @pytest.fixture
+    def iso_codes(self):
+        def _iso_codes(alpha_2, alpha_3, name, numeric):
+            details = mock.Mock()
+            details.alpha_2 = alpha_2
+            details.alpha_3 = alpha_3
+            details.name = name
+            details.numeric = numeric
+            return details
+        return _iso_codes
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_properly_calls_iso_coding(self, mocked_iso_code,
                                                            mocked_continent,
-                                                           org_details, continent_map):
-        pass
+                                                           org_details, continent_map,
+                                                           iso_codes):
+        mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
+        add_country_details(org_details[1])
+        assert mocked_iso_code.mock_calls == [mock.call('United Kingdom')]
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_correctly_applies_continent(self, mocked_iso_code,
-                                                             mocked_continent, org_details):
-        pass
+                                                             mocked_continent,
+                                                             org_details, continent_map,
+                                                             iso_codes):
+        mocked_continent.return_value = continent_map
+        mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
+
+        assert add_country_details(org_details[0])['continent'] == 'EU'
+
+    @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
+    @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
+    def test_add_country_details_correctly_applies_iso_codes_uk(self, mocked_iso_code,
+                                                                mocked_continent,
+                                                                org_details, continent_map,
+                                                                iso_codes):
+        mocked_continent.return_value = continent_map
+        mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
+        coded_country = add_country_details(org_details[0])
+
+        assert coded_country['country_alpha_2'] == 'GB'
+        assert coded_country['country_alpha_3'] == 'GBR'
+        assert coded_country['country_name'] == 'United Kingdom'
+        assert coded_country['country_numeric'] == '826'
+
+    @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
+    @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
+    def test_add_country_details_correctly_applies_iso_codes_non_uk(self, mocked_iso_code,
+                                                                    mocked_continent,
+                                                                    org_details, continent_map,
+                                                                    iso_codes):
+        mocked_continent.return_value = continent_map
+        mocked_iso_code.return_value = iso_codes('FR', 'FRA', 'France', '250')
+        coded_country = add_country_details(org_details[2])
+
+        assert coded_country['country_alpha_2'] == 'FR'
+        assert coded_country['country_alpha_3'] == 'FRA'
+        assert coded_country['country_name'] == 'France'
+        assert coded_country['country_numeric'] == '250'
+
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_returns_empty_fields_for_failed_country_lookup(self,
                                                                                 mocked_iso_code,
                                                                                 mocked_continent,
-                                                                                org_details):
-        pass
+                                                                                org_details,
+                                                                                continent_map):
+        mocked_iso_code.side_effect = KeyError
+        mocked_continent.return_value = continent_map
+        coded_country = add_country_details(org_details[4])
+
+        assert coded_country['country_alpha_2'] is None
+        assert coded_country['country_alpha_3'] is None
+        assert coded_country['country_name'] is None
+        assert coded_country['country_numeric'] is None
+        assert coded_country['continent'] is None
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_returns_empty_fields_when_no_country(self,
                                                                       mocked_iso_code,
                                                                       mocked_continent,
-                                                                      org_details):
-        pass
+                                                                      org_details,
+                                                                      continent_map):
+        mocked_continent.return_value = continent_map
+        coded_country = add_country_details(org_details[3])
+
+        mocked_iso_code.assert_not_called()
+        assert coded_country['country_alpha_2'] is None
+        assert coded_country['country_alpha_3'] is None
+        assert coded_country['country_name'] is None
+        assert coded_country['country_numeric'] is None
+        assert coded_country['continent'] is None
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_returns_empty_fields_when_no_address(self,
                                                                       mocked_iso_code,
                                                                       mocked_continent,
-                                                                      org_details):
-        pass
+                                                                      org_details,
+                                                                      continent_map):
+        mocked_continent.return_value = continent_map
+        coded_country = add_country_details(org_details[5])
 
-    @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
-    @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_overwrites_country_for_uk(self, mocked_iso_code,
-                                                           mocked_continent, org_details):
-        pass
+        mocked_iso_code.assert_not_called()
+        assert coded_country['country_alpha_2'] is None
+        assert coded_country['country_alpha_3'] is None
+        assert coded_country['country_name'] is None
+        assert coded_country['country_numeric'] is None
+        assert coded_country['continent'] is None
