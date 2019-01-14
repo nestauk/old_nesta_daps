@@ -84,8 +84,8 @@ class GtrGeocode(luigi.Task):
         logging.info(f"{total_batches} batches")
         completed_batches = 0
         for batch in split_batches(orgs, batch_size=batch_size):
-            map(add_country_details, batch)
-            map(geocode_uk_with_postcode, batch)
+            batch = map(add_country_details, batch)
+            batch = map(geocode_uk_with_postcode, batch)
 
             # remove data not in OrganisationLocation columns
             org_location_cols = OrganisationLocation.__table__.columns.keys()
@@ -97,8 +97,8 @@ class GtrGeocode(luigi.Task):
             completed_batches += 1
             logging.info(f"Completed {completed_batches} of {total_batches} batches")
 
-            if self.test:
-                logging.warning("Breaking after 1 batch in test mode")
+            if self.test and completed_batches > 1:
+                logging.warning("Breaking after 2 batches in test mode")
                 break
 
         # mark as done
