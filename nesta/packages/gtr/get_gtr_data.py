@@ -391,8 +391,22 @@ def add_country_details(org_details):
     Returns:
         (dict): processed org with extra data appended or None if failure
     """
-    pass
+    continent_map = alpha2_to_continent_mapping()
+    try:
+        country_name = org_details['country']
+        country_codes = country_iso_code(country_name)
+    except KeyError:
+        for c in ['country_alpha_2', 'country_alpha_3', 'country_name',
+                  'country_numeric', 'continent']:
+            org_details[c] = None
+    else:
+        org_details['country_alpha_2'] = country_codes.alpha_2
+        org_details['country_alpha_3'] = country_codes.alpha_3
+        org_details['country_name'] = country_codes.name
+        org_details['country_numeric'] = country_codes.numeric
+        org_details['continent'] = continent_map.get(country_codes.alpha_2)
 
+    return org_details
 
 
 if __name__ == "__main__":
