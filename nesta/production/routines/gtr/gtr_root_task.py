@@ -25,13 +25,12 @@ class RootTask(luigi.WrapperTask):
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
         _routine_id = "{}-{}".format(self.date, self.production)
-        logger = logging.getLogger()
         log_stream_handler = logging.StreamHandler()
         log_file_handler = logging.FileHandler('logs.log')
-        logger.basicConfig(handlers=(log_stream_handler, log_file_handler),
-                           # level=logging.INFO,
-                           level=logging.DEBUG,
-                           format="%(asctime)s:%(levelname)s:%(message)s")
+        logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
+                            # level=logging.INFO,
+                            level=logging.DEBUG,
+                            format="%(asctime)s:%(levelname)s:%(message)s")
         yield GtrGeocode(date=self.date,
                          db_config_env="MYSQLDB",
                          page_size=self.page_size,
