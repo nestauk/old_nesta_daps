@@ -19,6 +19,8 @@ from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 from nesta.production.orms.orm_utils import insert_data, try_until_allowed
 from nesta.production.orms.gtr_orm import Base, Organisation, OrganisationLocation
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.routines.gtr.gtr_collect import GtrTask
 
 
 class GtrGeocode(luigi.Task):
@@ -31,8 +33,23 @@ class GtrGeocode(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     test = luigi.BoolParameter()
-    # insert_batch_size = luigi.IntParameter(default=500)
     db_config_env = luigi.Parameter()
+    page_size = luigi.IntParameter()
+
+    def requires(self):
+        '''Collects the database configurations and executes the central task.'''
+        logging.getLogger().setLevel(logging.INFO)
+        yield GtrTask(date=self.date,
+                      page_size=self.page_size,
+                      batchable=find_filepath_from_pathstub("production/batchables/gtr/"),
+                      env_files=[find_filepath_from_pathstub("/nesta/nesta"),
+                                 find_filepath_from_pathstub("/config/mysqldb.config")],
+                      job_def="py36_amzn1_image",
+                      job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
+                      job_queue="HighPriority",
+                      region_name="eu-west-2",
+                      poll_time=10,
+                      test=self.test)
 
     def output(self):
         """Points to the output database engine"""
