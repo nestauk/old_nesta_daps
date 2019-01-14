@@ -24,9 +24,10 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
+        _routine_id = "{}-{}".format(self.date, self.production)
         logging.getLogger().setLevel(logging.INFO)
         yield GtrGeocode(date=self.date,
                          db_config_env="MYSQLDB",
                          page_size=self.page_size,
-                         job_name=f"GtRGeocode-{self.date}-{self.production}",
+                         _routine_id=_routine_id,
                          test=(not self.production))
