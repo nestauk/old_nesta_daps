@@ -45,7 +45,7 @@ class GtrGeocode(luigi.Task):
                       env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",
-                      job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
+                      job_name=f"GtR-{self.date}-{self.page_size}-{not self.test}",
                       job_queue="HighPriority",
                       region_name="eu-west-2",
                       poll_time=10,
