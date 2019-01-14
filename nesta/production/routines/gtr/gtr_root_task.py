@@ -28,8 +28,7 @@ class RootTask(luigi.WrapperTask):
         log_stream_handler = logging.StreamHandler()
         log_file_handler = logging.FileHandler('logs.log')
         logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
-                            # level=logging.INFO,
-                            level=logging.DEBUG,
+                            level=logging.INFO,
                             format="%(asctime)s:%(levelname)s:%(message)s")
         yield GtrGeocode(date=self.date,
                          db_config_env="MYSQLDB",

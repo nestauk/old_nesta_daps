@@ -90,9 +90,8 @@ class GtrGeocode(luigi.Task):
             # remove data not in OrganisationLocation columns
             org_location_cols = OrganisationLocation.__table__.columns.keys()
             batch = [{k: v for k, v in org.items() if k in org_location_cols}
-                     for org in orgs]
+                     for org in batch]
 
-            logging.debug(batch)
             insert_data(self.db_config_env, 'mysqldb', database,
                         Base, OrganisationLocation, batch)
             completed_batches += 1
