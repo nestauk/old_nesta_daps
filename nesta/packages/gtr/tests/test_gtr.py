@@ -10,9 +10,6 @@ from nesta.packages.gtr.get_gtr_data import TypeDict
 from nesta.packages.gtr.get_gtr_data import deduplicate_participants
 from nesta.packages.gtr.get_gtr_data import unpack_funding
 from nesta.packages.gtr.get_gtr_data import unpack_list_data
-# from nesta.packages.gtr.get_gtr_data import extract_link_data
-# from nesta.packages.gtr.get_gtr_data import extract_data
-# from nesta.packages.gtr.get_gtr_data import extract_data_recursive
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
 from nesta.packages.gtr.get_gtr_data import get_orgs_to_process
 from nesta.packages.gtr.get_gtr_data import geocode_uk_with_postcode
@@ -21,7 +18,7 @@ from nesta.packages.gtr.get_gtr_data import add_country_details
 
 class TestGtr(TestCase):
     def test_extract_link_table(self):
-        data = {"example_table_1":[{"project_id": 1, "rel": 2, "id":1}, 
+        data = {"example_table_1":[{"project_id": 1, "rel": 2, "id":1},
                                    {"project_id": 1, "other": 3},
                                    {"rel": 1, "other": 3}],
                 "example_table_2":[{"project_id": 1, "rel": 2, "id":1},
@@ -53,7 +50,7 @@ class TestGtr(TestCase):
                                    {"project_id": 1, "rel": 2},
                                    {"rel": 1, "other": 3}]}
 
-        for pass_key in ("project_id", "rel", "other", 
+        for pass_key in ("project_id", "rel", "other",
                          "example_table_1", "example_table_2"):
             self.assertTrue(contains_key(data, pass_key))
 
@@ -63,7 +60,7 @@ class TestGtr(TestCase):
     def test_remove_last_occurence(self):
         result = remove_last_occurence("some:other:object", ":")
         self.assertEqual(result, "some:otherobject")
-        
+
     def test_is_iterable(self):
         for pass_iter in ("text", {}, tuple(), [], set()):
             self.assertTrue(is_iterable(pass_iter))
@@ -74,7 +71,7 @@ class TestGtr(TestCase):
     def test_TypeDict(self):
         data = TypeDict()
         self.assertTrue(isinstance(data, dict))
-        
+
         data['nil_value'] = {'nil': 'true'}
         data['greeting'] = "hello"
         data['signoff'] = "good bye"
@@ -89,7 +86,6 @@ class TestGtr(TestCase):
         self.assertEqual(data['one'], 1)
         self.assertEqual(data['one_point'], 1.)
 
-        
     def test_deduplicate_participants(self):
         data = {'participant': [{"organisationId":20, 'projectCost':1, 'grantOffer':0}],
                 'organisations': [{'id':20}]}
@@ -97,7 +93,7 @@ class TestGtr(TestCase):
         self.assertNotIn('participant', data)
         self.assertIn('projectCost', data['organisations'][0])
         self.assertIn('grantOffer', data['organisations'][0])
-        
+
     def test_unpack_funding(self):
         row = {"money_stuff":{"currencyCode":"GBP", "value":20},
                "other_stuff":"a_value"}
@@ -105,7 +101,7 @@ class TestGtr(TestCase):
         self.assertNotIn("money_stuff", row)
         self.assertIn("currencyCode", row)
         self.assertIn("value", row)
-        self.assertIn("other_stuff", row)        
+        self.assertIn("other_stuff", row)
 
     def test_unpack_list_data(self):
         from collections import defaultdict
@@ -117,54 +113,72 @@ class TestGtr(TestCase):
         unpack_list_data(row, data)
         self.assertIn('projects', data)
         self.assertIn('generic_item', data)
-        self.assertIn('topic', data)        
+        self.assertIn('topic', data)
         self.assertNotIn('percentage', data['topic'][0])
 
     def test_read_xml_from_url(self):
         read_xml_from_url("https://gtr.ukri.org/gtr/api/projects")
 
 
-class TestGeocoding():
-    @pytest.fixture
-    def raw_org_data(self):
-        return [(0, {'address': {'line1': 'some street', 'postCode': 'ABC 123'}}),
-                (1, {'address': {'region': 'London', 'postCode': 'AA 456'}}),
-                (2, {'address': {'city': 'Paris', 'region': 'Outside UK'}}),
-                (3, {'address': {'id': 123, 'line1': 'my road'}}),
-                (4, None)
-                ]
+@pytest.fixture
+def raw_org_data():
+    return [(0, {'address': {'line1': 'some street', 'postCode': 'ABC 123',
+                             'country': 'United Kingdom'}}),
+            (1, {'address': {'region': 'London', 'postCode': 'AA 456'}}),
+            (2, {'address': {'city': 'Paris', 'region': 'Outside UK'}}),
+            (3, {'address': {'id': 123, 'line1': 'my road'}}),
+            (4, None)
+            ]
 
-    @pytest.fixture
-    def unpacked_orgs(self):
-        return [{'id': 0, 'line1': 'some street', 'postCode': 'ABC 123'},
-                {'id': 1, 'region': 'London', 'postCode': 'AA 456'},
-                {'id': 2, 'city': 'Paris', 'region': 'Outside UK'},
-                {'id': 3, 'line1': 'my road'},
-                {'id': 4}  # no address
-                ]
 
+@pytest.fixture
+def unpacked_orgs():
+    return [{'id': 0, 'line1': 'some street', 'postCode': 'ABC 123',
+             'country': 'United Kingdom'},
+            {'id': 1, 'region': 'London', 'postCode': 'AA 456'},
+            {'id': 2, 'city': 'Paris', 'region': 'Outside UK'},
+            {'id': 3, 'line1': 'my road'},
+            {'id': 4}  # no address
+            ]
+
+
+class TestGetOrgsToProcess():
     def test_get_orgs_to_process(self, raw_org_data, unpacked_orgs):
         assert get_orgs_to_process(raw_org_data, []) == unpacked_orgs
 
     def test_get_orgs_to_process_excludes_existing(self, raw_org_data):
         existing = [(1,), (2,), (4,)]
 
-        expected = [{'id': 0, 'line1': 'some street', 'postCode': 'ABC 123'},
+        expected = [{'id': 0, 'line1': 'some street', 'postCode': 'ABC 123',
+                     'country': 'United Kingdom'},
                     {'id': 3, 'line1': 'my road'}
                     ]
         assert get_orgs_to_process(raw_org_data, existing) == expected
 
+
+class TestGeocoding():
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
     def test_geocode_correctly_calls_geocoder(self, mocked_geocode, unpacked_orgs):
         mocked_geocode.return_value = {'lat': 111, 'lon': 999}
-        geocoded = geocode_uk_with_postcode(unpacked_orgs[0])
 
-        assert mocked_geocode.mock_calls == [mock.call(postalcode='ABC 123')]
-        assert geocoded == {'id': 0, 'line1': 'some street', 'postCode': 'ABC 123',
-                            'latitude': 111, 'longitude': 999}
+        geocode_uk_with_postcode(unpacked_orgs[0])
+
+        assert mocked_geocode.mock_calls == [mock.call(postalcode='ABC 123',
+                                                       country='United Kingdom')]
 
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
-    def test_geocode_returns_empty_fields_when_address_missing(self, mocked_geocode, unpacked_orgs):
+    def test_geocode_returns_results_on_success(self, mocked_geocode, unpacked_orgs):
+        mocked_geocode.return_value = {'lat': 111, 'lon': 999}
+
+        geocoded = geocode_uk_with_postcode(unpacked_orgs[0])
+
+        assert geocoded == {'id': 0, 'line1': 'some street', 'postCode': 'ABC 123',
+                            'latitude': 111, 'longitude': 999, 'country': 'United Kingdom'}
+
+    @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
+    def test_geocode_returns_empty_fields_when_address_missing(self,
+                                                               mocked_geocode,
+                                                               unpacked_orgs):
         mocked_geocode.return_value = None
         geocoded = geocode_uk_with_postcode(unpacked_orgs[4])
 
@@ -172,7 +186,9 @@ class TestGeocoding():
         assert geocoded == {'id': 4, 'latitude': None, 'longitude': None}
 
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
-    def test_geocode_returns_empty_fields_when_postcode_missing(self, mocked_geocode, unpacked_orgs):
+    def test_geocode_returns_empty_fields_when_postcode_missing(self,
+                                                                mocked_geocode,
+                                                                unpacked_orgs):
         mocked_geocode.return_value = None
         geocoded = geocode_uk_with_postcode(unpacked_orgs[3])
 
@@ -181,7 +197,9 @@ class TestGeocoding():
                             'latitude': None, 'longitude': None}
 
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
-    def test_geocode_returns_empty_fields_when_outside_uk(self, mocked_geocode, unpacked_orgs):
+    def test_geocode_returns_empty_fields_when_outside_uk(self,
+                                                          mocked_geocode,
+                                                          unpacked_orgs):
         mocked_geocode.return_value = None
         geocoded = geocode_uk_with_postcode(unpacked_orgs[2])
 
@@ -190,13 +208,26 @@ class TestGeocoding():
                             'latitude': None, 'longitude': None}
 
     @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
-    def test_geocode_returns_empty_fields_when_geocode_fails(self, mocked_geocode, unpacked_orgs):
+    def test_geocode_returns_empty_fields_when_geocode_fails(self,
+                                                             mocked_geocode,
+                                                             unpacked_orgs):
         mocked_geocode.return_value = None
         geocoded = geocode_uk_with_postcode(unpacked_orgs[1])
 
-        assert mocked_geocode.mock_calls == [mock.call(postalcode='AA 456')]
+        assert mocked_geocode.mock_calls == [mock.call(postalcode='AA 456',
+                                                       country='United Kingdom')]
         assert geocoded == {'id': 1, 'region': 'London', 'postCode': 'AA 456',
                             'latitude': None, 'longitude': None}
+
+    @mock.patch('nesta.packages.gtr.get_gtr_data._geocode')
+    def test_geocode_overwrites_country_on_successful_geocode(self,
+                                                              mocked_geocode,
+                                                              unpacked_orgs):
+        mocked_geocode.return_value = {'lat': 111, 'lon': 999}
+        geocoded = geocode_uk_with_postcode(unpacked_orgs[1])
+
+        assert geocoded == {'id': 1, 'region': 'London', 'postCode': 'AA 456',
+                            'latitude': 111, 'longitude': 999, 'country': 'United Kingdom'}
 
 
 class TestAddCountryDetails():
@@ -205,9 +236,9 @@ class TestAddCountryDetails():
         return [{'id': 0, 'line1': 'some street', 'country': 'UK'},
                 {'id': 1, 'region': 'London', 'country': 'United Kingdom'},
                 {'id': 2, 'city': 'Paris', 'country': 'france', 'region': 'Outside UK'},
-                {'id': 3, 'line1': 'my road'},  # no country
+                {'id': 3, 'line1': 'my road'},  # no country but UK (not Outside UK region)
                 {'id': 4, 'country': 'the moon'},  # invalid country
-                {'id': 5}  # no address
+                {'id': 5, 'line1': 'somewhere', 'region': 'Outside UK'}  # no country
                 ]
 
     @pytest.fixture
@@ -229,9 +260,11 @@ class TestAddCountryDetails():
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_properly_calls_iso_coding(self, mocked_iso_code,
+    def test_add_country_details_properly_calls_iso_coding(self,
+                                                           mocked_iso_code,
                                                            mocked_continent,
-                                                           org_details, continent_map,
+                                                           org_details,
+                                                           continent_map,
                                                            iso_codes):
         mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
         add_country_details(org_details[1])
@@ -239,9 +272,11 @@ class TestAddCountryDetails():
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_correctly_applies_continent(self, mocked_iso_code,
+    def test_add_country_details_correctly_applies_continent(self,
+                                                             mocked_iso_code,
                                                              mocked_continent,
-                                                             org_details, continent_map,
+                                                             org_details,
+                                                             continent_map,
                                                              iso_codes):
         mocked_continent.return_value = continent_map
         mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
@@ -250,9 +285,11 @@ class TestAddCountryDetails():
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_correctly_applies_iso_codes_uk(self, mocked_iso_code,
+    def test_add_country_details_correctly_applies_iso_codes_uk(self,
+                                                                mocked_iso_code,
                                                                 mocked_continent,
-                                                                org_details, continent_map,
+                                                                org_details,
+                                                                continent_map,
                                                                 iso_codes):
         mocked_continent.return_value = continent_map
         mocked_iso_code.return_value = iso_codes('GB', 'GBR', 'United Kingdom', '826')
@@ -265,9 +302,11 @@ class TestAddCountryDetails():
 
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_correctly_applies_iso_codes_non_uk(self, mocked_iso_code,
+    def test_add_country_details_correctly_applies_iso_codes_non_uk(self,
+                                                                    mocked_iso_code,
                                                                     mocked_continent,
-                                                                    org_details, continent_map,
+                                                                    org_details,
+                                                                    continent_map,
                                                                     iso_codes):
         mocked_continent.return_value = continent_map
         mocked_iso_code.return_value = iso_codes('FR', 'FRA', 'France', '250')
@@ -299,23 +338,6 @@ class TestAddCountryDetails():
     @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
     @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
     def test_add_country_details_returns_empty_fields_when_no_country(self,
-                                                                      mocked_iso_code,
-                                                                      mocked_continent,
-                                                                      org_details,
-                                                                      continent_map):
-        mocked_continent.return_value = continent_map
-        coded_country = add_country_details(org_details[3])
-
-        mocked_iso_code.assert_not_called()
-        assert coded_country['country_alpha_2'] is None
-        assert coded_country['country_alpha_3'] is None
-        assert coded_country['country_name'] is None
-        assert coded_country['country_numeric'] is None
-        assert coded_country['continent'] is None
-
-    @mock.patch('nesta.packages.gtr.get_gtr_data.alpha2_to_continent_mapping')
-    @mock.patch('nesta.packages.gtr.get_gtr_data.country_iso_code')
-    def test_add_country_details_returns_empty_fields_when_no_address(self,
                                                                       mocked_iso_code,
                                                                       mocked_continent,
                                                                       org_details,

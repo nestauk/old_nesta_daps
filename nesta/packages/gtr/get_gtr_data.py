@@ -373,11 +373,16 @@ def geocode_uk_with_postcode(org_details):
     org_details['longitude'] = None
 
     if org_details.get('region') != 'Outside UK' and org_details.get('postCode') is not None:
-        coordinates = _geocode(postalcode=org_details['postCode'])
+        # assume most without 'Outside UK' region are UK, but hardcode country into the
+        # request to prevent false results with postcodes that exist in multiple countries
+        coordinates = _geocode(postalcode=org_details['postCode'],
+                               country='United Kingdom')
 
         if coordinates is not None:
             org_details['latitude'] = coordinates['lat']
             org_details['longitude'] = coordinates['lon']
+            # if geocode succeeds with country=United Kingdom then overwrite
+            org_details['country'] = 'United Kingdom'
 
     return org_details
 
@@ -392,6 +397,7 @@ def add_country_details(org_details):
         (dict): processed org with extra data appended or None if failure
     """
     continent_map = alpha2_to_continent_mapping()
+
     try:
         country_name = org_details['country']
         country_codes = country_iso_code(country_name)
@@ -404,7 +410,7 @@ def add_country_details(org_details):
         org_details['country_alpha_3'] = country_codes.alpha_3
         org_details['country_name'] = country_codes.name
         org_details['country_numeric'] = country_codes.numeric
-        org_details['continent'] = continent_map.get(country_codes.alpha_2)
+        org_details['continent'] = continent_map[country_codes.alpha_2]
 
     return org_details
 
