@@ -84,8 +84,9 @@ class GtrGeocode(luigi.Task):
         logging.info(f"{total_batches} batches")
         completed_batches = 0
         for batch in split_batches(orgs, batch_size=batch_size):
-            batch = map(add_country_details, batch)
+            # geocode first to add missing country for UK
             batch = map(geocode_uk_with_postcode, batch)
+            batch = map(add_country_details, batch)
 
             # remove data not in OrganisationLocation columns
             org_location_cols = OrganisationLocation.__table__.columns.keys()
