@@ -332,8 +332,8 @@ def read_xml_from_url(url, **kwargs):
 
 
 def get_orgs_to_process(all_orgs, existing_orgs):
-    """Extracts organisations and addresses and removes any that have prevously been
-    processed.
+    """Extracts organisations and addresses, flattens addresses and returns just records
+    that have not prevously been processed.
 
     Args:
         all_orgs(:obj:`list` of :obj:`tuple`): organisation id and addresses
@@ -352,7 +352,7 @@ def get_orgs_to_process(all_orgs, existing_orgs):
         if org_id not in existing_ids:
             org_details = {'id': org_id}
             if address is not None:
-                org_details = {**address['address'], **org_details}  # address also contains an 'id' which we discard
+                org_details = {**address['address'], **org_details}  # address also contains an 'id' which we overwrite with the id in org_details
 
             orgs_to_process.append(org_details)
 
@@ -361,7 +361,8 @@ def get_orgs_to_process(all_orgs, existing_orgs):
 
 def geocode_uk_with_postcode(org_details):
     """Wrapper for the geocoder that will process any organisations that are in the UK
-    and have a postcode.
+    and have a postcode. Any that succeed also have their country overwritten, so the
+    data in this column is consistent.
 
     Args:
         orgs_details (dict): organisation details, without latitude and longitude
@@ -374,21 +375,21 @@ def geocode_uk_with_postcode(org_details):
 
     if org_details.get('region') != 'Outside UK' and org_details.get('postCode') is not None:
         # assume most without 'Outside UK' region are UK, but hardcode country into the
-        # request to prevent false results with postcodes that exist in multiple countries
+        # request to prevent false results with identical postcodes that exist in multiple countries
         coordinates = _geocode(postalcode=org_details['postCode'],
                                country='United Kingdom')
 
         if coordinates is not None:
             org_details['latitude'] = coordinates['lat']
             org_details['longitude'] = coordinates['lon']
-            # if geocode succeeds with country=United Kingdom then overwrite
+            # if geocode succeeds with country=United Kingdom then overwrite it
             org_details['country'] = 'United Kingdom'
 
     return org_details
 
 
 def add_country_details(org_details):
-    """If country is valid attempt to append iso codes and continent.
+    """If country name is valid attempt to append iso codes and continent.
 
     Args:
         org_details (dict): organisation details, without iso codes and continent
