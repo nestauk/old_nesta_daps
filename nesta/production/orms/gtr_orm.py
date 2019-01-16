@@ -34,7 +34,7 @@ class Projects(Base):
 
 
 class LinkTable(Base):
-    """This is the only "manufactured" table (i.e. doesn't officially exist in GtR).
+    """This is a "manufactured" table (i.e. doesn't officially exist in GtR).
     It provides links to the Project spine."""
     __tablename__ = 'gtr_link_table'
 
@@ -64,6 +64,8 @@ class Organisation(Base):
 
 
 class OrganisationLocation(Base):
+    """This table is not in the orginal data. It contains all organisations and location
+    details where it has been possible to ascertain them."""
     __tablename__ = "gtr_organisations_locations"
 
     id = Column(VARCHAR(36), primary_key=True)
