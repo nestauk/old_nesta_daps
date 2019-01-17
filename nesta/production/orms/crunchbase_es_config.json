@@ -8,7 +8,7 @@
             "analyzer": {
                 "url_analyzer": {
                     "type": "custom",
-                    "tokenizer": "mesh_terms_analyzer",
+                    "tokenizer": "uax_url_email",
                     "filter": [
                         "standard",
                         "lowercase"
@@ -100,19 +100,19 @@
                 },
                 "url_facebook_organisation": {
                     "type": "keyword",
-                    "analyzer": "mesh_terms_analyzer"
+                    "analyzer": "url_analyzer"
                 },
                 "url_linkedIn_organisation": {
                     "type": "keyword",
-                    "analyzer": "mesh_terms_analyzer"
+                    "analyzer": "url_analyzer"
                 },
                 "url_crunchBase_organisation": {
                     "type": "keyword",
-                    "analyzer": "mesh_terms_analyzer"
+                    "analyzer": "url_analyzer"
                 },
                 "url_twitter_organisation": {
                     "type": "keyword",
-                    "analyzer": "mesh_terms_analyzer"
+                    "analyzer": "url_analyzer"
                 },
                 "terms_alias_organisation": {
                     "type": "keyword"
