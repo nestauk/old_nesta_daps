@@ -67,7 +67,8 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger("requests").setLevel(logging.WARNING)
         logging.getLogger("botocore").setLevel(logging.WARNING)
         
-        configs = ["population_estimate", "employment", "population_estimate", 
+        configs = ["claimantcount", "median_wages",
+                   "population_estimate", "employment", 
                    "workforce_jobs", "businesscount"]
         #if not self.production:
         #    configs = ["employment"]
