@@ -31,12 +31,14 @@ def extract_link_table(data):
     """
     link_table = []
     for table_name, rows in data.items():
+        is_topic = table_name == "topic"
         for row in rows:
-            project_id, rel = None, None
+            project_id = None
+            rel = "TOPIC" if is_topic else None
             if 'project_id' in row:
                 project_id = row.pop('project_id')
             if 'rel' in row:
-                rel = row.pop('rel')
+                rel = row.pop('rel')                
             if project_id is None or rel is None:
                 continue
             link_table.append(dict(project_id=project_id, rel=rel,
