@@ -7,7 +7,7 @@
     {"tier_0": "country_alpha_3", "tier_1": "id_iso3_country"},
     {"tier_0": "country_numeric", "tier_1": "id_isoNumeric_country"},
     {"tier_0": "continent", "tier_1": "id_of_continent"},
-    {"tier_0": "coordinates", "tier_1": "coordinates_of_city"},
+    {"tier_0": "coordinates", "tier_1": "coordinate_of_city"},
     {"tier_0": "state_code", "tier_1": "id_state_organisation"},
     {"tier_0": "region", "tier_1": "placeName_region_organisation"},
     {"tier_0": "city", "tier_1": "placeName_city_organisation"},
@@ -32,5 +32,5 @@
     {"tier_0": "updated_at", "tier_1": "datetime_updated_organisation"},
     {"tier_0": "primary_role", "tier_1": "type_of_organisation"},
     {"tier_0": "parent_id", "tier_1": "id_parent_organisation"},
-    {"tier_0": "is_health", "tier_1": "booleanFlag_health_organization"}
+    {"tier_0": "is_health", "tier_1": "booleanFlag_health_organisation"}
 ]
