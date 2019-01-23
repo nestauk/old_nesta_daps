@@ -128,8 +128,7 @@
                     "type": "keyword"
                 },
                 "booleanFlag_health_organization": {
-                    "type": "boolean",
-                    "null_value": false
+                    "type": "boolean"
                 }
             }
         }
