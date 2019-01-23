@@ -1,10 +1,13 @@
+import boto3
 from contextlib import contextmanager
+import json
 import logging
 import pandas as pd
 import re
 import requests
 import tarfile
 from tempfile import NamedTemporaryFile
+import time
 
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
@@ -340,6 +343,15 @@ def org_batch_limits(engine, batch_size):
                 # no results means all rows have been collected
                 break
         yield first, last
+
+
+def all_org_ids(engine, limit=None):
+        with db_session(engine) as session:
+            orgs = session.query(Organization.id)
+            if limit is not None:
+                orgs = orgs.limit(limit)
+            return {org.id for org in orgs}
+
 
 
 if __name__ == '__main__':
