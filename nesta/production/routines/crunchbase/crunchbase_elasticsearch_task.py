@@ -43,6 +43,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     db_config_env = luigi.Parameter()
     process_batch_size = luigi.IntParameter(default=10000)
     insert_batch_size = luigi.IntParameter()
+    intermediate_bucket = luigi.Parameter()
 
     def requires(self):
         yield OrgGeocodeTask(date=self.date,
