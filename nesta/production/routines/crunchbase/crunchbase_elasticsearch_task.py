@@ -47,7 +47,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     def requires(self):
         yield OrgGeocodeTask(date=self.date,
                              _routine_id=self._routine_id,
-                             test=not self.production,
+                             test=self.test,
                              db_config_env="MYSQLDB",
                              city_col=Organization.city,
                              country_col=Organization.country,
