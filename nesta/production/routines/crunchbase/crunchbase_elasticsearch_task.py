@@ -98,30 +98,30 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # remove previously processed
         orgs_to_process = (org for org in all_orgs if org not in existing_ids)
-        logging.info(f"{len(orgs_to_process)} organisations after existing removed")
+        # logging.info(f"{len(orgs_to_process)} organisations after existing removed")
 
         job_params = []
-        if orgs_to_process:
-            for count, batch in enumerate(split_batches(orgs_to_process,
-                                                        self.process_batch_size), 1):
-                # write batch of ids to s3
-                batch_file = put_s3_batch(batch, self.intermediate_bucket, 'crunchbase_to_es')
-                params = {"batch_file": batch_file,
-                          "config": 'mysqldb.config',
-                          "db_name": self.database,
-                          "bucket": self.intermediate_bucket,
-                          "done": False,
-                          'outinfo': es_config['internal_host'],
-                          'out_port': es_config['port'],
-                          'out_index': es_config['index'],
-                          'out_type': es_config['type'],
-                          "test": self.test
-                          }
-                logging.info(params)
-                job_params.append(params)
-                if self.test and count > 1:
-                    logging.warning("Breaking after 2 batches while in test mode.")
-                    break
+        # if orgs_to_process:
+        for count, batch in enumerate(split_batches(orgs_to_process,
+                                                    self.process_batch_size), 1):
+            # write batch of ids to s3
+            batch_file = put_s3_batch(batch, self.intermediate_bucket, 'crunchbase_to_es')
+            params = {"batch_file": batch_file,
+                      "config": 'mysqldb.config',
+                      "db_name": self.database,
+                      "bucket": self.intermediate_bucket,
+                      "done": False,
+                      'outinfo': es_config['internal_host'],
+                      'out_port': es_config['port'],
+                      'out_index': es_config['index'],
+                      'out_type': es_config['type'],
+                      "test": self.test
+                      }
+            logging.info(params)
+            job_params.append(params)
+            if self.test and count > 1:
+                logging.warning("Breaking after 2 batches while in test mode.")
+                break
 
         logging.warning(f"Batch preparation completed, with {len(job_params)} batches")
         return job_params
