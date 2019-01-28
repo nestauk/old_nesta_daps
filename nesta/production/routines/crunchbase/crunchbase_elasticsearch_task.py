@@ -17,7 +17,7 @@ import os
 
 from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
-from nesta.packages.luigihacks.misctools.batches import split_batches, put_s3_batch
+from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
 from nesta.production.luigihacks.mysqldb import MySqlTarget
