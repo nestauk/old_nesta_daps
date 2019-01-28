@@ -7,7 +7,7 @@ import os
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
-from nesta.production.orms.crunchbase_orm import Organization
+from nesta.production.orms.crunchbase_orm import Organization, OrganizationCategory, CategoryGroup
 from nesta.production.orms.geographic_orm import Geographic
 
 
@@ -17,9 +17,10 @@ def run():
     batch_file = os.environ['BATCHPAR_batch_file']
 
     db_name = os.environ["BATCHPAR_db_name"]
-    table = os.environ["BATCHPAR_table"]
-    batch_size = int(os.environ["BATCHPAR_batch_size"])
-    # s3_path = os.environ["BATCHPAR_outinfo"]
+    es_host = os.environ['BATCHPAR_outinfo']
+    es_port = os.environ['BATCHPAR_out_port']
+    es_index = os.environ['BATCHPAR_out_index']
+    es_type = os.environ['BATCHPAR_out_type']
 
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -49,15 +50,6 @@ def run():
 
             row_combined.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
 
-#             row_combined['categories'] = [{category.category_name: [group for group
-#                                                                     in str(category.category_group_list).split('|')
-#                                                                     if group != 'None']}
-#                                           for category in (session.query(CategoryGroup)
-#                                                            .select_from(OrganizationCategory)
-#                                                            .join(CategoryGroup)
-#                                                            .filter(OrganizationCategory.organization_id==row.id)
-#                                                            .all())
-#                                           ]
             # iterate through categories and groups
             row_combined['category_list'] = []
             row_combined['category_groups'] = []
@@ -83,24 +75,6 @@ def run():
                 logging.info(f"{count} rows loaded to elasticsearch")
 
     logging.warning("Batch job complete.")
-
-
-with db_session(engine) as session:
-    # rows = session.query(Organization, Geographic).join(Geographic, Organization.location_id==Geographic.id).filter(Geographic.id.in_(["'s-gravendeel_netherlands"])).limit(1000).all()
-    geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric', 'continent', 'latitude', 'longitude']
-    rows_combined = []
-    for row in rows:
-        row_dict = {k: v for k, v in row.Organization.__dict__.items()}
-        row_dict.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
-        row_dict['categories'] = [{category.category_name: [group for group
-                                                            in str(category.category_group_list).split('|')
-                                                            if group != 'None']}
-                                  for category in (session.query(CategoryGroup)
-                                                   .select_from(OrganizationCategory)
-                                                   .join(CategoryGroup)
-                                                   .filter(OrganizationCategory.organization_id==row.id)
-                                                   .all())
-        rows_combined.append(row_dict)
 
 
 if __name__ == "__main__":
