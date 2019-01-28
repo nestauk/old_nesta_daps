@@ -41,6 +41,7 @@ class RootTask(luigi.WrapperTask):
                                 batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_elasticsearch"),
                                 env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                                            find_filepath_from_pathstub("config/mysqldb.config"),
+                                           find_filepath_from_pathstub("schema_transformations/crunchbase_organisation_members.json"),
                                            find_filepath_from_pathstub("config/elasticsearch.config")],
                                 job_def="py36_amzn1_image",
                                 job_name=f"CrunchBaseElasticsearchTask-{_routine_id}",
