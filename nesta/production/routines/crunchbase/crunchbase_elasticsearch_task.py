@@ -94,7 +94,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # get set of all organisations from mysql
         all_orgs = all_org_ids(engine)
-        logging.info(f"{len(all_org_ids)} organisations in MYSQL")
+        logging.info(f"{len(all_orgs)} organisations in MYSQL")
 
         # remove previously processed
         orgs_to_process = (org for org in all_orgs if org not in existing_ids)
