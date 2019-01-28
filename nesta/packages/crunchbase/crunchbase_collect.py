@@ -317,41 +317,12 @@ def process_non_orgs(df, existing, pks):
     return df
 
 
-def org_batch_limits(engine, batch_size):
-    '''
-    Determines first and last ids for a batch.
-
-    Args:
-        engine (:obj:`sqlalchemy.engine`): connector for the database
-        batch_size (int): rows of data in a batch
-
-    Returns:
-        first (int), last (int) application_ids
-    '''
-    last = None
-    while True:
-        with db_session(engine) as session:
-            rows = session.query(Organization.id).order_by(Organization.id)
-            if last is not None:
-                rows = rows.filter(Organization.id > last)
-            rows = rows.limit(batch_size)
-            try:
-                # extract first and last organisation id
-                first = rows[0].id
-                last = rows[-1].id
-            except KeyError:
-                # no results means all rows have been collected
-                break
-        yield first, last
-
-
 def all_org_ids(engine, limit=None):
         with db_session(engine) as session:
             orgs = session.query(Organization.id)
             if limit is not None:
                 orgs = orgs.limit(limit)
             return {org.id for org in orgs}
-
 
 
 if __name__ == '__main__':
