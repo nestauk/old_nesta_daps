@@ -82,6 +82,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
         es_config = get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
+        logging.info(f"elasticsearch config. host: {es_config['external_host']}, port: {es_config['port']}")
 
         if self.test:
             self.process_batch_size = 1000
