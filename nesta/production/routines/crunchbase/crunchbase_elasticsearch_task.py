@@ -82,15 +82,13 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
         es_config = get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
-        logging.info(f"elasticsearch config. host: {es_config['external_host']}, port: {es_config['port']}")
-
         if self.test:
             self.process_batch_size = 1000
             logging.warning(f"Batch size restricted to {self.process_batch_size} while in test mode")
 
         # get set of existing ids from elasticsearch via scroll
         query = {"_source": False}
-        scanner = scan(es, query, index=es_config['external_host'], doc_type=es_config['type'])
+        scanner = scan(es, query, index=es_config['index'], doc_type=es_config['type'])
         existing_ids = {s['_id'] for s in scanner}
         logging.info(f"Collected {len(existing_ids)} existing in Elasticsearch")
 
