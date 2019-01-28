@@ -56,7 +56,7 @@ def run():
             for category in (session.query(CategoryGroup)
                              .select_from(OrganizationCategory)
                              .join(CategoryGroup)
-                             .filter(OrganizationCategory.organization_id==row.id)
+                             .filter(OrganizationCategory.organization_id==row.Organization.id)
                              .all()):
                 row_combined['category_list'].append(category.category_name)
                 row_combined['category_groups'] += [group for group
