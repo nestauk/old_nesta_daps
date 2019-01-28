@@ -56,7 +56,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                              insert_batch_size=self.insert_batch_size,
                              env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                                         find_filepath_from_pathstub("config/mysqldb.config"),
-                                        find_filepath_from_pathstub("config/crunchbase.config")],
+                                        find_filepath_from_pathstub("config/elasticsearch.config")],
                              job_def="py36_amzn1_image",
                              job_name=f"CrunchBaseOrgGeocodeTask-{self._routine_id}",
                              job_queue="HighPriority",
