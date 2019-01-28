@@ -37,7 +37,7 @@ class RootTask(luigi.WrapperTask):
                                 test=not self.production,
                                 db_config_env="MYSQLDB",
                                 insert_batch_size=self.insert_batch_size,
-                                intermediate_bucket='nesta-production-intermediate'
+                                intermediate_bucket='nesta-production-intermediate',
                                 batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_elasticsearch"),
                                 env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                                            find_filepath_from_pathstub("config/mysqldb.config"),
