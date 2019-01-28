@@ -1,0 +1,112 @@
+from ast import literal_eval
+import boto3
+from elasticsearch import Elasticsearch
+import json
+import logging
+import os
+
+from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.production.orms.orm_utils import db_session, get_mysql_engine
+from nesta.production.orms.crunchbase_orm import Organization
+from nesta.production.orms.geographic_orm import Geographic
+
+
+def run():
+    test = literal_eval(os.environ["BATCHPAR_test"])
+    bucket = os.environ['BATCHPAR_bucket']
+    batch_file = os.environ['BATCHPAR_batch_file']
+
+    db_name = os.environ["BATCHPAR_db_name"]
+    table = os.environ["BATCHPAR_table"]
+    batch_size = int(os.environ["BATCHPAR_batch_size"])
+    # s3_path = os.environ["BATCHPAR_outinfo"]
+
+    # database setup
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
+
+    # s3 setup
+    es = Elasticsearch(es_host, port=es_port, sniff_on_start=True)
+
+    # collect file
+    nrows = 1000 if test else None
+
+    s3 = boto3.resource('s3')
+    obj = s3.Object(bucket, batch_file)
+    org_ids = json.loads(obj.get()['Body']._raw_stream.read())
+    logging.info(f"{len(org_ids)} organisations retrieved from s3")
+
+    geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric', 'continent', 'latitude', 'longitude']
+    with db_session(engine) as session:
+        rows = (session.query(Organization, Geographic)
+                .join(Geographic, Organization.location_id==Geographic.id)
+                .filter(Organization.id.in_(org_ids))
+                .limit(nrows)
+                .all())
+        for count, row in enumerate(rows, 1):
+            # convert sqlalchemy to dictionary
+            row_combined = {k: v for k, v in row.Organization.__dict__.items()}
+            row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
+
+            row_combined.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
+
+#             row_combined['categories'] = [{category.category_name: [group for group
+#                                                                     in str(category.category_group_list).split('|')
+#                                                                     if group != 'None']}
+#                                           for category in (session.query(CategoryGroup)
+#                                                            .select_from(OrganizationCategory)
+#                                                            .join(CategoryGroup)
+#                                                            .filter(OrganizationCategory.organization_id==row.id)
+#                                                            .all())
+#                                           ]
+            # iterate through categories and groups
+            row_combined['category_list'] = []
+            row_combined['category_groups'] = []
+            for category in (session.query(CategoryGroup)
+                             .select_from(OrganizationCategory)
+                             .join(CategoryGroup)
+                             .filter(OrganizationCategory.organization_id==row.id)
+                             .all()):
+                row_combined['category_list'].append(category.category_name)
+                row_combined['category_groups'] += [group for group
+                                                    in str(category.category_group_list).split('|')
+                                                    if group is not 'None']
+
+            row_combined = schema_transformer(row_combined,
+                                              filename='crunchbase_organisation_members.json',
+                                              from_key='tier_0',
+                                              to_key='tier_1',
+                                              ignore=['id'])
+            uid = row_combined.pop('id')
+            es.index(es_index, doc_type=es_type, id=uid, body=row_combined)
+
+            if not count % 1000:
+                logging.info(f"{count} rows loaded to elasticsearch")
+
+    logging.warning("Batch job complete.")
+
+
+with db_session(engine) as session:
+    # rows = session.query(Organization, Geographic).join(Geographic, Organization.location_id==Geographic.id).filter(Geographic.id.in_(["'s-gravendeel_netherlands"])).limit(1000).all()
+    geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric', 'continent', 'latitude', 'longitude']
+    rows_combined = []
+    for row in rows:
+        row_dict = {k: v for k, v in row.Organization.__dict__.items()}
+        row_dict.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
+        row_dict['categories'] = [{category.category_name: [group for group
+                                                            in str(category.category_group_list).split('|')
+                                                            if group != 'None']}
+                                  for category in (session.query(CategoryGroup)
+                                                   .select_from(OrganizationCategory)
+                                                   .join(CategoryGroup)
+                                                   .filter(OrganizationCategory.organization_id==row.id)
+                                                   .all())
+        rows_combined.append(row_dict)
+
+
+if __name__ == "__main__":
+    log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=logging.INFO,
+                        format="%(asctime)s:%(levelname)s:%(message)s")
+    run()
+
