@@ -98,10 +98,8 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # remove previously processed
         orgs_to_process = (org for org in all_orgs if org not in existing_ids)
-        # logging.info(f"{len(orgs_to_process)} organisations after existing removed")
 
         job_params = []
-        # if orgs_to_process:
         for count, batch in enumerate(split_batches(orgs_to_process,
                                                     self.process_batch_size), 1):
             # write batch of ids to s3

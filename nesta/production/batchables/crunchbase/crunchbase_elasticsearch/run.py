@@ -59,9 +59,9 @@ def run():
                              .filter(OrganizationCategory.organization_id==row.Organization.id)
                              .all()):
                 row_combined['category_list'].append(category.category_name)
-                row_combined['category_groups'] += [group for group
-                                                    in str(category.category_group_list).split('|')
-                                                    if group is not 'None']
+                row_combined['category_group_list'] += [group for group
+                                                        in str(category.category_group_list).split('|')
+                                                        if group is not 'None']
 
             row_combined = schema_transformer(row_combined,
                                               filename='crunchbase_organisation_members.json',
