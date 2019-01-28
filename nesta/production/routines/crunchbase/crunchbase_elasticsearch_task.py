@@ -15,12 +15,14 @@ import logging
 import luigi
 import os
 
-from crunchbase_org_collect_task import OrgCollectTask
+from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misctools.batches import split_batches, put_s3_batch
-from nesta.production.luigihacks import autobatch, misctools
+from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.crunchbase_orm import Organization
 
 
 S3 = boto3.resource('s3')
@@ -40,19 +42,32 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
     process_batch_size = luigi.IntParameter(default=10000)
-    insert_batch_size = luigi.IntParameter(default=1000)
+    insert_batch_size = luigi.IntParameter()
 
     def requires(self):
-        yield OrgCollectTask(date=self.date,
+        yield OrgGeocodeTask(date=self.date,
                              _routine_id=self._routine_id,
-                             test=self.test,
+                             test=not self.production,
+                             db_config_env="MYSQLDB",
+                             city_col=Organization.city,
+                             country_col=Organization.country,
+                             location_key_col=Organization.location_id,
                              insert_batch_size=self.insert_batch_size,
-                             db_config_env=self.db_config_env)
+                             env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                        find_filepath_from_pathstub("config/mysqldb.config"),
+                                        find_filepath_from_pathstub("config/crunchbase.config")],
+                             job_def="py36_amzn1_image",
+                             job_name=f"CrunchBaseOrgGeocodeTask-{self._routine_id}",
+                             job_queue="HighPriority",
+                             region_name="eu-west-2",
+                             poll_time=10,
+                             memory=4096,
+                             max_live_jobs=2)
 
     def output(self):
         '''Points to the output database engine'''
         self.db_config_path = os.environ[self.db_config_env]
-        db_config = misctools.get_config(self.db_config_path, "mysqldb")
+        db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "Crunchbase to Elasticsearch <dummy>"  # Note, not a real table
         update_id = "CrunchbaseToElasticsearch_{}".format(self.date)
@@ -65,7 +80,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
-        es_config = misctools.get_config('elasticsearch.config', es_mode)
+        es_config = get_config('elasticsearch.config', es_mode)
         es = Elasticsearch(es_config['external_host'], port=es_config['port'])
 
         if self.test:
