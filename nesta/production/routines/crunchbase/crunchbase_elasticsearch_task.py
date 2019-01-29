@@ -15,7 +15,7 @@ import logging
 import luigi
 import os
 
-from crunchbase_geocode_task import OrgGeocodeTask
+from crunchbase_geocode_task import HealthLabelTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
@@ -46,23 +46,11 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     intermediate_bucket = luigi.Parameter()
 
     def requires(self):
-        yield OrgGeocodeTask(date=self.date,
-                             _routine_id=self._routine_id,
-                             test=self.test,
-                             db_config_env="MYSQLDB",
-                             city_col=Organization.city,
-                             country_col=Organization.country,
-                             location_key_col=Organization.location_id,
-                             insert_batch_size=self.insert_batch_size,
-                             env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                        find_filepath_from_pathstub("config/mysqldb.config")],
-                             job_def="py36_amzn1_image",
-                             job_name=f"CrunchBaseOrgGeocodeTask-{self._routine_id}",
-                             job_queue="HighPriority",
-                             region_name="eu-west-2",
-                             poll_time=10,
-                             memory=4096,
-                             max_live_jobs=2)
+        yield HealthLabelTask(date=self.date,
+                              _routine_id=self._routine_id,
+                              test=self.test,
+                              insert_batch_size=self.insert_batch_size,
+                              db_config_env="MYSQLDB")
 
     def output(self):
         '''Points to the output database engine'''
