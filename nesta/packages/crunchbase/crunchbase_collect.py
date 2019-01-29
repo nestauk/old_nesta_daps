@@ -1,14 +1,13 @@
-import boto3
 from contextlib import contextmanager
-import json
 import logging
 import pandas as pd
+import pickle
 import re
 import requests
 import tarfile
 from tempfile import NamedTemporaryFile
-import time
 
+from utils import split_str  # required to unpickle the vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.production.luigihacks import misctools
@@ -318,11 +317,54 @@ def process_non_orgs(df, existing, pks):
 
 
 def all_org_ids(engine, limit=None):
-        with db_session(engine) as session:
-            orgs = session.query(Organization.id)
-            if limit is not None:
-                orgs = orgs.limit(limit)
-            return {org.id for org in orgs}
+    """Retrieve the id of every organization in the crunchbase data in MYSQL.
+
+    Args:
+        engine(:obj:`sqlalchemy.engine.Base.Engine`): engine to use with the session
+            when connecting to the database
+        limit(int): row limit to apply to query (for testing)
+
+    Returns:
+        (set): all organisation ids
+    """
+    with db_session(engine) as session:
+        orgs = session.query(Organization.id)
+        if limit is not None:
+            orgs = orgs.limit(limit)
+        return {org.id for org in orgs}
+
+
+def predict_health_flag(data, vectoriser, classifier):
+    """Predict health labels for crunchbase organisations using the list of categories.
+
+    Args:
+        data (:obj:`list` of :obj:`dict`): Crunchbase IDs and list of categories.
+        vectoriser (bytes): picked vectoriser model
+        classifier (bytes): pickled classifier model
+
+    Return:
+        (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
+
+    """
+    # refactor this out
+    # def flatten_lists(lst):
+    #     """Remove nested lists. """
+    #     return [item for sublist in lst for item in sublist]
+
+    # unpickle the models
+    vec = pickle.loads(vectoriser)
+    clf = pickle.loads(classifier)
+
+    # remove and store index (cannot be passed to predict)
+    # data_idx = [tup[0] for tup in data]
+    # labels = clf.predict(vec.transform(flatten_lists([tup[1] for tup in data])))
+    ids = [row['id'] for row in data]
+    categories = [row['categories'] for row in data]
+    labels = clf.predict(vec.transform(categories))
+
+    # rejoin ids to the output labels
+    return [{'id': id_, 'is_health': pred}
+            for id_, pred in zip(ids, labels)]
 
 
 if __name__ == '__main__':
