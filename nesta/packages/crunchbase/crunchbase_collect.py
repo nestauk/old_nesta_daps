@@ -376,13 +376,3 @@ if __name__ == '__main__':
     logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # orgs = get_files_from_tar(['organizations'], test=True)
-    # with crunchbase_tar() as tar:
-    #     names = tar.getnames()
-    # print(names)
-    # assert 'category_groups.csv' in names
-
-    # with crunchbase_tar() as tar:
-    #     cg_df = pd.read_csv(tar.extractfile('category_groups.csv'))
-    # print(cg_df.columns)
