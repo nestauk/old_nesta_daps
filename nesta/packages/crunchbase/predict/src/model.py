@@ -6,14 +6,9 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-# from utils import split_str
+from nesta.packages.crunchbase.utils import split_str
 
 np.random.seed(42)
-
-
-def split_str(text):
-    """Split a string on comma. Cannot pickle a lambda."""
-    return text.split(',')
 
 
 with open(sys.argv[1], 'rb') as h:
