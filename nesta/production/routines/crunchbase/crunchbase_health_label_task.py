@@ -31,8 +31,9 @@ class HealthLabelTask(luigi.Task):
     test = luigi.BoolParameter()
     insert_batch_size = luigi.IntParameter(default=500)
     db_config_env = luigi.Parameter()
-    vectoriser_key = luigi.Parameter(default='vectoriser.pickle')
-    classifier_key = luigi.Parameter(default='clf.pickle')
+    bucket = luigi.Parameter()
+    vectoriser_key = luigi.Parameter()
+    classifier_key = luigi.Parameter()
 
     def requires(self):
         yield OrgGeocodeTask(date=self.date,
