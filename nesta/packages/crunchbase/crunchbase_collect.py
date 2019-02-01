@@ -7,7 +7,6 @@ import requests
 import tarfile
 from tempfile import NamedTemporaryFile
 
-from utils import split_str  # required to unpickle the vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.production.luigihacks import misctools
@@ -346,6 +345,10 @@ def predict_health_flag(data, vectoriser, classifier):
         (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
 
     """
+    def split_str(text):
+        """Split a string on comma. Dependency of vectoriser to enable unpicking."""
+        return text.split(',')
+
     # refactor this out
     # def flatten_lists(lst):
     #     """Remove nested lists. """
