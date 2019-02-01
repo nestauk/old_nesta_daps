@@ -86,13 +86,15 @@ class HealthLabelTask(luigi.Task):
         orgs_with_cats = []
         with db_session(self.engine) as session:
             orgs = session.query(Organization.id).limit(nrows).all()
-            for (org_id, ) in orgs:
+            for count, (org_id, ) in enumerate(orgs, 1):
                 categories = (session
                               .query(OrganizationCategory.category_name)
                               .filter(OrganizationCategory.organization_id == org_id)
                               .all())
                 categories = ','.join(cat_name for (cat_name, ) in categories)
                 orgs_with_cats.append(dict(id=org_id, categories=categories))
+                if not count % 100:#00:
+                    logging.info(f"{count} organisations collected")
         logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
 
         logging.info("Predicting health flags")
