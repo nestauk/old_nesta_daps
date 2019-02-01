@@ -15,14 +15,13 @@ import logging
 import luigi
 import os
 
-from crunchbase_geocode_task import HealthLabelTask
+from crunchbase_health_label_task import HealthLabelTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
-from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.crunchbase_orm import Organization
 
 
 S3 = boto3.resource('s3')
