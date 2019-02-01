@@ -333,6 +333,13 @@ def all_org_ids(engine, limit=None):
         return {org.id for org in orgs}
 
 
+def split_str(text):
+    """Split a string on comma.
+    Dependency of predict_health_flag's vectoriser variable to enable unpicking.
+    """
+    return text.split(',')
+
+
 def predict_health_flag(data, vectoriser, classifier):
     """Predict health labels for crunchbase organisations using the list of categories.
 
@@ -345,9 +352,6 @@ def predict_health_flag(data, vectoriser, classifier):
         (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
 
     """
-    def split_str(text):
-        """Split a string on comma. Dependency of vectoriser to enable unpicking."""
-        return text.split(',')
 
     # refactor this out
     # def flatten_lists(lst):
