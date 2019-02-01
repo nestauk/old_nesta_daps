@@ -88,10 +88,9 @@ class HealthLabelTask(luigi.Task):
             orgs = session.query(Organization.id).limit(nrows).all()
             for (org_id, ) in orgs:
                 categories = (session
-                              .query(OrganizationCategory)
+                              .query(OrganizationCategory.category_name)
                               .filter(OrganizationCategory.organization_id == org_id)
                               .all())
-                # categories = [cat_name for (cat_name, ) in categories]
                 categories = ','.join(cat_name for (cat_name, ) in categories)
                 orgs_with_cats.append(dict(id=org_id, categories=categories))
         logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
