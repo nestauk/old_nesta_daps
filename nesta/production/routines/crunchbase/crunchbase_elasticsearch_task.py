@@ -49,7 +49,10 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                               _routine_id=self._routine_id,
                               test=self.test,
                               insert_batch_size=self.insert_batch_size,
-                              db_config_env="MYSQLDB")
+                              db_config_env="MYSQLDB",
+                              bucket='nesta-crunchbase-models',
+                              vectoriser_key='vectoriser.pickle',
+                              classifier_key='clf.pickle')
 
     def output(self):
         '''Points to the output database engine'''
