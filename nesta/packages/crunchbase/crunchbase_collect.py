@@ -346,19 +346,11 @@ def predict_health_flag(data, vectoriser, classifier):
         (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
 
     """
-
-    # refactor this out
-    # def flatten_lists(lst):
-    #     """Remove nested lists. """
-    #     return [item for sublist in lst for item in sublist]
-
     # unpickle the models
     vec = pickle.loads(vectoriser)
     clf = pickle.loads(classifier)
 
     # remove and store index (cannot be passed to predict)
-    # data_idx = [tup[0] for tup in data]
-    # labels = clf.predict(vec.transform(flatten_lists([tup[1] for tup in data])))
     ids = [row['id'] for row in data]
     categories = [row['categories'] for row in data]
     labels = clf.predict(vec.transform(categories))
