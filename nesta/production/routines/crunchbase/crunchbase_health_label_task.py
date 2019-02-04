@@ -82,17 +82,13 @@ class HealthLabelTask(luigi.Task):
         classifier = classifier_obj.get()['Body']._raw_stream.read()
 
         # retrieve organisations and categories
-        # batch_size = 5000
-        batch_size = 50
         nrows = 1000 if self.test else None
         logging.info("Collecting organisations from database")
-        # orgs_with_cats = []
         with db_session(self.engine) as session:
             orgs = session.query(Organization.id).limit(nrows).all()
 
         batch_count = 0
-        # for count, (org_id, ) in enumerate(orgs, 1):
-        for batch in split_batches(orgs, batch_size):
+        for batch in split_batches(orgs, self.insert_batch_size):
             batch_orgs_with_cats = []
             for (org_id, ) in batch:
                 with db_session(self.engine) as session:
@@ -102,19 +98,15 @@ class HealthLabelTask(luigi.Task):
                                   .all())
                 # categories should be a list of str, comma separated: ['item,item,item', 'next,next']
                 categories = ','.join(cat_name for (cat_name, ) in categories)
-                # TODO: Convert to a single key/value pair per org?
                 batch_orgs_with_cats.append(dict(id=org_id, categories=categories))
 
-            logging.info(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
+            logging.debug(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
-            logging.info("Predicting health flags")
+            logging.debug("Predicting health flags")
             batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
 
-            logging.info(f"{len(batch_orgs_with_flag)} organisations to update")
-            # with db_session(self.engine) as session:
+            logging.debug(f"{len(batch_orgs_with_flag)} organisations to update")
             session.bulk_update_mappings(Organization, batch_orgs_with_flag)
-        #     for count, org in orgs_with_flag:
-        #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
             batch_count += 1
             logging.info(f"{batch_count} batches complete")
 
