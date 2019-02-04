@@ -91,9 +91,12 @@ class HealthLabelTask(luigi.Task):
                               .query(OrganizationCategory.category_name)
                               .filter(OrganizationCategory.organization_id == org_id)
                               .all())
+                # categories should be a list of str, comma separated: ['item,item,item', 'next,next']
                 categories = ','.join(cat_name for (cat_name, ) in categories)
+                # TODO: Convert to a single key/value pair per org?
                 orgs_with_cats.append(dict(id=org_id, categories=categories))
-                if not count % 100:#00:
+                # if not count % 10000:
+                if not count % 100:  # testing
                     logging.info(f"{count} organisations collected")
         logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
 
@@ -102,7 +105,7 @@ class HealthLabelTask(luigi.Task):
 
         logging.info(f"{len(orgs_with_flag)} organisations to update")
         with db_session(self.engine) as session:
-            session.bulk_update_mapping(Organization, orgs_with_flag)
+            session.bulk_update_mappings(Organization, orgs_with_flag)
         #     for count, org in orgs_with_flag:
         #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
 
