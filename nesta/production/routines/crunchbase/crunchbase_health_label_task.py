@@ -13,6 +13,7 @@ import os
 
 from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, Organization, OrganizationCategory
@@ -81,33 +82,43 @@ class HealthLabelTask(luigi.Task):
         classifier = classifier_obj.get()['Body']._raw_stream.read()
 
         # retrieve organisations and categories
+        # batch_size = 5000
+        batch_size = 50
         nrows = 1000 if self.test else None
         logging.info("Collecting organisations from database")
-        orgs_with_cats = []
+        # orgs_with_cats = []
         with db_session(self.engine) as session:
             orgs = session.query(Organization.id).limit(nrows).all()
-            for count, (org_id, ) in enumerate(orgs, 1):
+
+        batch_count = 0
+        batch = split_batches(orgs, batch_size)
+        # for count, (org_id, ) in enumerate(orgs, 1):
+        for (org_id, ) in batch:
+            batch_orgs_with_cats = []
+            with db_session(self.engine) as session:
                 categories = (session
                               .query(OrganizationCategory.category_name)
                               .filter(OrganizationCategory.organization_id == org_id)
                               .all())
-                # categories should be a list of str, comma separated: ['item,item,item', 'next,next']
-                categories = ','.join(cat_name for (cat_name, ) in categories)
-                # TODO: Convert to a single key/value pair per org?
-                orgs_with_cats.append(dict(id=org_id, categories=categories))
-                # if not count % 10000:
-                if not count % 100:  # testing
-                    logging.info(f"{count} organisations collected")
-        logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
+            # categories should be a list of str, comma separated: ['item,item,item', 'next,next']
+            categories = ','.join(cat_name for (cat_name, ) in categories)
+            # TODO: Convert to a single key/value pair per org?
+            batch_orgs_with_cats.append(dict(id=org_id, categories=categories))
+            # if not count % 10000:
+            # if not count % 100:  # testing
+            #     logging.info(f"{count} organisations collected")
+            logging.info(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
-        logging.info("Predicting health flags")
-        orgs_with_flag = predict_health_flag(orgs_with_cats, vectoriser, classifier)
+            logging.info("Predicting health flags")
+            batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
 
-        logging.info(f"{len(orgs_with_flag)} organisations to update")
-        with db_session(self.engine) as session:
-            session.bulk_update_mappings(Organization, orgs_with_flag)
+            logging.info(f"{len(batch_orgs_with_flag)} organisations to update")
+            # with db_session(self.engine) as session:
+            session.bulk_update_mappings(Organization, batch_orgs_with_flag)
         #     for count, org in orgs_with_flag:
         #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
+            batch_count += 1
+            logging.info(f"{batch_count} batches complete")
 
         # mark as done
         logging.warning("Task complete")
