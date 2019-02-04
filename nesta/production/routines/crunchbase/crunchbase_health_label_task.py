@@ -93,8 +93,8 @@ class HealthLabelTask(luigi.Task):
         batch_count = 0
         # for count, (org_id, ) in enumerate(orgs, 1):
         for batch in split_batches(orgs, batch_size):
+            batch_orgs_with_cats = []
             for (org_id, ) in batch:
-                batch_orgs_with_cats = []
                 with db_session(self.engine) as session:
                     categories = (session
                                   .query(OrganizationCategory.category_name)
@@ -104,21 +104,19 @@ class HealthLabelTask(luigi.Task):
                 categories = ','.join(cat_name for (cat_name, ) in categories)
                 # TODO: Convert to a single key/value pair per org?
                 batch_orgs_with_cats.append(dict(id=org_id, categories=categories))
-                # if not count % 10000:
-                # if not count % 100:  # testing
-                #     logging.info(f"{count} organisations collected")
-                logging.info(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
-                logging.info("Predicting health flags")
-                batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
+            logging.info(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
-                logging.info(f"{len(batch_orgs_with_flag)} organisations to update")
-                # with db_session(self.engine) as session:
-                session.bulk_update_mappings(Organization, batch_orgs_with_flag)
-            #     for count, org in orgs_with_flag:
-            #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
-                batch_count += 1
-                logging.info(f"{batch_count} batches complete")
+            logging.info("Predicting health flags")
+            batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
+
+            logging.info(f"{len(batch_orgs_with_flag)} organisations to update")
+            # with db_session(self.engine) as session:
+            session.bulk_update_mappings(Organization, batch_orgs_with_flag)
+        #     for count, org in orgs_with_flag:
+        #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
+            batch_count += 1
+            logging.info(f"{batch_count} batches complete")
 
         # mark as done
         logging.warning("Task complete")
