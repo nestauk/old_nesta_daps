@@ -17,6 +17,9 @@ class TestWorldbankOrm(unittest.TestCase):
         '''Drop the temporary table'''
         Base.metadata.drop_all(self.engine)
 
+    def test_dummy(self):
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

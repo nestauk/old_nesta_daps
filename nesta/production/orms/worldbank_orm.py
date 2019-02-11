@@ -30,14 +30,14 @@ class WorldbankCountry(Base):
     name = Column(VARCHAR(54))
     region = Column(VARCHAR(26), index=True)
 
-    # Data
+    # Data (note that long names have been truncated to 64 chars in line with MySQL rules)
     age_dependency_ratio_pc_of_working_age_population = Column(FLOAT)
     barro_lee_percentage_of_population_age_25_with_no_education = Column(FLOAT)
-    barro_lee_percentage_of_population_age_25_with_tertiary_schooling_completed_tertiary = Column(FLOAT)
+    barro_lee_perce_of_popul_age_25_with_tertia_school_comple_tertia = Column(FLOAT)
     gini_index = Column(FLOAT)
     life_expectancy_at_birth_total_years = Column(FLOAT)
     mortality_rate_infant_per_1_000_live_births = Column(FLOAT)
     population_total = Column(FLOAT)
-    poverty_headcount_ratio_at_national_poverty_line_pc_of_population = Column(FLOAT)
+    poverty_headcount_ratio_at_national_poverty_line_pc_of_populatio = Column(FLOAT)
     rural_population_pc_of_total_population = Column(FLOAT)
 

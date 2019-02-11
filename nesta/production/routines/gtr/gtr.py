@@ -1,11 +1,8 @@
 '''
-Country :math:`\rightarrow` Extended groups
-===========================================
+Gateway to research data collection
+===================================
 
-Starting with a seed country (and Meetup category),
-extract all groups in that country and subsequently
-find all groups associated with all members of the
-original set of groups.
+Discover all GtR data via the API.
 '''
 
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
@@ -92,7 +89,11 @@ class RootTask(luigi.WrapperTask):
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",
                       job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
-                      job_queue="HighPriority",
+                      #job_queue="HighPriority",
+                      job_queue="MinimalCpus",
                       region_name="eu-west-2",
+                      vcpus=2,
                       poll_time=10,
+                      memory=2048,
+                      max_live_jobs=200,
                       test=(not self.production))

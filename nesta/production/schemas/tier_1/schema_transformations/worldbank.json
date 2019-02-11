@@ -41,10 +41,10 @@
     {"tier_0": "barro_lee_percentage_of_population_age_25_with_no_education",
      "tier_1": "metric_percPopOver25NoEduc_country"},
     
-    {"tier_0": "barro_lee_percentage_of_population_age_25_with_tertiary_schooling_completed_tertiary",
+    {"tier_0": "barro_lee_perce_of_popul_age_25_with_tertia_school_comple_tertia",
      "tier_1": "metric_percPopOver25TertiaryEduc_country"},
     
-    {"tier_0": "poverty_headcount_ratio_at_national_poverty_line_pc_of_population",
+    {"tier_0": "poverty_headcount_ratio_at_national_poverty_line_pc_of_populatio",
      "tier_1": "metric_percPopBelowPovertyLine_country"},
     
     {"tier_0": "rural_population_pc_of_total_population",
