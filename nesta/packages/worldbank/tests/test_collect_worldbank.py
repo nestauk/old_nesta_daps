@@ -47,7 +47,8 @@ def typical_country_metadata():
 
 @pytest.fixture
 def typical_flat_data():
-    return [{"?a bad ++ % VARiable Name!!": None}]
+    return [{"?a bad ++ % VARiable Name!!": None},
+            {"barro lee_percentage_of_population_age_25_with_tertiary_schooling_completed_tertiary": None}]
 
 
 @pytest.fixture
@@ -202,8 +203,11 @@ def test_flatten_country_data(typical_country_data,
 
 def test_clean_variable_names(typical_flat_data):
     cleaned_data = clean_variable_names(typical_flat_data)
-    
+
     assert len(typical_flat_data) == len(cleaned_data)
-    row = cleaned_data[0]
-    assert len(row) == 1
-    assert "a_bad_pc_variable_name" in row
+    for row in cleaned_data:
+        assert len(row) == 1
+        for k in row.keys():
+            assert " " not in k
+            assert len(k) <= 64
+            assert len(k) > 1

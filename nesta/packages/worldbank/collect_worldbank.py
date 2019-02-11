@@ -261,6 +261,18 @@ def clean_variable_names(flat_country_data):
             new_key = k.lower().replace("%", "pc")
             new_key = re.sub('[^0-9a-zA-Z]+', ' ', new_key)
             new_key = new_key.lstrip().rstrip().replace(" ", "_")
+            # Recursively remove middle character until less than 64 chars long
+            # (this is the MySQL limit)
+            while len(new_key) > 64:
+                # Find the longest term
+                longest_term = ""
+                for term in new_key.split("_"):
+                    if len(term) <= len(longest_term):
+                        continue
+                    longest_term = term
+                # Remove the final character from the longest term
+                new_term = longest_term[:-1]
+                new_key = new_key.replace(longest_term, new_term)
             # Edit in place
             new_row[new_key] = v
         out_data.append(new_row)
