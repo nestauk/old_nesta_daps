@@ -248,17 +248,22 @@ def clean_variable_names(flat_country_data):
     Args:
         flat_country_data (list): Flattened country data.
     """
+    out_data = []
     for row in flat_country_data:
+        new_row = {}
         for k, v in row.items():
             # Only clean names containing spaces
             if " " not in k:
+                new_row[k] = v
                 continue
             # Lower, replace '%', remove non-alphanums and use '_'
             new_key = k.lower().replace("%", "pc")
             new_key = re.sub('[^0-9a-zA-Z]+', ' ', new_key)
             new_key = new_key.lstrip().rstrip().replace(" ", "_")
             # Edit in place
-            row[new_key] = row.pop(k)
+            new_row[new_key] = v
+        out_data.append(new_row)
+    return out_data
 
 
 if __name__ == "__main__":
@@ -272,4 +277,4 @@ if __name__ == "__main__":
     country_data = get_country_data(variables)
     country_metadata = get_worldbank_resource("countries")
     flat_country_data = flatten_country_data(country_data, country_metadata)
-    clean_variable_names(flat_country_data)
+    cleaned_data = clean_variable_names(flat_country_data)

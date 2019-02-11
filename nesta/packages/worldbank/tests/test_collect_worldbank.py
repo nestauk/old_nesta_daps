@@ -201,8 +201,9 @@ def test_flatten_country_data(typical_country_data,
 
 
 def test_clean_variable_names(typical_flat_data):
-    clean_variable_names(typical_flat_data)
-    row = typical_flat_data[0]
-    assert len(typical_flat_data) == 1
+    cleaned_data = clean_variable_names(typical_flat_data)
+    
+    assert len(typical_flat_data) == len(cleaned_data)
+    row = cleaned_data[0]
     assert len(row) == 1
     assert "a_bad_pc_variable_name" in row
