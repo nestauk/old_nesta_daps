@@ -9,6 +9,7 @@ import requests
 # from retrying import retry
 import json
 from collections import defaultdict
+import re
 
 WORLDBANK_ENDPOINT = "http://api.worldbank.org/v2/{}"
 DEAD_RESPONSE = (None, None)  # tuple to match the default python return type
@@ -241,6 +242,25 @@ def flatten_country_data(country_data, country_metadata):
     return flat_country_data
 
 
+def clean_variable_names(flat_country_data):
+    """Clean variable names ready for DB storage in place.
+
+    Args:
+        flat_country_data (list): Flattened country data.
+    """
+    for row in flat_country_data:
+        for k, v in row.items():
+            # Only clean names containing spaces
+            if " " not in k:
+                continue
+            # Lower, replace '%', remove non-alphanums and use '_'
+            new_key = k.lower().replace("%", "pc")
+            new_key = re.sub('[^0-9a-zA-Z]+', ' ', new_key)
+            new_key = new_key.lstrip().rstrip().replace(" ", "_")
+            # Edit in place
+            row[new_key] = row.pop(k)
+
+
 if __name__ == "__main__":
     variables = get_variables_by_code(["SP.RUR.TOTL.ZS", "SP.URB.TOTL.IN.ZS",
                                        "SP.POP.DPND", "SP.POP.TOTL",
@@ -252,3 +272,4 @@ if __name__ == "__main__":
     country_data = get_country_data(variables)
     country_metadata = get_worldbank_resource("countries")
     flat_country_data = flatten_country_data(country_data, country_metadata)
+    clean_variable_names(flat_country_data)

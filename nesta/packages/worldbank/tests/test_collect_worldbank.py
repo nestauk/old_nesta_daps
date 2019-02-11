@@ -14,6 +14,7 @@ from nesta.packages.worldbank.collect_worldbank import unpack_quantity
 from nesta.packages.worldbank.collect_worldbank import unpack_data
 from nesta.packages.worldbank.collect_worldbank import get_country_data
 from nesta.packages.worldbank.collect_worldbank import flatten_country_data
+from nesta.packages.worldbank.collect_worldbank import clean_variable_names
 
 PKG = "nesta.packages.worldbank.collect_worldbank.{}"
 
@@ -42,6 +43,11 @@ def typical_country_metadata():
              'longitude': '-0.126236',
              'name': 'United Kingdom',
              'region': 'Europe & Central Asia'}]
+
+
+@pytest.fixture
+def typical_flat_data():
+    return [{"?a bad ++ % VARiable Name!!": None}]
 
 
 @pytest.fixture
@@ -192,3 +198,11 @@ def test_flatten_country_data(typical_country_data,
     assert type(data[0]) is dict
     assert len(data[0]) > len(typical_country_metadata[0])
     assert all(type(v) not in (list, dict) for v in data[0].values())
+
+
+def test_clean_variable_names(typical_flat_data):
+    clean_variable_names(typical_flat_data)
+    row = typical_flat_data[0]
+    assert len(typical_flat_data) == 1
+    assert len(row) == 1
+    assert "a_bad_pc_variable_name" in row
