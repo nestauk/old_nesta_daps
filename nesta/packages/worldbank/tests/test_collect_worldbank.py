@@ -24,9 +24,24 @@ def typical_worldbank_data():
             [{'adminregion': {'id': '', 'iso2code': '', 'value': ''},
               'capitalCity': 'Oranjestad', 'id': 'ABW', 'name': 'Aruba'}])
 
+
 @pytest.fixture
-def typical_worldbank_small_data():
-    return 
+def typical_country_data():
+    return {"GBR": {'Example variable name': 9.151}}
+
+
+@pytest.fixture
+def typical_country_metadata():
+    return [{'adminregion': '',
+             'capitalCity': 'London',
+             'id': 'GBR',
+             'incomeLevel': 'High income',
+             'iso2Code': 'GB',
+             'latitude': '51.5002',
+             'lendingType': 'Not classified',
+             'longitude': '-0.126236',
+             'name': 'United Kingdom',
+             'region': 'Europe & Central Asia'}]
 
 
 @pytest.fixture
@@ -156,13 +171,24 @@ def test_unpack_data(mocked_unpack_quantity):
 
 @mock.patch(PKG.format('worldbank_data'))
 @mock.patch(PKG.format('unpack_data'))
-def test_get_country_data(mocked_worldbank_data,
-                          mocked_unpack_data):
+def test_get_country_data(mocked_unpack_data,
+                          mocked_worldbank_data):
     mocked_worldbank_data.return_value = iter([1, 2, 3, 4])
     mocked_unpack_data.side_effect = [("cat", "dog", "fish"),
                                       ("cat", "me", "you"),
                                       ("dog", "me", None),
                                       ("dog", "me", "you")]
     data = get_country_data({"key": ["value"]})
+    assert len(data) == 2
+
+
+def test_flatten_country_data(typical_country_data,
+                              typical_country_metadata):
+    data = flatten_country_data(typical_country_data,
+                                typical_country_metadata)
+    # Assert that a flat list of dictionaries is returned
     assert len(data) > 0
-    
+    assert type(data) is list
+    assert type(data[0]) is dict
+    assert len(data[0]) > len(typical_country_metadata[0])
+    assert all(type(v) not in (list, dict) for v in data[0].values())

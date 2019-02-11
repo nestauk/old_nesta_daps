@@ -71,7 +71,7 @@ def data_from_response(response, data_key_path=None):
         metadata, data (dict, list): Metadata and data from API response.
     """
     # If the data is stored ({metadata}, [datarows])
-    if data_key_path is None:
+    if data_key_path is None or response == DEAD_RESPONSE:
         metadata, datarows = response
     # Otherwise if the data is stored as {metadata, path:{[to:data]}}
     # (or similar)
