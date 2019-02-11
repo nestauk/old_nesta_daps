@@ -8,7 +8,7 @@ variable names, but the alternative would have been raw codes like
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import DECIMAL
+from sqlalchemy.dialects.mysql import INTEGER, DECIMAL
 from sqlalchemy.types import FLOAT, VARCHAR
 from sqlalchemy import Column
 
@@ -25,6 +25,7 @@ class WorldbankCountry(Base):
     iso2Code = Column(VARCHAR(2), index=True)
     latitude = Column(DECIMAL(6, 4), index=True)
     longitude = Column(DECIMAL(6, 4), index=True)
+    year = Column(INTEGER, primary_key=True)
     lendingType = Column(VARCHAR(14))
     name = Column(VARCHAR(54))
     region = Column(VARCHAR(26), index=True)

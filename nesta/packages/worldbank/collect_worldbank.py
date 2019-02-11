@@ -224,6 +224,7 @@ def get_country_data(variables, year=2010):
                     variable_name = variable
                 done_countries.add(country)
                 country_data[country][variable_name] = value
+                country_data[country]["year"] = year
     return country_data
 
 
