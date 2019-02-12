@@ -218,17 +218,19 @@ def get_country_data(variables, year=2010):
                       f"series/{series}/time/YR{year}/data")
             data = worldbank_data(suffix, data_key_path=["source", "data"])
             for country, variable, value in map(unpack_data, data):
+                # Add the variable name to the mapping, and indentify the
+                # shortest possible version of the variable name as
+                # an alias for the rest
+                alias_mapping.add(variable)
+                if alias is None or len(alias) > len(variable):
+                    alias = variable
                 if value is None:  # Missing data for this country
                     continue
                 if country in done_countries:  # Already done this country
                     continue
-                if alias is None or len(alias) > len(variable):
-                    alias = variable
-                alias_mapping.add(variable)
                 done_countries.add(country)
                 country_data[country][variable] = value
                 country_data[country]["year"] = year
-
         # Apply the alias mapping
         for country in done_countries:
             for variable in alias_mapping:
@@ -236,9 +238,9 @@ def get_country_data(variables, year=2010):
                     continue
                 if variable == alias:
                     continue
+                # Assign the alias and delete the dealiased
                 country_data[country][alias] = country_data[country][variable]
                 del country_data[country][variable]
-
     return country_data
 
 
