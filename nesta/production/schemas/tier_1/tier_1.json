@@ -30,6 +30,7 @@
         "term": "middleName",
         "values": [
             "abstract",
+	    "adminRegion",
             "ageDepRatioPercWorkAgePop",
             "alias",
             "arxivSubjectCategory",
@@ -74,6 +75,7 @@
             "percPopOver25NoEduc",
             "percPopOver25TertiaryEduc",
             "percPopRural",
+	    "percPopUrban",
             "population",
             "programming",
             "region",

@@ -26,6 +26,9 @@
     {"tier_0": "region",
      "tier_1": "placeName_worldRegion_country"},
     
+    {"tier_0": "adminregion",
+     "tier_1": "placeName_adminRegion_country"},
+    
     {"tier_0": "gini_index",
      "tier_1": "metric_gini_country"},
     
@@ -51,5 +54,8 @@
      "tier_1": "metric_percPopRural_country"},
     
     {"tier_0": "mortality_rate_infant_per_1_000_live_births",
-     "tier_1": "metric_infMortPer1000LiveBirths_country"}
+     "tier_1": "metric_infMortPer1000LiveBirths_country"},
+
+    {"tier_0": "urban_population_pc_of_total",
+     "tier_1": "metric_percPopUrban_country"}
 ]

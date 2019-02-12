@@ -36,6 +36,7 @@ class CollectWorldbankTask(luigi.Task):
     date = luigi.DateParameter()
     db_config = luigi.DictParameter()
     variable_codes = luigi.ListParameter()
+    year = luigi.IntParameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -50,7 +51,7 @@ class CollectWorldbankTask(luigi.Task):
 
         # Get the data
         variables = get_variables_by_code(self.variable_codes)
-        country_data = get_country_data(variables)
+        country_data = get_country_data(variables, year=self.year)
         country_metadata = get_worldbank_resource("countries")
         flat_country_data = flatten_country_data(country_data,
                                                  country_metadata)
@@ -69,7 +70,7 @@ class CollectWorldbankTask(luigi.Task):
 
 class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.date.today())
-    production = luigi.BoolParameter(default=False)
+    production = luigi.BoolParameter(default=False)    
 
     def requires(self):
         db_config = misctools.get_config("mysqldb.config", "mysqldb")
@@ -84,9 +85,14 @@ class RootTask(luigi.WrapperTask):
                           "NYGDPMKTPSAKD",
                           "SI.POV.NAHC", "SI.POV.GINI"]
 
+        years = list(range(2011, 2018))
+
         if not self.production:
             variable_codes = variable_codes[0:2]
+            years = year[:1]
+        
 
-        yield CollectWorldbankTask(date=self.date, db_config=db_config,
-                                   variable_codes=variable_codes)
+        for year in years:
+            yield CollectWorldbankTask(date=self.date, db_config=db_config,
+                                       year=year, variable_codes=variable_codes)
 

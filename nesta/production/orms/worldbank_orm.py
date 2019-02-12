@@ -29,6 +29,7 @@ class WorldbankCountry(Base):
     lendingType = Column(VARCHAR(14))
     name = Column(VARCHAR(54))
     region = Column(VARCHAR(26), index=True)
+    adminregion = Column(VARCHAR(26))
 
     # Data (note that long names have been truncated to 64 chars in line with MySQL rules)
     age_dependency_ratio_pc_of_working_age_population = Column(FLOAT)
@@ -40,4 +41,4 @@ class WorldbankCountry(Base):
     population_total = Column(FLOAT)
     poverty_headcount_ratio_at_national_poverty_line_pc_of_populatio = Column(FLOAT)
     rural_population_pc_of_total_population = Column(FLOAT)
-
+    urban_population_pc_of_total = Column(FLOAT)
