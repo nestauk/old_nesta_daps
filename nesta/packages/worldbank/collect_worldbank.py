@@ -6,7 +6,7 @@ Collect worldbank sociodemographic data by country.
 """
 
 import requests
-# from retrying import retry
+from retrying import retry
 import json
 from collections import defaultdict
 import re
@@ -15,6 +15,7 @@ WORLDBANK_ENDPOINT = "http://api.worldbank.org/v2/{}"
 DEAD_RESPONSE = (None, None)  # tuple to match the default python return type
 
 
+@retry(stop_max_attempt_number=10, wait_fixed=5000)
 def worldbank_request(suffix, page, per_page=10000, data_key_path=None):
     """Hit the worldbank API and extract metadata and data from the response.
 
@@ -209,7 +210,8 @@ def get_country_data(variables, year=2010):
         # The name of a given variable varies subtlely across multiple
         # datasets, so we extract the variable name the first time for
         # consistency across datasets.
-        variable_name = None
+        alias = None
+        alias_mapping = set()
         done_countries = set()
         for source in sources:
             suffix = (f"sources/{source}/country/all/"
@@ -220,11 +222,23 @@ def get_country_data(variables, year=2010):
                     continue
                 if country in done_countries:  # Already done this country
                     continue
-                if variable_name is None:  # Only equals True the first time
-                    variable_name = variable
+                if alias is None or len(alias) > len(variable):
+                    alias = variable
+                alias_mapping.add(variable)
                 done_countries.add(country)
-                country_data[country][variable_name] = value
+                country_data[country][variable] = value
                 country_data[country]["year"] = year
+
+        # Apply the alias mapping
+        for country in done_countries:
+            for variable in alias_mapping:
+                if variable not in country_data[country]:
+                    continue
+                if variable == alias:
+                    continue
+                country_data[country][alias] = country_data[country][variable]
+                del country_data[country][variable]
+
     return country_data
 
 
