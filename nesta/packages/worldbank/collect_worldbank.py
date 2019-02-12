@@ -10,6 +10,8 @@ from retrying import retry
 import json
 from collections import defaultdict
 import re
+from datetime import datetime as dt
+
 
 WORLDBANK_ENDPOINT = "http://api.worldbank.org/v2/{}"
 DEAD_RESPONSE = (None, None)  # tuple to match the default python return type
@@ -194,7 +196,7 @@ def unpack_data(row):
     return country, variable, value
 
 
-def get_country_data(variables, year=2010):
+def get_country_data(variables, aliases, year=2010):
     """Extract data for specified variables for all available
     countries, in a specified year.
 
@@ -210,37 +212,20 @@ def get_country_data(variables, year=2010):
         # The name of a given variable varies subtlely across multiple
         # datasets, so we extract the variable name the first time for
         # consistency across datasets.
-        alias = None
-        alias_mapping = set()
+        alias = aliases[series]
         done_countries = set()
         for source in sources:
             suffix = (f"sources/{source}/country/all/"
                       f"series/{series}/time/YR{year}/data")
             data = worldbank_data(suffix, data_key_path=["source", "data"])
-            for country, variable, value in map(unpack_data, data):
-                # Add the variable name to the mapping, and indentify the
-                # shortest possible version of the variable name as
-                # an alias for the rest
-                alias_mapping.add(variable)
-                if alias is None or len(alias) > len(variable):
-                    alias = variable
+            for country, _, value in map(unpack_data, data):
                 if value is None:  # Missing data for this country
                     continue
                 if country in done_countries:  # Already done this country
                     continue
                 done_countries.add(country)
-                country_data[country][variable] = value
+                country_data[country][alias] = value
                 country_data[country]["year"] = year
-        # Apply the alias mapping
-        for country in done_countries:
-            for variable in alias_mapping:
-                if variable not in country_data[country]:
-                    continue
-                if variable == alias:
-                    continue
-                # Assign the alias and delete the dealiased
-                country_data[country][alias] = country_data[country][variable]
-                del country_data[country][variable]
     return country_data
 
 
@@ -257,6 +242,29 @@ def flatten_country_data(country_data, country_metadata):
                          for metadata in country_metadata
                          if metadata['id'] in country_data]
     return flat_country_data
+
+
+def discover_variable_name(series, sources):
+    """Discover variable names from each series [short hand code].
+    Also select the shortest name as a common alias, since each code
+    inconveniently maps to various very similar variable names.
+
+    Args:
+        series (str): The short hand code for the variable name, according to Worldbank API.
+        sources (list): List of identified dataset IDs
+    Returns:
+        alias (str): The shortest verbose variable name for the given series.
+    """
+    alias = None
+    for source in sources:
+        for year in range(2010, dt.now().year):
+            suffix = (f"sources/{source}/country/all/"
+                      f"series/{series}/time/YR{year}/data")
+            data = worldbank_data(suffix, data_key_path=["source", "data"])
+            for _, variable, _ in map(unpack_data, data):
+                if alias is None or len(alias) > len(variable):
+                    alias = variable
+    return alias
 
 
 def clean_variable_names(flat_country_data):
@@ -303,7 +311,9 @@ if __name__ == "__main__":
                                        "BAR.TER.CMPT.25UP.ZS",
                                        "NYGDPMKTPSAKD",
                                        "SI.POV.NAHC", "SI.POV.GINI"])
-    country_data = get_country_data(variables)
+    aliases = {series: discover_variable_name(series, sources)
+               for series, sources in variables.items()}
+    country_data = get_country_data(variables, aliases)
     country_metadata = get_worldbank_resource("countries")
     flat_country_data = flatten_country_data(country_data, country_metadata)
     cleaned_data = clean_variable_names(flat_country_data)
