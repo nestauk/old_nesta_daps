@@ -299,8 +299,9 @@ def test_country_data_single_request(mocked_worldbank_data_interval,
     # only "value" and "time" in this row of data
     _data = data[a_country][alias]
     assert len(_data) == 2
-    assert "value" in _data
-    assert "time" in _data
+    for row in _data:
+        assert "value" in row
+        assert "time" in row
 
 
 @mock.patch(PKG.format('calculate_number_of_api_pages'))
