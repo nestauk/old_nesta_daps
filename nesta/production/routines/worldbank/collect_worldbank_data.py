@@ -7,11 +7,15 @@ An example of building a pipeline with batched tasks.
 import luigi
 import datetime
 import json
+import logging
+from collections import defaultdict
+from sqlalchemy.orm import sessionmaker
 
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks import s3
 from nesta.production.luigihacks import misctools
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 from nesta.packages.worldbank.collect_worldbank import get_variables_by_code
 from nesta.packages.worldbank.collect_worldbank import get_country_data_kwargs
@@ -28,13 +32,13 @@ S3PREFIX = "s3://nesta-dev/production_batch_example_"
 
 
 class WorldbankTask(autobatch.AutoBatchTask):
-    '''Get Worldbank data by '''
+    '''Get Worldbank data by hitting the API in batches.'''
     date = luigi.DateParameter()
     db_config = luigi.DictParameter()
-    variables = luigi.ListParameter()
+    variable_codes = luigi.ListParameter()
 
     def output(self):
-        '''Points to the S3 Target'''
+        '''Points to the MySqlTarget checkpoint'''
         update_id = self.db_config["table"]+str(self.date)
         return MySqlTarget(update_id=update_id, **self.db_config)
 
@@ -62,6 +66,7 @@ class WorldbankTask(autobatch.AutoBatchTask):
                        f"{self.job_name}-{i}")
             params["outinfo"] = outfile
             params["done"] = s3fs.exists(outfile)
+            job_params.append(params)
         return job_params
 
     def combine(self, job_params):
@@ -69,14 +74,16 @@ class WorldbankTask(autobatch.AutoBatchTask):
 
         # Retrieve the batched data
         country_data = defaultdict(dict)
-        for params in job_params:
-            outfile = ("s3://nesta-production-intermediate/"
-                       f"{self.task_name}-{self.date}-{i}")
+        n_rows = 0
+        for i, params in enumerate(job_params):
+            print(i, " of ", len(job_params))
             _body = s3.S3Target(params["outinfo"]).open("rb")
-            _country_data = _body.read().decode('utf-8')
+            _country_data = json.loads(_body.read().decode('utf-8'))
             for country, data in _country_data.items():
                 for var_name, data_row in data.items():
+                    n_rows += 1
                     country_data[country][var_name] = data_row
+        print(f"Got {n_rows} rows of data")
 
         # Merge with metadata, then flatten and clean
         country_metadata = get_worldbank_resource("countries")
@@ -85,7 +92,7 @@ class WorldbankTask(autobatch.AutoBatchTask):
         cleaned_data = clean_variable_names(flat_country_data)
 
         # Commit the data
-        engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb",
+        engine = get_mysql_engine("MYSQLDB", "mysqldb",
                                   self.db_config['database'])
         Base.metadata.create_all(engine)
         Session = sessionmaker(engine)
@@ -109,23 +116,25 @@ class RootTask(luigi.WrapperTask):
         db_config["database"] = "production" if self.production else "dev"
         db_config["table"] = "worldbank_countries"
         
-        variable_codes = ["SP.RUR.TOTL.ZS", "SP.URB.TOTL.IN.ZS",
+        variable_codes = ["SP.RUR.TOTL.ZS", "SP.URB.TOTL.IN.ZS"
                           "SP.POP.DPND", "SP.POP.TOTL",
                           "SP.DYN.LE00.IN", "SP.DYN.IMRT.IN",
                           "BAR.NOED.25UP.ZS", "BAR.TER.CMPT.25UP.ZS",
                           "NYGDPMKTPSAKD", "SI.POV.NAHC", "SI.POV.GINI"]
 
 
+        job_name=(f"Worldbank-{self.date}-"
+                  f"{'_'.join(variable_codes).replace('.','_')}-"
+                  f"{self.production}")[0:120]
+
         yield WorldbankTask(date=self.date, db_config=db_config, 
                             variable_codes=variable_codes,
-                            self.test=not self.production,
-                            batchable=find_filepath_from_pathstub("production/batchables/collect_worldbank/")
+                            batchable=find_filepath_from_pathstub("production/batchables/collect_worldbank/"),
                             env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                        find_filepath_from_pathstub("/config/mysqldb.config")],
                             job_def="py36_amzn1_image",
-                            job_name=(f"Worldbank-{self.date}-{'_'.join(variable_codes)}-"
-                                      f"{self.production}"),
-                            job_queue="HighPriority",                                         
+                            job_name=job_name,
+                            job_queue="HighPriority",
                             region_name="eu-west-2",
                             poll_time=10,
                             max_live_jobs=200,
