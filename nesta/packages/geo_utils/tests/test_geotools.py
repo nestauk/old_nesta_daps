@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import pytest
 from unittest import mock
 
@@ -155,7 +156,6 @@ class TestGeocodeBatchDataframe():
                                       {'lat': '99.999999', 'lon': '-88.888888'},
                                       {'lat': '-2.202022', 'lon': '0.000000'}
                                       ]
-        geocoded_dataframe = geocode_batch_dataframe(test_dataframe)
 
         # Expected outputs
         expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
@@ -168,8 +168,11 @@ class TestGeocodeBatchDataframe():
                           mock.call(city='Sheffield', country='United Kingdom'),
                           mock.call(city='Brussels', country='Belgium')]
 
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe)
+
         # Check expected behaviours
-        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
+        assert_frame_equal(geocoded_dataframe, expected_dataframe,
+                           check_like=True, check_dtype=False)
         assert mocked_geocode.mock_calls == expected_calls
 
     @mock.patch(_GEOCODE)
@@ -183,7 +186,6 @@ class TestGeocodeBatchDataframe():
                                       None,
                                       {'lat': 3, 'lon': 6}
                                       ]
-        geocoded_dataframe = geocode_batch_dataframe(test_dataframe)
         # Expected outputs
         expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
                                            'city': ['London', 'Sheffield', 'Brussels'],
@@ -198,9 +200,76 @@ class TestGeocodeBatchDataframe():
                           mock.call(city='Brussels', country='Belgium'),
                           mock.call(q='Brussels Belgium')]
 
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method=2)
+
         # Check expected behaviours
-        assert geocoded_dataframe.to_dict(orient="records") == expected_dataframe.to_dict(orient="records")
+        assert_frame_equal(geocoded_dataframe, expected_dataframe,
+                           check_like=True, check_dtype=False)
         assert mocked_geocode.mock_calls == expected_calls
+
+    @mock.patch(_GEOCODE)
+    def test_underlying_geocoding_function_called_with_query_method_only(self,
+                                                                         mocked_geocode,
+                                                                         test_dataframe):
+        mocked_geocode.side_effect = [{'lat': 1, 'lon': 4},
+                                      {'lat': 2, 'lon': 5},
+                                      {'lat': 3, 'lon': 6}
+                                      ]
+        # Expected outputs
+        expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
+                                           'city': ['London', 'Sheffield', 'Brussels'],
+                                           'country': ['UK', 'United Kingdom', 'Belgium'],
+                                           'latitude': [1.0, 2.0, 3.0],
+                                           'longitude': [4.0, 5.0, 6.0],
+                                           })
+        expected_calls = [mock.call(q='London UK'),
+                          mock.call(q='Sheffield United Kingdom'),
+                          mock.call(q='Brussels Belgium')]
+
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method=1)
+
+        # Check expected behaviours
+        assert_frame_equal(geocoded_dataframe, expected_dataframe,
+                           check_like=True, check_dtype=False)
+        assert mocked_geocode.mock_calls == expected_calls
+
+    @mock.patch(_GEOCODE)
+    def test_valueerror_raised_when_invalid_query_method_passed(self,
+                                                                mocked_geocode,
+                                                                test_dataframe):
+        with pytest.raises(ValueError):
+            geocode_batch_dataframe(test_dataframe, query_method=3)
+
+        with pytest.raises(ValueError):
+            geocode_batch_dataframe(test_dataframe, query_method='test')
+
+        with pytest.raises(ValueError):
+            geocode_batch_dataframe(test_dataframe, query_method=None)
+
+    @mock.patch(_GEOCODE)
+    def test_output_column_names_are_applied(self, mocked_geocode, test_dataframe):
+
+        # Generate dataframe using a mocked output
+        mocked_geocode.side_effect = [{'lat': '12.923432', 'lon': '-75.234569'},
+                                      {'lat': '99.999999', 'lon': '-88.888888'},
+                                      {'lat': '-2.202022', 'lon': '0.000000'}
+                                      ]
+
+        # Expected outputs
+        expected_dataframe = pd.DataFrame({'index': [0, 1, 2],
+                                           'city': ['London', 'Sheffield', 'Brussels'],
+                                           'country': ['UK', 'United Kingdom', 'Belgium'],
+                                           'lat': [12.923432, 99.999999, -2.202022],
+                                           'lon': [-75.234569, -88.888888, 0.0]
+                                           })
+
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe,
+                                                     latitude='lat',
+                                                     longitude='lon')
+
+        # Check expected behaviours
+        assert_frame_equal(geocoded_dataframe, expected_dataframe,
+                           check_like=True, check_dtype=False)
 
 
 class TestCountryIsoCode():

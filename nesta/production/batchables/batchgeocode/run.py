@@ -1,7 +1,7 @@
 import logging
 import os
 import pandas as pd
-import s3fs
+import s3fs  # not called but required import to read from s3://
 
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.packages.geo_utils.geocode import geocode_batch_dataframe
@@ -26,8 +26,8 @@ def run():
     df = country_iso_code_dataframe(df)
     logging.info("Country ISO codes appended")
 
-    # geocode, appending latitude and longitude columns
-    df = geocode_batch_dataframe(df)
+    # geocode, appending latitude and longitude columns, using the q= query method
+    df = geocode_batch_dataframe(df, query_method=1)
     logging.info("Geocoding complete")
 
     # remove city and country columns and append done column
