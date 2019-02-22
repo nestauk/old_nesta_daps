@@ -15,28 +15,26 @@ import json
 import logging
 import time
 
-def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
-    """
-    Convenience method for getting the MySQL engine and inserting
-    data into the DB whilst ensuring a good connection is obtained
-    and that no duplicate primary keys are inserted.
-    Args:
-        db_env: See :obj:`get_mysql_engine`
-        section: See :obj:`get_mysql_engine`
-        database: See :obj:`get_mysql_engine`
-        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
-        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
-        data (:obj:`list` of :obj:`dict`): Rows of data to insert
-        low_memory (bool): To speed things up significantly, you can read
-                           all pkeys into memory first, but this will blow
-                           up for heavy pkeys or large tables.
-        return_non_inserted (bool): Flag that when set will also return a lists of rows that
-                                were in the supplied data but not imported (for checks)
+def filter_out_duplicates(db_env, section, database, Base, _class, data, 
+                          low_memory=False):
+    """Produce a filtered list of data, exluding duplicates and entries that
+    already exist in the data.
 
-    Returns:
-        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
-        :obj:`list` of :obj:`dict` data found already existing in the database (optional)
-        :obj:`list` of :obj:`dict` data which could not be imported (optional)
+    Args:
+        db_env: See :obj:`get_mysql_engine`                                                 
+        section: See :obj:`get_mysql_engine`                                                
+        database: See :obj:`get_mysql_engine`                                               
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.                          
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.                             
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert                           
+        low_memory (bool): To speed things up significantly, you can read                   
+                           all pkeys into memory first, but this will blow                  
+                           up for heavy pkeys or large tables.                              
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
+                                    were in the supplied data but not imported (for checks)     
+                                                                                        
+    Returns:                                                                                
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.      
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
@@ -62,7 +60,6 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
                             "{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
-            
         # Generate the pkey for this row
         pk = tuple([row[pkey.name]                       # Cast to str if required, since
                     if pkey.type.python_type is not str  # pandas may have incorrectly guessed
@@ -79,8 +76,44 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
             existing_objs.append(row)
             continue
         objs.append(_class(**row))
+    session.close()
+    return objs, existing_objs, failed_objs
+
+
+def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
+    """
+    Convenience method for getting the MySQL engine and inserting
+    data into the DB whilst ensuring a good connection is obtained
+    and that no duplicate primary keys are inserted.
+    Args:
+        db_env: See :obj:`get_mysql_engine`
+        section: See :obj:`get_mysql_engine`
+        database: See :obj:`get_mysql_engine`
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): To speed things up significantly, you can read
+                           all pkeys into memory first, but this will blow
+                           up for heavy pkeys or large tables.
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
+                                were in the supplied data but not imported (for checks)
+
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+        :obj:`list` of :obj:`dict` data found already existing in the database (optional)
+        :obj:`list` of :obj:`dict` data which could not be imported (optional)
+    """
+
+    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section, 
+                                                             database=database, 
+                                                             Base=Base, _class=_class, data=data,
+                                                             low_memory=low_memory)
 
     # save and commit
+    engine = get_mysql_engine(db_env, section, database)
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
