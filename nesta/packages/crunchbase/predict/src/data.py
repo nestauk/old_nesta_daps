@@ -8,10 +8,12 @@ np.random.seed(42)
 
 orgs = pd.read_csv(sys.argv[1])
 orgs['is_Health'] = orgs.category_list.apply(lambda x: 1
-                                            if any(health_keyword in str(x)
-                                            for health_keyword in health_keywords)
-                                            else 0
-                                            )
+                                             if any(health_keyword in str(x)
+                                                    for health_keyword
+                                                    in health_keywords)
+                                             else 0
+                                             )
+
 orgs = orgs[(orgs.category_group_list.isnull()==False)
             & (orgs.category_list.isnull()==False)]
 
