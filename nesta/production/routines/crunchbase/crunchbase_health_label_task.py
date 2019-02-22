@@ -59,7 +59,7 @@ class HealthLabelTask(luigi.Task):
         self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
+        db_config["table"] = "Crunchbase health labels <dummy>"  # Note, not a real table
         update_id = "CrunchbaseHealthLabel_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -92,8 +92,8 @@ class HealthLabelTask(luigi.Task):
                               .filter(OrganizationCategory.organization_id == org_id)
                               .all())
                 categories = ','.join(cat_name for (cat_name, ) in categories)
-                orgs_with_cats.append(dict(id=org_id, categories=categories))
-                if not count % 100:#00:
+                orgs_with_cats.append({'id': org_id, 'categories': categories})
+                if not count % 10000:
                     logging.info(f"{count} organisations collected")
         logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
 
@@ -103,8 +103,6 @@ class HealthLabelTask(luigi.Task):
         logging.info(f"{len(orgs_with_flag)} organisations to update")
         with db_session(self.engine) as session:
             session.bulk_update_mapping(Organization, orgs_with_flag)
-        #     for count, org in orgs_with_flag:
-        #         session.query(Organization.id).filter(Organization.id == org['id']).update(org)
 
         # mark as done
         logging.warning("Task complete")
