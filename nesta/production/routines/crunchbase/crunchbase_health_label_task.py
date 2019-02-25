@@ -10,6 +10,7 @@ import boto3
 import luigi
 import logging
 import os
+import pickle
 
 from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
@@ -72,20 +73,24 @@ class HealthLabelTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
-        # collect picked models from s3
+        # collect and unpickle models from s3
         logging.info("Collecting models from S3")
         s3 = boto3.resource('s3')
         vectoriser_obj = s3.Object(self.bucket, self.vectoriser_key)
-        vectoriser = vectoriser_obj.get()['Body']._raw_stream.read()
+        vectoriser = pickle.loads(vectoriser_obj.get()['Body']._raw_stream.read())
         classifier_obj = s3.Object(self.bucket, self.classifier_key)
-        classifier = classifier_obj.get()['Body']._raw_stream.read()
+        classifier = pickle.loads(classifier_obj.get()['Body']._raw_stream.read())
 
         # retrieve organisations and categories
         nrows = 1000 if self.test else None
         logging.info("Collecting organisations from database")
         orgs_with_cats = []
         with db_session(self.engine) as session:
-            orgs = session.query(Organization.id).limit(nrows).all()
+            orgs = (session
+                    .query(Organization.id)
+                    .filter(Organization.is_health._is(None))
+                    .limit(nrows)
+                    .all())
             for count, (org_id, ) in enumerate(orgs, 1):
                 categories = (session
                               .query(OrganizationCategory.category_name)
