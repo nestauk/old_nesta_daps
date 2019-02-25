@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 import logging
 import pandas as pd
-import pickle
 import re
 import requests
 import tarfile
@@ -345,24 +344,21 @@ def predict_health_flag(data, vectoriser, classifier):
 
     Args:
         data (:obj:`list` of :obj:`dict`): Crunchbase IDs and list of categories.
-        vectoriser (bytes): pickled vectoriser model
-        classifier (bytes): pickled classifier model
+        vectoriser: vectoriser model
+        classifier: classifier model
 
     Return:
         (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
 
     """
-    # unpickle the models
-    vec = pickle.loads(vectoriser)
-    clf = pickle.loads(classifier)
-
     # remove and store index (cannot be passed to predict)
     ids = [row['id'] for row in data]
     categories = [row['categories'] for row in data]
-    labels = clf.predict(vec.transform(categories))
+
+    labels = classifier.predict(vectoriser.transform(categories))
 
     # rejoin ids to the output labels
-    return [{'id': id_, 'is_health': pred}
+    return [{'id': id_, 'is_health': bool(pred)}
             for id_, pred in zip(ids, labels)]
 
 
