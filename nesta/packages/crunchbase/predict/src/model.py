@@ -63,7 +63,7 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'rb') as h:
         data = pickle.load(h)
 
-    vec, gs = train(data)
+    vec, gs, _ = train(data)
 
     with open(vec_out, 'wb') as h:
         pickle.dump(vec, h)
