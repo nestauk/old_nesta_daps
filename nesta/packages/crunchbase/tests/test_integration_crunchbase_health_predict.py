@@ -1,19 +1,19 @@
 import json
+import os
 import pandas as pd
 
 from nesta.packages.crunchbase.predict.src.model import train
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
 
 
-# ******resolve this before merge...path needs to work on remote machines ********
-# TEST_PATH = 'nesta/packages/crunchbase/tests'
-TEST_PATH = 'tests'
+TEST_PATH = os.path.dirname(__file__)
 TRAINING_DATA = f'{TEST_PATH}/integration_test_training_data.csv'
 UNLABELED_DATA = f'{TEST_PATH}/integration_test_dataset_to_label.json'
 EXPECTED_LABELED_DATA = f'{TEST_PATH}/integration_test_expected_labeled_dataset.json'
 
 
 def test_train_and_predict():
+    # collect training data
     train_data = pd.read_csv(TRAINING_DATA)
     assert train_data.shape == (5000, 2), 'Training data not shaped as expected'
 
