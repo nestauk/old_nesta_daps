@@ -88,7 +88,7 @@ class HealthLabelTask(luigi.Task):
         with db_session(self.engine) as session:
             orgs = (session
                     .query(Organization.id)
-                    .filter(Organization.is_health._is(None))
+                    .filter(Organization.is_health.is_(None))
                     .limit(nrows)
                     .all())
 
