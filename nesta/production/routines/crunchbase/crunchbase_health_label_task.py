@@ -111,9 +111,10 @@ class HealthLabelTask(luigi.Task):
             batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
 
             logging.debug(f"{len(batch_orgs_with_flag)} organisations to update")
-            session.bulk_update_mappings(Organization, batch_orgs_with_flag)
+            with db_session(self.engine) as session:
+                session.bulk_update_mappings(Organization, batch_orgs_with_flag)
             batch_count += 1
-            logging.info(f"{batch_count} batches complete")
+            logging.info(f"{batch_count} batches health labeled and written to db")
 
         # mark as done
         logging.warning("Task complete")
