@@ -49,6 +49,7 @@ class Organization(Base):
     type = Column(VARCHAR(50))
     long_description = Column(TEXT)
     parent_id = Column(VARCHAR(50))
+    is_health = Column(BOOLEAN)
     categories = relationship('CategoryGroup',
                               secondary='crunchbase_organizations_categories')
 
