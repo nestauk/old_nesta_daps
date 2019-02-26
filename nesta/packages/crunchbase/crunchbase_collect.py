@@ -6,6 +6,7 @@ import requests
 import tarfile
 from tempfile import NamedTemporaryFile
 
+from nesta.packages.crunchbase.utils import split_str  # required for unpickling of split_health_flag: vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.production.luigihacks import misctools
@@ -330,13 +331,6 @@ def all_org_ids(engine, limit=None):
         if limit is not None:
             orgs = orgs.limit(limit)
         return {org.id for org in orgs}
-
-
-def split_str(text):
-    """Split a string on comma.
-    Dependency of predict_health_flag's vectoriser variable to enable unpicking.
-    """
-    return text.split(',')
 
 
 def predict_health_flag(data, vectoriser, classifier):
