@@ -26,7 +26,7 @@ def run():
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
     # s3 setup
-    es = Elasticsearch(es_host, port=es_port, sniff_on_start=True)
+    es = Elasticsearch(es_host, port=es_port)
 
     # collect file
     nrows = 1000 if test else None
@@ -38,7 +38,8 @@ def run():
 
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric', 'continent', 'latitude', 'longitude']
     with db_session(engine) as session:
-        rows = (session.query(Organization, Geographic)
+        rows = (session
+                .query(Organization, Geographic)
                 .join(Geographic, Organization.location_id==Geographic.id)
                 .filter(Organization.id.in_(org_ids))
                 .limit(nrows)
