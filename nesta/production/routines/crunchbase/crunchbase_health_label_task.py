@@ -14,6 +14,7 @@ import pickle
 
 from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, Organization, OrganizationCategory
@@ -84,30 +85,35 @@ class HealthLabelTask(luigi.Task):
         # retrieve organisations and categories
         nrows = 1000 if self.test else None
         logging.info("Collecting organisations from database")
-        orgs_with_cats = []
         with db_session(self.engine) as session:
             orgs = (session
                     .query(Organization.id)
                     .filter(Organization.is_health._is(None))
                     .limit(nrows)
                     .all())
-            for count, (org_id, ) in enumerate(orgs, 1):
-                categories = (session
-                              .query(OrganizationCategory.category_name)
-                              .filter(OrganizationCategory.organization_id == org_id)
-                              .all())
+
+        batch_count = 0
+        for batch in split_batches(orgs, self.insert_batch_size):
+            batch_orgs_with_cats = []
+            for (org_id, ) in batch:
+                with db_session(self.engine) as session:
+                    categories = (session
+                                  .query(OrganizationCategory.category_name)
+                                  .filter(OrganizationCategory.organization_id == org_id)
+                                  .all())
+                # categories should be a list of str, comma separated: ['cat,cat,cat', 'cat,cat']
                 categories = ','.join(cat_name for (cat_name, ) in categories)
-                orgs_with_cats.append({'id': org_id, 'categories': categories})
-                if not count % 10000:
-                    logging.info(f"{count} organisations collected")
-        logging.info(f"{len(orgs_with_cats)} organisations retrieved from database")
+                batch_orgs_with_cats.append({'id': org_id, 'categories': categories})
 
-        logging.info("Predicting health flags")
-        orgs_with_flag = predict_health_flag(orgs_with_cats, vectoriser, classifier)
+            logging.debug(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
-        logging.info(f"{len(orgs_with_flag)} organisations to update")
-        with db_session(self.engine) as session:
-            session.bulk_update_mapping(Organization, orgs_with_flag)
+            logging.debug("Predicting health flags")
+            batch_orgs_with_flag = predict_health_flag(batch_orgs_with_cats, vectoriser, classifier)
+
+            logging.debug(f"{len(batch_orgs_with_flag)} organisations to update")
+            session.bulk_update_mappings(Organization, batch_orgs_with_flag)
+            batch_count += 1
+            logging.info(f"{batch_count} batches complete")
 
         # mark as done
         logging.warning("Task complete")
