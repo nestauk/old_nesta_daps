@@ -10,6 +10,7 @@ import boto3
 import luigi
 import logging
 import os
+import pickle
 
 from crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
@@ -60,7 +61,7 @@ class HealthLabelTask(luigi.Task):
         self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "Crunchbase <dummy>"  # Note, not a real table
+        db_config["table"] = "Crunchbase health labels <dummy>"  # Note, not a real table
         update_id = "CrunchbaseHealthLabel_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -73,19 +74,23 @@ class HealthLabelTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
 
-        # collect picked models from s3
+        # collect and unpickle models from s3
         logging.info("Collecting models from S3")
         s3 = boto3.resource('s3')
         vectoriser_obj = s3.Object(self.bucket, self.vectoriser_key)
-        vectoriser = vectoriser_obj.get()['Body']._raw_stream.read()
+        vectoriser = pickle.loads(vectoriser_obj.get()['Body']._raw_stream.read())
         classifier_obj = s3.Object(self.bucket, self.classifier_key)
-        classifier = classifier_obj.get()['Body']._raw_stream.read()
+        classifier = pickle.loads(classifier_obj.get()['Body']._raw_stream.read())
 
         # retrieve organisations and categories
         nrows = 1000 if self.test else None
         logging.info("Collecting organisations from database")
         with db_session(self.engine) as session:
-            orgs = session.query(Organization.id).limit(nrows).all()
+            orgs = (session
+                    .query(Organization.id)
+                    .filter(Organization.is_health._is(None))
+                    .limit(nrows)
+                    .all())
 
         batch_count = 0
         for batch in split_batches(orgs, self.insert_batch_size):
@@ -96,9 +101,9 @@ class HealthLabelTask(luigi.Task):
                                   .query(OrganizationCategory.category_name)
                                   .filter(OrganizationCategory.organization_id == org_id)
                                   .all())
-                # categories should be a list of str, comma separated: ['item,item,item', 'next,next']
+                # categories should be a list of str, comma separated: ['cat,cat,cat', 'cat,cat']
                 categories = ','.join(cat_name for (cat_name, ) in categories)
-                batch_orgs_with_cats.append(dict(id=org_id, categories=categories))
+                batch_orgs_with_cats.append({'id': org_id, 'categories': categories})
 
             logging.debug(f"{len(batch_orgs_with_cats)} organisations retrieved from database")
 
