@@ -51,9 +51,13 @@ def run():
 
             row_combined.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
 
+            # reformat coordinates
+            row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
+                                           'lon': row_combined.pop('longitude')}
+
             # iterate through categories and groups
             row_combined['category_list'] = []
-            row_combined['category_groups'] = []
+            row_combined['category_group_list'] = []
             for category in (session.query(CategoryGroup)
                              .select_from(OrganizationCategory)
                              .join(CategoryGroup)
@@ -84,4 +88,3 @@ if __name__ == "__main__":
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
     run()
-
