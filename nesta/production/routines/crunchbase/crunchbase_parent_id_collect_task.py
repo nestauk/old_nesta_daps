@@ -66,7 +66,7 @@ class ParentIdCollectTask(luigi.Task):
 
         # collect file
         nrows = 1000 if self.test else None
-        logging.info("Collecting org_parents from crunchbase tar")
+        logging.info(f"Collecting {nrows if nrows else 'all'} org_parents from crunchbase tar")
         org_parents = get_files_from_tar(['org_parents'], nrows=nrows)[0]
         logging.info(f"{len(org_parents)} parent ids in crunchbase export")
 
