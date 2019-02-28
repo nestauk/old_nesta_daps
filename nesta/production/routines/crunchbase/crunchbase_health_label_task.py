@@ -25,8 +25,14 @@ class HealthLabelTask(luigi.Task):
     """Apply health labels to the organisation data in MYSQL.
 
     Args:
+        date (datetime): Datetime used to label the outputs
         _routine_id (str): String used to label the AWS task
-        db_config_path: (str) The output database configuration
+        test (bool): True if in test mode
+        insert_batch_size (int): Number of rows to insert into the db in a batch
+        db_config_env (str): The output database envariable
+        bucket (str): S3 bucket where the models are stored
+        vectoriser_key (str): S3 key for the vectoriser model
+        classifier_key (str): S3 key for the classifier model
     """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
@@ -67,7 +73,6 @@ class HealthLabelTask(luigi.Task):
 
     def run(self):
         """Apply health labels using model."""
-
         # database setup
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
