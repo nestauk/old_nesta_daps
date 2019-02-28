@@ -15,7 +15,7 @@ import logging
 import luigi
 import os
 
-from crunchbase_health_label_task import HealthLabelTask
+from crunchbase_health_label_task import ParentIdCollectTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
@@ -45,14 +45,11 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     intermediate_bucket = luigi.Parameter()
 
     def requires(self):
-        yield HealthLabelTask(date=self.date,
-                              _routine_id=self._routine_id,
-                              test=self.test,
-                              insert_batch_size=self.insert_batch_size,
-                              db_config_env="MYSQLDB",
-                              bucket='nesta-crunchbase-models',
-                              vectoriser_key='vectoriser.pickle',
-                              classifier_key='clf.pickle')
+        yield ParentIdCollectTask(date=self.date,
+                                  _routine_id=self._routine_id,
+                                  test=self.test,
+                                  insert_batch_size=self.insert_batch_size,
+                                  db_config_env=self.db_config_env)
 
     def output(self):
         '''Points to the output database engine'''
