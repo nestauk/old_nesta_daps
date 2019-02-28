@@ -35,7 +35,11 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     Args:
         date (datetime): Datetime used to label the outputs
         _routine_id (str): String used to label the AWS task
-        db_config_path: (str) The output database configuration
+        db_config_env (str): The output database envariable
+        process_batch_size (int): Number of rows to process in a batch
+        insert_batch_size (int): Number of rows to insert into the db in a batch
+        intermediate_bucket (str): S3 bucket where the list of ids for each batch are
+                                   written
     '''
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
