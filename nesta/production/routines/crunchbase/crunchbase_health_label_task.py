@@ -92,8 +92,8 @@ class HealthLabelTask(luigi.Task):
                     .limit(nrows)
                     .all())
 
-        batch_count = 0
-        for batch in split_batches(orgs, self.insert_batch_size):
+        for batch_count, batch in enumerate(split_batches(orgs,
+                                                          self.insert_batch_size), 1):
             batch_orgs_with_cats = []
             for (org_id, ) in batch:
                 with db_session(self.engine) as session:
@@ -113,7 +113,6 @@ class HealthLabelTask(luigi.Task):
             logging.debug(f"{len(batch_orgs_with_flag)} organisations to update")
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Organization, batch_orgs_with_flag)
-            batch_count += 1
             logging.info(f"{batch_count} batches health labeled and written to db")
 
         # mark as done
