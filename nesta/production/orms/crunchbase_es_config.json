@@ -44,7 +44,7 @@
                 "id_of_continent": {
                     "type": "keyword"
                 },
-                "coordinates_of_city": {
+                "coordinate_of_city": {
                     "type": "geo_point"
                 },
                 "id_state_organisation": {
@@ -83,15 +83,15 @@
                 "currency_of_funding": {
                     "type": "keyword"
                 },
-                "datetime_birth_organisation": {
+                "date_birth_organisation": {
                     "type":   "date",
                     "format": "yyyy-MM-dd"
                 },
-                "datetime_last_funding": {
+                "date_last_funding": {
                     "type":   "date",
                     "format": "yyyy-MM-dd"
                 },
-                "datetime_death_organisation": {
+                "date_death_organisation": {
                     "type":   "date",
                     "format": "yyyy-MM-dd"
                 },
@@ -127,7 +127,7 @@
                 "id_parent_organisation": {
                     "type": "keyword"
                 },
-                "booleanFlag_health_organization": {
+                "booleanFlag_health_organisation": {
                     "type": "boolean"
                 }
             }
