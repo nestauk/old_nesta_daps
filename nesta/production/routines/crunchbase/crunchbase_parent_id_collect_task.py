@@ -10,7 +10,7 @@ import boto3
 import logging
 import luigi
 
-from crunchbase_org_collect_task import HealthLabelTask
+from crunchbase_parent_id_collect_task import HealthLabelTask
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks import misctools
