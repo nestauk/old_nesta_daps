@@ -66,8 +66,6 @@ class ParentIdCollectTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
         # collect file
-        # nrows = 1000 if self.test else None
-        # logging.info(f"Collecting {nrows if nrows else 'all'} org_parents from crunchbase tar")
         logging.info(f"Collecting org_parents from crunchbase tar")
         org_parents = get_files_from_tar(['org_parents'])[0]
         logging.info(f"{len(org_parents)} parent ids in crunchbase export")
@@ -75,23 +73,19 @@ class ParentIdCollectTask(luigi.Task):
         # collect previously processed orgs
         logging.info("Extracting previously processed organisations")
         with db_session(self.engine) as session:
-            # processed_orgs = (session.query(Organization.id)
-            processed_orgs = (session.query(Organization.id, Organization.parent_id)
-                              # .filter(Organization.parent_id.isnot(None))
-                              .all())
+            processed_orgs = session.query(Organization.id, Organization.parent_id).all()
+        all_orgs = {org for (org, _) in processed_orgs}
+        logging.info(f"{len(all_orgs)} total orgs in database")
         processed_orgs = {org for (org, parent_id) in processed_orgs
                           if parent_id is not None}
         logging.info(f"{len(processed_orgs)} previously processed orgs")
-        if self.test:
-            all_orgs = {org for (org, _) in processed_orgs}
 
-        # reformat into a list of dicts removing orgs that already have a parent_id
+        # reformat into a list of dicts, removing orgs that already have a parent_id
+        # or are missing from the database
         org_parents = org_parents[['uuid', 'parent_uuid']]
         org_parents.columns = ['id', 'parent_id']
+        org_parents = org_parents[org_parents['id'].isin(all_orgs)]
         org_parents = org_parents[~org_parents['id'].isin(processed_orgs)]
-        if self.test:
-            org_parents = org_parents[org_parents['id'].isin(all_orgs)]
-            logging.info("Restricted to orgs in the test database")
         org_parents = org_parents.to_dict(orient='records')
         logging.info(f"{len(org_parents)} organisations to update in MYSQL")
 
