@@ -15,7 +15,7 @@ import logging
 import luigi
 import os
 
-from crunchbase_health_label_task import ParentIdCollectTask
+from crunchbase_parent_id_collect_task import ParentIdCollectTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
