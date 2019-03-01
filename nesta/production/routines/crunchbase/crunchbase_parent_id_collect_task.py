@@ -36,6 +36,7 @@ class ParentIdCollectTask(luigi.Task):
     '''
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
+    test = luigi.BoolParameter()
     db_config_env = luigi.Parameter()
     db_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
