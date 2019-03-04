@@ -3,20 +3,9 @@
         "index": {
             "number_of_shards": "5",
             "number_of_replicas": "1"
-        },
-        "analysis": {
-            "analyzer": {
-                "url_analyzer": {
-                    "type": "custom",
-                    "tokenizer": "uax_url_email",
-                    "filter": [
-                        "standard",
-                        "lowercase"
-                        ]
-                }
-            }
         }
-    },"mappings": {
+    },
+    "mappings": {
         "_doc": {
             "dynamic": "strict",
             "properties": {
@@ -99,20 +88,16 @@
                     "type": "keyword"
                 },
                 "url_facebook_organisation": {
-                    "type": "keyword",
-                    "analyzer": "url_analyzer"
+                    "type": "keyword"
                 },
                 "url_linkedIn_organisation": {
-                    "type": "keyword",
-                    "analyzer": "url_analyzer"
+                    "type": "keyword"
                 },
                 "url_crunchBase_organisation": {
-                    "type": "keyword",
-                    "analyzer": "url_analyzer"
+                    "type": "keyword"
                 },
                 "url_twitter_organisation": {
-                    "type": "keyword",
-                    "analyzer": "url_analyzer"
+                    "type": "keyword"
                 },
                 "terms_alias_organisation": {
                     "type": "keyword"

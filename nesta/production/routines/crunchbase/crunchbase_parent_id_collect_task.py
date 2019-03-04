@@ -96,7 +96,7 @@ class ParentIdCollectTask(luigi.Task):
                 session.bulk_update_mappings(Organization, batch)
             logging.info(f"{count} batch{'es' if count > 1 else ''} written to db")
             if self.test and count > 1:
-                logging.info("Breaking after 2 batches in test mode")
+                logging.info("Breaking after 2 batches while in test mode")
                 break
 
         # mark as done
