@@ -15,7 +15,7 @@ import logging
 import luigi
 import os
 
-from crunchbase_parent_id_collect_task import ParentIdCollectTask
+from crunchbase_mesh_task import DescriptionMeshTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks import autobatch
@@ -49,7 +49,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     intermediate_bucket = luigi.Parameter()
 
     def requires(self):
-        yield ParentIdCollectTask(date=self.date,
+        yield DescriptionMeshTask(date=self.date,
                                   _routine_id=self._routine_id,
                                   test=self.test,
                                   insert_batch_size=self.insert_batch_size,
