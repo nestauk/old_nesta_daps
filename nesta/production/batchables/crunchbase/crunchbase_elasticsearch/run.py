@@ -29,7 +29,7 @@ def run():
     # elasticsearch setup
     credentials = boto3.Session().get_credentials()
     awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                       region='eu-west-2', service='es')
+                       'eu-west-2', 'es')
     es = Elasticsearch(
         hosts=[{'host': es_host, 'port': es_port}],
         http_auth=awsauth,
