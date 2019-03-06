@@ -73,7 +73,8 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         # elasticsearch setup
         es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
         es_config = get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'])
+        es = Elasticsearch(hosts=[{'host': es_config['host'],
+                                   'port': es_config['port']}])
         if self.test:
             self.process_batch_size = 1000
             logging.warning(f"Batch size restricted to {self.process_batch_size} while in test mode")
