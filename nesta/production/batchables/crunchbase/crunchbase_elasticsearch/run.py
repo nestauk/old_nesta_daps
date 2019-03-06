@@ -1,9 +1,10 @@
 from ast import literal_eval
 import boto3
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 import json
 import logging
 import os
+from requests_aws4auth import AWS4Auth
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
@@ -26,7 +27,17 @@ def run():
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
     # elasticsearch setup
+    credentials = boto3.Session().get_credentials()
+    awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
+                       region='eu-west-2', service='es')
     es = Elasticsearch(es_host, port=es_port)
+    es = Elasticsearch(
+        hosts=[{'host': es_host, 'port': es_port}],
+        http_auth=awsauth,
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=RequestsHttpConnection
+    )
 
     # retrieve batch org_ids from s3
     s3 = boto3.resource('s3')
