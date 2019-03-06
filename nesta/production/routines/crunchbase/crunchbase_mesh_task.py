@@ -67,19 +67,20 @@ class DescriptionMeshTask(luigi.Task):
 
         logging.info("Extracting previously processed orgs")
         with db_session(self.engine) as session:
-            processed_orgs = (session
-                              .query(Organization.id)
-                              .filter(Organization.mesh_terms.isnot(None))
-                              .all())
-        processed_orgs = {org_id for (org_id, ) in processed_orgs}
+            all_orgs = session .query(Organization.id, Organization.mesh_terms).all()
+        processed_orgs = {org_id for (org_id, mesh_terms) in all_orgs
+                          if mesh_terms is not None}
+        all_orgs = {org_id for (org_id, _) in all_orgs}
+        logging.info(f"{len(all_orgs)} total orgs in database")
         logging.info(f"{len(processed_orgs)} previously processed orgs")
 
-        # reformat for batch insert, removing previously processed terms
+        # reformat for batch insert, removing not found and previously processed terms
         meshed_orgs = [{'id': org_id, 'mesh_terms': ','.join(terms)}
                        for org_id, terms in mesh_terms.items()
-                       if org_id not in processed_orgs]
+                       if org_id in all_orgs and org_id not in processed_orgs]
 
         logging.info(f"{len(meshed_orgs)} organisations to update in database")
+
         for count, batch in enumerate(split_batches(meshed_orgs,
                                                     self.insert_batch_size), 1):
             with db_session(self.engine) as session:
