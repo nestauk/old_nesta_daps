@@ -3,7 +3,19 @@
         "index": {
             "number_of_shards": "5",
             "number_of_replicas": "1"
-        }
+        },
+        "analysis": {
+            "analyzer": {
+                "mesh_terms_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                        ]
+                }
+            }
     },
     "mappings": {
         "_doc": {
@@ -114,6 +126,15 @@
                 },
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
+                },
+                "terms_mesh_description": {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
                 }
             }
         }
