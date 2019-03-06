@@ -79,7 +79,10 @@ def run():
                              .all()):
                 row_combined['category_list'].append(category.category_name)
                 if category.category_group_list is not None:
-                    row_combined['category_group_list'] += category.category_group_list.split('|')
+                    row_combined['category_group_list'] += [group for group in
+                                                            category.category_group_list.split('|')
+                                                            if group not in
+                                                            row_combined['category_group_list']]
 
             # schema transform and write to elasticsearch
             uid = row_combined.pop('id')
