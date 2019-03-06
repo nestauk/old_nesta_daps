@@ -101,10 +101,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                       "db_name": self.database,
                       "bucket": self.intermediate_bucket,
                       "done": False,
-                      'outinfo': es_config['host'],
-                      'out_port': es_config['port'],
-                      'out_index': es_config['index'],
-                      'out_type': es_config['type'],
+                      'outinfo': es_config,
                       "test": self.test
                       }
             logging.info(params)

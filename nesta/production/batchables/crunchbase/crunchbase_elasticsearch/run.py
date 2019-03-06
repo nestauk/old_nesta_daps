@@ -13,15 +13,11 @@ from nesta.production.orms.geographic_orm import Geographic
 
 
 def run():
-    test = literal_eval(os.environ["BATCHPAR_test"])
+    test = literal_eval(os.environ['BATCHPAR_test'])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
-
-    db_name = os.environ["BATCHPAR_db_name"]
-    es_host = os.environ['BATCHPAR_outinfo']
-    es_port = os.environ['BATCHPAR_out_port']
-    es_index = os.environ['BATCHPAR_out_index']
-    es_type = os.environ['BATCHPAR_out_type']
+    db_name = os.environ['BATCHPAR_db_name']
+    es_config = literal_eval(os.environ['BATCHPAR_outinfo'])
 
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -29,14 +25,13 @@ def run():
     # elasticsearch setup
     credentials = boto3.Session().get_credentials()
     awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                       'eu-west-2', 'es')
-    es = Elasticsearch(
-        hosts=[{'host': es_host, 'port': es_port}],
-        http_auth=awsauth,
-        use_ssl=True,
-        verify_certs=True,
-        connection_class=RequestsHttpConnection
-    )
+                       es_config['region'], 'es')
+    es = Elasticsearch(es_config['host'],
+                       port=es_config['port'],
+                       http_auth=awsauth,
+                       use_ssl=True,
+                       verify_certs=True,
+                       connection_class=RequestsHttpConnection)
 
     # retrieve batch org_ids from s3
     s3 = boto3.resource('s3')
@@ -87,7 +82,8 @@ def run():
                                               filename='crunchbase_organisation_members.json',
                                               from_key='tier_0',
                                               to_key='tier_1')
-            es.index(es_index, doc_type=es_type, id=uid, body=row_combined)
+            es.index(es_config['index', doc_type=es_config['type'],
+                     id=uid, body=row_combined)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
