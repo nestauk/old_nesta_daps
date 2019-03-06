@@ -63,7 +63,7 @@ def run():
             row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
             row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
             for date in ['founded_on', 'last_funding_on', 'closed_on']:
-                if date is not None:
+                if row_combined[date] is not None:
                     row_combined[date] = row_combined[date].strftime('%Y-%m-%d')
             if row_combined['mesh_terms'] is not None:
                 row_combined['mesh_terms'] = row_combined['mesh_terms'].split('|')
