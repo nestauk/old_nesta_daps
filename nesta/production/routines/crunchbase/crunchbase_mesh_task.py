@@ -75,7 +75,7 @@ class DescriptionMeshTask(luigi.Task):
         logging.info(f"{len(processed_orgs)} previously processed orgs")
 
         # reformat for batch insert, removing not found and previously processed terms
-        meshed_orgs = [{'id': org_id, 'mesh_terms': ','.join(terms)}
+        meshed_orgs = [{'id': org_id, 'mesh_terms': '|'.join(terms)}
                        for org_id, terms in mesh_terms.items()
                        if org_id in all_orgs and org_id not in processed_orgs]
 
