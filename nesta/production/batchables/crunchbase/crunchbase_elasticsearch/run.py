@@ -62,6 +62,13 @@ def run():
                                            'lon': row_combined.pop('longitude')}
             row_combined['mesh_terms'] = row_combined['mesh_terms'].split('|')
             row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+            for date in ['founded_on', 'last_funding_on', 'closed_on']:
+                try:
+                    row_combined[date] = row_combined[date].strftime('%Y-%m-%d')
+                except AttributeError:
+                    # missing data
+                    pass
 
             # extract categories and category groups
             row_combined['category_list'] = []
