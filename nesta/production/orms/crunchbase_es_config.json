@@ -13,9 +13,10 @@
                         "standard",
                         "lowercase",
                         "stop"
-                        ]
+                    ]
                 }
             }
+        }
     },
     "mappings": {
         "_doc": {
@@ -85,15 +86,15 @@
                     "type": "keyword"
                 },
                 "date_birth_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "date_last_funding": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "date_death_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "count_employee_organisation": {
@@ -115,7 +116,7 @@
                     "type": "keyword"
                 },
                 "datetime_updated_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd HH:mm:ss"
                 },
                 "type_of_organisation": {

@@ -82,7 +82,7 @@ def run():
                                               filename='crunchbase_organisation_members.json',
                                               from_key='tier_0',
                                               to_key='tier_1')
-            es.index(es_config['index', doc_type=es_config['type'],
+            es.index(es_config['index'], doc_type=es_config['type'],
                      id=uid, body=row_combined)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
