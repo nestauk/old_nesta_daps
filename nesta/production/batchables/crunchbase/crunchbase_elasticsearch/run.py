@@ -27,7 +27,7 @@ def run():
     awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
                        es_config['region'], 'es')
     es = Elasticsearch(es_config['host'],
-                       port=es_config['port'],
+                       port=int(es_config['port']),
                        http_auth=awsauth,
                        use_ssl=True,
                        verify_certs=True,
@@ -60,8 +60,9 @@ def run():
             # reformatting
             row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
                                            'lon': row_combined.pop('longitude')}
-            row_combined['mesh_terms'] = row_combined['mesh_terms'].split('|')
             row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
+            if row_combined['mesh_terms'] is not None:
+                row_combined['mesh_terms'] = row_combined['mesh_terms'].split('|')
 
             # extract categories and category groups
             row_combined['category_list'] = []
