@@ -87,7 +87,7 @@ class ParentIdCollectTask(luigi.Task):
         org_parents = org_parents[org_parents['id'].isin(all_orgs)]
         org_parents = org_parents[~org_parents['id'].isin(processed_orgs)]
         org_parents = org_parents.to_dict(orient='records')
-        logging.info(f"{len(org_parents)} organisations to update in MYSQL")
+        logging.info(f"{len(org_parents)} organisations to update in database")
 
         # insert parent_ids into db in batches
         for count, batch in enumerate(split_batches(org_parents,

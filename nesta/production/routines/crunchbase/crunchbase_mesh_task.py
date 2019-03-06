@@ -53,7 +53,7 @@ class DescriptionMeshTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        # mysql setup
+        # database setup
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
@@ -62,10 +62,10 @@ class DescriptionMeshTask(luigi.Task):
         bucket = 'innovation-mapping-general'
         key = 'crunchbase_descriptions/crunchbase_descriptions_mesh.txt'
         mesh_terms = retrieve_mesh_terms(bucket, key)
-        mesh_terms = format_mesh_terms(mesh_terms)
-        logging.warning(f"File contains {len(mesh_terms)} meshed descriptions")
+        mesh_terms = format_mesh_terms(mesh_terms)  # [{'id': ['term1', 'term2']}, ...]
+        logging.info(f"File contains {len(mesh_terms)} orgs with mesh terms")
 
-        logging.info("Extracting previously processed organisations")
+        logging.info("Extracting previously processed orgs")
         with db_session(self.engine) as session:
             processed_orgs = (session
                               .query(Organization.id)
@@ -75,10 +75,11 @@ class DescriptionMeshTask(luigi.Task):
         logging.info(f"{len(processed_orgs)} previously processed orgs")
 
         # reformat for batch insert, removing previously processed terms
-        meshed_orgs = [{'id': org_id, 'mesh_terms': terms}
+        meshed_orgs = [{'id': org_id, 'mesh_terms': ','.join(terms)}
                        for org_id, terms in mesh_terms.items()
                        if org_id not in processed_orgs]
 
+        logging.info(f"{len(meshed_orgs)} organisations to update in database")
         for count, batch in enumerate(split_batches(meshed_orgs,
                                                     self.insert_batch_size), 1):
             with db_session(self.engine) as session:
