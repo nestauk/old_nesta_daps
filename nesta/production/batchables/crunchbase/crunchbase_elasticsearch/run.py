@@ -58,8 +58,12 @@ def run():
                                  if k in geo_fields})
 
             # reformatting
-            row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
-                                           'lon': row_combined.pop('longitude')}
+            lat = row_combined.pop('latitude')
+            lon = row_combined.pop('longitude')
+            if lat is not None and lon is not None:
+                row_combined['coordinates'] = {'lat': lat, 'lon': lon}
+            else:
+                row_combined['coordinates'] = None
             row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
             row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
             for date in ['founded_on', 'last_funding_on', 'closed_on']:
