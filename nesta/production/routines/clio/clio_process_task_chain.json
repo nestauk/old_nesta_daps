@@ -1,0 +1,19 @@
+[
+    {
+	"job_name": "ngram",
+	"batch_size": 10000,
+	"batchable": "batchables/nlp/ngrammer",
+	"env_files": ["/nesta/nesta","/config/mysqldb.config"],
+	"job_def": "py36_amzn1_image",
+	"job_queue": "HighPriority",
+	"region_name": "eu-west-2",
+	"poll_time": 10,
+	"memory": 4000
+    },
+    {
+	"job_name": "tfidf", 
+	"n_batches": 1,
+	"batchable": "batchables/nlp/tfidf",
+	"job_queue": "HighPriority"
+    }
+]
