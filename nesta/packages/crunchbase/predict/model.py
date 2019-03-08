@@ -1,4 +1,4 @@
-"""Training a vectoriser and random forest classifier model, based on a labeled training
+"""Training a random forest classifier model, based on a labeled training
 dataset. This is primarily designed for health labeling of crunchbase organisatons.
 """
 import logging
@@ -11,8 +11,8 @@ from nesta.packages.crunchbase.utils import split_str
 
 
 def train(data, random_seed=42):
-    """Consumes a training dataset, with binary labels and trains a vectoriser and
-    random forests classifier.
+    """Trains a random forests classifier model to predict whether a given document
+    is_heath based on text features.
 
     Args:
         data (:obj:`pandas.DataFrame`)
