@@ -1,3 +1,6 @@
+"""Training a vectoriser and random forest classifier model, based on a labeled training
+dataset. This is primarily designed for health labeling of crunchbase organisatons.
+"""
 import logging
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -8,22 +11,23 @@ from nesta.packages.crunchbase.utils import split_str
 
 
 def train(data, random_seed=42):
-    """Transform and train.
+    """Consumes a training dataset, with binary labels and trains a vectoriser and
+    random forests classifier.
 
     Args:
         data (:obj:`pandas.DataFrame`)
         random_seed (int): seed for any randomisers
 
     Returns:
-        vectoriser
-        classifier
+        vectoriser model
+        classifier model
     """
-    # Transform the feature set to TFIDF vectors.
+    # Transform the feature set to TFIDF vectors
     vec = TfidfVectorizer(tokenizer=split_str)
 
     # Features & target variable
     X = vec.fit_transform(list(data['category_list']))
-    y = data.is_Health
+    y = data.is_health
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
                                                         random_state=random_seed)

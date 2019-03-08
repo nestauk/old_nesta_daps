@@ -1,8 +1,9 @@
 import json
 import os
 import pandas as pd
+import pickle
 
-from nesta.packages.crunchbase.predict.src.model import train
+from nesta.packages.crunchbase.predict.model import train
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
 
 
@@ -20,6 +21,12 @@ def test_train_and_predict():
     # train and check accuracy
     vec, gs, accuracy = train(train_data)
     assert accuracy == 0.997
+
+    # pickle and unpickle, as per the implementation (catches errors with lambda)
+    pickled_vec = pickle.dumps(vec)
+    pickled_gs = pickle.dumps(gs)
+    vec = pickle.loads(pickled_vec)
+    gs = pickle.loads(pickled_gs)
 
     # collect unlabeled and expected data
     with open(UNLABELED_DATA) as f:
