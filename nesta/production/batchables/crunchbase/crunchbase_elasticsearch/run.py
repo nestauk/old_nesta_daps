@@ -26,7 +26,7 @@ def run():
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
     # s3 setup
-    es = Elasticsearch(es_host, port=es_port)
+    es = Elasticsearch(es_host, port=es_port, use_ssl=True)
 
     # collect file
     nrows = 1000 if test else None

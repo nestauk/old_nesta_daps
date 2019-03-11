@@ -111,7 +111,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         # elasticsearch setup
         es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['external_host'], port=es_config['port'])
+        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'
