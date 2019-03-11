@@ -19,8 +19,9 @@ def train(data, random_seed=42):
         random_seed (int): seed for any randomisers
 
     Returns:
-        vectoriser model
-        classifier model
+        (:obj:`sklearn.feature_extraction.text.TfidfVectorizer`): vectoriser model
+        (:obj:`sklearn.model_selection._search.GridSearchCV`): classifier model
+        (:obj:`np.ndarray`): confusion matrix
     """
     # Transform the feature set to TFIDF vectors
     vec = TfidfVectorizer(tokenizer=split_str)
@@ -43,13 +44,13 @@ def train(data, random_seed=42):
     gs = GridSearchCV(clf, param_grid, cv=5)
     gs.fit(X_train, y_train)
 
-    accuracy = gs.score(X=X_test, y=y_test)
+    con_matrix = confusion_matrix(y_test, gs.predict(X_test))
 
     logging.info(f"BEST PARAMS: {gs.best_params_}")
-    logging.info(f"TEST SET ACCURACY: {accuracy}")
-    logging.info(f"CONFUSION MATRIX:\n{confusion_matrix(y_test, gs.predict(X_test))}")
+    logging.info(f"TEST SET ACCURACY: {gs.score(X=X_test, y=y_test)}")
+    logging.info(f"CONFUSION MATRIX:\n{con_matrix}")
 
-    return vec, gs, accuracy
+    return vec, gs, con_matrix
 
 
 if __name__ == '__main__':
