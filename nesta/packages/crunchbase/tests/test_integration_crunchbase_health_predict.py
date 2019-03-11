@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 import pandas as pd
 import pickle
 
@@ -16,11 +17,12 @@ EXPECTED_LABELED_DATA = f'{TEST_PATH}/integration_test_expected_labeled_dataset.
 def test_train_and_predict():
     # collect training data
     train_data = pd.read_csv(TRAINING_DATA)
-    assert train_data.shape == (5000, 2), 'Training data not shaped as expected'
+    assert train_data.shape == (100, 2), "Training data not shaped as expected. Should just contain 'category_list' and 'is_health' columns"
 
-    # train and check accuracy
-    vec, gs, accuracy = train(train_data)
-    assert accuracy == 0.997
+    # train and against expected confusion matrix
+    vec, gs, confusion_matrix = train(train_data)
+    expected_confusion_matrix = np.array([[17, 0], [2, 1]], np.int64)
+    np.testing.assert_array_equal(confusion_matrix, expected_confusion_matrix)
 
     # pickle and unpickle, as per the implementation (catches errors with lambda)
     pickled_vec = pickle.dumps(vec)
