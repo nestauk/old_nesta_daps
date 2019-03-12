@@ -47,25 +47,31 @@ def run():
     with db_session(engine) as session:
         rows = (session
                 .query(Organization, Geographic)
-                .join(Geographic, Organization.location_id == Geographic.id)
+                .outerjoin(Geographic, Organization.location_id == Geographic.id)
                 .filter(Organization.id.in_(org_ids))
                 .limit(nrows)
                 .all())
         for count, row in enumerate(rows, 1):
             # convert sqlalchemy to dict
             row_combined = {k: v for k, v in row.Organization.__dict__.items()}
-            row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
-                                 if k in geo_fields})
+            try:
+                row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
+                                     if k in geo_fields})
+            except AttributeError:
+                # no geographic data
+                pass
 
             # reformatting
-            lat = row_combined.pop('latitude')
-            lon = row_combined.pop('longitude')
+            row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+
+            lat = row_combined.pop('latitude', None)
+            lon = row_combined.pop('longitude', None)
             if lat is not None and lon is not None:
                 row_combined['coordinates'] = {'lat': lat, 'lon': lon}
             else:
                 row_combined['coordinates'] = None
-            row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
-            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+
             for date in ['founded_on', 'last_funding_on', 'closed_on']:
                 if row_combined[date] is not None:
                     row_combined[date] = row_combined[date].strftime('%Y-%m-%d')
