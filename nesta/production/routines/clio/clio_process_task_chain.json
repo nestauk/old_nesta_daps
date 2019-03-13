@@ -14,6 +14,27 @@
 	"job_name": "tfidf", 
 	"n_batches": 1,
 	"batchable": "batchables/nlp/tfidf",
-	"job_queue": "HighPriority"
-    }
+	"memory": 16000,
+	"extra": {
+	    "lower_tfidf_percentile": 5,
+	    "upper_tfidf_percentile": 10
+	}
+    },
+    {
+	"job_name": "topic_model", 
+	"batchable": "batchables/nlp/topic_model",
+	"memory": 4000
+    }, 
+    {
+	"job_name": "synonyms",
+	"child": "tfidf",
+        "batchable": "batchables/nlp/synonyms",
+	"memory": 4000
+    },
+    {
+	"job_name": "ngram_analyser", 
+	"child": "ngram",
+	"use_intermediate_inputs": true,
+	"batchable": "batchables/nlp/ngram_analyser"
+    }   
 ]
