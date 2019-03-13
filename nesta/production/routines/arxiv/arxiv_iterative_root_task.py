@@ -9,7 +9,7 @@ import luigi
 import datetime
 import logging
 
-from arxiv_collect_task import CollectNewTask
+from arxiv_collect_iterative_task import CollectNewTask
 
 
 class RootTask(luigi.WrapperTask):
