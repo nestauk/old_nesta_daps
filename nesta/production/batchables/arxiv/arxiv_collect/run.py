@@ -1,14 +1,12 @@
 import boto3
-from contextlib import contextmanager
 import logging
 import os
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from urllib.parse import urlsplit
 
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategory, Category
-from nesta.packages.arxiv.collect_arxiv import request_token, arxiv_batch, load_arxiv_categories
+from nesta.packages.arxiv.collect_arxiv import request_token, load_arxiv_categories, retrieve_rows
 
 
 def parse_s3_path(path):
@@ -17,38 +15,6 @@ def parse_s3_path(path):
     s3_bucket = parsed_path.netloc
     s3_key = parsed_path.path.lstrip('/')
     return (s3_bucket, s3_key)
-
-
-def retrieve_rows(start_cursor, end_cursor, resumption_token):
-    '''Iterate through batches and yield single rows until the end_cursor or end of data
-    is reached.
-
-    Args:
-        start_cursor (int): first record to return
-        end_cursor (int): start of the next batch, ie stop when this cursor is returned
-        resumption_token (int): token to supply the api
-
-    Returns:
-        (dict): a single row of data
-    '''
-    while start_cursor is not None and start_cursor < end_cursor:
-        batch, start_cursor = arxiv_batch(resumption_token, start_cursor)
-        for row in batch:
-            yield row
-
-
-@contextmanager
-def db_session(engine):
-    Session = try_until_allowed(sessionmaker, engine)
-    session = try_until_allowed(Session)
-    try:
-        yield session
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
 
 
 def run():

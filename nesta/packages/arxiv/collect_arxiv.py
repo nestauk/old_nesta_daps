@@ -212,6 +212,24 @@ def arxiv_batch(token, cursor):
     return output, resumption_cursor
 
 
+def retrieve_rows(start_cursor, end_cursor, resumption_token):
+    '''Iterate through batches and yield single rows until the end_cursor or end of data
+    is reached.
+
+    Args:
+        start_cursor (int): first record to return
+        end_cursor (int): start of the next batch, ie stop when this cursor is returned
+        resumption_token (int): token to supply the api
+
+    Returns:
+        (dict): a single row of data
+    '''
+    while start_cursor is not None and start_cursor < end_cursor:
+        batch, start_cursor = arxiv_batch(resumption_token, start_cursor)
+        for row in batch:
+            yield row
+
+
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
