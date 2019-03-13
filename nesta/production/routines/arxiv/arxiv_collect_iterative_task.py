@@ -16,13 +16,6 @@ from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.packages.misc_utils.batches import split_batches
 
-import boto3
-
-S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta-production-intermediate")
-DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-BATCH_SIZE = 10000
-
 
 class CollectNewTask(luigi.Task):
     '''Collect new data from the arXiv api and dump the
@@ -31,14 +24,18 @@ class CollectNewTask(luigi.Task):
     Args:
         date (datetime): Datetime used to label the outputs
         _routine_id (str): String used to label the AWS task
-        db_config_path: (str) The output database configuration
+        db_config_env (str): environmental variable pointing to the db config file
+        db_config_path (str): The output database configuration
+        insert_batch_size (int): number of records to insert into the database at once
+        articles_from_date (str): new and updated articles from this data will be retrieved
+                                  Must be in YYYY-MM-DD format
     '''
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
     db_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
-    from_date = luigi.Parameter()
+    articles_from_date = luigi.Parameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -57,7 +54,7 @@ class CollectNewTask(luigi.Task):
         # process data
         articles = []
         article_cats = []
-        for row in retrieve_all_arxiv_rows(**{'from': self.from_date}):
+        for count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
             with db_session(self.engine) as session:
                 categories = row.pop('categories', [])
                 articles.append(row)
@@ -68,6 +65,9 @@ class CollectNewTask(luigi.Task):
                         logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Category table")
                         session.add(Category(id=cat))
                     article_cats.append(dict(article_id=row['id'], category_id=cat))
+            if self.test and count == 1000:
+                logging.warning("limiting to 1000 rows while in test mode")
+                break
 
         logging.info(f"Total articles: {len(articles)}")
         inserted_articles, existing_articles, failed_articles = insert_data(
@@ -80,14 +80,10 @@ class CollectNewTask(luigi.Task):
 
         # insert existing articles using a different method
         logging.info(f"{len(existing_articles)} existing articles")
-        for count, batch in enumerate(split_batches(existing_articles,
-                                                    self.insert_batch_size), 1):
+        for batch in split_batches(existing_articles, self.insert_batch_size):
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(existing_articles, batch)
             logging.info(f"{count} batch{'es' if count > 1 else ''} written to db")
-            if self.test and count > 1:
-                logging.info("Breaking after 2 batches while in test mode")
-                break
 
         logging.info(f"Total article categories: {len(article_cats)}")
         inserted_article_cats, _, failed_article_cats = insert_data(
