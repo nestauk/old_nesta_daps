@@ -71,7 +71,7 @@ class CollectNewTask(luigi.Task):
 
         logging.info(f"Total articles: {len(articles)}")
         inserted_articles, existing_articles, failed_articles = insert_data(
-                                                    "BATCHPAR_config", "mysqldb", database,
+                                                    self.db_config_env, "mysqldb", database,
                                                     Base, Article, articles,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_articles)} new articles")
@@ -87,7 +87,7 @@ class CollectNewTask(luigi.Task):
 
         logging.info(f"Total article categories: {len(article_cats)}")
         inserted_article_cats, _, failed_article_cats = insert_data(
-                                                    "BATCHPAR_config", "mysqldb", database,
+                                                    self.db_config_env, "mysqldb", database,
                                                     Base, ArticleCategory, article_cats,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_article_cats)} new article categories")

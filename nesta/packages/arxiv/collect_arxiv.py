@@ -208,6 +208,8 @@ def arxiv_batch(resumption_token=None, **kwargs):
 
     # extract cursor for next batch
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
+    if resumption_token is None:  # first batch only
+        logging.info(f"Total records to retrieve: {token.attrib['completeListSize']}")
     if token.text is not None:
         logging.info(f"next resumptionCursor: {token.text.split('|')[1]}")
     else:
