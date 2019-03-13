@@ -52,22 +52,25 @@ class CollectNewTask(luigi.Task):
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
+        with db_session(self.engine) as session:
+            all_categories = session.query(Category.id).all()
+            all_categories = {cat_id for (cat_id, ) in all_categories}
+
         # process data
         articles = []
         article_cats = []
         for count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
-            with db_session(self.engine) as session:
-                categories = row.pop('categories', [])
-                articles.append(row)
-                for cat in categories:
-                    try:
-                        session.query(Category).filter(Category.id == cat).one()
-                    except NoResultFound:
-                        logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Category table")
+            categories = row.pop('categories', [])
+            articles.append(row)
+            for cat in categories:
+                if cat not in all_categories:
+                    logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Category table")
+                    with db_session(self.engine) as session:
                         session.add(Category(id=cat))
-                    article_cats.append(dict(article_id=row['id'], category_id=cat))
-            if self.test and count == 1000:
-                logging.warning("limiting to 1000 rows while in test mode")
+                    all_categories.add(cat)
+                article_cats.append(dict(article_id=row['id'], category_id=cat))
+            if self.test and count == 2000:
+                logging.warning("limiting to 2000 rows while in test mode")
                 break
 
         logging.info(f"Total articles: {len(articles)}")
