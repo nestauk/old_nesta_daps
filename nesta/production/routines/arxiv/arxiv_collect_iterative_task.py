@@ -79,7 +79,7 @@ class CollectNewTask(luigi.Task):
                                                     Base, Article, articles,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_articles)} new articles")
-        if failed_articles is not None:
+        if len(failed_articles) > 0:
             raise ValueError(f"Articles could not be inserted: {failed_articles}")
 
         # insert existing articles using a different method
@@ -95,7 +95,7 @@ class CollectNewTask(luigi.Task):
                                                     Base, ArticleCategory, article_cats,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_article_cats)} new article categories")
-        if failed_article_cats is not None:
+        if len(failed_article_cats) > 0:
             raise ValueError(f"Categories could not be inserted: {failed_article_cats}")
 
         # mark as done
