@@ -13,6 +13,7 @@ from nesta.packages.arxiv.collect_arxiv import xml_to_json
 from nesta.packages.arxiv.collect_arxiv import load_arxiv_categories
 from nesta.packages.arxiv.collect_arxiv import _category_exists
 from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
+from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -88,18 +89,32 @@ def test_total_articles_doesnt_override_delay(mocked_request, mock_response):
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
-def test_arxiv_batch_sends_resumption_token_if_provided(mocked_request, mock_response):
+def test_arxiv_batch_sends_resumption_token_if_provided(mocked_request):
     batch, _ = arxiv_batch('111222444|1')
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
                                                      resumptionToken='111222444|1')
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
-def test_arxiv_batch_sends_prefix_if_no_resumption_token_provided(mocked_request,
-                                                                  mock_response):
+def test_arxiv_batch_sends_prefix_if_no_resumption_token_provided(mocked_request):
     batch, _ = arxiv_batch()
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
                                                      metadataPrefix='arXiv')
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_sends_kwargs_to_request_if_no_resumption_token_provided(mocked_request):
+    batch, _ = arxiv_batch(until='2019-03-01')
+    assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
+                                                     metadataPrefix='arXiv',
+                                                     until='2019-03-01')
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+def test_arxiv_batch_ignores_kwargs_if_resumption_token_provided(mocked_request):
+    batch, _ = arxiv_batch('11111111|2', _from='2019-03-01')
+    assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
+                                                     resumptionToken='11111111|2')
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
@@ -286,3 +301,27 @@ def test_retrieve_arxiv_batch_rows_stops_at_end_cursor(mocked_batch):
 
     result = list(retrieve_arxiv_batch_rows(0, 4, 'mytoken|1'))
     assert result == ['row1', 'row2', 'row3', 'row4']
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+def test_retrieve_all_arxiv_batch_rows_calls_arxiv_batch_correctly(mocked_batch):
+    rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
+    mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
+                                (rows[2:4], 'mytoken|4'),
+                                (rows[4:6], None)]
+
+    list(retrieve_all_arxiv_rows())
+    assert mocked_batch.mock_calls == [mock.call(None),
+                                       mock.call('mytoken|2'),
+                                       mock.call('mytoken|4')]
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+def test_retrieve_all_arxiv_batch_rows_returns_all_rows(mocked_batch):
+    rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
+    mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
+                                (rows[2:4], 'mytoken|4'),
+                                (rows[4:6], None)]
+
+    result = list(retrieve_all_arxiv_rows())
+    assert result == ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']

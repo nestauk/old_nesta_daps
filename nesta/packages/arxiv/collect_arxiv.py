@@ -146,14 +146,15 @@ def xml_to_json(element, tag, prefix=''):
     return json.dumps(all_data)
 
 
-def arxiv_batch(resumption_token=None):
+def arxiv_batch(resumption_token=None, **kwargs):
     """Retrieves a batch of data from the arXiv api (expect up to 1000).
     If a resumption token and cursor are not supplied then the first batch will be
-    requested.
+    requested. Additional keyword arguments are only sent with the first request (ie no
+    resumption_token)
 
     Args:
-        token (str): resumptionToken issued from a prevous request
-        cursor (int): record to start from
+        resumption_token (str): resumptionToken issued from a prevous request
+        kwargs: additonal paramaters to send with the initial api request
 
     Returns:
         (:obj:`list` of :obj:`dict`): retrieved records
@@ -162,7 +163,7 @@ def arxiv_batch(resumption_token=None):
     if resumption_token is not None:
         root = _arxiv_request(API_URL, resumptionToken=resumption_token)
     else:
-        root = _arxiv_request(API_URL, metadataPrefix='arXiv')
+        root = _arxiv_request(API_URL, metadataPrefix='arXiv', **kwargs)
     records = root.find(OAI+'ListRecords')
     output = []
 
@@ -234,6 +235,24 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
             start_cursor = int(resumption_token.split("|")[1])
         for row in batch:
             yield row
+
+
+def retrieve_all_arxiv_rows(**kwargs):
+    '''Iterate through batches and yield single rows through the whole dataset.
+
+    Args:
+        kwargs: any keyword arguments to send with the request
+
+    Returns:
+        (dict): a single row of data
+    '''
+    resumption_token = None
+    while True:
+        batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        for row in batch:
+            yield row
+        if resumption_token is None:
+            break
 
 
 if __name__ == '__main__':
