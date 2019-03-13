@@ -146,8 +146,10 @@ def xml_to_json(element, tag, prefix=''):
     return json.dumps(all_data)
 
 
-def arxiv_batch(token, cursor):
-    """Retrieves a batch of data from the arXiv api (expect 1000).
+def arxiv_batch(resumption_token=None):
+    """Retrieves a batch of data from the arXiv api (expect up to 1000).
+    If a resumption token and cursor are not supplied then the first batch will be
+    requested.
 
     Args:
         token (str): resumptionToken issued from a prevous request
@@ -155,9 +157,12 @@ def arxiv_batch(token, cursor):
 
     Returns:
         (:obj:`list` of :obj:`dict`): retrieved records
+        (str or None): resumption token if present in results
     """
-    resumption_token = '|'.join([token, str(cursor)])
-    root = _arxiv_request(API_URL, resumptionToken=resumption_token)
+    if resumption_token is not None:
+        root = _arxiv_request(API_URL, resumptionToken=resumption_token)
+    else:
+        root = _arxiv_request(API_URL, metadataPrefix='arXiv')
     records = root.find(OAI+'ListRecords')
     output = []
 
@@ -203,16 +208,14 @@ def arxiv_batch(token, cursor):
     # extract cursor for next batch
     token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
     if token.text is not None:
-        resumption_cursor = int(token.text.split("|")[1])
-        logging.info(f"next resumptionCursor: {resumption_cursor}")
+        logging.info(f"next resumptionCursor: {token.text.split('|')[1]}")
     else:
-        resumption_cursor = None
         logging.info("End of data")
 
-    return output, resumption_cursor
+    return output, token.text
 
 
-def retrieve_rows(start_cursor, end_cursor, resumption_token):
+def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
     '''Iterate through batches and yield single rows until the end_cursor or end of data
     is reached.
 
@@ -224,8 +227,11 @@ def retrieve_rows(start_cursor, end_cursor, resumption_token):
     Returns:
         (dict): a single row of data
     '''
-    while start_cursor is not None and start_cursor < end_cursor:
-        batch, start_cursor = arxiv_batch(resumption_token, start_cursor)
+    resumption_token = '|'.join([token, str(start_cursor)])
+    while resumption_token is not None and start_cursor < end_cursor:
+        batch, resumption_token = arxiv_batch(resumption_token)
+        if resumption_token is not None:
+            start_cursor = int(resumption_token.split("|")[1])
         for row in batch:
             yield row
 

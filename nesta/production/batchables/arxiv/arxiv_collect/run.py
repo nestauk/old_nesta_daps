@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategory, Category
-from nesta.packages.arxiv.collect_arxiv import request_token, load_arxiv_categories, retrieve_rows
+from nesta.packages.arxiv.collect_arxiv import request_token, load_arxiv_categories, retrieve_arxiv_batch_rows
 
 
 def parse_s3_path(path):
@@ -38,7 +38,7 @@ def run():
     articles = []
     article_cats = []
     resumption_token = request_token()
-    for row in retrieve_rows(start_cursor, end_cursor, resumption_token):
+    for row in retrieve_arxiv_batch_rows(start_cursor, end_cursor, resumption_token):
         with db_session(engine) as session:
             categories = row.pop('categories', [])
             articles.append(row)
