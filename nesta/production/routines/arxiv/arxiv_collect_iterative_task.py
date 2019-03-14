@@ -90,7 +90,7 @@ class CollectNewTask(luigi.Task):
             article_cats_to_delete = (session.query(ArticleCategory)
                                       .filter(ArticleCategory.article_id.in_(existing_article_cat_ids)))
             logging.info(f"{article_cats_to_delete.count()} article categories to delete from existing articles")
-            article_cats_to_delete.delete()
+            article_cats_to_delete.delete(synchronize_session=False)
         logging.info("Deleted")
 
         # update existing articles
