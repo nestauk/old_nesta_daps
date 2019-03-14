@@ -42,7 +42,7 @@ class CollectNewTask(luigi.Task):
         '''Points to the output database engine'''
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "arxiv iterative <dummy>"  # Note, not a real table
+        db_config["table"] = "arXlive <dummy>"  # Note, not a real table
         update_id = "ArxivIterativeCollect_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 

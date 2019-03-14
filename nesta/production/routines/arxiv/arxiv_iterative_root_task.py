@@ -9,7 +9,7 @@ import luigi
 import datetime
 import logging
 
-from arxiv_collect_iterative_task import CollectNewTask
+from arxiv_iterative_date_task import DateTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -25,7 +25,7 @@ class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.date.today())
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
-    articles_from_date = luigi.Parameter()
+    articles_from_date = luigi.Parameter(default=None)
 
     def requires(self):
         '''Collects the database configurations
@@ -33,9 +33,9 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
-        yield CollectNewTask(date=self.date,
-                             _routine_id=_routine_id,
-                             db_config_path=self.db_config_path,
-                             db_config_env='MYSQLDB',
-                             test=not self.production,
-                             articles_from_date=self.articles_from_date)
+        yield DateTask(date=self.date,
+                       _routine_id=_routine_id,
+                       db_config_path=self.db_config_path,
+                       db_config_env='MYSQLDB',
+                       test=not self.production,
+                       articles_from_date=self.articles_from_date)
