@@ -46,6 +46,10 @@ class CollectNewTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
+        try:
+            datetime.strptime(self.articles_from_date, '%Y-%m-%d')
+        except ValueError:
+            raise ValueError(f"From date for articles is invalid or not in YYYY-MM-DD format: {self.articles_from_date}")
         # database setup
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
@@ -70,7 +74,7 @@ class CollectNewTask(luigi.Task):
                     all_categories.add(cat)
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
             if self.test and count == 1600:
-                logging.warning("limiting to 1600 rows while in test mode")
+                logging.warning("Limiting to 1600 rows while in test mode")
                 break
 
         # insert new articles into database
@@ -82,7 +86,7 @@ class CollectNewTask(luigi.Task):
         logging.info(f"Inserted {len(inserted_articles)} new articles")
         logging.info(f"Identified {len(existing_articles)} existing articles to update")
         if len(failed_articles) > 0:
-            raise ValueError(f"Articles failed to be inserted: {failed_articles}")
+            raise ValueError(f"{len(failed_articles} articles failed to be inserted: {failed_articles}")
 
         # remove article category links from exisiting articles, in case they have changed
         existing_article_cat_ids = {article['id'] for article in existing_articles}
