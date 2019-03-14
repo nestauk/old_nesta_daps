@@ -43,7 +43,7 @@ class CollectNewTask(luigi.Task):
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "arxiv iterative <dummy>"  # Note, not a real table
-        update_id = "ArxivCollectData_{}".format(self.date)
+        update_id = "ArxivIterativeCollect_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
@@ -52,11 +52,12 @@ class CollectNewTask(luigi.Task):
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
+        # extract all existing categories
         with db_session(self.engine) as session:
             all_categories = session.query(Category.id).all()
             all_categories = {cat_id for (cat_id, ) in all_categories}
 
-        # process data
+        # retrieve and process, while inserting any missing categories
         articles = []
         article_cats = []
         for count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
@@ -73,6 +74,7 @@ class CollectNewTask(luigi.Task):
                 logging.warning("limiting to 2000 rows while in test mode")
                 break
 
+        # insert articles into database
         logging.info(f"Total articles: {len(articles)}")
         inserted_articles, existing_articles, failed_articles = insert_data(
                                                     self.db_config_env, "mysqldb", database,
@@ -83,18 +85,22 @@ class CollectNewTask(luigi.Task):
             raise ValueError(f"Articles could not be inserted: {failed_articles}")
 
         # insert existing articles using a different method
+        # TODO: delete existing article_cats before update in case they have changed
         logging.info(f"{len(existing_articles)} existing articles")
-        for batch in split_batches(existing_articles, self.insert_batch_size):
+        for count, batch in enumerate(split_batches(existing_articles,
+                                                    self.insert_batch_size), 1):
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Article, existing_articles)
-            logging.info(f"{count} batch{'es' if count > 1 else ''} written to db")
+            logging.info(f"{count * self.insert_batch_size} existing articles updated")
 
+        # insert links between articles and categories
         logging.info(f"Total article categories: {len(article_cats)}")
-        inserted_article_cats, _, failed_article_cats = insert_data(
+        inserted_article_cats, existing_article_cats, failed_article_cats = insert_data(
                                                     self.db_config_env, "mysqldb", database,
                                                     Base, ArticleCategory, article_cats,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_article_cats)} new article categories")
+        logging.info(f"{len(existing_article_cats)} were existing and not updated")
         if len(failed_article_cats) > 0:
             raise ValueError(f"Categories could not be inserted: {failed_article_cats}")
 
