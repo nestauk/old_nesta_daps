@@ -86,7 +86,7 @@ class CollectNewTask(luigi.Task):
         logging.info(f"Inserted {len(inserted_articles)} new articles")
         logging.info(f"Identified {len(existing_articles)} existing articles to update")
         if len(failed_articles) > 0:
-            raise ValueError(f"{len(failed_articles} articles failed to be inserted: {failed_articles}")
+            raise ValueError(f"{len(failed_articles)} articles failed to be inserted: {failed_articles}")
 
         # remove article category links from exisiting articles, in case they have changed
         existing_article_cat_ids = {article['id'] for article in existing_articles}
