@@ -86,7 +86,7 @@ class CollectNewTask(luigi.Task):
         logging.info(f"{len(existing_articles)} existing articles")
         for batch in split_batches(existing_articles, self.insert_batch_size):
             with db_session(self.engine) as session:
-                session.bulk_update_mappings(existing_articles, batch)
+                session.bulk_update_mappings(Article, existing_articles)
             logging.info(f"{count} batch{'es' if count > 1 else ''} written to db")
 
         logging.info(f"Total article categories: {len(article_cats)}")
