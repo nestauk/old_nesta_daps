@@ -64,7 +64,7 @@ class CollectNewTask(luigi.Task):
             articles.append(row)
             for cat in categories:
                 if cat not in all_categories:
-                    logging.warning(f"missing category: '{cat}' for article {row['id']}.  Adding to Category table")
+                    logging.warning(f"Missing category: '{cat}' for article {row['id']}.  Adding to Category table")
                     with db_session(self.engine) as session:
                         session.add(Category(id=cat))
                     all_categories.add(cat)
@@ -74,7 +74,7 @@ class CollectNewTask(luigi.Task):
                 break
 
         # insert new articles into database
-        logging.info(f"Total articles: {len(articles)}")
+        logging.info(f"Total articles to insert: {len(articles)}")
         inserted_articles, existing_articles, failed_articles = insert_data(
                                                     self.db_config_env, "mysqldb", database,
                                                     Base, Article, articles,
@@ -91,26 +91,28 @@ class CollectNewTask(luigi.Task):
                                       .filter(ArticleCategory.article_id.in_(existing_article_cat_ids)))
             logging.info(f"{article_cats_to_delete.count()} article categories to delete from existing articles")
             article_cats_to_delete.delete(synchronize_session=False)
-        logging.info("Deleted")
+        logging.info("Article categories deleted")
 
         # update existing articles
-        logging.info("Updating {len(existing_articles)} existing articles}")
-        for count, batch in enumerate(split_batches(existing_articles,
-                                                    self.insert_batch_size), 1):
+        logging.info(f"Updating {len(existing_articles)} existing articles")
+        count = 0
+        for batch in split_batches(existing_articles, self.insert_batch_size):
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Article, existing_articles)
-            logging.info(f"{count * self.insert_batch_size} existing articles updated")
+            count += len(batch)
+            logging.info(f"{count} existing articles updated")
 
         # insert links between articles and categories
-        logging.info(f"Total article categories: {len(article_cats)}")
+        logging.info(f"Total article categories to insert: {len(article_cats)}")
         inserted_article_cats, existing_article_cats, failed_article_cats = insert_data(
                                                     self.db_config_env, "mysqldb", database,
                                                     Base, ArticleCategory, article_cats,
                                                     return_non_inserted=True)
-        logging.info(f"Inserted {len(inserted_article_cats)} new article categories")
-        logging.info(f"{len(existing_article_cats)} article catergories were existing and not updated")
+        logging.info(f"Inserted {len(inserted_article_cats)} article categories")
+        if len(existing_article_cats) > 0:
+            raise ValueError(f"{len(existing_article_cats)} duplicate article categories: {existing_article_cats}")
         if len(failed_article_cats) > 0:
-            raise ValueError(f"Article categories failed to be inserted: {failed_article_cats}")
+            raise ValueError(f"{len(failed_article_cats)} article categories failed to be inserted: {failed_article_cats}")
 
         # mark as done
         logging.warning("Task complete")
