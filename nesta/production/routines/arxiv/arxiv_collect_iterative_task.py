@@ -7,7 +7,6 @@ Luigi routine to collect new data from the arXiv api and load it to MySQL.
 
 import luigi
 import logging
-from sqlalchemy.orm.exc import NoResultFound
 
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategory, Category
@@ -27,8 +26,8 @@ class CollectNewTask(luigi.Task):
         db_config_env (str): environmental variable pointing to the db config file
         db_config_path (str): The output database configuration
         insert_batch_size (int): number of records to insert into the database at once
-        articles_from_date (str): new and updated articles from this data will be retrieved
-                                  Must be in YYYY-MM-DD format
+        articles_from_date (str): new and updated articles from this date will be
+                                  retrieved. Must be in YYYY-MM-DD format
     '''
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
@@ -70,23 +69,32 @@ class CollectNewTask(luigi.Task):
                         session.add(Category(id=cat))
                     all_categories.add(cat)
                 article_cats.append(dict(article_id=row['id'], category_id=cat))
-            if self.test and count == 2000:
-                logging.warning("limiting to 2000 rows while in test mode")
+            if self.test and count == 1600:
+                logging.warning("limiting to 1600 rows while in test mode")
                 break
 
-        # insert articles into database
+        # insert new articles into database
         logging.info(f"Total articles: {len(articles)}")
         inserted_articles, existing_articles, failed_articles = insert_data(
                                                     self.db_config_env, "mysqldb", database,
                                                     Base, Article, articles,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_articles)} new articles")
+        logging.info(f"Identified {len(existing_articles)} existing articles to update")
         if len(failed_articles) > 0:
-            raise ValueError(f"Articles could not be inserted: {failed_articles}")
+            raise ValueError(f"Articles failed to be inserted: {failed_articles}")
 
-        # insert existing articles using a different method
-        # TODO: delete existing article_cats before update in case they have changed
-        logging.info(f"{len(existing_articles)} existing articles")
+        # remove article category links from exisiting articles, in case they have changed
+        existing_article_cat_ids = {article['id'] for article in existing_articles}
+        with db_session(self.engine) as session:
+            article_cats_to_delete = (session.query(ArticleCategory)
+                                      .filter(ArticleCategory.article_id.in_(existing_article_cat_ids)))
+            logging.info(f"{article_cats_to_delete.count()} article categories to delete from existing articles")
+            article_cats_to_delete.delete()
+        logging.info("Deleted")
+
+        # update existing articles
+        logging.info("Updating {len(existing_articles)} existing articles}")
         for count, batch in enumerate(split_batches(existing_articles,
                                                     self.insert_batch_size), 1):
             with db_session(self.engine) as session:
@@ -100,9 +108,9 @@ class CollectNewTask(luigi.Task):
                                                     Base, ArticleCategory, article_cats,
                                                     return_non_inserted=True)
         logging.info(f"Inserted {len(inserted_article_cats)} new article categories")
-        logging.info(f"{len(existing_article_cats)} were existing and not updated")
+        logging.info(f"{len(existing_article_cats)} article catergories were existing and not updated")
         if len(failed_article_cats) > 0:
-            raise ValueError(f"Categories could not be inserted: {failed_article_cats}")
+            raise ValueError(f"Article categories failed to be inserted: {failed_article_cats}")
 
         # mark as done
         logging.warning("Task complete")
