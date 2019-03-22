@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import pandas as pd
+import re
 import requests
 from retrying import retry
 import s3fs  # required for pandas to use read_csv from s3
@@ -219,7 +220,7 @@ def arxiv_batch(resumption_token=None, **kwargs):
 
 
 def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
-    '''Iterate through batches and yield single rows until the end_cursor or end of data
+    """Iterate through batches and yield single rows until the end_cursor or end of data
     is reached.
 
     Args:
@@ -229,7 +230,7 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
 
     Returns:
         (dict): a single row of data
-    '''
+    """
     resumption_token = '|'.join([token, str(start_cursor)])
     while resumption_token is not None and start_cursor < end_cursor:
         batch, resumption_token = arxiv_batch(resumption_token)
@@ -240,14 +241,14 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
 
 
 def retrieve_all_arxiv_rows(**kwargs):
-    '''Iterate through batches and yield single rows through the whole dataset.
+    """Iterate through batches and yield single rows through the whole dataset.
 
     Args:
         kwargs: any keyword arguments to send with the request
 
     Returns:
         (dict): a single row of data
-    '''
+    """
     resumption_token = None
     while True:
         batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
@@ -255,6 +256,32 @@ def retrieve_all_arxiv_rows(**kwargs):
             yield row
         if resumption_token is None:
             break
+
+
+def extract_last_update_date(prefix, updates):
+    """Determine the latest valid date from a list of update_ids.
+
+    Args:
+        prefix (str): valid prefix in the update id
+        updates (list of str): update ids extracted from the luigi_table_updates
+
+    Returns:
+        (str): latest valid date from the supplied list
+    """
+    date_pattern = r'(\d{4}-\d{2}-\d{2})'
+    pattern = re.compile(f'^{prefix}_{date_pattern}$')
+    matches = [re.search(pattern, update) for update in updates]
+    dates = []
+    for match in matches:
+        try:
+            datetime.datetime.strptime(match.group(1), '%Y-%m-%d')
+            dates.append(match.group(1))
+        except (AttributeError, ValueError):  # no matches or strptime conversion fail
+            pass
+    try:
+        return sorted(dates, reverse=True)[0]
+    except IndexError:
+        raise ValueError("Latest date could not be identified")
 
 
 if __name__ == '__main__':

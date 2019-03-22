@@ -5,9 +5,9 @@ arXiv data collection and processing
 Luigi routine to collect all data from the arXiv api and load it to MySQL.
 '''
 
-import luigi
 import datetime
 import logging
+import luigi
 
 from arxiv_iterative_date_task import DateTask
 

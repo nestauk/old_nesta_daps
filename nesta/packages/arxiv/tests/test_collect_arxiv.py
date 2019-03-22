@@ -14,6 +14,7 @@ from nesta.packages.arxiv.collect_arxiv import load_arxiv_categories
 from nesta.packages.arxiv.collect_arxiv import _category_exists
 from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
+from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -239,10 +240,10 @@ def test_xml_to_json_conversion():
 def test__category_exists_returns_correct_bool():
     mocked_session = mock.Mock()
     mocked_session.query().filter().one.return_value = 'found it'
-    assert _category_exists(mocked_session, 1) == True
+    assert _category_exists(mocked_session, 1) is True
 
     mocked_session.query().filter().one.side_effect = NoResultFound
-    assert _category_exists(mocked_session, 2) == False
+    assert _category_exists(mocked_session, 2) is False
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._add_category')
@@ -325,3 +326,56 @@ def test_retrieve_all_arxiv_batch_rows_returns_all_rows(mocked_batch):
 
     result = list(retrieve_all_arxiv_rows())
     assert result == ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
+
+
+def test_last_update_date_extracts_latest_date():
+    updates = ['ArxivIterativeCollect_2019-03-14',
+               'ArxivIterativeCollect_2019-03-13',
+               'ArxivIterativeCollect_2001-01-01']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2019-03-14'
+
+    updates = ['ArxivIterativeCollect_2018-03-14',
+               'ArxivIterativeCollect_2019-03-13',
+               'ArxivIterativeCollect_2020-01-01']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2020-01-01'
+
+    updates = ['ArxivIterativeCollect_2001-01-14',
+               'ArxivIterativeCollect_2001-02-03',
+               'ArxivIterativeCollect_2001-02-03']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2001-02-03'
+
+
+def test_last_update_date_ignores_invalid_updates():
+    updates = ['ArxivIterativeCollect_2019-03-14',
+               'ArxivIterativeCollect_2019-03-13',
+               'ArxivIterativeCollect_2019-04-99']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2019-03-14'
+
+    updates = ['ArxivIterativeCollect_2019.03.14',
+               'ArxivIterativeCollect_2019-03-13',
+               'ArxivIterativeCollect_2019']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2019-03-13'
+
+    updates = ['ArxivIterativeCollect_2019-03-14',
+               'ArxivIterativeCollect_2019-03-13',
+               'ArxivIterativeCollection_2019-04-09']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2019-03-14'
+
+    updates = ['ArxivIterativeCollect_2019-03-13',
+               'badArxivIterativeCollect_2019-03-14',
+               'ArxivIterativeCollect_2018-04-01']
+    latest = extract_last_update_date('ArxivIterativeCollect', updates)
+    assert latest == '2019-03-13'
+
+
+def test_last_update_date_raises_valueerror_if_none_found():
+    updates = []
+
+    with pytest.raises(ValueError):
+        extract_last_update_date('ArxivIterativeCollect', updates)
