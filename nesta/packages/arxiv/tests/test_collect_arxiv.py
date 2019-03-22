@@ -61,13 +61,13 @@ def test_arxiv_request_implements_delay(mocked_requests, mock_response):
     assert time.time() - start_time > 3
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_request_token_returns_correct_token(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     assert request_token() == '3132962'
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_request_token_doesnt_override_delay(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     request_token()
@@ -75,13 +75,13 @@ def test_request_token_doesnt_override_delay(mocked_request, mock_response):
         assert mocked_request.call_args[1]['delay'] >= 3
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_total_articles_returns_correct_amount(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     assert total_articles() == 1463679
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_total_articles_doesnt_override_delay(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     total_articles()
@@ -89,21 +89,21 @@ def test_total_articles_doesnt_override_delay(mocked_request, mock_response):
         assert mocked_request.call_args[1]['delay'] >= 3
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_sends_resumption_token_if_provided(mocked_request):
     batch, _ = arxiv_batch('111222444|1')
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
                                                      resumptionToken='111222444|1')
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_sends_prefix_if_no_resumption_token_provided(mocked_request):
     batch, _ = arxiv_batch()
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
                                                      metadataPrefix='arXiv')
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_sends_kwargs_to_request_if_no_resumption_token_provided(mocked_request):
     batch, _ = arxiv_batch(until='2019-03-01')
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
@@ -111,14 +111,14 @@ def test_arxiv_batch_sends_kwargs_to_request_if_no_resumption_token_provided(moc
                                                      until='2019-03-01')
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_ignores_kwargs_if_resumption_token_provided(mocked_request):
     batch, _ = arxiv_batch('11111111|2', _from='2019-03-01')
     assert mocked_request.mock_calls[0] == mock.call('http://export.arxiv.org/oai2',
                                                      resumptionToken='11111111|2')
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444|1')
@@ -127,7 +127,7 @@ def test_arxiv_batch_extracts_required_fields(mocked_request, mock_response):
     assert set(batch[0]) == expected_fields
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_handles_missing_fields(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444|1')
@@ -135,7 +135,7 @@ def test_arxiv_batch_handles_missing_fields(mocked_request, mock_response):
     assert set(batch[1]) == expected_fields
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_author_json_conversion(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444|1')
@@ -150,7 +150,7 @@ def test_arxiv_batch_author_json_conversion(mocked_request, mock_response):
     assert batch[1]['authors'] == expected_authors
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_converts_categories_to_list(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444|1')
@@ -158,7 +158,7 @@ def test_arxiv_batch_converts_categories_to_list(mocked_request, mock_response):
     assert batch[1]['categories'] == ['hep-ex']
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_converts_dates(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     batch, _ = arxiv_batch('111222444|1')
@@ -166,14 +166,14 @@ def test_arxiv_batch_converts_dates(mocked_request, mock_response):
     assert {'created', 'updated'}.isdisjoint(batch[1].keys())
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_returns_resumption_cursor(mocked_request, mock_response):
     mocked_request.return_value = ET.fromstring(mock_response)
     _, reumption_token = arxiv_batch('111222444|1')
     assert reumption_token == '3132962|1001'
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._arxiv_request', autospec=True)
 def test_arxiv_batch_returns_none_at_end_of_data(mocked_request):
     mock_response = b'''<?xml version="1.0" encoding="UTF-8"?>
 <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
@@ -246,11 +246,11 @@ def test__category_exists_returns_correct_bool():
     assert _category_exists(mocked_session, 2) is False
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv._add_category')
-@mock.patch('nesta.packages.arxiv.collect_arxiv._category_exists')
-@mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine')
-@mock.patch('nesta.packages.arxiv.collect_arxiv.try_until_allowed')
-@mock.patch('nesta.packages.arxiv.collect_arxiv.pd')
+@mock.patch('nesta.packages.arxiv.collect_arxiv._add_category', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv._category_exists', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.try_until_allowed', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.pd', autospec=True)
 def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try,
                                                       mocked_engine, mocked_exists,
                                                       mocked_add):
@@ -271,7 +271,7 @@ def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try,
     assert mocked_add.mock_calls == expected_calls
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch', autospec=True)
 def test_retrieve_arxiv_batch_rows_calls_arxiv_batch_correctly(mocked_batch):
     mocked_batch.side_effect = [('data', 'mytoken|2'),
                                 ('data', 'mytoken|4'),
@@ -282,7 +282,8 @@ def test_retrieve_arxiv_batch_rows_calls_arxiv_batch_correctly(mocked_batch):
                                        mock.call('mytoken|2'),
                                        mock.call('mytoken|4')]
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch', autospec=True)
 def test_retrieve_arxiv_batch_rows_returns_all_rows_till_empty_token(mocked_batch):
     rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
     mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
@@ -293,7 +294,7 @@ def test_retrieve_arxiv_batch_rows_returns_all_rows_till_empty_token(mocked_batc
     assert result == ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch', autospec=True)
 def test_retrieve_arxiv_batch_rows_stops_at_end_cursor(mocked_batch):
     rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
     mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
@@ -304,7 +305,7 @@ def test_retrieve_arxiv_batch_rows_stops_at_end_cursor(mocked_batch):
     assert result == ['row1', 'row2', 'row3', 'row4']
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch', autospec=True)
 def test_retrieve_all_arxiv_batch_rows_calls_arxiv_batch_correctly(mocked_batch):
     rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
     mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
@@ -317,7 +318,7 @@ def test_retrieve_all_arxiv_batch_rows_calls_arxiv_batch_correctly(mocked_batch)
                                        mock.call('mytoken|4')]
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.arxiv_batch', autospec=True)
 def test_retrieve_all_arxiv_batch_rows_returns_all_rows(mocked_batch):
     rows = ['row1', 'row2', 'row3', 'row4', 'row5', 'row6']
     mocked_batch.side_effect = [(rows[0:2], 'mytoken|2'),
