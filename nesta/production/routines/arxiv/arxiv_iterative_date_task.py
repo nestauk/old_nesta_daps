@@ -15,6 +15,9 @@ from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
 
 
+UPDATE_PREFIX = 'ArxivIterativeCollect'
+
+
 class DateTask(luigi.WrapperTask):
     '''Collect new data from the arXiv api and dump the
     data in the MySQL server.
@@ -47,11 +50,12 @@ class DateTask(luigi.WrapperTask):
 
         if self.articles_from_date is None:
             query = text("SELECT update_id FROM luigi_table_updates "
-                         "WHERE update_id LIKE 'ArxivIterativeCollect%'")
+                         f"WHERE update_id LIKE '{UPDATE_PREFIX}%'")
             with db_session(self.engine) as session:
                 previous_updates = session.execute(query).fetchall()
             try:
-                self.articles_from_date = extract_last_update_date(previous_updates)
+                self.articles_from_date = extract_last_update_date(UPDATE_PREFIX,
+                                                                   previous_updates)
             except ValueError:
                 raise ValueError("Date for iterative data collection could not be determined")
 
