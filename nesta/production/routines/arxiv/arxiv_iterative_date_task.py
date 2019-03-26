@@ -8,11 +8,11 @@ Luigi routine to identify the date since the last iterative data collection
 import datetime
 import logging
 import luigi
-
-from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
-
+from sqlalchemy.sql import text
 
 from arxiv_collect_iterative_task import CollectNewTask
+from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
+from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
 
 
 class DateTask(luigi.WrapperTask):
@@ -46,10 +46,14 @@ class DateTask(luigi.WrapperTask):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
         if self.articles_from_date is None:
-            self.articles_from_date = '2019-01-04'
-
-        if self.articles_from_date is None:
-            raise ValueError("Date for iterative data collection could not be determined")
+            query = text("SELECT update_id FROM luigi_table_updates "
+                         "WHERE update_id LIKE 'ArxivIterativeCollect%'")
+            with db_session(self.engine) as session:
+                previous_updates = session.execute(query).fetchall()
+            try:
+                self.articles_from_date = extract_last_update_date(previous_updates)
+            except ValueError:
+                raise ValueError("Date for iterative data collection could not be determined")
 
         yield CollectNewTask(date=self.date,
                              _routine_id=self._routine_id,
