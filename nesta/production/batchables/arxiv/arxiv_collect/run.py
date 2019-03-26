@@ -43,6 +43,8 @@ def run():
             categories = row.pop('categories', [])
             articles.append(row)
             for cat in categories:
+                # TODO:this is inefficient and should be queried once to a set. see
+                # iterative proceess.
                 try:
                     session.query(Category).filter(Category.id == cat).one()
                 except NoResultFound:
