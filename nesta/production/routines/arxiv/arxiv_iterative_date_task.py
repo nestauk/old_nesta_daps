@@ -53,6 +53,7 @@ class DateTask(luigi.WrapperTask):
                          f"WHERE update_id LIKE '{UPDATE_PREFIX}%'")
             with db_session(self.engine) as session:
                 previous_updates = session.execute(query).fetchall()
+            previous_updates = [update_id for (update_id, ) in previous_updates]
             try:
                 self.articles_from_date = extract_last_update_date(UPDATE_PREFIX,
                                                                    previous_updates)
