@@ -44,6 +44,14 @@ class Category(Base):
     description = Column(VARCHAR(100))
 
 
+class ArticleFieldsOfStudy(Base):
+    """Link table to Microsoft Academic Graph fields of study."""
+    __tablename__ = 'arxiv_article_fields_of_study'
+
+    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
+    fos_id = Column(VARCHAR(40), ForeignKey('mag_fields_of_study.id'), primary_key=True)
+
+
 # to be added at a later date
 # class ArticleMSC(Base):
 #     """Association table for Arxiv articles to Mathematics Subject Classification."""
