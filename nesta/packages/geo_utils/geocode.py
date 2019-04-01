@@ -103,10 +103,10 @@ def geocode_dataframe(df):
 def geocode_batch_dataframe(df, city='city', country='country',
                             latitude='latitude', longitude='longitude',
                             query_method=2):
-    """Geocodes a dataframe, first by supplying the city and country to the api, if this
-    fails a second attempt is made supplying the combination using the q= method.
-    The supplied dataframe df is returned with additional columns appended, containing
-    the latitude and longitude as floats.
+    """Geocodes a dataframe with several options for query method.
+
+    The supplied dataframe is returned with additional columns appended, containing
+    the latitude and longitude as floats, or None if unsuccessful.
 
     Args:
         df (:obj:`pandas.DataFrame`): input dataframe
@@ -114,9 +114,10 @@ def geocode_batch_dataframe(df, city='city', country='country',
         country (str): name of the input column containing the country
         latitude (str): name of the output column containing the latitude
         longitude (str): name of the output column containing the longitude
-        query_method (int): query methods to attempt: 0: city, country only
-                                                1: q only
-                                                2: city, country with fallback to q method
+        query_method (int): query methods to attempt:
+                                        0: city, country only
+                                        1: q only
+                                        2: city, country with fallback to q method
 
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
