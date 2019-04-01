@@ -6,7 +6,7 @@ from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE
+from sqlalchemy.types import JSON, DATE, INTEGER
 
 Base = declarative_base()
 
@@ -24,6 +24,9 @@ class Article(Base):
     doi = Column(VARCHAR(200))
     abstract = Column(TEXT)
     authors = Column(JSON)
+    mag_authors = Column(JSON)
+    citation_count = Column(INTEGER)
+    citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
     categories = relationship('ArticleCategory')
 
