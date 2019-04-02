@@ -1,3 +1,4 @@
+from collections import defaultdict
 import datetime
 import json
 import logging
@@ -11,8 +12,10 @@ from sqlalchemy.orm.exc import NoResultFound
 import time
 import xml.etree.ElementTree as ET
 
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Category
+from nesta.packages.mag.query_mag import prepare_title
+from nesta.packages.misc_utils.batches import split_batches
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.production.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -282,6 +285,37 @@ def extract_last_update_date(prefix, updates):
         return sorted(dates, reverse=True)[0]
     except IndexError:
         raise ValueError("Latest date could not be identified")
+
+
+def batched_titles(ids, title_id_lookup, batch_size, engine):
+    """Extracts batches of titles from the database and yields titles for lookup against
+    the MAG api. A lookup dict of titles to ids is also appended to (duplicate titles
+    exist in the arXiv dataset.)
+
+    Args:
+        ids (set): all the article ids that need to be processed
+        title_id_lookup (:obj:`collections.defaultdict`): an empty defaultdict where generated {title:id} lookup will be stored
+        batch_size (int): number of ids to be queried at once in the database
+        engine (:obj:`sqlalchemy.engine.base.Engine`): connection to the database
+
+    Returns:
+        (str): prepared title for lookup
+    """
+    for batch_of_ids in split_batches(ids, batch_size):
+        with db_session(engine) as session:
+            batch_with_titles = (session
+                                 .query(Article.id, Article.title)
+                                 .filter(Article.id.in_(batch_of_ids))
+                                 .all())
+        batch_with_clean_titles = defaultdict(list)
+        for (id, title) in batch_with_titles:
+            batch_with_clean_titles[prepare_title(title)].append(id)
+
+        # append to the lookup
+        title_id_lookup.update(batch_with_clean_titles)
+
+        for title in batch_with_clean_titles:
+            yield title
 
 
 if __name__ == '__main__':

@@ -31,7 +31,8 @@ def prepare_title(title):
 
 def build_expr(query_items, entity_name, max_length=1000):
     """Builds and yields OR expressions for MAG from a list of items. Strings and
-    integer items are formatted according to the MAG query specification.
+    integer items are formatted quoted and unquoted respectively, as per the MAG query
+    specification.
 
     Args:
         query_items (list): all items to be queried
