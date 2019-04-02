@@ -10,7 +10,7 @@ import datetime
 import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
-from arxiv_collect_task import CollectAllTask
+from arxiv_collect_all_task import CollectAllTask
 
 
 class RootTask(luigi.WrapperTask):
