@@ -6,7 +6,7 @@ Luigi routine to query the Microsoft Academic Graph for additional data and appe
 the exiting data in the database.
 """
 from collections import defaultdict
-from datetime import datetime
+from datetime import date
 import luigi
 import logging
 
@@ -64,53 +64,108 @@ class QueryMagTask(luigi.Task):
                                   .query(ArticleFieldsOfStudy.article_id)
                                   .all())
             arxiv_ids_with_fos = {id for (id, ) in arxiv_ids_with_fos}
+            logging.info(f"{len(arxiv_ids_with_fos)} articles already processed")
 
             arxiv_ids_to_process = (session
                                     .query(Article.id)
                                     .filter(~Article.id.in_(arxiv_ids_with_fos))
                                     .all())
 
-            all_fos = session.query(FieldOfStudy.id).all()
+            all_fos_ids = session.query(FieldOfStudy.id).all()
 
         arxiv_ids_to_process = {id for (id, ) in arxiv_ids_to_process}
-        all_fos = {id for (id, ) in all_fos}
+        logging.info(f"{len(arxiv_ids_to_process)} articles to process")
+        all_fos_ids = {id for (id, ) in all_fos_ids}
+        logging.info(f"{len(all_fos_ids)} fields of service in the database")
 
         # retrieve and process, while inserting any missing categories
-        article_fos = []  # article_id, fos_id
-        missing_fos = []
+        # article_fos = []  # article_id, fos_id
+        # missing_fos = []
+
+        paper_fields = ["Id", "Ti", "F.FId", "CC",
+                        "AA.AuN", "AA.AuId", "AA.AfN", "AA.AfId", "AA.S"]
 
         author_mapping = {'AuN': 'author_name',
                           'AuId': 'author_id',
                           'AfN': 'author_affiliation',
                           'AfId': 'author_affiliation_id',
                           'S': 'author_order'}
-        paper_fields = ["Id", "Ti", "F.DFN", "F.FId", "CC", "AA.AuN", "AA.AuId",
-                        "AA.AfN", "AA.AfId", "AA.S"]
+
+        field_mapping = {"Id": 'id',
+                         "Ti": 'title',
+                         "F": 'field_of_study_ids',
+                         "AA": 'mag_authors',
+                         "CC": 'citation_count'}
 
         title_id_lookup = defaultdict(list)
 
         # for batch in batched_titles
-        for expr in build_expr(batched_titles(arxiv_ids_to_process, title_id_lookup,
-                                              10000, self.engine)):
+        for count, expr in enumerate(build_expr(batched_titles(arxiv_ids_to_process,
+                                                               title_id_lookup,
+                                                               10000,
+                                                               self.engine), 'Ti'), 1):
             logging.debug(expr)
+            expr_len = len(expr.split(','))
+            logging.info(f"Querying {expr_len} titles")
+
             data = query_mag_api(expr, paper_fields, mag_subscription_key)
 
-            # clean up authors
+            entities_len = len(data['entities'])
+            logging.info(f"{entities_len} entities returned")
+            missing_articles = expr_len - entities_len
+            if missing_articles != 0:
+                logging.info(f"{missing_articles} titles not found in MAG")
+
+            batch_missing_fos = set()
+            batch_article_fos_links = []
+
+            # renaming and reformatting
             for row in data['entities']:
-                for author in row['AA']:
+                for code, description in field_mapping.items():
+                    try:
+                        row[description] = row.pop(code)
+                    except KeyError:
+                        pass
+
+                for author in row['mag_authors']:
                     for code, description in author_mapping.items():
                         try:
                             author[description] = author.pop(code)
                         except KeyError:
                             pass
 
-            # apply mapping for non-author fields
-            # use the lookup table to determine arxiv id for fos
-            # check for missing fields of study, query these from the mag and add to
-                # field of study table
+                # TODO:work on this to determine the best method of generating the link
+                # table and calculating the missing fids
+                row['field_of_study_ids'] = [f['FId'] for f in row['field_of_study_ids']]
+                batch_article_fos_links.update([{row['id']: f['FId']}
+                                                    for f in row['fields_of_study']]
+                # ********
+
+                if row.get('citation_count', None) is not None:
+                    row['citation_count_updated'] = date.today()
+
+                row['id'] = title_id_lookup[row['title']]
+
+                missing_fos = set(row['field_of_study_ids']) - all_fos_ids
+                if missing_fos:
+                    logging.warning(f"missing field of study ids {missing_fos} for {row['id']}")
+                    batch_missing_fos.update(missing_fos)
+
+
+                
+
+            # query the missing from the api and append them to the db
+                # not possible to write to the link table without them present due
+                # to the foreign key
             # append additional data to the arxiv table(authors, citation,
                 # citation_date)
-            # create entries in the fos link table
+            # create entries in the fos link table (last action due to foreign key and
+                # the fact that this signifies success
+
+            logging.info(f"Batch {count}")
+            if count > 1:
+                logging.warning("Exiting after 1 batch in test mode")
+                break
 
         # mark as done
         logging.warning("Task complete")

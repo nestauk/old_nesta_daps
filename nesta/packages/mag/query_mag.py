@@ -182,44 +182,64 @@ def write_fields_of_study_to_db(data, engine, chunksize=10000):
 
 
 if __name__ == "__main__":
+    import json
+
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     # collect api key from config
-    mag_config = misctools.get_config('nesta/production/config/mag.config', 'mag')
+    mag_config = misctools.get_config('mag.config', 'mag')
     subscription_key = mag_config['subscription_key']
 
     # setup database connectors
     engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
 
     # *** query papers from arxiv titles
-    # df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
+    df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
 
-    # author_mapping = {'AuN': 'author_name',
-    #                   'AuId': 'author_id',
-    #                   'AfN': 'author_affiliation',
-    #                   'AfId': 'author_affiliation_id',
-    #                   'S': 'author_order'}
-    # # query papers
-    # paper_fields = ["Id", "Ti", "F.DFN", "F.FId", "CC", "AA.AuN", "AA.AuId",
-    #                 "AA.AfN", "AA.AfId", "AA.S"]
-    # for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti'):  # this .apply will take forever on the whole dataset. move to a generator
-    #     # print(expr)
-    #     data = query_mag_api(expr, paper_fields)
-    #     print(json.dumps(data['entities'][0], indent=4))
-    #     break
+    author_mapping = {'AuN': 'author_name',
+                      'AuId': 'author_id',
+                      'AfN': 'author_affiliation',
+                      'AfId': 'author_affiliation_id',
+                      'S': 'author_order'}
 
-    #     # clean up authors
-    #     for row in data['entities']:
-    #         for author in row['AA']:
-    #             for code, description in author_mapping.items():
-    #                 try:
-    #                     author[description] = author.pop(code)
-    #                 except KeyError:
-    #                     pass
+    field_mapping = {"Id": 'id',
+                     "Ti": 'title', # not needed
+                     "F": 'fields_of_study',
+                     "AA": 'authors',
+                     "CC": 'citation_count'}
+    # query papers
+    paper_fields = ["Id", "Ti", "F.FId", "CC", "AA.AuN", "AA.AuId",
+                    "AA.AfN", "AA.AfId", "AA.S"]
+    for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti'):  # this .apply will take forever on the whole dataset. move to a generator
+        # print(expr)
+        data = query_mag_api(expr, paper_fields, subscription_key)
+        print(json.dumps(data['entities'][0], indent=4))
+        break
 
+    for row in data['entities']:
+        # clean up authors
+        for author in row['AA']:
+            for code, description in author_mapping.items():
+                try:
+                    author[description] = author.pop(code)
+                except KeyError:
+                    pass
+
+        # convert fields of study to a list
+        # row['F'] = [f['FId'] for f in row['F']]
+
+        # rename fields
+        for code, description in field_mapping.items():
+            try:
+                row[description] = row.pop(code)
+            except KeyError:
+                pass
+
+    from IPython import embed; embed()
+    pass
 
     # *** json to sql
     # write_fields_of_study_to_db('mag_fields_of_study.json', 'dev')
