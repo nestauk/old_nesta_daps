@@ -13,7 +13,7 @@ import logging
 from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import batched_titles
 from nesta.packages.mag.query_mag import build_expr, query_mag_api, query_fields_of_study, write_fields_of_study_to_db
-from nesta.production.orms.arxiv_orm import Article, ArticleFieldsOfStudy
+from nesta.production.orms.arxiv_orm import Base, Article, ArticleFieldsOfStudy
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
@@ -40,6 +40,7 @@ class QueryMagTask(luigi.Task):
     db_config_path = luigi.Parameter()
     mag_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
+    articles_from_date = luigi.Parameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -62,6 +63,7 @@ class QueryMagTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        Base.metadata.create_all(self.engine)
 
         mag_config = misctools.get_config(self.mag_config_path, 'mag')
         mag_subscription_key = mag_config['subscription_key']
@@ -95,8 +97,7 @@ class QueryMagTask(luigi.Task):
                           'AfId': 'author_affiliation_id',
                           'S': 'author_order'}
 
-        field_mapping = {"Id": 'id',
-                         "Ti": 'title',
+        field_mapping = {"Ti": 'title',
                          "F": 'field_of_study_ids',
                          "AA": 'mag_authors',
                          "CC": 'citation_count'}
@@ -109,12 +110,12 @@ class QueryMagTask(luigi.Task):
                                                                self.engine), 'Ti'), 1):
             logging.debug(expr)
             expr_len = len(expr.split(','))
-            logging.info(f"Querying {expr_len} titles")
-
+            logging.info(f"Querying MAG for {expr_len} titles")
             batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
+            logging.debug(batch_data)
 
             entities_len = len(batch_data['entities'])
-            logging.info(f"{entities_len} entities returned")
+            logging.info(f"{entities_len} entities returned from MAG")
             missing_articles = expr_len - entities_len
             if missing_articles != 0:
                 logging.info(f"{missing_articles} titles not found in MAG")
@@ -125,6 +126,10 @@ class QueryMagTask(luigi.Task):
 
             # renaming and reformatting
             for row in batch_data['entities']:
+                # drop unnecessary fields
+                for field in ['logprob', 'prob', 'Id']:
+                    del row[field]
+
                 for code, description in field_mapping.items():
                     try:
                         row[description] = row.pop(code)
@@ -144,14 +149,14 @@ class QueryMagTask(luigi.Task):
                 # reformat fos_ids
                 field_of_study_ids = {f['FId'] for f in row.pop('field_of_study_ids')}
 
-                # lookup list of ids
+                # lookup list of ids (there are duplicates by title)
                 row_article_ids = title_id_lookup[row['title']]
                 for article_id in row_article_ids:
                     batch_article_fos_links.extend({'article_id': article_id, 'fos_id': id}
                                                    for id in field_of_study_ids)
-                    batch_article_data.append({'id': article_id, **row})
+                    batch_article_data.append({**row, 'id': article_id})
 
-                missing_fos_ids = set(row['field_of_study_ids']) - all_fos_ids
+                missing_fos_ids = set(field_of_study_ids) - all_fos_ids
                 if missing_fos_ids:
                     logging.warning(f"Missing field of study ids {missing_fos_ids} for {row_article_ids}")
                     batch_missing_fos.update(missing_fos_ids)
@@ -167,16 +172,18 @@ class QueryMagTask(luigi.Task):
 
             # update a batch of articles in the db
             logging.info(f"Updating {len(batch_article_data)} articles")
+            logging.debug(batch_article_data)
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Article, batch_article_data)
 
             # write a batch of article/fields of study to the link table
             logging.info(f"Inserting {len(batch_article_fos_links)} article-field of study links")
+            logging.debug(batch_article_fos_links)
             with db_session(self.engine) as session:
                 session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
 
             logging.info(f"Batch {count} done")
-            if count > 2:
+            if count == 2:
                 logging.warning("Exiting after 2 batches in test mode")
                 break
 

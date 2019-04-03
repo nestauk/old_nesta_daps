@@ -25,13 +25,16 @@ class RootTask(luigi.WrapperTask):
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
     articles_from_date = luigi.Parameter(default=None)
+    debug = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
         _routine_id = "{}-{}".format(self.date, self.production)
 
-        logging.getLogger().setLevel(logging.INFO)
+        level = logging.DEBUG if self.debug else logging.INFO
+        logging.getLogger().setLevel(level)
+
         yield QueryMagTask(date=self.date,
                            _routine_id=_routine_id,
                            db_config_path=self.db_config_path,
