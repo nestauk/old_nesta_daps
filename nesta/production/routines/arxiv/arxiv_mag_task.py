@@ -10,14 +10,14 @@ from datetime import date
 import luigi
 import logging
 
+from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import batched_titles
-from nesta.packages.mag.query_mag import build_expr, query_mag_api
-from nesta.production.orms.arxiv_orm import Base, Article, ArticleFieldsOfStudy
+from nesta.packages.mag.query_mag import build_expr, query_mag_api, query_fields_of_study, write_fields_of_study_to_db
+from nesta.production.orms.arxiv_orm import Article, ArticleFieldsOfStudy
 from nesta.production.orms.mag_orm import FieldOfStudy
-from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
+from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.packages.misc_utils.batches import split_batches
 
 
 class QueryMagTask(luigi.Task):
@@ -49,6 +49,14 @@ class QueryMagTask(luigi.Task):
         update_id = "ArxivQueryMag_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
+    def requires(self):
+        yield DateTask(date=self.date,
+                       _routine_id=self._routine_id,
+                       db_config_path=self.db_config_path,
+                       db_config_env=self.db_config_env,
+                       test=self.test,
+                       articles_from_date=self.articles_from_date)
+
     def run(self):
         # database setup
         database = 'dev' if self.test else 'production'
@@ -76,11 +84,7 @@ class QueryMagTask(luigi.Task):
         arxiv_ids_to_process = {id for (id, ) in arxiv_ids_to_process}
         logging.info(f"{len(arxiv_ids_to_process)} articles to process")
         all_fos_ids = {id for (id, ) in all_fos_ids}
-        logging.info(f"{len(all_fos_ids)} fields of service in the database")
-
-        # retrieve and process, while inserting any missing categories
-        # article_fos = []  # article_id, fos_id
-        # missing_fos = []
+        logging.info(f"{len(all_fos_ids)} fields of study in the database")
 
         paper_fields = ["Id", "Ti", "F.FId", "CC",
                         "AA.AuN", "AA.AuId", "AA.AfN", "AA.AfId", "AA.S"]
@@ -99,7 +103,6 @@ class QueryMagTask(luigi.Task):
 
         title_id_lookup = defaultdict(list)
 
-        # for batch in batched_titles
         for count, expr in enumerate(build_expr(batched_titles(arxiv_ids_to_process,
                                                                title_id_lookup,
                                                                10000,
@@ -108,9 +111,9 @@ class QueryMagTask(luigi.Task):
             expr_len = len(expr.split(','))
             logging.info(f"Querying {expr_len} titles")
 
-            data = query_mag_api(expr, paper_fields, mag_subscription_key)
+            batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
 
-            entities_len = len(data['entities'])
+            entities_len = len(batch_data['entities'])
             logging.info(f"{entities_len} entities returned")
             missing_articles = expr_len - entities_len
             if missing_articles != 0:
@@ -118,9 +121,10 @@ class QueryMagTask(luigi.Task):
 
             batch_missing_fos = set()
             batch_article_fos_links = []
+            batch_article_data = []
 
             # renaming and reformatting
-            for row in data['entities']:
+            for row in batch_data['entities']:
                 for code, description in field_mapping.items():
                     try:
                         row[description] = row.pop(code)
@@ -134,37 +138,46 @@ class QueryMagTask(luigi.Task):
                         except KeyError:
                             pass
 
-                # TODO:work on this to determine the best method of generating the link
-                # table and calculating the missing fids
-                row['field_of_study_ids'] = [f['FId'] for f in row['field_of_study_ids']]
-                batch_article_fos_links.update([{row['id']: f['FId']}
-                                                    for f in row['fields_of_study']]
-                # ********
-
                 if row.get('citation_count', None) is not None:
                     row['citation_count_updated'] = date.today()
 
-                row['id'] = title_id_lookup[row['title']]
+                # reformat fos_ids
+                field_of_study_ids = {f['FId'] for f in row.pop('field_of_study_ids')}
 
-                missing_fos = set(row['field_of_study_ids']) - all_fos_ids
-                if missing_fos:
-                    logging.warning(f"missing field of study ids {missing_fos} for {row['id']}")
-                    batch_missing_fos.update(missing_fos)
+                # lookup list of ids
+                row_article_ids = title_id_lookup[row['title']]
+                for article_id in row_article_ids:
+                    batch_article_fos_links.extend({'article_id': article_id, 'fos_id': id}
+                                                   for id in field_of_study_ids)
+                    batch_article_data.append({'id': article_id, **row})
 
+                missing_fos_ids = set(row['field_of_study_ids']) - all_fos_ids
+                if missing_fos_ids:
+                    logging.warning(f"Missing field of study ids {missing_fos_ids} for {row_article_ids}")
+                    batch_missing_fos.update(missing_fos_ids)
 
-                
+            # write the batch to db, starting with any missing fields of study
+            if batch_missing_fos:
+                logging.info(f"Querying MAG for {len(batch_missing_fos)} missing fields of study")
+                batch_found_fos = query_fields_of_study(mag_subscription_key,
+                                                        ids=batch_missing_fos)
+                logging.info(f"Found {len(batch_found_fos)} new fields of study")
+                write_fields_of_study_to_db(batch_found_fos, self.engine)
+                all_fos_ids.update(fos['id'] for fos in batch_found_fos)
 
-            # query the missing from the api and append them to the db
-                # not possible to write to the link table without them present due
-                # to the foreign key
-            # append additional data to the arxiv table(authors, citation,
-                # citation_date)
-            # create entries in the fos link table (last action due to foreign key and
-                # the fact that this signifies success
+            # update a batch of articles in the db
+            logging.info(f"Updating {len(batch_article_data)} articles")
+            with db_session(self.engine) as session:
+                session.bulk_update_mappings(Article, batch_article_data)
 
-            logging.info(f"Batch {count}")
-            if count > 1:
-                logging.warning("Exiting after 1 batch in test mode")
+            # write a batch of article/fields of study to the link table
+            logging.info(f"Inserting {len(batch_article_fos_links)} article-field of study links")
+            with db_session(self.engine) as session:
+                session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
+
+            logging.info(f"Batch {count} done")
+            if count > 2:
+                logging.warning("Exiting after 2 batches in test mode")
                 break
 
         # mark as done

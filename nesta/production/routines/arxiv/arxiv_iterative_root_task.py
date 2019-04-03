@@ -4,12 +4,11 @@ arXiv data collection and processing
 
 Luigi routine to collect all data from the arXiv api and load it to MySQL.
 '''
-
 import datetime
 import logging
 import luigi
 
-from arxiv_iterative_date_task import DateTask
+from arxiv_mag_task import QueryMagTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -33,9 +32,10 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
-        yield DateTask(date=self.date,
-                       _routine_id=_routine_id,
-                       db_config_path=self.db_config_path,
-                       db_config_env='MYSQLDB',
-                       test=not self.production,
-                       articles_from_date=self.articles_from_date)
+        yield QueryMagTask(date=self.date,
+                           _routine_id=_routine_id,
+                           db_config_path=self.db_config_path,
+                           db_config_env='MYSQLDB',
+                           mag_config_path='mag.config',
+                           test=not self.production,
+                           articles_from_date=self.articles_from_date)
