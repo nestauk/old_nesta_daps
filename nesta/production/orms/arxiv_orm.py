@@ -1,14 +1,21 @@
 '''
 Arxiv
-======
+=====
 '''
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE, INTEGER
+from sqlalchemy.types import BIGINT, JSON, DATE, INTEGER
+
+from nesta.production.orms.mag_orm import Base as MagBase
+from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
+
+
+# combine Microsoft Academic Graph Base to allow create all function to work
+Base = merge_metadata(Base, MagBase)
 
 
 class Article(Base):
@@ -28,7 +35,10 @@ class Article(Base):
     citation_count = Column(INTEGER)
     citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
-    categories = relationship('ArticleCategory')
+    categories = relationship('ArticleCategory',
+                              secondary='arxiv_article_categories')
+    fields_of_study = relationship('FieldOfStudy',
+                                   secondary='arxiv_article_fields_of_study')
 
 
 class ArticleCategory(Base):
@@ -48,11 +58,11 @@ class Category(Base):
 
 
 class ArticleFieldsOfStudy(Base):
-    """Link table to Microsoft Academic Graph fields of study."""
+    """Association table to Microsoft Academic Graph fields of study."""
     __tablename__ = 'arxiv_article_fields_of_study'
 
     article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
-    fos_id = Column(VARCHAR(40), ForeignKey('mag_fields_of_study.id'), primary_key=True)
+    fos_id = Column(BIGINT, ForeignKey('mag_fields_of_study.id'), primary_key=True)
 
 
 # to be added at a later date
