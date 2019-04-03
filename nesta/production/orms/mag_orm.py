@@ -18,4 +18,4 @@ class FieldOfStudy(Base):
     name = Column(VARCHAR(250, collation='utf8_bin'))
     level = Column(INTEGER)
     parent_ids = Column(TEXT)
-    children_ids = Column(TEXT)
+    child_ids = Column(TEXT)
