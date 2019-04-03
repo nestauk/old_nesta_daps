@@ -87,15 +87,18 @@ def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
 
 
 def query_fields_of_study(subscription_key,
-                          levels=[0, 1, 2, 3, 4, 5],
-                          fields=['Id', 'DFN', 'FL', 'FP.FId', 'FC.FId'],  # id, display_name, level, parent_ids, children_ids
+                          ids=None,
+                          levels=None,
+                          fields=['Id', 'DFN', 'FL', 'FP.FId', 'FC.FId'],
+                          # id, display_name, level, parent_ids, children_ids
                           query_count=1000,
                           results_limit=None):
     """Queries the MAG for fields of study. Expect >650k results for all levels.
 
     Args:
         subscription_key (str): MAG api subscription key
-        levels (:obj:`list` of `int`): levels to extract. 0 is the highest, 5 is lowest
+        ids: (:obj:`list` of `int`): field of study ids to query
+        levels (:obj:`list` of `int`): levels to extract. 0 is highest, 5 is lowest
         fields (:obj:`list` of `str`): codes of fields to return, as per mag documentation
         query_count (int): number of items to return
         results_limit (int): break and return as close to this number of results as the
@@ -104,8 +107,15 @@ def query_fields_of_study(subscription_key,
     Returns:
         (:obj:`list` of `dict`): results from the api query
     """
+    if ids is not None and levels is None:
+        expr_args = (ids, 'Id')
+    elif levels is not None and ids is None:
+        expr_args = (levels, 'FL')
+    else:
+        raise TypeError("Field of study ids OR levels should be supplied")
+
     fields_of_study = []
-    for expr in build_expr(levels, 'FL'):
+    for expr in build_expr(*expr_args):
         logging.info(expr)
         count = 1000
         offset = 0
@@ -165,11 +175,11 @@ def write_fields_of_study_to_db(data, engine, chunksize=10000):
     df = pd.DataFrame(data)
 
     logging.info("Renaming columns and cleaning data")
-    column_remapping = {'DFN': 'name',
-                        'FC': 'children_ids',
+    column_remapping = {'Id': 'id',
+                        'DFN': 'name',
                         'FL': 'level',
                         'FP': 'parent_ids',
-                        'Id': 'id'}
+                        'FC': 'child_ids'}
     df = df.rename(columns=column_remapping)
     df.children_ids = df.children_ids.apply(concatenate_ids)
     df.parent_ids = df.parent_ids.apply(concatenate_ids)
