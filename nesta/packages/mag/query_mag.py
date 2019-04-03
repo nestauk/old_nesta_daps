@@ -56,7 +56,9 @@ def build_expr(query_items, entity_name, max_length=1000):
         elif type(item) == int:
             expr.append(f"{entity_name}={item}")
 
-    yield f"expr=OR({','.join(expr)})"
+    # pick up any remainder below max_length
+    if len(expr) > 0:
+        yield f"expr=OR({','.join(expr)})"
 
 
 def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
@@ -181,7 +183,7 @@ def write_fields_of_study_to_db(data, engine, chunksize=10000):
                         'FP': 'parent_ids',
                         'FC': 'child_ids'}
     df = df.rename(columns=column_remapping)
-    df.children_ids = df.children_ids.apply(concatenate_ids)
+    df.child_ids = df.child_ids.apply(concatenate_ids)
     df.parent_ids = df.parent_ids.apply(concatenate_ids)
 
     # write to sql
