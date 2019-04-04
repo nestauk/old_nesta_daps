@@ -6,7 +6,7 @@ from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import BIGINT, JSON, DATE, INTEGER
+from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
 
 from nesta.production.orms.mag_orm import Base as MagBase
 from nesta.production.orms.orm_utils import merge_metadata
@@ -32,6 +32,8 @@ class Article(Base):
     abstract = Column(TEXT)
     authors = Column(JSON)
     mag_authors = Column(JSON)
+    mag_id = Column(BIGINT)
+    mag_match_prob = Column(FLOAT)
     citation_count = Column(INTEGER)
     citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
