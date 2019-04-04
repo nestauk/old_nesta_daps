@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import date
 import luigi
 import logging
+import pprint
 
 from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import batched_titles
@@ -59,6 +60,8 @@ class QueryMagTask(luigi.Task):
                        articles_from_date=self.articles_from_date)
 
     def run(self):
+        pp = pprint.PrettyPrinter(indent=4, width=100)
+
         # database setup
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
@@ -97,10 +100,12 @@ class QueryMagTask(luigi.Task):
                           'AfId': 'author_affiliation_id',
                           'S': 'author_order'}
 
-        field_mapping = {"Ti": 'title',
-                         "F": 'field_of_study_ids',
-                         "AA": 'mag_authors',
-                         "CC": 'citation_count'}
+        field_mapping = {'Id': 'mag_id',
+                         'Ti': 'title',
+                         'F': 'field_of_study_ids',
+                         'AA': 'mag_authors',
+                         'CC': 'citation_count',
+                         'logprob': 'mag_match_prob'}
 
         title_id_lookup = defaultdict(list)
 
@@ -108,15 +113,27 @@ class QueryMagTask(luigi.Task):
                                                                title_id_lookup,
                                                                10000,
                                                                self.engine), 'Ti'), 1):
-            logging.debug(expr)
-            expr_len = len(expr.split(','))
-            logging.info(f"Querying MAG for {expr_len} titles")
+            logging.debug(pp.pprint(expr))
+            expr_length = len(expr.split(','))
+            logging.info(f"Querying MAG for {expr_length} titles")
             batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
-            logging.debug(batch_data)
+            logging.debug(pp.pprint(batch_data))
 
-            entities_len = len(batch_data['entities'])
-            logging.info(f"{entities_len} entities returned from MAG")
-            missing_articles = expr_len - entities_len
+            returned_entities = batch_data['entities']
+
+            logging.info(f"{len(returned_entities)} entities returned from MAG (potentially including duplicates)")
+
+            # dedupe response keeping the entity with the highest logprob
+            titles = defaultdict(dict)
+            for row in returned_entities:
+                titles[row['Ti']].update({row['Id']: row['logprob']})
+
+            logging.info(f"{len(titles)} entities after deduplication")
+            deduped_ids = set()
+            for title in titles.values():
+                deduped_ids.add(sorted(title, key=title.get, reverse=True)[0])
+
+            missing_articles = expr_length - len(titles)
             if missing_articles != 0:
                 logging.info(f"{missing_articles} titles not found in MAG")
 
@@ -124,12 +141,12 @@ class QueryMagTask(luigi.Task):
             batch_article_fos_links = []
             batch_article_data = []
 
-            # renaming and reformatting
-            for row in batch_data['entities']:
-                # drop unnecessary fields
-                for field in ['logprob', 'prob', 'Id']:
-                    del row[field]
+            for row in returned_entities:
+                # exclude duplicates
+                if row['Id'] not in deduped_ids:
+                    continue
 
+                # renaming and reformatting
                 for code, description in field_mapping.items():
                     try:
                         row[description] = row.pop(code)
@@ -146,15 +163,22 @@ class QueryMagTask(luigi.Task):
                 if row.get('citation_count', None) is not None:
                     row['citation_count_updated'] = date.today()
 
-                # reformat fos_ids
+                # reformat fos_ids out of a list of dictionaries
                 field_of_study_ids = {f['FId'] for f in row.pop('field_of_study_ids')}
 
-                # lookup list of ids (there are duplicates by title)
+                # lookup list of ids (there are duplicates by title in arxiv)
                 row_article_ids = title_id_lookup[row['title']]
+
+                # drop unnecessary fields
+                for f in ['prob', 'title']:
+                    del row[f]
+
+                # build new article data, fos links and missing fields of study
+                # ready for load to db
                 for article_id in row_article_ids:
+                    batch_article_data.append({**row, 'id': article_id})
                     batch_article_fos_links.extend({'article_id': article_id, 'fos_id': id}
                                                    for id in field_of_study_ids)
-                    batch_article_data.append({**row, 'id': article_id})
 
                 missing_fos_ids = set(field_of_study_ids) - all_fos_ids
                 if missing_fos_ids:
@@ -172,13 +196,13 @@ class QueryMagTask(luigi.Task):
 
             # update a batch of articles in the db
             logging.info(f"Updating {len(batch_article_data)} articles")
-            logging.debug(batch_article_data)
+            logging.debug(pp.pprint(batch_article_data))
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Article, batch_article_data)
 
             # write a batch of article/fields of study to the link table
             logging.info(f"Inserting {len(batch_article_fos_links)} article-field of study links")
-            logging.debug(batch_article_fos_links)
+            logging.debug(pp.pprint(batch_article_fos_links))
             with db_session(self.engine) as session:
                 session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
 
