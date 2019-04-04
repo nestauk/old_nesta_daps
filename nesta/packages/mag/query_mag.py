@@ -23,9 +23,11 @@ def prepare_title(title):
     # Recursively remove spaces
     while "  " in result:
         result = result.replace("  ", " ")
-    # Remove trailing spaces
+    # Remove leading and trailing spaces
     if result[-1] == " ":
         result = result[0:-1]
+    if result[0] == " ":
+        result = result[1:]
     return result
 
 
@@ -209,7 +211,7 @@ if __name__ == "__main__":
     engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
 
     # *** query papers from arxiv titles
-    df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
+    # df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
 
     author_mapping = {'AuN': 'author_name',
                       'AuId': 'author_id',
@@ -225,37 +227,44 @@ if __name__ == "__main__":
     # query papers
     paper_fields = ["Id", "Ti", "F.FId", "CC", "AA.AuN", "AA.AuId",
                     "AA.AfN", "AA.AfId", "AA.S"]
-    for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti'):  # this .apply will take forever on the whole dataset. move to a generator
+    # for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti'):  # this .apply will take forever on the whole dataset. move to a generator
+    #     # print(expr)
+    #     data = query_mag_api(expr, paper_fields, subscription_key)
+    #     print(json.dumps(data['entities'][0], indent=4))
+    #     break
+
+    # for row in data['entities']:
+    #     # clean up authors
+    #     for author in row['AA']:
+    #         for code, description in author_mapping.items():
+    #             try:
+    #                 author[description] = author.pop(code)
+    #             except KeyError:
+    #                 pass
+
+    #     # convert fields of study to a list
+    #     # row['F'] = [f['FId'] for f in row['F']]
+
+    #     # rename fields
+    #     for code, description in field_mapping.items():
+    #         try:
+    #             row[description] = row.pop(code)
+    #         except KeyError:
+    #             pass
+
+
+    # dupe_title = ['convergence of the discrete dipole approximation i theoretical analysis']
+    dupe_title = ['convergence of the discrete dipole approximation ii an extrapolation technique to increase the accuracy']
+    for expr in build_expr(dupe_title, 'Ti'):
         # print(expr)
         data = query_mag_api(expr, paper_fields, subscription_key)
         print(json.dumps(data['entities'][0], indent=4))
+        from IPython import embed; embed()
+
         break
-
-    for row in data['entities']:
-        # clean up authors
-        for author in row['AA']:
-            for code, description in author_mapping.items():
-                try:
-                    author[description] = author.pop(code)
-                except KeyError:
-                    pass
-
-        # convert fields of study to a list
-        # row['F'] = [f['FId'] for f in row['F']]
-
-        # rename fields
-        for code, description in field_mapping.items():
-            try:
-                row[description] = row.pop(code)
-            except KeyError:
-                pass
-
-    from IPython import embed; embed()
-    pass
-
     # *** json to sql
     # write_fields_of_study_to_db('mag_fields_of_study.json', 'dev')
-    write_fields_of_study_to_db('mag_fields_of_study.json', 'production')
+    # write_fields_of_study_to_db('mag_fields_of_study.json', 'production')
 
 
     # *** extract field ids from papers
