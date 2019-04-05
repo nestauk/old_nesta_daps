@@ -13,8 +13,7 @@ from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
 
-
-# combine Microsoft Academic Graph Base to allow create all function to work
+# Merge with Microsoft Academic Graph declarative base to allow create_all function to work
 Base = merge_metadata(Base, MagBase)
 
 
