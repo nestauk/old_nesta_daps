@@ -30,9 +30,12 @@ class QueryMagTask(luigi.Task):
         _routine_id (str): String used to label the AWS task
         db_config_env (str): environmental variable pointing to the db config file
         db_config_path (str): The output database configuration
+        mag_config_path (str): Microsoft Academic Graph Api key configuration path
         insert_batch_size (int): number of records to insert into the database at once
+                                 (not used in this task but passed down to others)
         articles_from_date (str): new and updated articles from this date will be
                                   retrieved. Must be in YYYY-MM-DD format
+                                  (not used in this task but passed down to others)
     """
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
