@@ -31,10 +31,12 @@ def prepare_title(title):
     return result
 
 
-def build_expr(query_items, entity_name, max_length=1000):
+def build_expr(query_items, entity_name, max_length=16000):
     """Builds and yields OR expressions for MAG from a list of items. Strings and
     integer items are formatted quoted and unquoted respectively, as per the MAG query
     specification.
+
+    The maximum accepted query length for the api appears to be around 16,000 characters.
 
     Args:
         query_items (list): all items to be queried
@@ -47,20 +49,21 @@ def build_expr(query_items, entity_name, max_length=1000):
     """
     expr = []
     length = 0
+    query_prefix_format = "expr=OR({})"
     for item in query_items:
-        length += len(str(item))
-        if length > max_length:
-            yield f"expr=OR({','.join(expr)})"
-            expr = []
-            length = len(str(item))
         if type(item) == str:
-            expr.append(f"{entity_name}='{item}'")
+            formatted_item = f"{entity_name}='{item}'"
         elif type(item) == int:
-            expr.append(f"{entity_name}={item}")
+            formatted_item = f"{entity_name}={item}"
+        length = sum(len(e) + 1 for e in expr) + len(formatted_item) + len(query_prefix_format)
+        if length >= max_length:
+            yield query_prefix_format.format(','.join(expr))
+            expr.clear()
+        expr.append(formatted_item)
 
     # pick up any remainder below max_length
     if len(expr) > 0:
-        yield f"expr=OR({','.join(expr)})"
+        yield query_prefix_format.format(','.join(expr))
 
 
 def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
@@ -175,7 +178,6 @@ def write_fields_of_study_to_db(data, engine, chunksize=10000):
     """
     logging.warning(f"Using {engine.url.database} database")
 
-    # convert to a dataframe
     df = pd.DataFrame(data)
 
     logging.info("Renaming columns and cleaning data")
@@ -188,7 +190,6 @@ def write_fields_of_study_to_db(data, engine, chunksize=10000):
     df.child_ids = df.child_ids.apply(concatenate_ids)
     df.parent_ids = df.parent_ids.apply(concatenate_ids)
 
-    # write to sql
     logging.info(f"Writing {len(df)} rows to database")
     df.to_sql('mag_fields_of_study', con=engine, index=False,
               if_exists='append', chunksize=chunksize)
@@ -211,7 +212,7 @@ if __name__ == "__main__":
     engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
 
     # *** query papers from arxiv titles
-    # df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
+    df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
 
     author_mapping = {'AuN': 'author_name',
                       'AuId': 'author_id',
@@ -227,11 +228,15 @@ if __name__ == "__main__":
     # query papers
     paper_fields = ["Id", "Ti", "F.FId", "CC", "AA.AuN", "AA.AuId",
                     "AA.AfN", "AA.AfId", "AA.S"]
-    # for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti'):  # this .apply will take forever on the whole dataset. move to a generator
-    #     # print(expr)
-    #     data = query_mag_api(expr, paper_fields, subscription_key)
-    #     print(json.dumps(data['entities'][0], indent=4))
-    #     break
+    for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti', max_length=16000):  # this .apply will take forever on the whole dataset. move to a generator
+        # print(expr)
+        data = query_mag_api(expr, paper_fields, subscription_key)
+        # print(json.dumps(data['entities'][0], indent=4))
+        print(f"query length: {len(expr)}")
+        print(f"titles in query: {len(expr.split(','))}")
+        print(f"entities returned from api: {len(data['entities'])}")
+
+        break
 
     # for row in data['entities']:
     #     # clean up authors
@@ -254,14 +259,13 @@ if __name__ == "__main__":
 
 
     # dupe_title = ['convergence of the discrete dipole approximation i theoretical analysis']
-    dupe_title = ['convergence of the discrete dipole approximation ii an extrapolation technique to increase the accuracy']
-    for expr in build_expr(dupe_title, 'Ti'):
-        # print(expr)
-        data = query_mag_api(expr, paper_fields, subscription_key)
-        print(json.dumps(data['entities'][0], indent=4))
-        from IPython import embed; embed()
+    # dupe_title = ['convergence of the discrete dipole approximation ii an extrapolation technique to increase the accuracy']
+    # for expr in build_expr(dupe_title, 'Ti'):
+    #     # print(expr)
+    #     data = query_mag_api(expr, paper_fields, subscription_key)
+    #     print(json.dumps(data['entities'][0], indent=4))
 
-        break
+    #     break
     # *** json to sql
     # write_fields_of_study_to_db('mag_fields_of_study.json', 'dev')
     # write_fields_of_study_to_db('mag_fields_of_study.json', 'production')
