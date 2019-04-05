@@ -5,14 +5,14 @@ arXiv data collection and processing
 Luigi routine to identify the date since the last iterative data collection
 '''
 
-import datetime
+from datetime import datetime, timedelta
 import logging
 import luigi
-from sqlalchemy.sql import text
+from sqlalchemy import func
 
 from arxiv_collect_iterative_task import CollectNewTask
-from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
-from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
+from nesta.production.orms.arxiv_orm import Article
+from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 
 
 UPDATE_PREFIX = 'ArxivIterativeCollect'
@@ -49,16 +49,12 @@ class DateTask(luigi.WrapperTask):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
         if self.articles_from_date is None:
-            query = text("SELECT update_id FROM luigi_table_updates "
-                         f"WHERE update_id LIKE '{UPDATE_PREFIX}%'")
             with db_session(self.engine) as session:
-                previous_updates = session.execute(query).fetchall()
-            previous_updates = [update_id for (update_id, ) in previous_updates]
-            try:
-                self.articles_from_date = extract_last_update_date(UPDATE_PREFIX,
-                                                                   previous_updates)
-            except ValueError:
+                latest_update = session.query(func.max(Article.updated)).scalar()
+            if latest_update is None:
                 raise ValueError("Date for iterative data collection could not be determined")
+            latest_update += timedelta(days=1)
+            self.articles_from_date = datetime.strftime(latest_update, '%Y-%m-%d')
 
         yield CollectNewTask(date=self.date,
                              _routine_id=self._routine_id,
