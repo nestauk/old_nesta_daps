@@ -289,17 +289,18 @@ def extract_last_update_date(prefix, updates):
 
 def batched_titles(ids, title_id_lookup, batch_size, engine):
     """Extracts batches of titles from the database and yields titles for lookup against
-    the MAG api. A lookup dict of titles to ids is also appended to (duplicate titles
-    exist in the arXiv dataset.)
+    the MAG api. A lookup dict of titles to ids is also appended to a supplied
+    defaultdict (duplicate titles exist in the arXiv dataset.)
 
     Args:
-        ids (set): all the article ids that need to be processed
-        title_id_lookup (:obj:`collections.defaultdict`): an empty defaultdict where generated {title:id} lookup will be stored
-        batch_size (int): number of ids to be queried at once in the database
-        engine (:obj:`sqlalchemy.engine.base.Engine`): connection to the database
+        ids (set): all article ids to be processed
+        title_id_lookup (:obj:`collections.defaultdict`): an empty defaultdict(list)
+            where generated {title:[id, ...]} lookup will be appended
+        batch_size (int): number of ids in each query to the database
+        engine (:obj:`sqlalchemy.engine.base.Engine`): database connection engine
 
     Returns:
-        (str): prepared title for lookup
+        (generator): yields single prepared titles
     """
     for batch_of_ids in split_batches(ids, batch_size):
         with db_session(engine) as session:
@@ -307,14 +308,13 @@ def batched_titles(ids, title_id_lookup, batch_size, engine):
                                  .query(Article.id, Article.title)
                                  .filter(Article.id.in_(batch_of_ids))
                                  .all())
-        batch_with_clean_titles = defaultdict(list)
+        clean_titles = set()
         for (id, title) in batch_with_titles:
-            batch_with_clean_titles[prepare_title(title)].append(id)
+            title = prepare_title(title)
+            clean_titles.add(title)
+            title_id_lookup[title].append(id)
 
-        # append to the lookup
-        title_id_lookup.update(batch_with_clean_titles)
-
-        for title in batch_with_clean_titles:
+        for title in clean_titles:
             yield title
 
 

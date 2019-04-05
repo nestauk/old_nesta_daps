@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pandas as pd
 import pytest
 from sqlalchemy.orm.exc import NoResultFound
@@ -15,6 +16,7 @@ from nesta.packages.arxiv.collect_arxiv import _category_exists
 from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
+from nesta.packages.arxiv.collect_arxiv import batched_titles
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -248,7 +250,7 @@ def test__category_exists_returns_correct_bool():
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv._add_category', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv._category_exists', autospec=True)
-@mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.get_mysql_engine')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.try_until_allowed', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.pd', autospec=True)
 def test_arxiv_categories_retrieves_and_appends_to_db(mocked_pandas, mocked_try,
@@ -380,3 +382,86 @@ def test_last_update_date_raises_valueerror_if_none_found():
 
     with pytest.raises(ValueError):
         extract_last_update_date('ArxivIterativeCollect', updates)
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
+def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
+                                                    mocked_split_batches,
+                                                    mocked_prepare_title):
+    title_id_lookup = defaultdict(list)
+    mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
+    mocked_session = mock.Mock()
+    mocked_session.query().filter().all.side_effect = ([(1, 'title A'),
+                                                        (2, 'title B'),
+                                                        (3, 'title C')],
+                                                       [(4, 'title D'),
+                                                        (5, 'title E'),
+                                                        (6, 'title F')])
+    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+    mocked_prepare_title.side_effect = ('prepared title A',
+                                        'prepared title B',
+                                        'prepared title C',
+                                        'prepared title D',
+                                        'prepared title E',
+                                        'prepared title F')
+
+    result = sorted(list(batched_titles(None, title_id_lookup, 3, None)))
+    assert result == ['prepared title A',
+                      'prepared title B',
+                      'prepared title C',
+                      'prepared title D',
+                      'prepared title E',
+                      'prepared title F']
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
+def test_batched_titles_generates_title_id_lookup(mocked_db_session,
+                                                  mocked_split_batches,
+                                                  mocked_prepare_title):
+    title_id_lookup = defaultdict(list)
+    mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])
+    mocked_session = mock.Mock()
+    mocked_session.query().filter().all.side_effect = ([(1, 'dummy title'),
+                                                        (2, 'dummy title'),
+                                                        (3, 'dummy title')],
+                                                       [(4, 'dummy title'),
+                                                        (5, 'dummy title'),
+                                                        (6, 'dummy title')])
+    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+    mocked_prepare_title.side_effect = ('clean title A',
+                                        'clean title B',
+                                        'clean title B',
+                                        'clean title C',
+                                        'clean title A',
+                                        'clean title B')
+
+    expected_result = defaultdict(list)
+    expected_result.update({'clean title A': [1, 5],
+                            'clean title B': [2, 3, 6],
+                            'clean title C': [4]})
+
+    list(batched_titles(None, title_id_lookup, 3, None))  # exhaust the generator
+    assert title_id_lookup == expected_result
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
+@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
+def test_batched_titles_calls_split_batches_correctly(mocked_db_session,
+                                                      mocked_split_batches,
+                                                      mocked_prepare_title):
+    title_id_lookup = defaultdict(list)
+    mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])
+    mocked_session = mock.Mock()
+    mocked_session.query().filter().all.return_value = [(1, 'dummy title')]
+    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+    mocked_prepare_title.return_value = 'clean title A'
+
+    ids = [1, 2, 3, 4]
+    batch_size = 2
+    list(batched_titles(ids, title_id_lookup, batch_size, None))  # exhaust the generator
+    assert mocked_split_batches.mock_calls == [mock.call([1, 2, 3, 4], 2)]
