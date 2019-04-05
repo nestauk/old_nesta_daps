@@ -23,11 +23,9 @@ def prepare_title(title):
     # Recursively remove spaces
     while "  " in result:
         result = result.replace("  ", " ")
-    # Remove leading and trailing spaces
+    # Remove trailing spaces
     if result[-1] == " ":
         result = result[0:-1]
-    if result[0] == " ":
-        result = result[1:]
     return result
 
 
