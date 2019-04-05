@@ -116,11 +116,11 @@ class QueryMagTask(luigi.Task):
                                                                title_id_lookup,
                                                                10000,
                                                                self.engine), 'Ti'), 1):
-            logging.debug(pp.pprint(expr))
+            logging.debug(pp.pformat(expr))
             expr_length = len(expr.split(','))
             logging.info(f"Querying MAG for {expr_length} titles")
             batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
-            logging.debug(pp.pprint(batch_data))
+            logging.debug(pp.pformat(batch_data))
 
             returned_entities = batch_data['entities']
 
@@ -199,13 +199,13 @@ class QueryMagTask(luigi.Task):
 
             # update a batch of articles in the db
             logging.info(f"Updating {len(batch_article_data)} articles")
-            logging.debug(pp.pprint(batch_article_data))
+            logging.debug(pp.pformat(batch_article_data))
             with db_session(self.engine) as session:
                 session.bulk_update_mappings(Article, batch_article_data)
 
             # write a batch of article/fields of study to the link table
             logging.info(f"Inserting {len(batch_article_fos_links)} article-field of study links")
-            logging.debug(pp.pprint(batch_article_fos_links))
+            logging.debug(pp.pformat(batch_article_fos_links))
             with db_session(self.engine) as session:
                 session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
 
