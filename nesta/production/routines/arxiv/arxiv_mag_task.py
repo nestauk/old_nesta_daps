@@ -210,7 +210,7 @@ class QueryMagTask(luigi.Task):
                 session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
 
             logging.info(f"Batch {count} done")
-            if count == 2:
+            if self.test and count == 2:
                 logging.warning("Exiting after 2 batches in test mode")
                 break
 
