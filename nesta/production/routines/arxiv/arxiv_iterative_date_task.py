@@ -49,12 +49,14 @@ class DateTask(luigi.WrapperTask):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
         if self.articles_from_date is None:
+            logging.info("Extracting latest update date from database")
             with db_session(self.engine) as session:
                 latest_update = session.query(func.max(Article.updated)).scalar()
             if latest_update is None:
                 raise ValueError("Date for iterative data collection could not be determined")
             latest_update += timedelta(days=1)
             self.articles_from_date = datetime.strftime(latest_update, '%Y-%m-%d')
+        logging.info(f"Updating arxive data from date: {self.articles_from_date}")
 
         yield CollectNewTask(date=self.date,
                              _routine_id=self._routine_id,

@@ -36,7 +36,7 @@ class Article(Base):
     citation_count = Column(INTEGER)
     citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
-    categories = relationship('ArticleCategory',
+    categories = relationship('Category',
                               secondary='arxiv_article_categories')
     fields_of_study = relationship('FieldOfStudy',
                                    secondary='arxiv_article_fields_of_study')
