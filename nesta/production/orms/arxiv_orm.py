@@ -2,19 +2,42 @@
 Arxiv
 =====
 '''
-from sqlalchemy import Column, ForeignKey
+from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
 
+from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.mag_orm import Base as MagBase
 from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
+# Merge metadata with Microsoft Academic Graph declarative base
+merge_metadata(Base, MagBase)
 
-# Merge with Microsoft Academic Graph declarative base to allow create_all function to work
-Base = merge_metadata(Base, MagBase)
+
+"""Association table for Arxiv articles and their categories."""
+article_categories = Table('arxiv_article_categories', Base.metadata,
+                           Column('article_id',
+                                  VARCHAR(20),
+                                  ForeignKey('arxiv_articles.id'),
+                                  primary_key=True),
+                           Column('category_id',
+                                  VARCHAR(40),
+                                  ForeignKey('arxiv_categories.id'),
+                                  primary_key=True))
+
+"""Association table to Microsoft Academic Graph fields of study."""
+article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,
+                                Column('article_id',
+                                       VARCHAR(20),
+                                       ForeignKey('arxiv_articles.id'),
+                                       primary_key=True),
+                                Column('fos_id',
+                                       BIGINT,
+                                       ForeignKey(FieldOfStudy.id),
+                                       primary_key=True))
 
 
 class Article(Base):
@@ -37,17 +60,9 @@ class Article(Base):
     citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
     categories = relationship('Category',
-                              secondary='arxiv_article_categories')
-    fields_of_study = relationship('FieldOfStudy',
-                                   secondary='arxiv_article_fields_of_study')
-
-
-class ArticleCategory(Base):
-    """Association table for Arxiv articles and their categories."""
-    __tablename__ = 'arxiv_article_categories'
-
-    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
-    category_id = Column(VARCHAR(40), ForeignKey('arxiv_categories.id'), primary_key=True)
+                              secondary=article_categories)
+    fields_of_study = relationship(FieldOfStudy,
+                                   secondary=article_fields_of_study)
 
 
 class Category(Base):
@@ -56,14 +71,6 @@ class Category(Base):
 
     id = Column(VARCHAR(40), primary_key=True)
     description = Column(VARCHAR(100))
-
-
-class ArticleFieldsOfStudy(Base):
-    """Association table to Microsoft Academic Graph fields of study."""
-    __tablename__ = 'arxiv_article_fields_of_study'
-
-    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
-    fos_id = Column(BIGINT, ForeignKey('mag_fields_of_study.id'), primary_key=True)
 
 
 # to be added at a later date
