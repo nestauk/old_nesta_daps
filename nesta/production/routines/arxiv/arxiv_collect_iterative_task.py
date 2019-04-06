@@ -8,13 +8,13 @@ Luigi routine to collect new data from the arXiv api and load it to MySQL.
 from datetime import datetime
 import luigi
 import logging
+from sqlalchemy.orm import sessionmaker
 
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
-from nesta.production.orms.arxiv_orm import Base, Article, ArticleCategory, Category
-from nesta.production.orms.orm_utils import get_mysql_engine, insert_data, db_session
+from nesta.production.orms.arxiv_orm import Article, Category
+from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.packages.misc_utils.batches import split_batches
 
 
 class CollectNewTask(luigi.Task):
@@ -55,69 +55,67 @@ class CollectNewTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        Session = sessionmaker(self.engine)
+        session = Session()
 
-        # extract all existing categories
-        with db_session(self.engine) as session:
-            all_categories = session.query(Category.id).all()
-            all_categories = {cat_id for (cat_id, ) in all_categories}
+        # create lookup for categories (less than 200) and article ids
+        all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
+        logging.info(f"{len(all_categories_lookup)} existing categories")
+        all_article_ids = {article.id for article in session.query(Article.id).all()}
+        logging.info(f"{len(all_article_ids)} existing articles")
 
+        new_count = 0
+        existing_count = 0
+        new_articles_batch = []
         # retrieve and process, while inserting any missing categories
-        articles = []
-        article_cats = []
-        for count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
+        for row_count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
+            # swap category ids for Category objects
             categories = row.pop('categories', [])
-            articles.append(row)
+            row['categories'] = []
             for cat in categories:
-                if cat not in all_categories:
+                try:
+                    cat = all_categories_lookup[cat]
+                except KeyError:
                     logging.warning(f"Missing category: '{cat}' for article {row['id']}.  Adding to Category table")
-                    with db_session(self.engine) as session:
-                        session.add(Category(id=cat))
-                    all_categories.add(cat)
-                article_cats.append(dict(article_id=row['id'], category_id=cat))
-            if self.test and count == 1600:
+                    cat = Category(id=cat)
+                    session.add(cat)
+                    session.commit()
+                    all_categories_lookup[cat.id] = cat
+                row['categories'].append(cat)
+
+            if row['id'] not in all_article_ids:
+                # create new Article and append to batch
+                new_articles_batch.append(Article(**row))
+                new_count += 1
+                if len(new_articles_batch) == self.insert_batch_size:
+                    logging.debug("Inserting a batch of new Articles")
+                    session.add_all(new_articles_batch)
+                    session.commit()
+                    new_articles_batch.clear()
+            else:
+                # lookup and update existing article
+                logging.debug(f"Updating existing record: {row}")
+                categories = row.pop('categories')  # prevent hashing error using .update with a list
+                existing = session.query(Article).filter(Article.id == row.pop('id'))
+                existing.update(row)
+                existing.one().categories = categories
+                session.commit()
+                existing_count += 1
+
+            if not row_count % 1000:
+                logging.info(f"Processed {row_count} articles")
+            if self.test and row_count == 1600:
                 logging.warning("Limiting to 1600 rows while in test mode")
                 break
 
-        # insert new articles into database
-        logging.info(f"Total articles to insert: {len(articles)}")
-        inserted_articles, existing_articles, failed_articles = insert_data(
-                                                    self.db_config_env, "mysqldb", database,
-                                                    Base, Article, articles,
-                                                    return_non_inserted=True)
-        logging.info(f"Inserted {len(inserted_articles)} new articles")
-        logging.info(f"Identified {len(existing_articles)} existing articles to update")
-        if len(failed_articles) > 0:
-            raise ValueError(f"{len(failed_articles)} articles failed to be inserted: {failed_articles}")
+        # insert any remaining new articles
+        if len(new_articles_batch) > 0:
+            session.add_all(new_articles_batch)
+            session.commit()
 
-        # remove article category links from exisiting articles, in case they have changed
-        existing_article_cat_ids = {article['id'] for article in existing_articles}
-        with db_session(self.engine) as session:
-            article_cats_to_delete = (session.query(ArticleCategory)
-                                      .filter(ArticleCategory.article_id.in_(existing_article_cat_ids)))
-            logging.info(f"{article_cats_to_delete.count()} article categories to delete from existing articles")
-            article_cats_to_delete.delete(synchronize_session=False)
-        logging.info("Article categories deleted")
-
-        # update existing articles
-        logging.info(f"Updating {len(existing_articles)} existing articles")
-        count = 0
-        for batch in split_batches(existing_articles, self.insert_batch_size):
-            with db_session(self.engine) as session:
-                session.bulk_update_mappings(Article, existing_articles)
-            count += len(batch)
-            logging.info(f"{count} existing articles updated")
-
-        # insert links between articles and categories
-        logging.info(f"Total article categories to insert: {len(article_cats)}")
-        inserted_article_cats, existing_article_cats, failed_article_cats = insert_data(
-                                                    self.db_config_env, "mysqldb", database,
-                                                    Base, ArticleCategory, article_cats,
-                                                    return_non_inserted=True)
-        logging.info(f"Inserted {len(inserted_article_cats)} article categories")
-        if len(existing_article_cats) > 0:
-            raise ValueError(f"{len(existing_article_cats)} duplicate article categories: {existing_article_cats}")
-        if len(failed_article_cats) > 0:
-            raise ValueError(f"{len(failed_article_cats)} article categories failed to be inserted: {failed_article_cats}")
+        session.close()
+        logging.info(f"Total {new_count} new articles added")
+        logging.info(f"Total {existing_count} existing articles updated")
 
         # mark as done
         logging.warning("Task complete")
