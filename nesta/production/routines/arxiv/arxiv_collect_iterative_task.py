@@ -58,7 +58,7 @@ class CollectNewTask(luigi.Task):
         Session = sessionmaker(self.engine)
         session = Session()
 
-        # create lookup for categories (less than 200) and article ids
+        # create lookup for categories (less than 200) and set of article ids
         all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
         logging.info(f"{len(all_categories_lookup)} existing categories")
         all_article_ids = {article.id for article in session.query(Article.id).all()}
@@ -67,6 +67,7 @@ class CollectNewTask(luigi.Task):
         new_count = 0
         existing_count = 0
         new_articles_batch = []
+
         # retrieve and process, while inserting any missing categories
         for row_count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
             # swap category ids for Category objects
@@ -78,8 +79,6 @@ class CollectNewTask(luigi.Task):
                 except KeyError:
                     logging.warning(f"Missing category: '{cat}' for article {row['id']}.  Adding to Category table")
                     cat = Category(id=cat)
-                    session.add(cat)
-                    session.commit()
                     all_categories_lookup[cat.id] = cat
                 row['categories'].append(cat)
 
