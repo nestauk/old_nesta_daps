@@ -266,6 +266,32 @@ def retrieve_all_arxiv_rows(**kwargs):
             break
 
 
+def extract_last_update_date(prefix, updates):
+    """Determine the latest valid date from a list of update_ids.
+
+    Args:
+        prefix (str): valid prefix in the update id
+        updates (list of str): update ids extracted from the luigi_table_updates
+
+    Returns:
+        (str): latest valid date from the supplied list
+    """
+    date_pattern = r'(\d{4}-\d{2}-\d{2})'
+    pattern = re.compile(f'^{prefix}_{date_pattern}$')
+    matches = [re.search(pattern, update) for update in updates]
+    dates = []
+    for match in matches:
+        try:
+            datetime.datetime.strptime(match.group(1), '%Y-%m-%d')
+            dates.append(match.group(1))
+        except (AttributeError, ValueError):  # no matches or strptime conversion fail
+            pass
+    try:
+        return sorted(dates, reverse=True)[0]
+    except IndexError:
+        raise ValueError("Latest date could not be identified")
+
+
 def batched_titles(ids, title_id_lookup, batch_size, engine):
     """Extracts batches of titles from the database and yields titles for lookup against
     the MAG api. A lookup dict of titles to ids is also appended to a supplied
