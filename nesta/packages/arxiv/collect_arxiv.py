@@ -91,6 +91,7 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     """
     params = dict(verb='ListRecords', **kwargs)
     r = requests.get(url, params=params)
+    r.raise_for_status()
     time.sleep(delay)
     try:
         root = ET.fromstring(r.text)
@@ -211,15 +212,19 @@ def arxiv_batch(resumption_token=None, **kwargs):
         output.append(row)
 
     # extract cursor for next batch
-    token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
-    if resumption_token is None:  # first batch only
-        logging.info(f"Total records to retrieve: {token.attrib['completeListSize']}")
-    if token.text is not None:
-        logging.info(f"next resumptionCursor: {token.text.split('|')[1]}")
+    new_token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
+    if new_token is None or new_token.text is None:
+        resumption_token = None
+        logging.info(f"Hit end of arXiv data. {len(output)} records in this final batch.")
     else:
-        logging.info("End of data")
+        if resumption_token is None:  # first batch only
+            total_articles = new_token.attrib.get('completeListSize', 0)
+            logging.info(f"Total records to retrieve in batches: {total_articles}")
+        else:
+            resumption_token = new_token.text
+            logging.info(f"next resumptionCursor: {new_token.split('|')[1]}")
 
-    return output, token.text
+    return output, resumption_token
 
 
 def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
@@ -290,6 +295,20 @@ def batched_titles(ids, title_id_lookup, batch_size, engine):
 
         for title in clean_titles:
             yield title
+
+
+def update_existing_articles(session, article_batch):
+    # prevent hashing error using .update with a list
+    article_categories = {row['id']: row.pop('categories')
+                          for row in article_batch}
+    session.bulk_update_mappings(Article, article_batch)
+
+    # slowly update the categories using relationships
+    for (article_id, row) in (session
+                              .query(Article.id, Article)
+                              .filter(Article.id.in_(article_categories))
+                              .all()):
+        row.categories = article_categories[article_id]
 
 
 if __name__ == '__main__':
