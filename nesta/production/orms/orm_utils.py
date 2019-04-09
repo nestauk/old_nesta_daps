@@ -42,19 +42,19 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    
+
     # Add the data
     all_pks = set()
     objs = []
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    
+
     # Read all pks if in low_memory mode
     if low_memory:
         fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
-    
+
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
@@ -62,7 +62,7 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
                             "{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
-            
+
         # Generate the pkey for this row
         pk = tuple([row[pkey.name]                       # Cast to str if required, since
                     if pkey.type.python_type is not str  # pandas may have incorrectly guessed
