@@ -1,8 +1,11 @@
 '''
-Batch Example
-=============
+Collect WorldBank
+==================
 
-An example of building a pipeline with batched tasks.
+Collect WorldBank data for as many countries as possibles by
+automatically discovering data based on a given set of variable codes.
+For example, as given variable can appear in multiple datasets so any
+missing values can be partially recovered by considering all datasets.
 '''
 import luigi
 import datetime
