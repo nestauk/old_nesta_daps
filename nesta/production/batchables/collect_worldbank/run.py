@@ -1,9 +1,8 @@
 '''
-run.py (batch_example)
-======================
+run.py (collect_worldbank)
+==========================
 
-The batchable for the :code:`routines.examples.batch_example`,
-which simply increments a muppet's age by one unit.
+The batchable for the collecting worldbank data.
 '''
 
 import boto3
@@ -22,8 +21,7 @@ def parse_s3_path(path):
 
 
 def run():
-    '''Gets the name and age of the muppet, and increments the age.
-    The result is transferred to S3.'''
+    '''Make a single request for country's worldbank data'''
 
     # Remove the 2 default parameters for the batch job
     outpath = os.environ.pop("BATCHPAR_outinfo")
