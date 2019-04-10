@@ -1,0 +1,16 @@
+cluster.name: ec2-elastic-cluster
+
+network.host: 0.0.0.0
+network.publish_host: _ec2:privateIpv4_
+
+# Discovery
+discovery.zen.minimum_master_nodes: 2
+discovery.zen.hosts_provider: ec2
+# Use this AWS instance tag to discover potential server peers.
+# Create a tag with key=role and value=elastic-cluster-member
+discovery.ec2.tag.role: elastic-cluster-member
+discovery.ec2.endpoint: ec2.eu-west-2.amazonaws.com
+
+# CORS
+http.cors.enabled: true
+#http.cors.allow-methods: GET

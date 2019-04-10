@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pipreqs --force --ignore docs/ .
+pipreqs --ignore docs/ --print . | sort -f > requirements.txt

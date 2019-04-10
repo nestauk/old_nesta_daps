@@ -17,6 +17,8 @@ class TestGtr(unittest.TestCase):
         '''Drop the temporary table'''
         Base.metadata.drop_all(self.engine)
 
+    def test_build(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()

@@ -36,6 +36,7 @@ def crunchbase_tarfile():
 @mock.patch('nesta.packages.crunchbase.crunchbase_collect.requests.get')
 def test_crunchbase_tar(mocked_requests, mocked_temp_file, crunchbase_tarfile):
     mocked_temp_file().__enter__.return_value = crunchbase_tarfile
+    mocked_temp_file().__exit__.side_effect = lambda *args: crunchbase_tarfile.close()
     crunchbase_tarfile.write = lambda x: None  # patch write method to do nothing
 
     with crunchbase_tar() as test_tar:
