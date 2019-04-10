@@ -23,7 +23,6 @@ def split_batches(data, batch_size):
     if len(batch) > 0:
         yield batch
 
-
 def put_s3_batch(data, bucket, prefix):
         """Writes out a batch of data to s3 as json, so it can be picked up by the
         batchable task.

@@ -10,6 +10,7 @@ def generate_test_data():
     return _generate_test_data
 
 
+
 @pytest.fixture
 def generate_test_set_data():
     def _generate_test_set_data(n):
@@ -39,7 +40,6 @@ def test_split_batches_yields_multiple_batches_with_remainder(generate_test_data
         yielded_batches.append(batch)
 
     assert len(yielded_batches) == 3
-
 
 def test_split_batches_with_set(generate_test_set_data):
     yielded_batches = []

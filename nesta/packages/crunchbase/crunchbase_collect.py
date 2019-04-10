@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 from nesta.packages.crunchbase.utils import split_str  # required for unpickling of split_health_flag: vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks import misctools
 from nesta.production.orms.orm_utils import db_session, insert_data
 from nesta.production.orms.crunchbase_orm import Organization
@@ -145,26 +146,6 @@ def total_records(data_dict, append_to=None):
     totals['batch_total'] = total
 
     return totals
-
-
-def split_batches(data, batch_size):
-    """Breaks batches down into chunks consumable by the database.
-
-    Args:
-        data (:obj:`list` of :obj:`dict`): list of rows of data
-        batch_size (int): number of rows per batch
-
-    Returns:
-        (:obj:`list` of :obj:`dict`): yields a batch at a time
-    """
-    batch = []
-    for row in data:
-        batch.append(row)
-        if len(batch) == batch_size:
-            yield batch
-            batch.clear()
-    if len(batch) > 0:
-        yield batch
 
 
 def _insert_data(config, section, database, base, table, data, batch_size=500):

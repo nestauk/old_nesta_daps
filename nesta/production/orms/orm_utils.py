@@ -125,6 +125,14 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
 
 @contextmanager
 def db_session(engine):
+    """Creates and mangages an sqlalchemy session.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.base.Engine`): engine to use to access the database
+
+    Returns:
+        (:obj:`sqlalchemy.orm.session.Session`): generated session
+    """
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
     try:
