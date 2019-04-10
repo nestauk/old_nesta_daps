@@ -69,7 +69,7 @@ def data_from_response(response, data_key_path=None):
     """Split up the response from the worldbank API.
 
     Args:
-        suffix (str): Suffix to append to :obj:`WORLDBANK_ENDPOINT`.
+        response (tuple): Response from worldbank API, expected to be a tuple of two json items.
         data_key_path (list): List specifying json path to data object.
     Returns:
         metadata, data (dict, list): Metadata and data from API response.
