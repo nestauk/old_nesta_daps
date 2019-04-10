@@ -25,7 +25,7 @@ class Article(Base):
     abstract = Column(TEXT)
     authors = Column(JSON)
     msc_class = Column(VARCHAR(200))
-    categories = relationship('ArticleCategories')
+    categories = relationship('ArticleCategory')
 
 
 class ArticleCategory(Base):
