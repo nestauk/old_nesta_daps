@@ -89,37 +89,6 @@ def data_from_response(response, data_key_path=None):
     return metadata, datarows
 
 
-# def worldbank_data(suffix, data_key_path=None):
-#     """Yield a row of data from worldbank API.
-
-#     Args:
-#         suffix (str): Suffix to append to :obj:`WORLDBANK_ENDPOINT`.
-#         data_key_path (list): List specifying json path to data object.
-#     Yields:
-#         row (dict): A row of data from the worldbank API.
-#     """
-#     # Discover the shape of the data by inspecting the metadata with
-#     # a tiny request (1 result, 1 page)
-#     metadata, _ = worldbank_request(suffix=suffix, page=1, per_page=1,
-#                                     data_key_path=data_key_path)
-#     # If the request was invalid
-#     if metadata is None:
-#         return
-
-#     # Iterate through pages until done
-#     total = int(metadata["total"])
-#     print(suffix, total)
-#     n, page = 0, 1
-#     while n < total:
-#         # Get the data, and yield row by row
-#         _, datarows = worldbank_request(suffix=suffix, page=page,
-#                                         data_key_path=data_key_path)
-#         for row in datarows:
-#             yield row
-#         page += 1
-#         n += len(datarows)
-
-
 def calculate_number_of_api_pages(suffix, per_page=10000, data_key_path=None):
     """Calculate the number of API scrolls required to paginate through this
     request.
