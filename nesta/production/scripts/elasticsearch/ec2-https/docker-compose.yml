@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  elasticsearch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: elasticsearch-node
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - 9200:9200
+      - 9300:9300
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+          soft: 65536
+          hard: 65536
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+
+volumes:
+  esdata1:
+    driver: local

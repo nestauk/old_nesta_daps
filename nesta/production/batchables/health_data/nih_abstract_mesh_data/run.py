@@ -82,7 +82,7 @@ def run():
                               ignore=['doc_id'])
 
     # output to elasticsearch
-    es = Elasticsearch(es_config['internal_host'], port=es_config['port'], sniff_on_start=True)
+    es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
     logging.warning(f'writing {len(docs)} documents to elasticsearch')
     for doc in docs:
         uid = doc.pop("doc_id")
