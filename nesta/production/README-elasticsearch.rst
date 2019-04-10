@@ -40,8 +40,18 @@ python 3.6
 
 Docker
 ------
-- max file descriptors
-- docker-compose
+the :code:`docker-compose.yml` needs to include ulimits settings::
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+          soft: 65536
+          hard: 65536
+
+Recipes for http or https clusters can be found in: :code:`nesta/production/scripts/elasticsearch`
+
+There is also an EC2 AMI for a http node stored in the London region: :code:`elasticsearch node London vX`
 
 Reindexing data from a remote cluster
 -------------------------------------
