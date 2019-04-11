@@ -4,20 +4,17 @@ Gateway to research data collection
 
 Discover all GtR data via the API.
 '''
+import luigi
+import datetime
+import boto3
 
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
 from nesta.packages.gtr.get_gtr_data import TOP_URL
 from nesta.packages.gtr.get_gtr_data import TOTALPAGES_KEY
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import get_config
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks import s3
-import luigi
-import datetime
-import logging 
-import boto3
-import os
 
 
 # Define these globally since they are shared resources
@@ -31,7 +28,7 @@ class GtrTask(autobatch.AutoBatchTask):
     '''Get all GtR data'''
     date = luigi.DateParameter(default=datetime.date.today())
     page_size = luigi.IntParameter(default=10)
-    
+
     def output(self):
         '''Points to the input database target'''
         db_config = get_config("mysqldb.config", "mysqldb")
@@ -39,10 +36,9 @@ class GtrTask(autobatch.AutoBatchTask):
         db_config["table"] = "gtr_table"
         return MySqlTarget(update_id=self.job_name, **db_config)
 
-
     def prepare(self):
         '''Prepare the batch job parameters'''
-        # Assertain the total number of pages first             
+        # Assertain the total number of pages first
         projects = read_xml_from_url(TOP_URL, p=1, s=self.page_size)
         total_pages = int(projects.attrib[TOTALPAGES_KEY])
 
@@ -61,14 +57,11 @@ class GtrTask(autobatch.AutoBatchTask):
             job_params.append(params)
         return job_params
 
-
     def combine(self, job_params):
         '''Combine the outputs from the batch jobs'''
         self.output().touch()
 
-
-
-class RootTask(luigi.WrapperTask):
+class GtrOnlyRootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
     and executes the central task. 
 

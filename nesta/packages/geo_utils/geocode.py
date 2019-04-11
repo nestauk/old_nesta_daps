@@ -38,35 +38,51 @@ def geocode(**request_kwargs):
     return geo_data
 
 
-@retry(stop_max_attempt_number=10)
+def retry_if_not_value_error(exception):
+    """Forces retry to exit if a valueError is returned. Supplied to the
+    'retry_on_exception' argument in the retry decorator.
+
+    Args:
+        exception (Exception): the raised exception, to check
+
+    Returns:
+        (bool): False if a ValueError, else True
+    """
+    return not isinstance(exception, ValueError)
+
+
+@retry(stop_max_attempt_number=10, retry_on_exception=retry_if_not_value_error)
 @ratelimit(max_per_second=0.5)
-def _geocode(q=None, city=None, country=None):
-    '''Extension of geocode to handle errors and attempt with the query method on
+def _geocode(q=None, **kwargs):
+    '''Extension of geocode to catch invalid requests to the api and handle errors.
     failure.
 
     Args:
         q (str): query string, multiple words should be separated with +
-        city (str): name of the city.
-        country (str): name of the country.
+        kwargs (str): name and value of any other valid query parameters
+
     Returns:
-        dict of lat and lon.
+        dict: lat and lon
     '''
-    if city and country:
-        query_kwargs = {'country': country, 'city': city}
-    elif q and not (city or country):
-        query_kwargs = {'q': q}
-    else:
-        raise TypeError("Missing argument: q or city and country required")
+    valid_kwargs = ['street', 'city', 'county', 'state', 'country', 'postalcode']
+    if not all(kwarg in valid_kwargs for kwarg in kwargs):
+        raise ValueError(f"Invalid query parameter. Not in: {valid_kwargs}")
+    if q and kwargs:
+        raise ValueError("Supply either q OR other query parameters, they cannot be combined.")
+    if not q and not kwargs:
+        raise ValueError("No query parameters supplied")
+
+    query_kwargs = {'q': q} if q else kwargs
 
     try:
         geo_data = geocode(**query_kwargs)
     except ValueError:
-        logging.debug(f"Unable to geocode {q or (city, country)}")
-        return None  # converts to null and is accepted in elasticsearch
+        logging.debug(f"Unable to geocode {query_kwargs}")
+        return None  # converts to null which is accepted in elasticsearch
 
     lat = geo_data[0]['lat']
     lon = geo_data[0]['lon']
-    logging.debug(f"Successfully geocoded {q or (city, country)} to {lat, lon}")
+    logging.debug(f"Successfully geocoded {query_kwargs} to {lat, lon}")
 
     return {'lat': lat, 'lon': lon}
 
@@ -101,7 +117,8 @@ def geocode_dataframe(df):
 
 
 def geocode_batch_dataframe(df, city='city', country='country',
-                            latitude='latitude', longitude='longitude'):
+                            latitude='latitude', longitude='longitude',
+                            query_method='both'):
     """Geocodes a dataframe, first by supplying the city and country to the api, if this
     fails a second attempt is made supplying the combination using the q= method.
     The supplied dataframe df is returned with additional columns appended, containing
@@ -113,15 +130,25 @@ def geocode_batch_dataframe(df, city='city', country='country',
         country (str): name of the input column containing the country
         latitude (str): name of the output column containing the latitude
         longitude (str): name of the output column containing the longitude
+        query_method (int): query methods to attempt:
+                                    'city_country_only': city and country only
+                                    'query_only': q method only
+                                    'both': city, country with fallback to q method
 
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
     """
+
+    if query_method not in ['city_country_only', 'query_only', 'both']:
+        raise ValueError("Invalid query method, must be 'city_country_only', 'query_only' or 'both'")
+
     df[latitude], df[longitude] = None, None
 
     for idx, row in df.iterrows():
-        location = _geocode(city=row[city], country=row[country])
-        if location is None:
+        location = None
+        if query_method in ['city_country_only', 'both']:
+            location = _geocode(city=row[city], country=row[country])
+        if location is None and query_method in ['query_only', 'both']:
             query = f"{row[city]} {row[country]}"
             location = _geocode(q=query)
         if location is not None:
