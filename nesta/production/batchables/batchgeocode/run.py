@@ -27,7 +27,7 @@ def run():
     logging.info("Country ISO codes appended")
 
     # geocode, appending latitude and longitude columns, using the q= query method
-    df = geocode_batch_dataframe(df, query_method=1)
+    df = geocode_batch_dataframe(df, query_method='query_only')
     logging.info("Geocoding complete")
 
     # remove city and country columns and append done column

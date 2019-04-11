@@ -102,7 +102,7 @@ def geocode_dataframe(df):
 
 def geocode_batch_dataframe(df, city='city', country='country',
                             latitude='latitude', longitude='longitude',
-                            query_method=2):
+                            query_method='both'):
     """Geocodes a dataframe, first by supplying the city and country to the api, if this
     fails a second attempt is made supplying the combination using the q= method.
     The supplied dataframe df is returned with additional columns appended, containing
@@ -114,23 +114,25 @@ def geocode_batch_dataframe(df, city='city', country='country',
         country (str): name of the input column containing the country
         latitude (str): name of the output column containing the latitude
         longitude (str): name of the output column containing the longitude
-        query_method (int): query methods to attempt: 0: city, country only
-                                                1: q only
-                                                2: city, country with fallback to q method
+        query_method (int): query methods to attempt:
+                                    'city_country_only': city and country only
+                                    'query_only': q method only
+                                    'both': city, country with fallback to q method
 
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
     """
-    if query_method not in [0, 1, 2]:
-        raise ValueError("Invalid query method, must be 0, 1 or 2")
+
+    if query_method not in ['city_country_only', 'query_only', 'both']:
+        raise ValueError("Invalid query method, must be 'city_country_only', 'query_only' or 'both'")
 
     df[latitude], df[longitude] = None, None
 
     for idx, row in df.iterrows():
         location = None
-        if query_method in [0, 2]:
+        if query_method in ['city_country_only', 'both']:
             location = _geocode(city=row[city], country=row[country])
-        if location is None and query_method in [1, 2]:
+        if location is None and query_method in ['query_only', 'both']:
             query = f"{row[city]} {row[country]}"
             location = _geocode(q=query)
         if location is not None:

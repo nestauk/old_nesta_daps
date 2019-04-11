@@ -200,7 +200,7 @@ class TestGeocodeBatchDataframe():
                           mock.call(city='Brussels', country='Belgium'),
                           mock.call(q='Brussels Belgium')]
 
-        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method=2)
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method='both')
 
         # Check expected behaviours
         assert_frame_equal(geocoded_dataframe, expected_dataframe,
@@ -226,7 +226,7 @@ class TestGeocodeBatchDataframe():
                           mock.call(q='Sheffield United Kingdom'),
                           mock.call(q='Brussels Belgium')]
 
-        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method=1)
+        geocoded_dataframe = geocode_batch_dataframe(test_dataframe, query_method='query_only')
 
         # Check expected behaviours
         assert_frame_equal(geocoded_dataframe, expected_dataframe,
@@ -238,13 +238,13 @@ class TestGeocodeBatchDataframe():
                                                                 mocked_geocode,
                                                                 test_dataframe):
         with pytest.raises(ValueError):
-            geocode_batch_dataframe(test_dataframe, query_method=3)
+            geocode_batch_dataframe(test_dataframe, query_method='cats')
 
         with pytest.raises(ValueError):
             geocode_batch_dataframe(test_dataframe, query_method='test')
 
         with pytest.raises(ValueError):
-            geocode_batch_dataframe(test_dataframe, query_method=None)
+            geocode_batch_dataframe(test_dataframe, query_method=1)
 
     @mock.patch(_GEOCODE)
     def test_output_column_names_are_applied(self, mocked_geocode, test_dataframe):
