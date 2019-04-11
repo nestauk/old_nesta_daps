@@ -3,6 +3,19 @@
         "index": {
             "number_of_shards": "5",
             "number_of_replicas": "1"
+        },
+        "analysis": {
+            "analyzer": {
+                "mesh_terms_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                    ]
+                }
+            }
         }
     },
     "mappings": {
@@ -67,21 +80,21 @@
                     "type": "integer"
                 },
                 "cost_of_funding": {
-                    "type": "integer"
+                    "type": "long"
                 },
                 "currency_of_funding": {
                     "type": "keyword"
                 },
                 "date_birth_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "date_last_funding": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "date_death_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd"
                 },
                 "count_employee_organisation": {
@@ -103,7 +116,7 @@
                     "type": "keyword"
                 },
                 "datetime_updated_organisation": {
-                    "type":   "date",
+                    "type": "date",
                     "format": "yyyy-MM-dd HH:mm:ss"
                 },
                 "type_of_organisation": {
@@ -114,6 +127,15 @@
                 },
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
+                },
+                "terms_mesh_description": {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
                 }
             }
         }

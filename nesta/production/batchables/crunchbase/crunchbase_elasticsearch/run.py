@@ -1,9 +1,10 @@
 from ast import literal_eval
 import boto3
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 import json
 import logging
 import os
+from requests_aws4auth import AWS4Auth
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
@@ -12,74 +13,99 @@ from nesta.production.orms.geographic_orm import Geographic
 
 
 def run():
-    test = literal_eval(os.environ["BATCHPAR_test"])
+    test = literal_eval(os.environ['BATCHPAR_test'])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
-
-    db_name = os.environ["BATCHPAR_db_name"]
-    es_host = os.environ['BATCHPAR_outinfo']
-    es_port = os.environ['BATCHPAR_out_port']
-    es_index = os.environ['BATCHPAR_out_index']
-    es_type = os.environ['BATCHPAR_out_type']
+    db_name = os.environ['BATCHPAR_db_name']
+    es_config = literal_eval(os.environ['BATCHPAR_outinfo'])
 
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
-    # s3 setup
-    es = Elasticsearch(es_host, port=es_port, use_ssl=True)
+    # elasticsearch setup
+    credentials = boto3.Session().get_credentials()
+    awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
+                       es_config['region'], 'es')
+    es = Elasticsearch(es_config['host'],
+                       port=int(es_config['port']),
+                       http_auth=awsauth,
+                       use_ssl=True,
+                       verify_certs=True,
+                       connection_class=RequestsHttpConnection)
 
-    # collect file
-    nrows = 1000 if test else None
-
+    # retrieve batch org_ids from s3
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     org_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(org_ids)} organisations retrieved from s3")
 
-    geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric', 'continent', 'latitude', 'longitude']
+    geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
+                  'continent', 'latitude', 'longitude']
+    nrows = 1000 if test else None
+
+    # collect orgs and geo data from database
     with db_session(engine) as session:
         rows = (session
                 .query(Organization, Geographic)
-                .join(Geographic, Organization.location_id==Geographic.id)
+                .outerjoin(Geographic, Organization.location_id == Geographic.id)
                 .filter(Organization.id.in_(org_ids))
                 .limit(nrows)
                 .all())
         for count, row in enumerate(rows, 1):
-            # convert sqlalchemy to dictionary
+            # convert sqlalchemy to dict
             row_combined = {k: v for k, v in row.Organization.__dict__.items()}
-            row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
+            try:
+                row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
+                                     if k in geo_fields})
+            except AttributeError:
+                # no geographic data
+                pass
 
-            row_combined.update({k: v for k, v in row.Geographic.__dict__.items() if k in geo_fields})
+            # reformatting
+            row_combined['currency_of_funding'] = 'USD'  # all from 'funding_total_usd'
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
 
-            # reformat coordinates
-            row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
-                                           'lon': row_combined.pop('longitude')}
+            lat = row_combined.pop('latitude', None)
+            lon = row_combined.pop('longitude', None)
+            if lat is not None and lon is not None:
+                row_combined['coordinates'] = {'lat': lat, 'lon': lon}
+            else:
+                row_combined['coordinates'] = None
 
-            # iterate through categories and groups
+            for date in ['founded_on', 'last_funding_on', 'closed_on']:
+                if row_combined[date] is not None:
+                    row_combined[date] = row_combined[date].strftime('%Y-%m-%d')
+            if row_combined['mesh_terms'] is not None:
+                row_combined['mesh_terms'] = row_combined['mesh_terms'].split('|')
+
+            # extract categories and category groups
             row_combined['category_list'] = []
             row_combined['category_group_list'] = []
-            for category in (session.query(CategoryGroup)
+            for category in (session
+                             .query(CategoryGroup)
                              .select_from(OrganizationCategory)
                              .join(CategoryGroup)
-                             .filter(OrganizationCategory.organization_id==row.Organization.id)
+                             .filter(OrganizationCategory.organization_id == row.Organization.id)
                              .all()):
                 row_combined['category_list'].append(category.category_name)
-                row_combined['category_group_list'] += [group for group
-                                                        in str(category.category_group_list).split('|')
-                                                        if group is not 'None']
+                if category.category_group_list is not None:
+                    row_combined['category_group_list'] += [group for group in
+                                                            category.category_group_list.split('|')
+                                                            if group not in
+                                                            row_combined['category_group_list']]
 
+            # schema transform and write to elasticsearch
+            uid = row_combined.pop('id')
             row_combined = schema_transformer(row_combined,
                                               filename='crunchbase_organisation_members.json',
                                               from_key='tier_0',
-                                              to_key='tier_1',
-                                              ignore=['id'])
-            uid = row_combined.pop('id')
-            es.index(es_index, doc_type=es_type, id=uid, body=row_combined)
-
+                                              to_key='tier_1')
+            es.index(es_config['index'], doc_type=es_config['type'],
+                     id=uid, body=row_combined)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
-    logging.warning("Batch job complete.")
+    logging.warning("Batch job complete")
 
 
 if __name__ == "__main__":
