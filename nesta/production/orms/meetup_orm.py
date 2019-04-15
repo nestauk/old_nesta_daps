@@ -27,7 +27,7 @@ class Group(Base):
     lat = Column(DECIMAL(6, 3))
     lon = Column(DECIMAL(6, 3))
     members = Column(INT)
-    name = Column(TEXT)
+    name = Column(TEXT(collation="utf8mb4_unicode_ci"))
     topics = Column(JSON)
     category_id = Column(INT)
     country_name = Column(VARCHAR(100))
