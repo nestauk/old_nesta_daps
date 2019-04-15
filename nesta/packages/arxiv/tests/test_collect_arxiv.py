@@ -1,4 +1,5 @@
 from collections import defaultdict
+import datetime
 import pandas as pd
 import pytest
 from sqlalchemy.orm.exc import NoResultFound
@@ -16,7 +17,8 @@ from nesta.packages.arxiv.collect_arxiv import _category_exists
 from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
-from nesta.packages.arxiv.collect_arxiv import batched_titles
+from nesta.packages.arxiv.collect_arxiv import BatchedTitles
+from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -336,19 +338,19 @@ def test_last_update_date_extracts_latest_date():
                'ArxivIterativeCollect_2019-03-13',
                'ArxivIterativeCollect_2001-01-01']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2019-03-14'
+    assert latest == datetime.datetime(2019, 3, 14)
 
     updates = ['ArxivIterativeCollect_2018-03-14',
                'ArxivIterativeCollect_2019-03-13',
                'ArxivIterativeCollect_2020-01-01']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2020-01-01'
+    assert latest == datetime.datetime(2020, 1, 1)
 
     updates = ['ArxivIterativeCollect_2001-01-14',
                'ArxivIterativeCollect_2001-02-03',
                'ArxivIterativeCollect_2001-02-03']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2001-02-03'
+    assert latest == datetime.datetime(2001, 2, 3)
 
 
 def test_last_update_date_ignores_invalid_updates():
@@ -356,25 +358,25 @@ def test_last_update_date_ignores_invalid_updates():
                'ArxivIterativeCollect_2019-03-13',
                'ArxivIterativeCollect_2019-04-99']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2019-03-14'
+    assert latest == datetime.datetime(2019, 3, 14)
 
     updates = ['ArxivIterativeCollect_2019.03.14',
                'ArxivIterativeCollect_2019-03-13',
                'ArxivIterativeCollect_2019']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2019-03-13'
+    assert latest == datetime.datetime(2019, 3, 13)
 
     updates = ['ArxivIterativeCollect_2019-03-14',
                'ArxivIterativeCollect_2019-03-13',
                'ArxivIterativeCollection_2019-04-09']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2019-03-14'
+    assert latest == datetime.datetime(2019, 3, 14)
 
     updates = ['ArxivIterativeCollect_2019-03-13',
                'badArxivIterativeCollect_2019-03-14',
                'ArxivIterativeCollect_2018-04-01']
     latest = extract_last_update_date('ArxivIterativeCollect', updates)
-    assert latest == '2019-03-13'
+    assert latest == datetime.datetime(2019, 3, 13)
 
 
 def test_last_update_date_raises_valueerror_if_none_found():
@@ -384,22 +386,30 @@ def test_last_update_date_raises_valueerror_if_none_found():
         extract_last_update_date('ArxivIterativeCollect', updates)
 
 
+@pytest.fixture
+def mocked_articles():
+    def _mocked_articles(articles):
+        """creates a list of Article instances from the supplied details"""
+        return [mock.Mock(spec=Article, **{'id': id, 'title': title})
+                for (id, title) in articles]
+    return _mocked_articles
+
+
 @mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
 def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
                                                     mocked_split_batches,
-                                                    mocked_prepare_title):
-    title_id_lookup = defaultdict(list)
+                                                    mocked_prepare_title,
+                                                    mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
+
+    mocked_articles = [mocked_articles([(1, 'title A'), (2, 'title B'), (3, 'title C')]),
+                       mocked_articles([(4, 'title D'), (5, 'title E'), (6, 'title F')])]
     mocked_session = mock.Mock()
-    mocked_session.query().filter().all.side_effect = ([(1, 'title A'),
-                                                        (2, 'title B'),
-                                                        (3, 'title C')],
-                                                       [(4, 'title D'),
-                                                        (5, 'title E'),
-                                                        (6, 'title F')])
+    mocked_session.query().filter().all.side_effect = mocked_articles
     mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+
     mocked_prepare_title.side_effect = ('prepared title A',
                                         'prepared title B',
                                         'prepared title C',
@@ -407,7 +417,8 @@ def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
                                         'prepared title E',
                                         'prepared title F')
 
-    result = sorted(list(batched_titles(None, title_id_lookup, 3, None)))
+    batcher = BatchedTitles([1, 2, 3, 4, 5, 6], batch_size=3, session=mocked_session)
+    result = sorted(list(batcher))
     assert result == ['prepared title A',
                       'prepared title B',
                       'prepared title C',
@@ -421,17 +432,15 @@ def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
 @mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
 def test_batched_titles_generates_title_id_lookup(mocked_db_session,
                                                   mocked_split_batches,
-                                                  mocked_prepare_title):
-    title_id_lookup = defaultdict(list)
-    mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])
+                                                  mocked_prepare_title,
+                                                  mocked_articles):
+    mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
+
+    mocked_articles = [mocked_articles([(x, 'dummy_title') for x in range(1, 7)])]
     mocked_session = mock.Mock()
-    mocked_session.query().filter().all.side_effect = ([(1, 'dummy title'),
-                                                        (2, 'dummy title'),
-                                                        (3, 'dummy title')],
-                                                       [(4, 'dummy title'),
-                                                        (5, 'dummy title'),
-                                                        (6, 'dummy title')])
+    mocked_session.query().filter().all.side_effect = mocked_articles
     mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+
     mocked_prepare_title.side_effect = ('clean title A',
                                         'clean title B',
                                         'clean title B',
@@ -444,8 +453,10 @@ def test_batched_titles_generates_title_id_lookup(mocked_db_session,
                             'clean title B': [2, 3, 6],
                             'clean title C': [4]})
 
-    list(batched_titles(None, title_id_lookup, 3, None))  # exhaust the generator
-    assert title_id_lookup == expected_result
+    batcher = BatchedTitles([1, 2, 3, 4, 5, 6], batch_size=3, session=mocked_session)
+    list(batcher)
+    for title, ids in expected_result.items():
+        assert ids == batcher[title]
 
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
@@ -453,15 +464,16 @@ def test_batched_titles_generates_title_id_lookup(mocked_db_session,
 @mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
 def test_batched_titles_calls_split_batches_correctly(mocked_db_session,
                                                       mocked_split_batches,
-                                                      mocked_prepare_title):
-    title_id_lookup = defaultdict(list)
-    mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])
+                                                      mocked_prepare_title,
+                                                      mocked_articles):
+    mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
+
     mocked_session = mock.Mock()
-    mocked_session.query().filter().all.return_value = [(1, 'dummy title')]
+    mocked_session.query().filter().all.return_value = mocked_articles([(1, 'dummy_title')])
     mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
+
     mocked_prepare_title.return_value = 'clean title A'
 
-    ids = [1, 2, 3, 4]
-    batch_size = 2
-    list(batched_titles(ids, title_id_lookup, batch_size, None))  # exhaust the generator
+    batcher = BatchedTitles([1, 2, 3, 4], batch_size=2, session=mocked_session)
+    list(batcher)
     assert mocked_split_batches.mock_calls == [mock.call([1, 2, 3, 4], 2)]
