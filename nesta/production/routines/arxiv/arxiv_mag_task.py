@@ -5,16 +5,15 @@ arXiv data collection and processing
 Luigi routine to query the Microsoft Academic Graph for additional data and append it to
 the exiting data in the database.
 """
-from collections import defaultdict
 from datetime import date
 import luigi
 import logging
 import pprint
 
 from arxiv_iterative_date_task import DateTask
-from nesta.packages.arxiv.collect_arxiv import batched_titles
-from nesta.packages.mag.query_mag import build_expr, query_mag_api, query_fields_of_study, write_fields_of_study_to_db
-from nesta.production.orms.arxiv_orm import Base, Article, ArticleFieldsOfStudy
+from nesta.packages.arxiv.collect_arxiv import BatchWriter, BatchedTitles, update_existing_articles
+from nesta.packages.mag.query_mag import build_expr, query_mag_api, query_fields_of_study, dedupe_entities, update_field_of_study_ids
+from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
@@ -60,7 +59,8 @@ class QueryMagTask(luigi.Task):
                        db_config_path=self.db_config_path,
                        db_config_env=self.db_config_env,
                        test=self.test,
-                       articles_from_date=self.articles_from_date)
+                       articles_from_date=self.articles_from_date,
+                       insert_batch_size=self.insert_batch_size)
 
     def run(self):
         pp = pprint.PrettyPrinter(indent=4, width=100)
@@ -71,148 +71,131 @@ class QueryMagTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         Base.metadata.create_all(self.engine)
 
-        mag_config = misctools.get_config(self.mag_config_path, 'mag')
-        mag_subscription_key = mag_config['subscription_key']
-
-        # extract article ids without fields of study and existing fields of study ids
         with db_session(self.engine) as session:
-            arxiv_ids_with_fos = (session
-                                  .query(ArticleFieldsOfStudy.article_id)
-                                  .all())
-            arxiv_ids_with_fos = {id for (id, ) in arxiv_ids_with_fos}
-            logging.info(f"{len(arxiv_ids_with_fos)} articles already processed")
+            mag_config = misctools.get_config(self.mag_config_path, 'mag')
+            mag_subscription_key = mag_config['subscription_key']
 
-            arxiv_ids_to_process = (session
-                                    .query(Article.id)
-                                    .filter(~Article.id.in_(arxiv_ids_with_fos))
-                                    .all())
+            paper_fields = ["Id", "Ti", "F.FId", "CC",
+                            "AA.AuN", "AA.AuId", "AA.AfN", "AA.AfId", "AA.S"]
 
-            all_fos_ids = session.query(FieldOfStudy.id).all()
+            author_mapping = {'AuN': 'author_name',
+                              'AuId': 'author_id',
+                              'AfN': 'author_affiliation',
+                              'AfId': 'author_affiliation_id',
+                              'S': 'author_order'}
 
-        arxiv_ids_to_process = {id for (id, ) in arxiv_ids_to_process}
-        logging.info(f"{len(arxiv_ids_to_process)} articles to process")
-        all_fos_ids = {id for (id, ) in all_fos_ids}
-        logging.info(f"{len(all_fos_ids)} fields of study in the database")
+            field_mapping = {'Id': 'mag_id',
+                             'Ti': 'title',
+                             'F': 'fields_of_study',
+                             'AA': 'mag_authors',
+                             'CC': 'citation_count',
+                             'logprob': 'mag_match_prob'}
 
-        paper_fields = ["Id", "Ti", "F.FId", "CC",
-                        "AA.AuN", "AA.AuId", "AA.AfN", "AA.AfId", "AA.S"]
+            logging.info("Querying database for articles without fields of study")
+            arxiv_ids_to_process = {a.id for a in (session.
+                                                   query(Article)
+                                                   .filter(~Article.fields_of_study.any())
+                                                   .all())}
+            total_arxiv_ids_to_process = len(arxiv_ids_to_process)
+            logging.info(f"{total_arxiv_ids_to_process} articles to process")
 
-        author_mapping = {'AuN': 'author_name',
-                          'AuId': 'author_id',
-                          'AfN': 'author_affiliation',
-                          'AfId': 'author_affiliation_id',
-                          'S': 'author_order'}
+            all_articles_to_update = BatchWriter(self.insert_batch_size,
+                                                 update_existing_articles,
+                                                 session)
 
-        field_mapping = {'Id': 'mag_id',
-                         'Ti': 'title',
-                         'F': 'field_of_study_ids',
-                         'AA': 'mag_authors',
-                         'CC': 'citation_count',
-                         'logprob': 'mag_match_prob'}
+            batched_titles = BatchedTitles(arxiv_ids_to_process, 10000, session)
+            batch_field_of_study_ids = set()
 
-        title_id_lookup = defaultdict(list)
+            for count, expr in enumerate(build_expr(batched_titles, 'Ti'), 1):
+                logging.debug(pp.pformat(expr))
+                expr_length = len(expr.split(','))
+                logging.info(f"Querying MAG for {expr_length} titles")
+                total_arxiv_ids_to_process -= expr_length
+                batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
+                logging.debug(pp.pformat(batch_data))
 
-        for count, expr in enumerate(build_expr(batched_titles(arxiv_ids_to_process,
-                                                               title_id_lookup,
-                                                               10000,
-                                                               self.engine), 'Ti'), 1):
-            logging.debug(pp.pformat(expr))
-            expr_length = len(expr.split(','))
-            logging.info(f"Querying MAG for {expr_length} titles")
-            batch_data = query_mag_api(expr, paper_fields, mag_subscription_key)
-            logging.debug(pp.pformat(batch_data))
+                returned_entities = batch_data['entities']
+                logging.info(f"{len(returned_entities)} entities returned from MAG (potentially including duplicates)")
 
-            returned_entities = batch_data['entities']
+                # dedupe response keeping the entity with the highest logprob
+                deduped_mag_ids = dedupe_entities(returned_entities)
+                logging.info(f"{len(deduped_mag_ids)} entities after deduplication")
 
-            logging.info(f"{len(returned_entities)} entities returned from MAG (potentially including duplicates)")
+                missing_articles = expr_length - len(deduped_mag_ids)
+                if missing_articles != 0:
+                    logging.info(f"{missing_articles} titles not found in MAG")
 
-            # dedupe response keeping the entity with the highest logprob
-            titles = defaultdict(dict)
-            for row in returned_entities:
-                titles[row['Ti']].update({row['Id']: row['logprob']})
+                batch_article_data = []
 
-            logging.info(f"{len(titles)} entities after deduplication")
-            deduped_ids = set()
-            for title in titles.values():
-                deduped_ids.add(sorted(title, key=title.get, reverse=True)[0])
+                for row in returned_entities:
+                    # exclude duplicate titles
+                    if row['Id'] not in deduped_mag_ids:
+                        continue
 
-            missing_articles = expr_length - len(titles)
-            if missing_articles != 0:
-                logging.info(f"{missing_articles} titles not found in MAG")
-
-            batch_missing_fos = set()
-            batch_article_fos_links = []
-            batch_article_data = []
-
-            for row in returned_entities:
-                # exclude duplicates
-                if row['Id'] not in deduped_ids:
-                    continue
-
-                # renaming and reformatting
-                for code, description in field_mapping.items():
-                    try:
-                        row[description] = row.pop(code)
-                    except KeyError:
-                        pass
-
-                for author in row['mag_authors']:
-                    for code, description in author_mapping.items():
+                    # renaming and reformatting
+                    for code, description in field_mapping.items():
                         try:
-                            author[description] = author.pop(code)
+                            row[description] = row.pop(code)
                         except KeyError:
                             pass
 
-                if row.get('citation_count', None) is not None:
-                    row['citation_count_updated'] = date.today()
+                    for author in row.get('mag_authors', []):
+                        for code, description in author_mapping.items():
+                            try:
+                                author[description] = author.pop(code)
+                            except KeyError:
+                                pass
 
-                # reformat fos_ids out of a list of dictionaries
-                field_of_study_ids = {f['FId'] for f in row.pop('field_of_study_ids')}
+                    if row.get('citation_count', None) is not None:
+                        row['citation_count_updated'] = date.today()
 
-                # lookup list of ids (there are duplicates by title in arxiv)
-                row_article_ids = title_id_lookup[row['title']]
+                    # reformat fos_ids out of dictionaries
+                    try:
+                        row['fields_of_study'] = {f['FId'] for f in row.pop('fields_of_study')}
+                    except KeyError:
+                        row['fields_of_study'] = []
+                    batch_field_of_study_ids.update(row['fields_of_study'])
 
-                # drop unnecessary fields
-                for f in ['prob', 'title']:
-                    del row[f]
+                    # get list of ids which share the same title
+                    try:
+                        matching_articles = batched_titles[row['title']]
+                    except KeyError:
+                        logging.warning(f"Returned title not found in original data: {row['title']}")
+                        continue
 
-                # build new article data, fos links and missing fields of study
-                # ready for load to db
-                for article_id in row_article_ids:
-                    batch_article_data.append({**row, 'id': article_id})
-                    batch_article_fos_links.extend({'article_id': article_id, 'fos_id': id}
-                                                   for id in field_of_study_ids)
+                    # drop unnecessary fields
+                    for f in ['prob', 'title']:
+                        del row[f]
 
-                missing_fos_ids = set(field_of_study_ids) - all_fos_ids
+                    # add each matching article for this title to the batch
+                    for article_id in matching_articles:
+                        batch_article_data.append({**row, 'id': article_id})
+
+                # check fields of study are in database 
+                batch_field_of_study_ids = {fos_id for article in batch_article_data
+                                            for fos_id in article['fields_of_study']}
+                logging.debug('Checking fields of study exist in db')
+                found_fos_ids = {fos.id for fos in (session
+                                                    .query(FieldOfStudy)
+                                                    .filter(FieldOfStudy.id.in_(batch_field_of_study_ids))
+                                                    .all())}
+
+                missing_fos_ids = batch_field_of_study_ids - found_fos_ids
                 if missing_fos_ids:
-                    logging.warning(f"Missing field of study ids {missing_fos_ids} for {row_article_ids}")
-                    batch_missing_fos.update(missing_fos_ids)
+                    #  query mag for details if not found
+                    update_field_of_study_ids(missing_fos_ids)
 
-            # write the batch to db, starting with any missing fields of study
-            if batch_missing_fos:
-                logging.info(f"Querying MAG for {len(batch_missing_fos)} missing fields of study")
-                batch_found_fos = query_fields_of_study(mag_subscription_key,
-                                                        ids=batch_missing_fos)
-                logging.info(f"Found {len(batch_found_fos)} new fields of study")
-                write_fields_of_study_to_db(batch_found_fos, self.engine)
-                all_fos_ids.update(fos['id'] for fos in batch_found_fos)
+                # add this batch to the queue
+                all_articles_to_update.extend(batch_article_data)
 
-            # update a batch of articles in the db
-            logging.info(f"Updating {len(batch_article_data)} articles")
-            logging.debug(pp.pformat(batch_article_data))
-            with db_session(self.engine) as session:
-                session.bulk_update_mappings(Article, batch_article_data)
+                logging.info(f"Batch {count} done. {total_arxiv_ids_to_process} articles left to process")
+                if self.test and count == 2:
+                    logging.warning("Exiting after 2 batches in test mode")
+                    break
 
-            # write a batch of article/fields of study to the link table
-            logging.info(f"Inserting {len(batch_article_fos_links)} article-field of study links")
-            logging.debug(pp.pformat(batch_article_fos_links))
-            with db_session(self.engine) as session:
-                session.bulk_insert_mappings(ArticleFieldsOfStudy, batch_article_fos_links)
-
-            logging.info(f"Batch {count} done")
-            if self.test and count == 2:
-                logging.warning("Exiting after 2 batches in test mode")
-                break
+            # pick up any left over in the batch
+            if all_articles_to_update:
+                all_articles_to_update.write()
 
         # mark as done
         logging.warning("Task complete")

@@ -8,9 +8,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
 
+from nesta.production.orms.orm_utils import merge_metadata
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.mag_orm import Base as MagBase
-from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
 # Merge metadata with Microsoft Academic Graph declarative base
@@ -27,6 +27,7 @@ article_categories = Table('arxiv_article_categories', Base.metadata,
                                   VARCHAR(40),
                                   ForeignKey('arxiv_categories.id'),
                                   primary_key=True))
+
 
 """Association table to Microsoft Academic Graph fields of study."""
 article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,

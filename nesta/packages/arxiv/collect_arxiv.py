@@ -21,6 +21,8 @@ OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
 DELAY = 10  # seconds between requests
 API_URL = 'http://export.arxiv.org/oai2'
+ARTICLE_CATS_TABLE = 'arxiv_article_categories'
+ARTICLE_FOS_TABLE = 'arxiv_article_fields_of_study'
 
 
 def _category_exists(session, cat_id):
@@ -220,9 +222,8 @@ def arxiv_batch(resumption_token=None, **kwargs):
         if resumption_token is None:  # first batch only
             total_articles = new_token.attrib.get('completeListSize', 0)
             logging.info(f"Total records to retrieve in batches: {total_articles}")
-        else:
-            resumption_token = new_token.text
-            logging.info(f"next resumptionCursor: {new_token.split('|')[1]}")
+        resumption_token = new_token.text
+        logging.info(f"next resumptionCursor: {resumption_token.split('|')[1]}")
 
     return output, resumption_token
 
@@ -282,59 +283,152 @@ def extract_last_update_date(prefix, updates):
     dates = []
     for match in matches:
         try:
-            datetime.datetime.strptime(match.group(1), '%Y-%m-%d')
-            dates.append(match.group(1))
+            dates.append(datetime.datetime.strptime(match.group(1), '%Y-%m-%d'))
         except (AttributeError, ValueError):  # no matches or strptime conversion fail
             pass
     try:
-        return sorted(dates, reverse=True)[0]
+        return sorted(dates)[-1]
     except IndexError:
         raise ValueError("Latest date could not be identified")
 
 
-def batched_titles(ids, title_id_lookup, batch_size, engine):
-    """Extracts batches of titles from the database and yields titles for lookup against
-    the MAG api. A lookup dict of titles to ids is also appended to a supplied
-    defaultdict (duplicate titles exist in the arXiv dataset.)
+class BatchedTitles():
+    def __init__(self, ids, batch_size, session):
+        """Extracts batches of titles from the database and yields titles for lookup
+        against the MAG api.
 
-    Args:
-        ids (set): all article ids to be processed
-        title_id_lookup (:obj:`collections.defaultdict`): an empty defaultdict(list)
-            where generated {title:[id, ...]} lookup will be appended
-        batch_size (int): number of ids in each query to the database
-        engine (:obj:`sqlalchemy.engine.base.Engine`): database connection engine
+        A lookup dict of {prepared title: [id, ...]} is generated for each batch:
+        self.title_id_lookup
 
-    Returns:
-        (generator): yields single prepared titles
+        Args:
+            ids (set): all article ids to be processed
+            batch_size (int): number of ids in each query to the database
+            engine (:obj:`sqlalchemy.engine.base.Engine`): database connection engine
+
+        Returns:
+            (generator): yields single prepared titles
+        """
+        self.ids = ids
+        self.batch_size = batch_size
+        self.session = session
+        self.title_articles_lookup = defaultdict(list)
+
+    def __getitem__(self, key):
+        """Get articles which match the provided title.
+        Args:
+            key (str): the title of the article
+
+        Returns
+            (:obj:`list` of `str`) article ids which matched the provided title before
+            the request to mag was made.
+        """
+        matching_articles = self.title_articles_lookup.get(key)
+        if matching_articles is None:
+            raise KeyError(f"Title not found in lookup {key}")
+        else:
+            return matching_articles
+
+    def __iter__(self):
+        for batch_of_ids in split_batches(self.ids, self.batch_size):
+            self.title_articles_lookup.clear()
+            for article in (self.session.query(Article)
+                                        .filter(Article.id.in_(batch_of_ids))
+                                        .all()):
+                self.title_articles_lookup[prepare_title(article.title)].append(article.id)
+
+            for title in self.title_articles_lookup:
+                yield title
+
+
+class BatchWriter(list):
+    """A list with functionality to monitor appends.
+    When a specified size is reached a function is called and the list cleared down.
     """
-    for batch_of_ids in split_batches(ids, batch_size):
-        with db_session(engine) as session:
-            batch_with_titles = (session
-                                 .query(Article.id, Article.title)
-                                 .filter(Article.id.in_(batch_of_ids))
-                                 .all())
-        clean_titles = set()
-        for (id, title) in batch_with_titles:
-            title = prepare_title(title)
-            clean_titles.add(title)
-            title_id_lookup[title].append(id)
+    def __init__(self, limit, function, *function_args, **function_kwargs):
+        """
+        Args:
+            limit (int): limit in length triggering a write
+            function (function): the function which will be called
+            args, kwargs: will be passed on to the function call
+        """
+        self.limit = limit
+        self.function = function
+        self.function_args = function_args
+        self.function_kwargs = function_kwargs
 
-        for title in clean_titles:
-            yield title
+    def append(self, item):
+        """Appends to the list and then checks current size against the set limit."""
+        super().append(item)
+        if len(self) >= self.limit:
+            self.write(self)
+            self.clear()
+
+    def extend(self, items):
+        """Adds multiple items to the list then writes until it is below limit."""
+        super().extend(items)
+        while len(self) >= self.limit:
+            self.write(self[0:self.limit])
+            del self[0:self.limit]
+
+    def write(self, items=None):
+        """Calls the specified function with args and kwargs"""
+        if items is None:
+            items = self
+        self.function(items, *self.function_args, **self.function_kwargs)
 
 
-def update_existing_articles(session, article_batch):
-    # prevent hashing error using .update with a list
-    article_categories = {row['id']: row.pop('categories')
-                          for row in article_batch}
+def add_new_articles(article_batch, session):
+    """Adds new articles to the session and commits them.
+    Args:
+        article_batch (:obj:`list` of `Article`): Articles to add to database
+        session (:obj:`sqlalchemy.orm.session`): active session to use
+    """
+    logging.info(f"Inserting a batch of {len(article_batch)} new Articles")
+    session.add_all(article_batch)
+    session.commit()
+
+
+def update_existing_articles(article_batch, session):
+    """Updates existing articles from a list of dictionaries. Bulk method is used for
+    non relationship fields, with the relationship fields updated row by row.
+    Args:
+        article_batch (:obj:`list` of `dict`): articles to add to database
+        session (:obj:`sqlalchemy.orm.session`): active session to use
+    """
+    logging.info(f"Updating a batch of {len(article_batch)} existing articles")
+
+    # convert lists of category ids into rows for association table
+    article_categories = [dict(article_id=article['id'], category_id=cat_id)
+                          for article in article_batch
+                          for cat_id in article.pop('categories', [])]
+
+    # convert lists of fos_ids into rows for association table
+    article_fields_of_study = [dict(article_id=article['id'], fos_id=fos_id)
+                               for article in article_batch
+                               for fos_id in article.pop('fields_of_study', [])]
+
+    # update unlinked article data in bulk
+    logging.debug("bulk update mapping on articles")
     session.bulk_update_mappings(Article, article_batch)
 
-    # slowly update the categories using relationships
-    for (article_id, row) in (session
-                              .query(Article.id, Article)
-                              .filter(Article.id.in_(article_categories))
-                              .all()):
-        row.categories = article_categories[article_id]
+    logging.debug("core orm delete and insert on categories")
+    if article_categories:
+        # remove and re-create links
+        article_cats_table = Base.metadata.tables[ARTICLE_CATS_TABLE]
+        all_article_ids = {a['id'] for a in article_batch}
+        logging.debug("core orm delete on categories")
+        session.execute(article_cats_table.delete()
+                        .where(article_cats_table.columns['article_id'].in_(all_article_ids)))
+        logging.debug("core orm insert on categories")
+        session.execute(article_cats_table.insert(),
+                        article_categories)
+
+    logging.debug("core orm insert on fields of study")
+    if article_fields_of_study:
+        session.execute(Base.metadata.tables[ARTICLE_FOS_TABLE].insert(),
+                        article_fields_of_study)
+
+    session.commit()
 
 
 if __name__ == '__main__':

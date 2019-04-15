@@ -1,10 +1,12 @@
 from alphabet_detector import AlphabetDetector
+from collections import defaultdict
 import logging
 import pandas as pd
 import requests
 
 from nesta.production.luigihacks import misctools
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.mag_orm import FieldOfStudy
 
 
 def prepare_title(title):
@@ -110,7 +112,7 @@ def query_fields_of_study(subscription_key,
                              offset and query_count allow (for testing)
 
     Returns:
-        (:obj:`list` of `dict`): results from the api query
+        (:obj:`list` of `dict`): processed results from the api query
     """
     if ids is not None and levels is None:
         expr_args = (ids, 'Id')
@@ -119,7 +121,15 @@ def query_fields_of_study(subscription_key,
     else:
         raise TypeError("Field of study ids OR levels should be supplied")
 
-    fields_of_study = []
+    field_mapping = {'Id': 'id',
+                     'DFN': 'name',
+                     'FL': 'level',
+                     'FP': 'parent_ids',
+                     'FC': 'child_ids'}
+    fields_to_drop = ['logprob', 'prob']
+    fields_to_compact = ['FC', 'FP']
+
+    # fields_of_study = []
     for expr in build_expr(*expr_args):
         logging.info(expr)
         count = 1000
@@ -132,26 +142,47 @@ def query_fields_of_study(subscription_key,
                 break
 
             # clean up and formatting
-            fields_to_drop = ['logprob', 'prob']
-            fields_to_compact = ['FC', 'FP']
             for row in fos_data['entities']:
-                # remove unnecessary fields
                 for f in fields_to_drop:
                     del row[f]
-                for c in fields_to_compact:
+
+                for code, description in field_mapping.items():
                     try:
-                        row[c] = [ids['FId'] for ids in row[c]]
+                        row[description] = row.pop(code)
+                    except KeyError:
+                        pass
+
+                for field in fields_to_compact:
+                    try:
+                        row[field] = ','.join(str(ids['FId']) for ids in row[field])
                     except KeyError:
                         # no parents and/or children
                         pass
-                fields_of_study.append(row)
+
+                # fields_of_study.append(row)
+                yield row
 
             offset += len(fos_data['entities'])
             logging.info(offset)
-            if results_limit is not None and offset >= results_limit:
-                return fields_of_study
 
-    return fields_of_study
+            if results_limit is not None and offset >= results_limit:
+                break
+                # return fields_of_study
+
+    # return fields_of_study
+
+
+def dedupe_entities(entities):
+    titles = defaultdict(dict)
+    for row in entities:
+        titles[row['Ti']].update({row['Id']: row['logprob']})
+
+    deduped_mag_ids = set()
+    for title in titles.values():
+        # find highest probability match for each title
+        deduped_mag_ids.add(sorted(title, key=title.get, reverse=True)[0])
+
+    return deduped_mag_ids
 
 
 def concatenate_ids(ids):
@@ -165,6 +196,20 @@ def concatenate_ids(ids):
     if ids is not pd.np.nan:
         return ','.join(str(i) for i in ids)
 
+
+def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
+    logging.info(f"Missing field of study ids: {fos_ids}")
+    logging.info(f"Querying MAG for {len(fos_ids)} missing fields of study")
+    new_fos_to_import = (FieldOfStudy(**fos) for fos
+                         in query_fields_of_study(mag_subscription_key,
+                                                  ids=fos_ids))
+    logging.info(f"Retrieved {len(new_fos_to_import)} new fields of study from MAG")
+    fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
+    if fos_not_found:
+        raise ValueError(f"Fields of study present in articles but could not be found in MAG Fields of Study database. New links cannot be created until this is resolved: {fos_not_found}")
+    session.add_all(new_fos_to_import)
+    session.commit()
+    logging.info("Added new fields of study to database")
 
 def write_fields_of_study_to_db(data, engine, chunksize=10000):
     """Writes fields of study to a database.

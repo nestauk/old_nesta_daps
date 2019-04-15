@@ -2,16 +2,16 @@
 arXiv data collection and processing
 ====================================
 
-Luigi routine to identify the date since the last iterative data collection
+Luigi wrapper to identify the date since the last iterative data collection
 '''
-
 from datetime import datetime, timedelta
+
 import logging
 import luigi
-from sqlalchemy import func
+from sqlalchemy.sql import text
 
 from arxiv_collect_iterative_task import CollectNewTask
-from nesta.production.orms.arxiv_orm import Article
+from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 
 
@@ -36,6 +36,7 @@ class DateTask(luigi.WrapperTask):
     test = luigi.BoolParameter(default=True)
     db_config_path = luigi.Parameter(default="mysqldb.config")
     db_config_env = luigi.Parameter()
+    insert_batch_size = luigi.IntParameter(default=500)
     articles_from_date = luigi.Parameter(default=None)
 
     def requires(self):
@@ -50,17 +51,24 @@ class DateTask(luigi.WrapperTask):
 
         if self.articles_from_date is None:
             logging.info("Extracting latest update date from database")
+            query = text("SELECT update_id FROM luigi_table_updates "
+                         f"WHERE update_id LIKE '{UPDATE_PREFIX}%'")
             with db_session(self.engine) as session:
-                latest_update = session.query(func.max(Article.updated)).scalar()
-            if latest_update is None:
+                previous_updates = session.execute(query).fetchall()
+            previous_updates = [update_id for (update_id, ) in previous_updates]
+            try:
+                latest_update = extract_last_update_date(UPDATE_PREFIX, previous_updates)
+            except ValueError:
                 raise ValueError("Date for iterative data collection could not be determined")
-            latest_update += timedelta(days=1)
+            # latest_update += timedelta(days=1)
             self.articles_from_date = datetime.strftime(latest_update, '%Y-%m-%d')
-        logging.info(f"Updating arxive data from date: {self.articles_from_date}")
+
+        logging.info(f"Updating arxiv data from date: {self.articles_from_date}")
 
         yield CollectNewTask(date=self.date,
                              _routine_id=self._routine_id,
                              db_config_path=self.db_config_path,
                              db_config_env=self.db_config_env,
                              test=self.test,
+                             insert_batch_size=self.insert_batch_size,
                              articles_from_date=self.articles_from_date)

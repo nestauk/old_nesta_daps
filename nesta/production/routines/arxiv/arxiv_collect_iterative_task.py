@@ -8,11 +8,11 @@ Luigi routine to collect new data from the arXiv api and load it to MySQL.
 from datetime import datetime
 import luigi
 import logging
-from sqlalchemy.orm import sessionmaker
 
-from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
+from nesta.packages.arxiv.collect_arxiv import BatchWriter, retrieve_all_arxiv_rows
+from nesta.packages.arxiv.collect_arxiv import add_new_articles, update_existing_articles
 from nesta.production.orms.arxiv_orm import Article, Category
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 
@@ -55,64 +55,72 @@ class CollectNewTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
-        Session = sessionmaker(self.engine)
-        session = Session()
+        with db_session(self.engine) as session:
+            # create lookup for categories (less than 200) and set of article ids
+            all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
+            logging.info(f"{len(all_categories_lookup)} existing categories")
+            all_article_ids = {article.id for article in session.query(Article.id).all()}
+            logging.info(f"{len(all_article_ids)} existing articles")
+            already_updated = {article.id: article.updated for article
+                               in (session.query(Article)
+                                   .filter(Article.updated >= self.articles_from_date)
+                                   .all())}
+            logging.info(f"{len(already_updated)} records exist in the database with a date on or after the update date.")
 
-        # create lookup for categories (less than 200) and set of article ids
-        all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
-        logging.info(f"{len(all_categories_lookup)} existing categories")
-        all_article_ids = {article.id for article in session.query(Article.id).all()}
-        logging.info(f"{len(all_article_ids)} existing articles")
+            new_count = 0
+            existing_count = 0
+            new_articles_batch = BatchWriter(self.insert_batch_size,
+                                             add_new_articles,
+                                             session)
+            existing_articles_batch = BatchWriter(self.insert_batch_size,
+                                                  update_existing_articles,
+                                                  session)
 
-        new_count = 0
-        existing_count = 0
-        new_articles_batch = []
-
-        # retrieve and process, while inserting any missing categories
-        for row_count, row in enumerate(retrieve_all_arxiv_rows(**{'from': self.articles_from_date}), 1):
-            # swap category ids for Category objects
-            categories = row.pop('categories', [])
-            row['categories'] = []
-            for cat in categories:
+            # retrieve and process, while inserting any missing categories
+            for row in retrieve_all_arxiv_rows(**{'from': self.articles_from_date}):
                 try:
-                    cat = all_categories_lookup[cat]
+                    # update only newer data
+                    if row['updated'] <= already_updated[row['id']]:
+                        continue
                 except KeyError:
-                    logging.warning(f"Missing category: '{cat}' for article {row['id']}.  Adding to Category table")
-                    cat = Category(id=cat)
-                    all_categories_lookup[cat.id] = cat
-                row['categories'].append(cat)
+                    pass
 
-            if row['id'] not in all_article_ids:
+                # check for missing categories
+                for cat in row.get('categories', []):
+                    try:
+                        cat = all_categories_lookup[cat]
+                    except KeyError:
+                        logging.warning(f"Missing category: '{cat}' for article {row['id']}.  Adding to Category table")
+                        new_cat = Category(id=cat)
+                        session.add(new_cat)
+                        session.commit()
+
                 # create new Article and append to batch
-                new_articles_batch.append(Article(**row))
-                new_count += 1
-                if len(new_articles_batch) == self.insert_batch_size:
-                    logging.debug("Inserting a batch of new Articles")
-                    session.add_all(new_articles_batch)
-                    session.commit()
-                    new_articles_batch.clear()
-            else:
-                # lookup and update existing article
-                logging.debug(f"Updating existing record: {row}")
-                categories = row.pop('categories')  # prevent hashing error using .update with a list
-                existing = session.query(Article).filter(Article.id == row.pop('id'))
-                existing.update(row)
-                existing.one().categories = categories
-                session.commit()
-                existing_count += 1
+                if row['id'] not in all_article_ids:
+                    # convert category ids to Category objects
+                    row['categories'] = [all_categories_lookup[cat]
+                                         for cat in row.get('categories', [])]
+                    new_articles_batch.append(Article(**row))
+                    new_count += 1
+                else:
+                    # append to existing articles batch
+                    existing_articles_batch.append(row)
+                    existing_count += 1
 
-            if not row_count % 1000:
-                logging.info(f"Processed {row_count} articles")
-            if self.test and row_count == 1600:
-                logging.warning("Limiting to 1600 rows while in test mode")
-                break
+                count = new_count + existing_count
+                if not count % 1000:
+                    logging.info(f"Processed {count} articles")
+                if self.test and count == 1600:
+                    logging.warning("Limiting to 1600 rows while in test mode")
+                    break
 
-        # insert any remaining new articles
-        if len(new_articles_batch) > 0:
-            session.add_all(new_articles_batch)
-            session.commit()
+            # insert any remaining new and existing articles
+            logging.info("Processing final batches")
+            if new_articles_batch:
+                new_articles_batch.write()
+            if existing_articles_batch:
+                existing_articles_batch.write()
 
-        session.close()
         logging.info(f"Total {new_count} new articles added")
         logging.info(f"Total {existing_count} existing articles updated")
 

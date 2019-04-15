@@ -25,6 +25,7 @@ class RootTask(luigi.WrapperTask):
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
     articles_from_date = luigi.Parameter(default=None)
+    insert_batch_size = luigi.IntParameter(default=500)
     debug = luigi.BoolParameter(default=False)
 
     def requires(self):
@@ -41,4 +42,5 @@ class RootTask(luigi.WrapperTask):
                            db_config_env='MYSQLDB',
                            mag_config_path='mag.config',
                            test=not self.production,
+                           insert_batch_size=self.insert_batch_size,
                            articles_from_date=self.articles_from_date)
