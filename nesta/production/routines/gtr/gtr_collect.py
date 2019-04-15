@@ -1,11 +1,8 @@
 '''
-Country :math:`\rightarrow` Extended groups
-===========================================
+Gateway to research data collection
+===================================
 
-Starting with a seed country (and Meetup category),
-extract all groups in that country and subsequently
-find all groups associated with all members of the
-original set of groups.
+Discover all GtR data via the API.
 '''
 import luigi
 import datetime
@@ -63,3 +60,33 @@ class GtrTask(autobatch.AutoBatchTask):
     def combine(self, job_params):
         '''Combine the outputs from the batch jobs'''
         self.output().touch()
+
+class GtrOnlyRootTask(luigi.WrapperTask):
+    '''A dummy root task, which collects the database configurations
+    and executes the central task. 
+
+    Args:
+        date (datetime): Date used to label the outputs
+    '''
+    date = luigi.DateParameter(default=datetime.date.today())
+    page_size = luigi.IntParameter(default=10)
+    production = luigi.BoolParameter(default=False)
+    
+    def requires(self):
+        '''Collects the database configurations and executes the central task.'''
+        logging.getLogger().setLevel(logging.INFO)        
+        yield GtrTask(date=self.date,
+                      page_size=self.page_size,
+                      batchable=find_filepath_from_pathstub("production/batchables/gtr/"),
+                      env_files=[find_filepath_from_pathstub("/nesta/nesta"),
+                                 find_filepath_from_pathstub("/config/mysqldb.config")],
+                      job_def="py36_amzn1_image",
+                      job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
+                      #job_queue="HighPriority",
+                      job_queue="MinimalCpus",
+                      region_name="eu-west-2",
+                      vcpus=2,
+                      poll_time=10,
+                      memory=2048,
+                      max_live_jobs=200,
+                      test=(not self.production))
