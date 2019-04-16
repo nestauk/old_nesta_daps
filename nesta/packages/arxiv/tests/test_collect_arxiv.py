@@ -398,9 +398,7 @@ def mocked_articles():
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
-@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
-def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
-                                                    mocked_split_batches,
+def test_batched_titles_returns_all_prepared_titles(mocked_split_batches,
                                                     mocked_prepare_title,
                                                     mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
@@ -409,7 +407,6 @@ def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
                        mocked_articles([(4, 'title D'), (5, 'title E'), (6, 'title F')])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
-    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
 
     mocked_prepare_title.side_effect = ('prepared title A',
                                         'prepared title B',
@@ -430,9 +427,7 @@ def test_batched_titles_returns_all_prepared_titles(mocked_db_session,
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
-@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
-def test_batched_titles_generates_title_id_lookup(mocked_db_session,
-                                                  mocked_split_batches,
+def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
                                                   mocked_prepare_title,
                                                   mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
@@ -440,7 +435,6 @@ def test_batched_titles_generates_title_id_lookup(mocked_db_session,
     mocked_articles = [mocked_articles([(x, 'dummy_title') for x in range(1, 7)])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
-    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
 
     mocked_prepare_title.side_effect = ('clean title A',
                                         'clean title B',
@@ -462,16 +456,13 @@ def test_batched_titles_generates_title_id_lookup(mocked_db_session,
 
 @mock.patch('nesta.packages.arxiv.collect_arxiv.prepare_title', autospec=True)
 @mock.patch('nesta.packages.arxiv.collect_arxiv.split_batches', autospec=True)
-@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session', autospec=True)
-def test_batched_titles_calls_split_batches_correctly(mocked_db_session,
-                                                      mocked_split_batches,
+def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
                                                       mocked_prepare_title,
                                                       mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.return_value = mocked_articles([(1, 'dummy_title')])
-    mocked_db_session('dummy_arg').__enter__.return_value = mocked_session
 
     mocked_prepare_title.return_value = 'clean title A'
 

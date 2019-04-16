@@ -301,7 +301,7 @@ class BatchedTitles():
         Args:
             ids (set): all article ids to be processed
             batch_size (int): number of ids in each query to the database
-            engine (:obj:`sqlalchemy.engine.base.Engine`): database connection engine
+            session (:obj:`sqlalchemy.orm.session`): current session
 
         Returns:
             (generator): yields single prepared titles
