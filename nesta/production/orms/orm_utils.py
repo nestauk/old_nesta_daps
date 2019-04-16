@@ -15,6 +15,72 @@ import json
 import logging
 import time
 
+def filter_out_duplicates(db_env, section, database, Base, _class, data, 
+                          low_memory=False):
+    """Produce a filtered list of data, exluding duplicates and entries that
+    already exist in the data.
+
+    Args:
+        db_env: See :obj:`get_mysql_engine`                                                 
+        section: See :obj:`get_mysql_engine`                                                
+        database: See :obj:`get_mysql_engine`                                               
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.                          
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.                             
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert                           
+        low_memory (bool): To speed things up significantly, you can read                   
+                           all pkeys into memory first, but this will blow                  
+                           up for heavy pkeys or large tables.                              
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
+                                    were in the supplied data but not imported (for checks)     
+                                                                                        
+    Returns:                                                                                
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.      
+    """
+    engine = get_mysql_engine(db_env, section, database)
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
+
+    # Add the data
+    all_pks = set()
+    objs = []
+    existing_objs = []
+    failed_objs = []
+    pkey_cols = _class.__table__.primary_key.columns
+
+    # Read all pks if in low_memory mode
+    if low_memory:
+        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+        all_pks = set(session.query(*fields).all())
+
+    for irow, row in enumerate(data):
+        # The data must contain all of the pkeys
+        if not all(pkey.name in row for pkey in pkey_cols):
+            logging.warning(f"{row} does not contain any of "
+                            "{[pkey.name in row for pkey in pkey_cols]}")
+            failed_objs.append(row)
+            continue
+
+        # Generate the pkey for this row
+        pk = tuple([row[pkey.name]                       # Cast to str if required, since
+                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
+                    else str(row[pkey.name])             # the type as int
+                    for pkey in pkey_cols])
+
+        # The row mustn't aleady exist in the input data
+        if pk in all_pks:
+            existing_objs.append(row)
+            continue
+        all_pks.add(pk)
+        # Nor should the row exist in the DB
+        if not low_memory and session.query(exists(_class, **row)).scalar():
+            existing_objs.append(row)
+            continue
+        objs.append(_class(**row))
+    session.close()
+    return objs, existing_objs, failed_objs
+
+
 def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
@@ -38,49 +104,17 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         :obj:`list` of :obj:`dict` data found already existing in the database (optional)
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
+
+    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section, 
+                                                             database=database, 
+                                                             Base=Base, _class=_class, data=data,
+                                                             low_memory=low_memory)
+
+    # save and commit
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    
-    # Add the data
-    all_pks = set()
-    objs = []
-    existing_objs = []
-    failed_objs = []
-    pkey_cols = _class.__table__.primary_key.columns
-    
-    # Read all pks if in low_memory mode
-    if low_memory:
-        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
-        all_pks = set(session.query(*fields).all())
-    
-    for irow, row in enumerate(data):
-        # The data must contain all of the pkeys
-        if not all(pkey.name in row for pkey in pkey_cols):
-            logging.warning(f"{row} does not contain any of "
-                            "{[pkey.name in row for pkey in pkey_cols]}")
-            failed_objs.append(row)
-            continue
-            
-        # Generate the pkey for this row
-        pk = tuple([row[pkey.name]                       # Cast to str if required, since
-                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
-                    else str(row[pkey.name])             # the type as int
-                    for pkey in pkey_cols])
-
-        # The row mustn't aleady exist in the input data
-        if pk in all_pks:
-            existing_objs.append(row)
-            continue
-        all_pks.add(pk)
-        # Nor should the row exist in the DB
-        if not low_memory and session.query(exists(_class, **row)).scalar():
-            existing_objs.append(row)
-            continue
-        objs.append(_class(**row))
-
-    # save and commit
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
@@ -91,6 +125,14 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
 
 @contextmanager
 def db_session(engine):
+    """Creates and mangages an sqlalchemy session.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.base.Engine`): engine to use to access the database
+
+    Returns:
+        (:obj:`sqlalchemy.orm.session.Session`): generated session
+    """
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
     try:

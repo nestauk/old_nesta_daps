@@ -66,6 +66,7 @@ class Article(Base):
                                    secondary=article_fields_of_study)
 
 
+
 class Category(Base):
     """Lookup table for Arxiv category descriptions."""
     __tablename__ = 'arxiv_categories'

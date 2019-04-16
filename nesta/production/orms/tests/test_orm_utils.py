@@ -40,8 +40,13 @@ class DummyFunctionWrapper:
 
 class TestOrmUtils(unittest.TestCase):
     ''''''
+    @classmethod    
+    def setUpClass(cls):
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        Base.metadata.drop_all(engine)
 
-    def tearDown(self):
+    @classmethod    
+    def tearDownClass(cls):
         engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
         Base.metadata.drop_all(engine)
 

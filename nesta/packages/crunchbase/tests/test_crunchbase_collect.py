@@ -99,30 +99,6 @@ def generate_test_data():
     return _generate_test_data
 
 
-def test_split_batches_when_data_is_smaller_than_batch_size(generate_test_data):
-    yielded_batches = []
-    for batch in split_batches(generate_test_data(200), batch_size=1000):
-        yielded_batches.append(batch)
-
-    assert len(yielded_batches) == 1
-
-
-def test_split_batches_yields_multiple_batches_with_exact_fit(generate_test_data):
-    yielded_batches = []
-    for batch in split_batches(generate_test_data(2000), batch_size=1000):
-        yielded_batches.append(batch)
-
-    assert len(yielded_batches) == 2
-
-
-def test_split_batches_yields_multiple_batches_with_remainder(generate_test_data):
-    yielded_batches = []
-    for batch in split_batches(generate_test_data(2400), batch_size=1000):
-        yielded_batches.append(batch)
-
-    assert len(yielded_batches) == 3
-
-
 def test_total_records_returns_correct_totals(generate_test_data):
     returned_data = {'inserted': generate_test_data(100),
                      'existing': generate_test_data(0),
