@@ -4,7 +4,7 @@ arXiv data collection and processing
 
 Luigi wrapper to identify the date since the last iterative data collection
 '''
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import logging
 import luigi
@@ -60,7 +60,6 @@ class DateTask(luigi.WrapperTask):
                 latest_update = extract_last_update_date(UPDATE_PREFIX, previous_updates)
             except ValueError:
                 raise ValueError("Date for iterative data collection could not be determined")
-            # latest_update += timedelta(days=1)
             self.articles_from_date = datetime.strftime(latest_update, '%Y-%m-%d')
 
         logging.info(f"Updating arxiv data from date: {self.articles_from_date}")

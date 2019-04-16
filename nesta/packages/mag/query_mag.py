@@ -129,7 +129,6 @@ def query_fields_of_study(subscription_key,
     fields_to_drop = ['logprob', 'prob']
     fields_to_compact = ['FC', 'FP']
 
-    # fields_of_study = []
     for expr in build_expr(*expr_args):
         logging.info(expr)
         count = 1000
@@ -159,7 +158,6 @@ def query_fields_of_study(subscription_key,
                         # no parents and/or children
                         pass
 
-                # fields_of_study.append(row)
                 yield row
 
             offset += len(fos_data['entities'])
@@ -167,12 +165,16 @@ def query_fields_of_study(subscription_key,
 
             if results_limit is not None and offset >= results_limit:
                 break
-                # return fields_of_study
-
-    # return fields_of_study
 
 
 def dedupe_entities(entities):
+    """Finds the highest probability match for each title in returned entities from MAG.
+    Args:
+        entities (:obj:`list` of `dict`): entities from the MAG api
+
+    Returns:
+        (set): ids of entities with the highest probability score, one for each title
+    """
     titles = defaultdict(dict)
     for row in entities:
         titles[row['Ti']].update({row['Id']: row['logprob']})
@@ -183,18 +185,6 @@ def dedupe_entities(entities):
         deduped_mag_ids.add(sorted(title, key=title.get, reverse=True)[0])
 
     return deduped_mag_ids
-
-
-def concatenate_ids(ids):
-    """Converts a list of ids into a comma separated string.
-    Args:
-        ids (list or other iterable)
-
-    Returns:
-        (str): comma seperated string
-    """
-    if ids is not pd.np.nan:
-        return ','.join(str(i) for i in ids)
 
 
 def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
@@ -210,33 +200,6 @@ def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
     session.add_all(new_fos_to_import)
     session.commit()
     logging.info("Added new fields of study to database")
-
-def write_fields_of_study_to_db(data, engine, chunksize=10000):
-    """Writes fields of study to a database.
-
-    Args:
-        data (:obj:`list` of `dict`): rows of fields of study data
-        engine (:obj:`sqlalchemy.engine.base.Engine`): connection to the database
-        chunksize (int): number of rows to write in each insert
-    """
-    logging.warning(f"Using {engine.url.database} database")
-
-    df = pd.DataFrame(data)
-
-    logging.info("Renaming columns and cleaning data")
-    column_remapping = {'Id': 'id',
-                        'DFN': 'name',
-                        'FL': 'level',
-                        'FP': 'parent_ids',
-                        'FC': 'child_ids'}
-    df = df.rename(columns=column_remapping)
-    df.child_ids = df.child_ids.apply(concatenate_ids)
-    df.parent_ids = df.parent_ids.apply(concatenate_ids)
-
-    logging.info(f"Writing {len(df)} rows to database")
-    df.to_sql('mag_fields_of_study', con=engine, index=False,
-              if_exists='append', chunksize=chunksize)
-    logging.info("Writing to database complete")
 
 
 if __name__ == "__main__":

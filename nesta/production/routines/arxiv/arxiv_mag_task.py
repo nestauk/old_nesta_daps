@@ -12,7 +12,7 @@ import pprint
 
 from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import BatchWriter, BatchedTitles, update_existing_articles
-from nesta.packages.mag.query_mag import build_expr, query_mag_api, query_fields_of_study, dedupe_entities, update_field_of_study_ids
+from nesta.packages.mag.query_mag import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
@@ -171,7 +171,7 @@ class QueryMagTask(luigi.Task):
                     for article_id in matching_articles:
                         batch_article_data.append({**row, 'id': article_id})
 
-                # check fields of study are in database 
+                # check fields of study are in database
                 batch_field_of_study_ids = {fos_id for article in batch_article_data
                                             for fos_id in article['fields_of_study']}
                 logging.debug('Checking fields of study exist in db')

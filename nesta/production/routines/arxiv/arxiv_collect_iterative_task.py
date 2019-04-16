@@ -4,13 +4,11 @@ arXiv data collection and processing
 
 Luigi routine to collect new data from the arXiv api and load it to MySQL.
 '''
-
 from datetime import datetime
 import luigi
 import logging
 
-from nesta.packages.arxiv.collect_arxiv import BatchWriter, retrieve_all_arxiv_rows
-from nesta.packages.arxiv.collect_arxiv import add_new_articles, update_existing_articles
+from nesta.packages.arxiv.collect_arxiv import add_new_articles, BatchWriter, retrieve_all_arxiv_rows, update_existing_articles
 from nesta.production.orms.arxiv_orm import Article, Category
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools

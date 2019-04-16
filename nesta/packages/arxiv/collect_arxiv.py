@@ -14,15 +14,13 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
 DELAY = 10  # seconds between requests
 API_URL = 'http://export.arxiv.org/oai2'
-ARTICLE_CATS_TABLE = 'arxiv_article_categories'
-ARTICLE_FOS_TABLE = 'arxiv_article_fields_of_study'
 
 
 def _category_exists(session, cat_id):
@@ -414,7 +412,7 @@ def update_existing_articles(article_batch, session):
     logging.debug("core orm delete and insert on categories")
     if article_categories:
         # remove and re-create links
-        article_cats_table = Base.metadata.tables[ARTICLE_CATS_TABLE]
+        article_cats_table = Base.metadata.tables['arxiv_article_categories']
         all_article_ids = {a['id'] for a in article_batch}
         logging.debug("core orm delete on categories")
         session.execute(article_cats_table.delete()
@@ -425,7 +423,7 @@ def update_existing_articles(article_batch, session):
 
     logging.debug("core orm insert on fields of study")
     if article_fields_of_study:
-        session.execute(Base.metadata.tables[ARTICLE_FOS_TABLE].insert(),
+        session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
 
     session.commit()

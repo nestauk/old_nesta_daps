@@ -1,11 +1,9 @@
 import mock
-import pandas as pd
 
 from nesta.packages.mag.query_mag import prepare_title
 from nesta.packages.mag.query_mag import build_expr
 from nesta.packages.mag.query_mag import query_mag_api
-from nesta.packages.mag.query_mag import concatenate_ids
-from nesta.packages.mag.query_mag import query_fields_of_study
+from nesta.packages.mag.query_mag import dedupe_entities
 
 
 def test_prepare_title_removes_extra_spaces():
@@ -45,13 +43,10 @@ def test_query_mag_api_sends_correct_request(mocked_requests):
     assert mocked_requests.call_args == expected_call_args
 
 
-def test_concatenate_ids_converts_to_a_string():
-    assert concatenate_ids([1, 2, 3]) == '1,2,3'
-    assert concatenate_ids(['cat', 'dog', 'frog']) == 'cat,dog,frog'
+def test_dedupe_entities_picks_highest_for_each_title():
+    entities = [{'Id': 1, 'Ti': 'test title', 'logprob': 44},
+                {'Id': 2, 'Ti': 'test title', 'logprob': 10},
+                {'Id': 3, 'Ti': 'another title', 'logprob': 5},
+                {'Id': 4, 'Ti': 'another title', 'logprob': 10}]
 
-
-def test_concatenate_ids_returns_none_when_ids_is_nan():
-    assert concatenate_ids(pd.np.nan) is None
-
-
-
+    assert dedupe_entities(entities) == {1, 4}
