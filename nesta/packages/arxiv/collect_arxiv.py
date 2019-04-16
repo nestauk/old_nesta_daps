@@ -360,7 +360,7 @@ class BatchWriter(list):
         """Appends to the list and then checks current size against the set limit."""
         super().append(item)
         if len(self) >= self.limit:
-            self.write(self)
+            self.write(self.copy())
             self.clear()
 
     def extend(self, items):
