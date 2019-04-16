@@ -6,10 +6,13 @@ import requests
 import tarfile
 from tempfile import NamedTemporaryFile
 
-from nesta.production.luigihacks import misctools
-from nesta.production.orms.orm_utils import insert_data
+from nesta.packages.crunchbase.utils import split_str  # required for unpickling of split_health_flag: vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
+from nesta.packages.misc_utils.batches import split_batches
+from nesta.production.luigihacks import misctools
+from nesta.production.orms.orm_utils import db_session, insert_data
+from nesta.production.orms.crunchbase_orm import Organization
 
 
 @contextmanager
@@ -143,26 +146,6 @@ def total_records(data_dict, append_to=None):
     totals['batch_total'] = total
 
     return totals
-
-
-def split_batches(data, batch_size):
-    """Breaks batches down into chunks consumable by the database.
-
-    Args:
-        data (:obj:`list` of :obj:`dict`): list of rows of data
-        batch_size (int): number of rows per batch
-
-    Returns:
-        (:obj:`list` of :obj:`dict`): yields a batch at a time
-    """
-    batch = []
-    for row in data:
-        batch.append(row)
-        if len(batch) == batch_size:
-            yield batch
-            batch.clear()
-    if len(batch) > 0:
-        yield batch
 
 
 def _insert_data(config, section, database, base, table, data, batch_size=500):
@@ -313,19 +296,50 @@ def process_non_orgs(df, existing, pks):
     return df
 
 
+def all_org_ids(engine, limit=None):
+    """Retrieve the id of every organization in the crunchbase data in MYSQL.
+
+    Args:
+        engine(:obj:`sqlalchemy.engine.Base.Engine`): engine to use with the session
+            when connecting to the database
+        limit(int): row limit to apply to query (for testing)
+
+    Returns:
+        (set): all organisation ids
+    """
+    with db_session(engine) as session:
+        orgs = session.query(Organization.id)
+        if limit is not None:
+            orgs = orgs.limit(limit)
+        return {org.id for org in orgs}
+
+
+def predict_health_flag(data, vectoriser, classifier):
+    """Predict health labels for crunchbase organisations using the list of categories.
+
+    Args:
+        data (:obj:`list` of :obj:`dict`): Crunchbase IDs and list of categories.
+        vectoriser: vectoriser model
+        classifier: classifier model
+
+    Return:
+        (:obj:`list` of :obj:`dict`): Crunchbase ids and bool health flag
+
+    """
+    # remove and store index (cannot be passed to predict)
+    ids = [row['id'] for row in data]
+    categories = [row['categories'] for row in data]
+
+    labels = classifier.predict(vectoriser.transform(categories))
+
+    # rejoin ids to the output labels
+    return [{'id': id_, 'is_health': bool(pred)}
+            for id_, pred in zip(ids, labels)]
+
+
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()
     log_file_handler = logging.FileHandler('logs.log')
     logging.basicConfig(handlers=(log_stream_handler, log_file_handler),
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # orgs = get_files_from_tar(['organizations'], test=True)
-    # with crunchbase_tar() as tar:
-    #     names = tar.getnames()
-    # print(names)
-    # assert 'category_groups.csv' in names
-
-    # with crunchbase_tar() as tar:
-    #     cg_df = pd.read_csv(tar.extractfile('category_groups.csv'))
-    # print(cg_df.columns)

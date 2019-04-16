@@ -39,4 +39,5 @@ def put_s3_batch(data, bucket, prefix):
         filename = f"{prefix}-{timestamp}.json"
         obj = s3.Object(bucket, filename)
         obj.put(Body=json.dumps(data))
+
         return filename
