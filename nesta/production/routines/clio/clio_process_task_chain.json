@@ -17,7 +17,7 @@
 	"memory": 16000,
 	"extra": {
 	    "lower_tfidf_percentile": 5,
-	    "upper_tfidf_percentile": 10
+	    "upper_tfidf_percentile": 90
 	}
     },
     {

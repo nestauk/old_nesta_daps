@@ -1,6 +1,14 @@
+"""
+tfidf batchable
+---------------
+
+Applies TFIDF cuts to a dataset via
+environmental variables lower_tfidf_percentile
+and upper_tfidf_percentile.
+"""
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from nesta.production.luigihacks.s3 import parse_s3_path
-
 import os
 import boto3
 import json
@@ -9,6 +17,14 @@ import json
 
 
 def chunker(_transformed, n_chunks):
+    """Yield chunks from a numpy array.
+    
+    Args:
+        _transformed (np.array): Array to split into chunks.
+        n_chunks (int): Number of chunks to split the array into.
+    Yields:
+        chunk (np.array)
+    """
     n_rows, _ = _transformed.shape
     chunk_size = round(n_rows / n_chunks)
     remaining = n_rows % chunk_size
@@ -97,6 +113,4 @@ if __name__ == "__main__":
         os.environ["BATCHPAR_last_index"] = '20000'
         os.environ["BATCHPAR_upper_tfidf_percentile"] = '90'
         os.environ["BATCHPAR_lower_tfidf_percentile"] = '5'
-        
-        
     run()
