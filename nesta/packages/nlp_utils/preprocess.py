@@ -90,6 +90,7 @@ def clean_and_tokenize(text, remove_stops):
 
 def filter_by_idf(documents, lower_idf_limit, upper_idf_limit):
     """Remove (from documents) terms which are in a range of IDF values.
+    
     Args:
         documents (list): Either a :obj:`list` of :obj:`str` or a
                           :obj:`list` of :obj:`list` of :obj:`str` to be
@@ -98,6 +99,7 @@ def filter_by_idf(documents, lower_idf_limit, upper_idf_limit):
                                  to exclude terms by their IDF.
         upper_idf_limit (float): Upper percentile (between 0 and 100) on which
                                  to exclude terms by their IDF.
+
     Returns:
         Filtered documents
     """

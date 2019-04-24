@@ -103,7 +103,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         # elasticsearch setup
         es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
         es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['external_host'], port=es_config['port'])
+        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
@@ -112,7 +112,7 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'end_index': end,
                       'config': "mysqldb.config",
                       'db': db,
-                      'outinfo': es_config['internal_host'],
+                      'outinfo': es_config['host'],
                       'out_port': es_config['port'],
                       'out_index': es_config['index'],
                       'out_type': es_config['type'],

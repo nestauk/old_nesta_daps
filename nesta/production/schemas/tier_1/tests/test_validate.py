@@ -21,6 +21,7 @@ class TestValidate():
             # Load the transformation
             if not filename.endswith(".json"):
                 continue
+            print(filename)
             filename = os.path.join(dirname, filename)
             with open(filename) as f:
                 data = json.load(f)
