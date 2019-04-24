@@ -1,3 +1,10 @@
+"""
+ngram_analyser batchable
+------------------------
+
+Currently a dummy task, to be replaced with an ngram analyser.
+"""
+
 from nesta.production.luigihacks.s3 import parse_s3_path
 
 import os

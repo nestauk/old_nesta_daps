@@ -1,5 +1,11 @@
-from nesta.production.luigihacks.s3 import parse_s3_path
+"""
+synonyms batchable
+------------------
 
+Dummy task to extract synonyms.
+"""
+
+from nesta.production.luigihacks.s3 import parse_s3_path
 import os
 import boto3
 import json
