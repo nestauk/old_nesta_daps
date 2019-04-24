@@ -67,9 +67,7 @@ def run():
                             ignore=['application_id'])
 
     # output to elasticsearch
-    es = Elasticsearch(es_host, port=es_port, sniff_on_start=True)
-    # TODO: implement https
-    # , scheme='https')
+    es = Elasticsearch(es_host, port=es_port, use_ssl=True)
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])

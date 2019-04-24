@@ -54,13 +54,13 @@ def run():
                                   'urlname'])
 
     objs = insert_data("BATCHPAR_config", "mysqldb", db,
-                       Base, Group, output)
+                       Base, Group, output[48:49])
 
     # Mark the task as done
     s3 = boto3.resource('s3')
     s3_obj = s3.Object(*parse_s3_path(s3_path))
     s3_obj.put(Body="")
-    
+
     return len(objs)
 
 
