@@ -19,8 +19,10 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
 from nesta.packages.arxiv.collect_arxiv import BatchWriter
-from nesta.production.orms.arxiv_orm import Article
+from nesta.packages.arxiv.collect_arxiv import query_dedupe_sparql
+from nesta.packages.arxiv.collect_arxiv import extract_entity_id
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.orms.arxiv_orm import Article
 
 
 @pytest.fixture(scope='session')
@@ -391,8 +393,7 @@ def test_last_update_date_raises_valueerror_if_none_found():
 def mocked_articles():
     def _mocked_articles(articles):
         """creates a list of Article instances from the supplied details"""
-        return [mock.Mock(spec=Article, **{'id': id, 'title': title})
-                for (id, title) in articles]
+        return [mock.Mock(spec=Article, **a) for a in articles]
     return _mocked_articles
 
 
@@ -403,8 +404,12 @@ def test_batched_titles_returns_all_prepared_titles(mocked_split_batches,
                                                     mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
 
-    mocked_articles = [mocked_articles([(1, 'title A'), (2, 'title B'), (3, 'title C')]),
-                       mocked_articles([(4, 'title D'), (5, 'title E'), (6, 'title F')])]
+    mocked_articles = [mocked_articles([{'id': 1, 'title': 'title A'},
+                                        {'id': 2, 'title': 'title B'},
+                                        {'id': 3, 'title': 'title C'}]),
+                       mocked_articles([{'id': 4, 'title': 'title D'},
+                                        {'id': 5, 'title': 'title E'},
+                                        {'id': 6, 'title': 'title F'}])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -432,7 +437,7 @@ def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
                                                   mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
-    mocked_articles = [mocked_articles([(x, 'dummy_title') for x in range(1, 7)])]
+    mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'} for x in range(1, 7)])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -462,7 +467,7 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
     mocked_session = mock.Mock()
-    mocked_session.query().filter().all.return_value = mocked_articles([(1, 'dummy_title')])
+    mocked_session.query().filter().all.return_value = mocked_articles([{'id': 1, 'title': 'dummy_title'}])
 
     mocked_prepare_title.return_value = 'clean title A'
 
@@ -506,3 +511,48 @@ def test_batch_writer_calls_function_with_args():
         batch_writer.append(b)
 
     mock_function_to_call.assert_called_once_with([1, 2], mock_arg, some_kwarg=mock_kwarg)
+
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.jellyfish.levenshtein_distance')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.sparql_query')
+def test_query_dedupe_sparql_returns_closest_match(mocked_sparql_query,
+                                                   mocked_lev_distance):
+    missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
+                        {'id': 2, 'doi': '2.2/4321', 'title': 'title_b'}]
+
+    mocked_sparql_query.side_effect = [[{'paperTitle': 'title_aaa'},
+                                        {'paperTitle': 'title_aa'}],
+                                       [{'paperTitle': 'title_b'},
+                                        {'paperTitle': 'title_c'}]]
+    mocked_lev_distance.side_effect = [2, 1, 0, 1]
+
+    result = list(query_dedupe_sparql(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1},
+                      {'paperTitle': 'title_b', 'score': 0, 'id': 2}]
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.jellyfish.levenshtein_distance')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.sparql_query')
+def test_query_dedupe_sparql_returns_nothing_when_doi_not_found(mocked_sparql_query,
+                                                                mocked_lev_distance):
+    missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
+                        {'id': 2, 'doi': 'bad_doi', 'title': 'title_b'}]
+
+    mocked_sparql_query.side_effect = [[{'paperTitle': 'title_aa'}],
+                                       list()]
+    mocked_lev_distance.return_value = 1
+
+    result = list(query_dedupe_sparql(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1}]
+
+
+def test_extract_entity_id_returns_id():
+    assert extract_entity_id('http://ma-graph.org/entity/109214941') == 109214941
+    assert extract_entity_id('http://ma-graph.org/entity/19694890') == 19694890
+    assert extract_entity_id('http://ma-graph.org/entity/13203339') == 13203339
+
+
+def test_extract_entity_id_raises_value_error_when_not_found():
+    with pytest.raises(ValueError):
+        extract_entity_id('bad_url')

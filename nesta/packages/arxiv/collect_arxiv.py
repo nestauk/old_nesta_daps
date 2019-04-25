@@ -1,5 +1,6 @@
 from collections import defaultdict
 import datetime
+import jellyfish
 import json
 import logging
 import pandas as pd
@@ -14,6 +15,7 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
+from nesta.packages.misc_utils.sparql_query import sparql_query
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Article, Category
 
@@ -427,6 +429,58 @@ def update_existing_articles(article_batch, session):
                         article_fields_of_study)
 
     session.commit()
+
+
+def query_dedupe_sparql(missing_articles):
+    """Queries Microsoft Academic Graph via the SPARQL endpoint, using doi.
+    Deduplication is applied by identifying the closest match on title.
+
+    Args:
+        missing_articles (:obj:`list` of :obj:`dict`): articles 
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): data returned from MAG
+    """
+    # duplicate dois in response, eg: doi': '10.1103/PhysRevD.76.052005'}
+    endpoint = 'http://ma-graph.org/sparql'
+    query = '''PREFIX dcterms: <http://purl.org/dc/terms/>
+            PREFIX datacite: <http://purl.org/spar/datacite/>
+            PREFIX fabio: <http://purl.org/spar/fabio/>
+            PREFIX magp: <http://ma-graph.org/property/>
+
+            SELECT ?paper ?paperTitle ?citationCount (group_concat(?fieldOfStudy;separator=",") as ?fieldsOfStudy)
+            WHERE {{
+            ?paper datacite:doi "{}"^^xsd:string .
+            ?paper dcterms:title ?paperTitle .
+            ?paper magp:citationCount ?citationCount .
+            ?paper fabio:hasDiscipline ?fieldOfStudy .
+            }}'''
+
+    for article in missing_articles:
+        response = sparql_query(endpoint, query.format(article['doi']))
+        for result in response:
+            result['score'] = jellyfish.levenshtein_distance(result['paperTitle'],
+                                                             article['title'])
+        if response:
+            best_match = sorted(response, key=lambda d: d['score'])[0]
+            best_match['id'] = article['id']
+            yield best_match
+
+
+def extract_entity_id(entity):
+    """Extracts the id from a string of a mag entity.
+
+    Args:
+        entity (str): the entity url from MAG
+
+    Returns:
+        (int): the id of the entity
+    """
+    rex = r'.+/(\d+)$'
+    match = re.match(rex, entity)
+    if match is None:
+        raise ValueError(f"Unable to extract id from {entity}")
+    return int(match.groups()[0])
 
 
 if __name__ == '__main__':
