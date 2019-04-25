@@ -4,6 +4,7 @@ from elasticsearch import Elasticsearch
 import json
 import logging
 import os
+import pandas as pd
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
@@ -24,6 +25,11 @@ def run():
 
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
+    static_engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "static_data")
+    states_lookup = {row['state_code']: row['state_name'] 
+                     for _, row in  pd.read_sql_table('us_states_lookup', 
+                                                      static_engine).iterrows()}
+    states_lookup[None] = None  # default lookup for non-US countries
 
     # s3 setup
     es = Elasticsearch(es_host, port=es_port, use_ssl=True)
@@ -67,6 +73,10 @@ def run():
                 row_combined['category_group_list'] += [group for group
                                                         in str(category.category_group_list).split('|')
                                                         if group is not 'None']
+
+            # Add a field for US state name
+            state_code = row_combined['id_state_organization']
+            row_combined['placeName_state_organization'] = states_lookup[state_code]
 
             row_combined = schema_transformer(row_combined,
                                               filename='crunchbase_organisation_members.json',
