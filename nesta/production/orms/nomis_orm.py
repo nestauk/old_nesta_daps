@@ -41,7 +41,7 @@ class NomisBusinessCount(Base):
     employment_sizeband_code = Column(INT, primary_key=True, index=True, autoincrement=False)
     geography_code = Column(VARCHAR(9), primary_key=True, index=True)
     industry_code = Column(VARCHAR(3), primary_key=True, index=True)
-    obs_value = Column(INT)
+    obs_value = Column(FLOAT)
 
 
 class NomisVariableLookup(Base):
@@ -56,7 +56,7 @@ class NomisEmployment(Base):
 
     date = Column(DATETIME, primary_key=True, index=True)
     geography_code = Column(VARCHAR(9), primary_key=True, index=True)
-    obs_value = Column(INT)
+    obs_value = Column(FLOAT)
     variable_code = Column(INT, primary_key=True, index=True, autoincrement=False)
 
 
@@ -89,6 +89,12 @@ class NomisAgeLookup(Base):
     code = Column(INT, primary_key=True, autoincrement=False)
     name = Column(TEXT)
 
+class NomisOtherAgeLookup(Base):
+    __tablename__ = 'nomis_age_lookup'
+
+    code = Column(INT, primary_key=True, autoincrement=False)
+    name = Column(TEXT)
+
 
 class NomisPopulationEstimate(Base):
     __tablename__ = 'nomis_population_estimate'
@@ -97,7 +103,7 @@ class NomisPopulationEstimate(Base):
     date = Column(DATETIME, primary_key=True, index=True)
     gender_code = Column(INT, primary_key=True, index=True, autoincrement=False)
     geography_code = Column(VARCHAR(9), primary_key=True, index=True)
-    obs_value = Column(INT)
+    obs_value = Column(FLOAT)
 
 
 class NomisWorkforceJobs(Base):
@@ -107,4 +113,28 @@ class NomisWorkforceJobs(Base):
     geography_code = Column(VARCHAR(9), primary_key=True, index=True)
     industry_code = Column(VARCHAR(3), primary_key=True, index=True)
     sex_code = Column(INT, primary_key=True, index=True, autoincrement=False)
-    obs_value = Column(INT)
+    obs_value = Column(FLOAT)
+
+class NomisClaimantCount(Base):
+    __tablename__ = "nomis_claimantcount"
+    
+    date = Column(DATETIME, primary_key=True, index=True)
+    geography_code = Column(VARCHAR(9), primary_key=True, index=True)
+    gender_code = Column(INT, primary_key=True, index=True, autoincrement=False)
+    age_code = Column(INT, primary_key=True, index=True, autoincrement=False)
+    obs_value = Column(FLOAT)
+
+class NomisMedianWages(Base):
+    __tablename__ = "nomis_median_wages"
+    
+    date = Column(DATETIME, primary_key=True, index=True)
+    geography_code = Column(VARCHAR(9), primary_key=True, index=True)
+    sex_code = Column(INT, primary_key=True, index=True, autoincrement=False)
+    pay_code = Column(INT, primary_key=True, index=True, autoincrement=False)
+    obs_value = Column(FLOAT)
+
+class NomisPayLookup(Base):
+    __tablename__ = "nomis_pay_lookup"
+    
+    code = Column(INT, primary_key=True, autoincrement=False)
+    name = Column(TEXT)

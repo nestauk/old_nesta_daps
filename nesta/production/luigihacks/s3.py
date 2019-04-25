@@ -16,6 +16,8 @@ from luigi import configuration
 from luigi.format import get_default_format
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemTarget, AtomicLocalFile
 
+"""Bytes in MiB"""
+BYTES_IN_MiB=1.049e+6
 
 S3_DIRECTORY_MARKER_SUFFIX = '/'
 
@@ -135,6 +137,10 @@ class S3FS(FileSystem):
         self.copy(path, dest)
         self.remove(path)
 
+    def du(self, path):
+        (s3_bucket, s3_key) = parse_s3_path(path)
+        response = self.s3_client.head_object(Bucket=s3_bucket, Key=s3_key)
+        return response['ContentLength']/BYTES_IN_MiB
 
 
 class S3Target(FileSystemTarget):

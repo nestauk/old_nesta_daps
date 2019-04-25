@@ -113,13 +113,18 @@ class AutoBatchTask(luigi.Task, ABC):
         if self.test:
             if len(job_params) > 2:
                 job_params = job_params[0:2]
+                logging.info(f"Test mode: running {len(job_params)} jobs")
 
         # Prepare the environment for batching
         env_files = " ".join(self.env_files)
         try:
+            if self.test:
+                logging.info(f"Test mode: Preparing batch")
             s3file_timestamp = command_line("nesta_prepare_batch "
                                             "{} {}".format(self.batchable,
                                                            env_files), self.test)
+            if self.test:
+                logging.info(f"Test mode: Prepared batch")
         except CalledProcessError:
             raise batchclient.BatchJobException("Invalid input "
                                                 "or environment files")
@@ -189,11 +194,16 @@ class AutoBatchTask(luigi.Task, ABC):
                           "value": s3file_timestamp}]
                          #{"name": "PYTHONIOENCODING", "value": "latin1"}]
 
+        if self.test:
+            logging.info(f"Test mode: Got env variables")
+
         # Set up batch client, and check that we haven't 
         # already hit the time limit
         batch_client = batchclient.BatchClient(poll_time=self.poll_time,
                                                region_name=self.region_name)
         self._assert_timeout(batch_client, job_ids=[])
+        if self.test:
+            logging.info(f"Test mode: Ready to batch")
         
         all_job_kwargs = []
         for i, params in enumerate(job_params):
