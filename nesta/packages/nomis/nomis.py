@@ -220,9 +220,9 @@ def find_geographies(geography_name, dataset_id = "NM_1_1"):
 
 
 if __name__ == "__main__":
-    configs = ["businesscount", "employment", #"population_census",
-               "population_estimate", "workforce_jobs"]
-
+    #configs = ["businesscount", "employment", #"population_census",
+    #           "population_estimate", "workforce_jobs"]
+    configs = ["median_wages", "claimantcount"]
 
     for config_name in configs:
         config, geogs_list, dataset_id, date_format = process_config(config_name, 
@@ -239,8 +239,7 @@ if __name__ == "__main__":
                 data = {config_name: df}
                 tables = reformat_nomis_columns(data)
                 for name, table in tables.items():
-                    print("\t\t", name, len(table))
-
+                    print("\t\t", name, len(table), table[0].keys())
 
     # nomis_data = {}
     # for table_name in configs:

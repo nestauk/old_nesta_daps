@@ -15,7 +15,7 @@ from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
-
+from nesta.production.orms.orm_utils import filter_out_duplicates
 
 class OrgCollectTask(luigi.Task):
     """Download tar file of Organization csvs and load them into the MySQL server.
@@ -49,7 +49,7 @@ class OrgCollectTask(luigi.Task):
         try_until_allowed(Base.metadata.create_all, self.engine)
 
         # collect files
-        nrows = 1000 if self.test else None
+        nrows = 200 if self.test else None
         cat_groups, orgs, org_descriptions = get_files_from_tar(['category_groups',
                                                                  'organizations',
                                                                  'organization_descriptions'
@@ -75,7 +75,13 @@ class OrgCollectTask(luigi.Task):
                      Base, Organization, processed_orgs, self.insert_batch_size)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
-        org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
+        org_cats, existing_org_cats, failed_org_cats = filter_out_duplicates(self.db_config_env, 
+                                                                             'mysqldb', database, Base, 
+                                                                             OrganizationCategory, 
+                                                                             org_cats)
+        logging.info(f"Inserting {len(org_cats)} org categories "
+                     f"({len(existing_org_cats)} already existed and {len(failed_org_cats)} failed)")
+        #org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
         with db_session(self.engine) as session:
             session.add_all(org_cats)
 
