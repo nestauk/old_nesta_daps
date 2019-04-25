@@ -10,7 +10,7 @@ import luigi
 import logging
 import pprint
 
-from arxiv_iterative_date_task import QueryMagTask
+from arxiv_mag_task import QueryMagTask
 from nesta.packages.arxiv.collect_arxiv import BatchWriter, BatchedTitles, update_existing_articles, query_dedupe_sparql, extract_entity_id
 from nesta.packages.mag.query_mag import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
 from nesta.production.orms.arxiv_orm import Base, Article
@@ -50,7 +50,7 @@ class MagSparqlTask(luigi.Task):
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "arXlive <dummy>"  # Note, not a real table
-        update_id = "ArxivQueryMag_{}".format(self.date)
+        update_id = "ArxivMagSparql_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
@@ -58,12 +58,14 @@ class MagSparqlTask(luigi.Task):
                            _routine_id=self._routine_id,
                            db_config_path=self.db_config_path,
                            db_config_env=self.db_config_env,
+                           mag_config_path=self.mag_config_path,
                            test=self.test,
                            articles_from_date=self.articles_from_date,
                            insert_batch_size=self.insert_batch_size)
 
     def run(self):
-        # pp = pprint.PrettyPrinter(indent=4, width=100)
+        mag_config = misctools.get_config(self.mag_config_path, 'mag')
+        mag_subscription_key = mag_config['subscription_key']
 
         # database setup
         database = 'dev' if self.test else 'production'
@@ -72,16 +74,12 @@ class MagSparqlTask(luigi.Task):
         Base.metadata.create_all(self.engine)
 
         with db_session(self.engine) as session:
-            # mag_config = misctools.get_config(self.mag_config_path, 'mag')
-            # mag_subscription_key = mag_config['subscription_key']
-
             field_mapping = {'paper': 'mag_id',
                              'paperTitle': 'title',
                              'fieldsOfStudy': 'fields_of_study',
                              'citationCount': 'citation_count'}
 
             logging.info("Querying database for articles without fields of study")
-
             articles_to_process = [dict(id=a.id, doi=a.doi, title=a.title) for a in
                                    (session
                                    .query(Article)
@@ -94,11 +92,8 @@ class MagSparqlTask(luigi.Task):
                                                  update_existing_articles,
                                                  session)
 
-            batch_field_of_study_ids = set()
-
             for count, row in enumerate(query_dedupe_sparql(articles_to_process),
                                         start=1):
-
                 # renaming and reformatting
                 for code, description in field_mapping.items():
                     try:
@@ -111,12 +106,10 @@ class MagSparqlTask(luigi.Task):
 
                 # reformat fos_ids out of entity urls
                 try:
-                    row['fields_of_study'] = {extract_entity_id(f) for f in row.pop('fields_of_study')}
                     fos = row.pop('fields_of_study')
                     row['fields_of_study'] = {extract_entity_id(f) for f in fos.split(',')}
                 except KeyError:
                     row['fields_of_study'] = []
-                batch_field_of_study_ids.update(row['fields_of_study'])
 
                 # reformat mag_id out of entity url
                 row['mag_id'] = extract_entity_id(row['mag_id'])
@@ -125,7 +118,7 @@ class MagSparqlTask(luigi.Task):
                 for f in ['score', 'title']:
                     del row[f]
 
-                # check fields of study are in database
+                # check fields of study exist in the database
                 logging.debug('Checking fields of study exist in db')
                 found_fos_ids = {fos.id for fos in (session
                                                     .query(FieldOfStudy)
@@ -134,15 +127,17 @@ class MagSparqlTask(luigi.Task):
 
                 missing_fos_ids = row['fields_of_study'] - found_fos_ids
                 if missing_fos_ids:
-                    #  query mag for details if not found
-                    update_field_of_study_ids(missing_fos_ids)
+                    #  query mag for missing fields of study and write to db if not found
+                    update_field_of_study_ids(mag_subscription_key, session, missing_fos_ids)
 
                 # add this row to the queue
-                all_articles_to_update.extend(row)
+                logging.debug(row)
+                all_articles_to_update.append(row)
 
-                logging.info(f"Batch {count} done. {total_arxiv_ids_to_process} articles left to process")
-                if self.test and count == 2:
-                    logging.warning("Exiting after 2 rows in test mode")
+                if not count % 1000:
+                    logging.info(f"{count} done. {total_arxiv_ids_to_process - count} articles left to process")
+                if self.test and count == 300:
+                    logging.warning("Exiting after 300 rows in test mode")
                     break
 
             # pick up any left over in the batch

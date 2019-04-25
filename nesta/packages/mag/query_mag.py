@@ -190,9 +190,8 @@ def dedupe_entities(entities):
 def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
     logging.info(f"Missing field of study ids: {fos_ids}")
     logging.info(f"Querying MAG for {len(fos_ids)} missing fields of study")
-    new_fos_to_import = (FieldOfStudy(**fos) for fos
-                         in query_fields_of_study(mag_subscription_key,
-                                                  ids=fos_ids))
+    new_fos_to_import = [FieldOfStudy(**fos) for fos
+                         in query_fields_of_study(mag_subscription_key, ids=fos_ids)]
     logging.info(f"Retrieved {len(new_fos_to_import)} new fields of study from MAG")
     fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
     if fos_not_found:

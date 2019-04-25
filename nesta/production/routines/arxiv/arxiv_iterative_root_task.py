@@ -8,7 +8,7 @@ import datetime
 import logging
 import luigi
 
-from arxiv_mag_task import MagSparqlTask
+from arxiv_mag_sparql_task import MagSparqlTask
 
 
 class RootTask(luigi.WrapperTask):
