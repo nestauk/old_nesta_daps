@@ -55,7 +55,7 @@ def _country_detection(row, lookup):
             if country in v:
                 _row['terms_of_countryTags'] = lookup[country]
     return _row
-    
+
 
 def _guess_delimiter(item, threshold=0.1):
     scores = {}
@@ -69,7 +69,7 @@ def _guess_delimiter(item, threshold=0.1):
 
 
 def _listify_terms(row):
-    """Terms must be a list, so either split by most common delimeter 
+    """Terms must be a list, so either split by most common delimeter
     (“;” for RWJF, must have a frequency of n%) or convert to a list
     """
     _row = row.copy()
@@ -90,23 +90,35 @@ def _listify_terms(row):
         else:
             _row[k] = [v]
     return _row
-        
+
+def _null_mapping(row, field_null_mapping):
+    _row = row.copy()
+    for field_name, nullable_values in field_null_mapping.items():
+        if field_name not in _row:
+            continue
+        if _row[field_name] in nullable_values:
+            _row[field_name] = None
+    return _row
+
 
 class ElasticsearchPlus(Elasticsearch):
-    def __init__(self, 
+    def __init__(self,
                  schema_transformer_args=(),
                  schema_transformer_kwargs={},
+                 field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
                  country_detection=False,
                  listify_terms=True,
-                 *args, **kwargs):        
+                 *args, **kwargs):
         # Apply the schema mapping
-        self.functions = [lambda row: schema_transformer(row, *schema_transformer_args, 
+        self.functions = [lambda row: schema_transformer(row, *schema_transformer_args,
                                                          **schema_transformer_kwargs)]
         # Convert values to null as required
         if null_empty_str:
             self.functions.append(_null_empty_str)
+        if len(field_null_mapping) > 0:
+            self.functions.append(lambda row: _null_mapping(row, field_null_mapping))
         if coordinates_as_floats:
             self.functions.append(_coordinates_as_floats)
         # Detect countries in text fields
