@@ -1,27 +1,44 @@
 from collections import Counter
+from collections import defaultdict
 from elasticsearch import Elasticsearch
 from functools import reduce
 import numpy as np
 import pandas as pd
 import re
 import string
+from copy import deepcopy
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 
-COUNTRY_LOOKUP="https://s3.eu-west-2.amazonaws.com/nesta-open-data/country_lookup/Countries-List.csv"
-PUNCTUATION = re.compile('[a-zA-Z\d\s:]').sub('', string.printable)
+COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
+                "/nesta-open-data/country_lookup/Countries-List.csv")
+COUNTRY_TAG="terms_of_countryTags"
+PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
 
 def _null_empty_str(row):
-    _row = row.copy()
+    """Nullify values if they are empty strings.
+    
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
     for k, v in row.items():
         if v == '':
             _row[k] = None
     return _row
 
-
 def _coordinates_as_floats(row):
-    _row = row.copy():
+    """Ensure coordinate data are always floats.
+    
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
     for k, v in row.items():
         if not k.startswith("coordinate_"):
             continue
@@ -31,33 +48,59 @@ def _coordinates_as_floats(row):
         _row[k]['longitude'] = float(v['longitude'])
     return _row
 
-
 def _country_lookup():
+    """Extract country/nationality --> iso2 code lookup
+    from a public json file.
+    
+    Returns:
+        lookup (dict): country/nationality --> iso2 code lookup.
+    """
     df = pd.read_csv(COUNTRY_LOOKUP, encoding='latin')
-    lookup = {}
+    lookup = defaultdict(list)
     for _, row in df.iterrows():
         iso2 = row.pop("ISO 3166 Code")
         for k, v in row.items():
             if pd.isnull(v):
                 continue
-            if v in lookup:
-                raise ValueError(f"Duplicate value: {v}")
-            lookup[v] = iso2
+            lookup[v].append(iso2)
     return lookup
 
-
 def _country_detection(row, lookup):
-    _row = row.copy()
+    """Append a list of countries detected from keywords
+    discovered in all text fields. The new field name
+    is titled according to the global variable COUNTRY_TAG.
+    
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """    
+    _row = deepcopy(row)
+    _row[COUNTRY_TAG] = []
     for k, v in row.items():
         if type(v) is not str:
             continue
         for country in lookup:
             if country in v:
-                _row['terms_of_countryTags'] = lookup[country]
+                _row[COUNTRY_TAG] += lookup[country]
+    tags = _row[COUNTRY_TAG]
+    _row[COUNTRY_TAG] = None if len(tags) == 0 else list(set(tags))
     return _row
 
 
-def _guess_delimiter(item, threshold=0.1):
+def _guess_delimiter(item, threshold=0.25):
+    """Guess the delimiter in a splittable string.
+    Note, the delimiter is assumed to be non-whitespace
+    non-alphanumeric.
+    
+    Args:
+        item (str): A string that we want to split up.
+        threshold (float): If the mean fractional size of the split items 
+                           are greater than this threshold, it is assumed
+                           that no delimiter exists.
+    Returns:
+        p (str): A delimiter character.
+    """
     scores = {}
     for p in PUNCTUATION:
         split = item.split(p)
@@ -69,16 +112,21 @@ def _guess_delimiter(item, threshold=0.1):
 
 
 def _listify_terms(row):
-    """Terms must be a list, so either split by most common delimeter
-    (“;” for RWJF, must have a frequency of n%) or convert to a list
+    """Split any 'terms' fields by a guessed delimiter if the
+    field is a string.
+    
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
     """
-    _row = row.copy()
+    _row = deepcopy(row)
     for k, v in row.items():
         if not k.startswith("terms_"):
             continue
         if v is None:
             continue
-        _type = type(k)
+        _type = type(v)
         if _type is list:
             continue
         elif _type is not str:
@@ -92,16 +140,58 @@ def _listify_terms(row):
     return _row
 
 def _null_mapping(row, field_null_mapping):
-    _row = row.copy()
+    """Convert any values to null if the type of
+    the value is listed in the field_null_mapping
+    for that field. For example a field_null_mapping of:
+
+    {
+        "field_1": ["", 123, "a"],
+        "field_2": [""]
+    }
+
+    would lead to the data:
+
+    [{"field_1": 123, "field_2": "a"},
+     {"field_1": "", "field_2": ""},
+     {"field_1": "b", "field_2": 123}]
+
+    being converted to:
+    
+    [{"field_1": None, "field_2": "a"},
+     {"field_1": None, "field_2": None},
+     {"field_1": "b", "field_2": 123}] 
+        
+    Args:
+        row (dict): Row of data to evaluate.
+        field_null_mapping (dict): Mapping of field names to values to be interpreted as null.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
     for field_name, nullable_values in field_null_mapping.items():
         if field_name not in _row:
             continue
-        if _row[field_name] in nullable_values:
+        value = _row[field_name]
+        # This could apply to coordinates
+        if type(value) is dict:
+            for k, v in value.items():
+                if {k: v} in nullable_values:
+                    _row[field_name] = None
+                    break
+        # For non-iterables
+        elif _row[field_name] in nullable_values:
             _row[field_name] = None
     return _row
 
 
 class ElasticsearchPlus(Elasticsearch):
+    """
+    
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
     def __init__(self,
                  schema_transformer_args=(),
                  schema_transformer_kwargs={},
@@ -131,9 +221,23 @@ class ElasticsearchPlus(Elasticsearch):
         super().__init__(*args, **kwargs)
 
     def chain_functions(self, row):
+        """
+        
+        Args:
+            row (dict): Row of data to evaluate.
+        Returns:
+            _row (dict): Modified row.
+        """
         return reduce(lambda _row, f: f(_row), self.functions, row)
 
     def index(self, **kwargs):
+        """
+        
+        Args:
+            row (dict): Row of data to evaluate.
+        Returns:
+            _row (dict): Modified row.
+        """
         try:
             _body = kwargs.pop("body")
         except KeyError:
