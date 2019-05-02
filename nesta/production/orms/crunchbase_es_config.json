@@ -21,7 +21,7 @@
                 "placeName_country_organisation": {
                     "type": "keyword"
                 },
-		"placeName_continent_organisation": {
+                "placeName_continent_organisation": {
                     "type": "keyword"
                 },
                 "placeName_state_organisation": {

@@ -19,7 +19,7 @@
         "nih": "cost_total_project",
         "crunchbase": "cost_of_funding"
     },
-    "countries_codes": {
+    "countries_ids": {
         "nih": "terms_of_countryTags",
         "crunchbase": "terms_of_countryTags"
     },
@@ -71,6 +71,9 @@
     "state": {
         "nih": "placeName_state_organisation",
         "crunchbase": "placeName_state_organisation"
+    },
+    "state_id": {
+        "crunchbase": "id_state_organisation"
     },
     "summary": {
         "nih": "textBody_abstract_project",
