@@ -10,11 +10,17 @@ from nesta.production.luigihacks.elasticsearch import _guess_delimiter
 from nesta.production.luigihacks.elasticsearch import _listify_terms
 from nesta.production.luigihacks.elasticsearch import _null_mapping
 
-GUESS_DELIMITER="nesta.production.luigihacks.elasticsearch._guess_delimiter"
+from nesta.production.luigihacks.elasticsearch import ElasticsearchPlus
+
+PATH="nesta.production.luigihacks.elasticsearch"
+GUESS_DELIMITER=f"{PATH}._guess_delimiter"
+SCHEMA_TRANS=f"{PATH}.schema_transformer"
+CHAIN_TRANS=f"{PATH}.ElasticsearchPlus.chain_transforms"
+SUPER_INDEX=f"{PATH}.Elasticsearch.index"
 
 @pytest.fixture
 def lookup():
-    return {"Chinese": ["CN"], 
+    return {"Chinese": ["CN"],
             "British": ["GB"],
             "Greece": ["GR"],
             "France": ["FR"],
@@ -30,7 +36,7 @@ def row():
     return {"empty str": "",
             "non-empty str": "blah",
             "coordinate_of_xyz": {"latitude": "123",
-                                  "longitude": "234"},            
+                                  "longitude": "234"},
             "coordinate_of_abc": {"latitude": 123,
                                   "longitude": 234},
             "coordinate_of_none": None,
@@ -97,7 +103,7 @@ def test_listify_splittable_terms(mocked_guess_delimiter, row):
 @mock.patch(GUESS_DELIMITER, return_value=None)  # << This is a secret bonus test, since the 'return_value' of None would cause '_listify_terms' to crash, but 'terms_of_xyz' = None should mean that the code never gets that far.
 def test_listify_none_terms(mocked_guess_delimiter, row):
     row["terms_of_xyz"] = None
-    _row = _listify_terms(row)    
+    _row = _listify_terms(row)
     assert len(_row) == len(row)
     assert _row == row
 
@@ -115,7 +121,24 @@ def test_listify_good_terms(mocked_guess_delimiter, row):
 def test_null_mapping(row, field_null_mapping):
     _row = _null_mapping(row, field_null_mapping)
     assert len(_row) == len(row)
-    assert _row != row    
+    assert _row != row
     for k, v in field_null_mapping.items():
         assert _row[k] is None
         assert row[k] is not None
+
+@mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
+def test_chain_transforms(mocked_schema_transformer, row,
+                          field_null_mapping):
+    es = ElasticsearchPlus(field_null_mapping=field_null_mapping)
+    _row = es.chain_transforms(row)
+    assert len(_row) == len(row) + 1
+    
+@mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
+@mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
+def test_index(mocked_chain_transform, mocked_super_index, row):
+    es = ElasticsearchPlus()
+    body = [row]*12
+    with pytest.raises(ValueError):
+        es.index()
+    es.index(body=body)
+

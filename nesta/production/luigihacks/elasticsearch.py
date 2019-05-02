@@ -185,62 +185,71 @@ def _null_mapping(row, field_null_mapping):
 
 
 class ElasticsearchPlus(Elasticsearch):
-    """
+    """Wrapper around the Elasticsearch API, which applies
+    transformations (including schema mapping) to input data
+    before indexing.
     
     Args:
-        row (dict): Row of data to evaluate.
-    Returns:
-        _row (dict): Modified row.
+        schema_transformer_kwargs (dict): Schema transformation keyword arguments.
+        field_null_mapping: A mapping of fields to values to be converted to None.
+        null_empty_str (bool): Convert empty strings to None?
+        coordinates_as_floats (bool): Convert all coordinate fields to floats?
+        country_detection (bool): Append new field listing country name mentions?
+        listify_terms (bool): Attempt to convert all 'terms' fields to lists?
+        {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self,
-                 schema_transformer_args=(),
-                 schema_transformer_kwargs={},
+                 strans_kwargs={},
                  field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
-                 country_detection=False,
+                 country_detection=True,
                  listify_terms=True,
                  *args, **kwargs):
         # Apply the schema mapping
-        self.functions = [lambda row: schema_transformer(row, *schema_transformer_args,
-                                                         **schema_transformer_kwargs)]
+        self.transforms = [lambda row: schema_transformer(row, **strans_kwargs)]
+
         # Convert values to null as required
         if null_empty_str:
-            self.functions.append(_null_empty_str)
+            self.transforms.append(_null_empty_str)
+
+        # Convert other values to null as specified
         if len(field_null_mapping) > 0:
-            self.functions.append(lambda row: _null_mapping(row, field_null_mapping))
+            self.transforms.append(lambda row: _null_mapping(row, 
+                                                             field_null_mapping))
+
+        # Convert coordinates to floats
         if coordinates_as_floats:
-            self.functions.append(_coordinates_as_floats)
+            self.transforms.append(_coordinates_as_floats)
+
         # Detect countries in text fields
         if country_detection:
             _lookup = _country_lookup()
-            self.functions.append(lambda row: _country_detection(row, _lookup))
+            self.transforms.append(lambda row: _country_detection(row, _lookup))
+
         # Convert items which SHOULD be lists to lists
         if listify_terms:
-            self.functions.append(listify_terms)
+            self.transforms.append(_listify_terms)
         super().__init__(*args, **kwargs)
 
-    def chain_functions(self, row):
-        """
+    def chain_transforms(self, row):
+        """Apply all transforms sequentially to a given row of data.
         
         Args:
             row (dict): Row of data to evaluate.
         Returns:
             _row (dict): Modified row.
         """
-        return reduce(lambda _row, f: f(_row), self.functions, row)
+        return reduce(lambda _row, f: f(_row), self.transforms, row)
 
     def index(self, **kwargs):
-        """
-        
-        Args:
-            row (dict): Row of data to evaluate.
-        Returns:
-            _row (dict): Modified row.
+        """Same as the core :obj:`Elasticsearch` API, except applies the
+        transformation chain before indexing. Note: only keyword arguments
+        are accepted.
         """
         try:
             _body = kwargs.pop("body")
         except KeyError:
             raise ValueError("Keyword argument 'body' was not provided.")
-        _body = map(lambda row: chain_functions(row), _body)
-        super().index(body=list(_body), *args, **kwargs)
+        _body = map(lambda row: self.chain_transforms(row), _body)
+        super().index(body=list(_body), **kwargs)
