@@ -28,6 +28,25 @@ S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
+def assert_correct_config(test, config, key):
+    """Assert that config key and 'index' value are consistent with the
+    running mode.
+
+    Args:
+        test (bool): Are we running in test mode?
+        config (dict): Elasticsearch config file data.
+        key (str): The name of the config key.
+    """
+    err_msg = "In test mode='{test}', config key '{key}' must end with '{suffix}'"
+    if test and not key.endswith("_dev"):
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
+    elif not self.test and not index_name.endswith("_prod")
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
+
+    index = config[key]['index']
+    if test and not index.endswith("_dev"):
+        raise ValueError(f"In test mode the index '{key}' must end with '_dev'")
+
 
 class ElasticsearchTask(autobatch.AutoBatchTask):
     '''Download tar file of csvs and load them into the MySQL server.
@@ -71,12 +90,23 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
 
         # elasticsearch setup
-        es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
-        es_config = get_config('elasticsearch.config', es_mode)
+        #es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
+        es_config = get_config('elasticsearch.config', self.es_mode)
+        es_mapping = get_es_mapping('crunchbase', aliases='health_scanner')
+        assert_correct_config(self.test, self.es_mode, es_config)
+
         es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
         if self.test:
             self.process_batch_size = 1000
-            logging.warning(f"Batch size restricted to {self.process_batch_size} while in test mode")
+            logging.warning(f"Batch size restricted to {self.process_batch_size}"
+                            " while in test mode")
+        # Drop the index if required (must be in test mode to do this)
+        if self.reindex and self.test:
+            es.indices.delete(index=es_config['index'])
+        # Create the index if required
+        if not es.indices.exists(index=es_config['index']):
+            es.indices.create(index=es_config['index'], body=mapping)
+
 
         # get set of existing ids from elasticsearch via scroll
         query = {"_source": False}
