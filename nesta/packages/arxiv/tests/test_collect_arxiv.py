@@ -19,8 +19,7 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
 from nesta.packages.arxiv.collect_arxiv import BatchWriter
-from nesta.packages.arxiv.collect_arxiv import query_dedupe_sparql
-from nesta.packages.arxiv.collect_arxiv import extract_entity_id
+from nesta.packages.arxiv.collect_arxiv import query_mag_sparql_by_doi
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.orms.arxiv_orm import Article
 
@@ -513,46 +512,34 @@ def test_batch_writer_calls_function_with_args():
     mock_function_to_call.assert_called_once_with([1, 2], mock_arg, some_kwarg=mock_kwarg)
 
 
-
-@mock.patch('nesta.packages.arxiv.collect_arxiv.jellyfish.levenshtein_distance')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.levenshtein_distance')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.sparql_query')
 def test_query_dedupe_sparql_returns_closest_match(mocked_sparql_query,
                                                    mocked_lev_distance):
     missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
                         {'id': 2, 'doi': '2.2/4321', 'title': 'title_b'}]
 
-    mocked_sparql_query.side_effect = [[{'paperTitle': 'title_aaa'},
-                                        {'paperTitle': 'title_aa'}],
-                                       [{'paperTitle': 'title_b'},
-                                        {'paperTitle': 'title_c'}]]
+    mocked_sparql_query.return_value = [[{'paperTitle': 'title_aaa', 'doi': '1.1/1234'},
+                                         {'paperTitle': 'title_aa', 'doi': '1.1/1234'},
+                                         {'paperTitle': 'title_b', 'doi': '2.2/4321'},
+                                         {'paperTitle': 'title_c', 'doi': '2.2/4321'}]]
     mocked_lev_distance.side_effect = [2, 1, 0, 1]
 
-    result = list(query_dedupe_sparql(missing_articles))
-    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1},
-                      {'paperTitle': 'title_b', 'score': 0, 'id': 2}]
+    result = list(query_mag_sparql_by_doi(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'},
+                      {'paperTitle': 'title_b', 'score': 0, 'id': 2, 'doi': '2.2/4321'}]
 
 
-@mock.patch('nesta.packages.arxiv.collect_arxiv.jellyfish.levenshtein_distance')
+@mock.patch('nesta.packages.arxiv.collect_arxiv.levenshtein_distance')
 @mock.patch('nesta.packages.arxiv.collect_arxiv.sparql_query')
-def test_query_dedupe_sparql_returns_nothing_when_doi_not_found(mocked_sparql_query,
-                                                                mocked_lev_distance):
+def test_query_dedupe_sparql_returns_no_results_when_doi_not_found(mocked_sparql_query,
+                                                                   mocked_lev_distance):
     missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
                         {'id': 2, 'doi': 'bad_doi', 'title': 'title_b'}]
 
-    mocked_sparql_query.side_effect = [[{'paperTitle': 'title_aa'}],
-                                       list()]
-    mocked_lev_distance.return_value = 1
+    mocked_sparql_query.return_value = [[{'paperTitle': 'title_aaa', 'doi': '1.1/1234'},
+                                         {'paperTitle': 'title_aa', 'doi': '1.1/1234'}]]
+    mocked_lev_distance.side_effect = [2, 1]
 
-    result = list(query_dedupe_sparql(missing_articles))
-    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1}]
-
-
-def test_extract_entity_id_returns_id():
-    assert extract_entity_id('http://ma-graph.org/entity/109214941') == 109214941
-    assert extract_entity_id('http://ma-graph.org/entity/19694890') == 19694890
-    assert extract_entity_id('http://ma-graph.org/entity/13203339') == 13203339
-
-
-def test_extract_entity_id_raises_value_error_when_not_found():
-    with pytest.raises(ValueError):
-        extract_entity_id('bad_url')
+    result = list(query_mag_sparql_by_doi(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'}]

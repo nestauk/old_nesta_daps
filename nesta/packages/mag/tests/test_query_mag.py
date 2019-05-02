@@ -1,9 +1,11 @@
 import mock
+import pytest
 
-from nesta.packages.mag.query_mag import prepare_title
-from nesta.packages.mag.query_mag import build_expr
-from nesta.packages.mag.query_mag import query_mag_api
-from nesta.packages.mag.query_mag import dedupe_entities
+from nesta.packages.mag.query_mag_api import prepare_title
+from nesta.packages.mag.query_mag_api import build_expr
+from nesta.packages.mag.query_mag_api import query_mag_api
+from nesta.packages.mag.query_mag_api import dedupe_entities
+from nesta.packages.mag.query_mag_sparql import extract_entity_id
 
 
 def test_prepare_title_removes_extra_spaces():
@@ -29,7 +31,7 @@ def test_build_expr_respects_query_limit_and_returns_remainder():
     assert list(build_expr([1, 2, 3], 'Id', 21)) == ["expr=OR(Id=1,Id=2)", "expr=OR(Id=3)"]
 
 
-@mock.patch('nesta.packages.mag.query_mag.requests.post')
+@mock.patch('nesta.packages.mag.query_mag_api.requests.post')
 def test_query_mag_api_sends_correct_request(mocked_requests):
     sub_key = 123
     fields = ['Id', 'Ti']
@@ -50,3 +52,14 @@ def test_dedupe_entities_picks_highest_for_each_title():
                 {'Id': 4, 'Ti': 'another title', 'logprob': 10}]
 
     assert dedupe_entities(entities) == {1, 4}
+
+
+def test_extract_entity_id_returns_id():
+    assert extract_entity_id('http://ma-graph.org/entity/109214941') == 109214941
+    assert extract_entity_id('http://ma-graph.org/entity/19694890') == 19694890
+    assert extract_entity_id('http://ma-graph.org/entity/13203339') == 13203339
+
+
+def test_extract_entity_id_raises_value_error_when_not_found():
+    with pytest.raises(ValueError):
+        extract_entity_id('bad_url')

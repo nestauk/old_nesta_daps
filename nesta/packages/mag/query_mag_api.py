@@ -3,7 +3,9 @@ from collections import defaultdict
 import logging
 import pandas as pd
 import requests
+import re
 
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks import misctools
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.mag_orm import FieldOfStudy
@@ -107,7 +109,7 @@ def query_fields_of_study(subscription_key,
         ids: (:obj:`list` of `int`): field of study ids to query
         levels (:obj:`list` of `int`): levels to extract. 0 is highest, 5 is lowest
         fields (:obj:`list` of `str`): codes of fields to return, as per mag documentation
-        query_count (int): number of items to return
+        query_count (int): number of items to return from each query
         results_limit (int): break and return as close to this number of results as the
                              offset and query_count allow (for testing)
 

@@ -8,11 +8,10 @@ the exiting data in the database.
 from datetime import date
 import luigi
 import logging
-import pprint
 
 from arxiv_mag_task import QueryMagTask
-from nesta.packages.arxiv.collect_arxiv import BatchWriter, BatchedTitles, update_existing_articles, query_dedupe_sparql, extract_entity_id
-from nesta.packages.mag.query_mag import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
+from nesta.packages.arxiv.collect_arxiv import BatchWriter, update_existing_articles, query_mag_sparql_by_doi, extract_entity_id
+from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
@@ -64,8 +63,8 @@ class MagSparqlTask(luigi.Task):
                            insert_batch_size=self.insert_batch_size)
 
     def run(self):
-        mag_config = misctools.get_config(self.mag_config_path, 'mag')
-        mag_subscription_key = mag_config['subscription_key']
+        # mag_config = misctools.get_config(self.mag_config_path, 'mag')
+        # mag_subscription_key = mag_config['subscription_key']
 
         # database setup
         database = 'dev' if self.test else 'production'
@@ -92,7 +91,7 @@ class MagSparqlTask(luigi.Task):
                                                  update_existing_articles,
                                                  session)
 
-            for count, row in enumerate(query_dedupe_sparql(articles_to_process),
+            for count, row in enumerate(query_mag_sparql_by_doi(articles_to_process),
                                         start=1):
                 # renaming and reformatting
                 for code, description in field_mapping.items():
@@ -128,7 +127,7 @@ class MagSparqlTask(luigi.Task):
                 missing_fos_ids = row['fields_of_study'] - found_fos_ids
                 if missing_fos_ids:
                     #  query mag for missing fields of study and write to db if not found
-                    update_field_of_study_ids(mag_subscription_key, session, missing_fos_ids)
+                    update_field_of_study_ids_sparql(session, missing_fos_ids)
 
                 # add this row to the queue
                 logging.debug(row)

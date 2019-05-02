@@ -18,5 +18,6 @@ class FieldOfStudy(Base):
     id = Column(BIGINT, primary_key=True, autoincrement=False)
     name = Column(VARCHAR(250, collation='utf8_bin'))
     level = Column(INTEGER)
+    category = Column(VARCHAR(100))
     parent_ids = Column(TEXT)
     child_ids = Column(TEXT)
