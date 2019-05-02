@@ -21,6 +21,9 @@
                 "placeName_country_organisation": {
                     "type": "keyword"
                 },
+		"placeName_continent_organisation": {
+                    "type": "keyword"
+                },
                 "placeName_state_organisation": {
                     "type": "keyword"
                 },
@@ -117,6 +120,18 @@
                 },
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
+                },
+		"_cost_usd2018_organisation": {
+		    "type": "float"
+		},
+		"terms_of_countryTags": {
+		    "type": "keyword"
+		},
+		"_terms_sdg_summary":{
+		    "type": "keyword"
+		},
+                "_terms_mesh_description": {
+                    "type": "keyword"
                 }
             }
         }
