@@ -16,16 +16,16 @@
                     "type": "keyword"
                 },
                 "url_of_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_country_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_continent_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_state_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "id_iso2_country": {
                     "type": "keyword"
@@ -46,10 +46,10 @@
                     "type": "keyword"
                 },
                 "placeName_region_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_city_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "address_of_organisation": {
                     "type": "keyword"
@@ -64,10 +64,10 @@
                     "type": "text"
                 },
                 "terms_subcategory_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "terms_category_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "count_rounds_funding": {
                     "type": "integer"
@@ -106,14 +106,14 @@
                     "type": "keyword"
                 },
                 "terms_alias_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "datetime_updated_organisation": {
                     "type":   "date",
                     "format": "yyyy-MM-dd HH:mm:ss"
                 },
                 "type_of_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "id_parent_organisation": {
                     "type": "keyword"
@@ -121,15 +121,15 @@
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
                 },
-		"_cost_usd2018_organisation": {
-		    "type": "float"
-		},
-		"terms_of_countryTags": {
-		    "type": "keyword"
-		},
-		"_terms_sdg_summary":{
-		    "type": "keyword"
-		},
+                "_cost_usd2018_organisation": {
+                    "type": "float"
+                },
+                "terms_of_countryTags": {
+                    "type": "keyword"
+                },
+                "_terms_sdg_summary":{
+                    "type": "keyword"
+                },
                 "_terms_mesh_description": {
                     "type": "keyword"
                 }

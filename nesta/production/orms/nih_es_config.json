@@ -13,7 +13,7 @@
                         "standard",
                         "lowercase",
                         "stop"
-                        ]
+                    ]
                 }
             }
         }
@@ -28,16 +28,16 @@
                     "type": "integer"
                 },
                 "placeName_city_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_country_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_continent_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_state_organisation": {
-                    "type": "keyword"
+                    "type": "text"
                 },
                 "placeName_zipcode_organisation": {
                     "type": "keyword"
@@ -105,12 +105,12 @@
                 "terms_of_countryTags": {
                     "type": "keyword"
                 },
-		"_rank_rhodonite_abstract": {
-		    "type": "float"
-		},
-		"_terms_sdg_abstract": {
-		    "type": "keyword"
-		}
+                "_rank_rhodonite_abstract": {
+                    "type": "float"
+                },
+                "_terms_sdg_abstract": {
+                    "type": "keyword"
+                }
             }
         }
     }
