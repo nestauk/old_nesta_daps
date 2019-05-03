@@ -17,7 +17,8 @@
                 }
             }
         }
-    },"mappings": {
+    },
+    "mappings": {
         "_doc": {
             "dynamic": "strict",
             "properties": {
@@ -61,16 +62,36 @@
                   "type": "keyword"
                 },
                 "placeName_city_organisation": {
-                    "type": "text"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_continent_organisation": {
-                    "type": "text"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_country_organisation": {
-                    "type": "text"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_state_organisation": {
-                    "type": "text"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_zipcode_organisation": {
                     "type": "keyword"
