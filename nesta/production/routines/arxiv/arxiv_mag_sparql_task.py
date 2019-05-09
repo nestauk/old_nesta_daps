@@ -10,8 +10,8 @@ import luigi
 import logging
 
 from arxiv_mag_task import QueryMagTask
-from nesta.packages.arxiv.collect_arxiv import BatchWriter, update_existing_articles, query_mag_sparql_by_doi, extract_entity_id
-from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql
+from nesta.packages.arxiv.collect_arxiv import BatchWriter, update_existing_articles
+from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql, extract_entity_id, query_mag_sparql_by_doi
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
@@ -63,9 +63,6 @@ class MagSparqlTask(luigi.Task):
                            insert_batch_size=self.insert_batch_size)
 
     def run(self):
-        # mag_config = misctools.get_config(self.mag_config_path, 'mag')
-        # mag_subscription_key = mag_config['subscription_key']
-
         # database setup
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
@@ -78,7 +75,7 @@ class MagSparqlTask(luigi.Task):
                              'fieldsOfStudy': 'fields_of_study',
                              'citationCount': 'citation_count'}
 
-            logging.info("Querying database for articles without fields of study")
+            logging.info("Querying database for articles without fields of study and with doi")
             articles_to_process = [dict(id=a.id, doi=a.doi, title=a.title) for a in
                                    (session
                                    .query(Article)
@@ -100,15 +97,23 @@ class MagSparqlTask(luigi.Task):
                     except KeyError:
                         pass
 
+                # logging.debug(f"fields_of study for {row.get('id')}: {row.get('fields_of_study')}")
+
                 if row.get('citation_count', None) is not None:
                     row['citation_count_updated'] = date.today()
 
                 # reformat fos_ids out of entity urls
+                logging.debug(f"{type(row.get('fields_of_study'))}")
                 try:
                     fos = row.pop('fields_of_study')
                     row['fields_of_study'] = {extract_entity_id(f) for f in fos.split(',')}
+                    logging.debug(f"{type(row['fields_of_study'])}")
                 except KeyError:
                     row['fields_of_study'] = []
+                except AttributeError:
+                    logging.debug(f"Strangely pre-extracted fos ids? {fos}")
+                    logging.debug(f"{type(fos)}")
+                    row['fields_of_study'] = fos
 
                 # reformat mag_id out of entity url
                 row['mag_id'] = extract_entity_id(row['mag_id'])
@@ -126,8 +131,12 @@ class MagSparqlTask(luigi.Task):
 
                 missing_fos_ids = row['fields_of_study'] - found_fos_ids
                 if missing_fos_ids:
-                    #  query mag for missing fields of study and write to db if not found
-                    update_field_of_study_ids_sparql(session, missing_fos_ids)
+                    logging.info(f"Missing field of study ids: {missing_fos_ids}")
+                    fos_not_found = update_field_of_study_ids_sparql(session, missing_fos_ids)
+                    # any fos not found in mag are removed to prevent foreign key
+                    # constraint errors when building the link table
+                    for fos in fos_not_found:
+                        row['fields_of_study'].remove(fos)
 
                 # add this row to the queue
                 logging.debug(row)

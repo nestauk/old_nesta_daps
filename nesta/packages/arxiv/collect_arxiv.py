@@ -1,6 +1,5 @@
 from collections import defaultdict
 import datetime
-from jellyfish import levenshtein_distance
 import json
 import logging
 import pandas as pd
@@ -15,7 +14,6 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.packages.misc_utils.sparql_query import sparql_query
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Article, Category
 
@@ -429,65 +427,6 @@ def update_existing_articles(article_batch, session):
                         article_fields_of_study)
 
     session.commit()
-
-
-def query_mag_sparql_by_doi(missing_articles):
-    """Queries Microsoft Academic Graph via the SPARQL endpoint, using doi.
-    Deduplication is applied by identifying the closest match on title.
-
-    Args:
-        missing_articles (:obj:`list` of :obj:`dict`): articles
-
-    Returns:
-        (:obj:`list` of :obj:`dict`): data returned from MAG
-    """
-    # duplicate dois in response, eg: doi': '10.1103/PhysRevD.76.052005'}
-    endpoint = 'http://ma-graph.org/sparql'
-
-    query = '''PREFIX dcterms: <http://purl.org/dc/terms/>
-    PREFIX datacite: <http://purl.org/spar/datacite/>
-    PREFIX fabio: <http://purl.org/spar/fabio/>
-    PREFIX magp: <http://ma-graph.org/property/>
-
-    SELECT ?paper ?doi ?paperTitle ?citationCount
-           GROUP_CONCAT(DISTINCT ?fieldOfStudy; separator=",") as ?fieldsOfStudy
-    WHERE {{
-        ?paper datacite:doi ?doi .
-        ?paper magp:citationCount ?citationCount .
-        ?paper dcterms:title ?paperTitle .
-        ?paper magp:citationCount ?citationCount .
-        ?paper fabio:hasDiscipline ?fieldOfStudy .
-        {article_filter}
-    }}
-    GROUP BY ?paper ?doi ?paperTitle ?citationCount
-    ORDER BY ?paper'''
-
-    concat_articles = ','.join(f'"{i["doi"]}"^^xsd:string' for i in missing_articles)
-    article_filter = f"FILTER (?doi IN ({concat_articles}))"
-
-    for batch in sparql_query(endpoint, query.format(article_filter=article_filter)):
-        articles_to_dedupe = defaultdict(list)
-        # combine results by doi
-        for result in batch:
-            articles_to_dedupe[result['doi']].append(result)
-
-        # matches = []
-        for missing_article in missing_articles:
-            found_articles = articles_to_dedupe.get(missing_article['doi'])
-            if found_articles is None:
-                # no matches
-                continue
-
-            # calculate the score for difference between the titles
-            for found_article in found_articles:
-                found_article['score'] = levenshtein_distance(found_article['paperTitle'],
-                                                              missing_article['title'])
-
-            # determine the closest title match by score
-            best_match = sorted(found_articles, key=lambda x: x['score'])[0]
-            best_match['id'] = missing_article['id']
-
-            yield best_match
 
 
 if __name__ == '__main__':

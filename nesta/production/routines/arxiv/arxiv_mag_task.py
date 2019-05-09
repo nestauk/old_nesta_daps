@@ -12,7 +12,7 @@ import pprint
 
 from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import BatchWriter, BatchedTitles, update_existing_articles
-from nesta.packages.mag.query_mag import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
+from nesta.packages.mag.query_mag_api import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session

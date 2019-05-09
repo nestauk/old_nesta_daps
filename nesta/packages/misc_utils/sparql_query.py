@@ -9,13 +9,14 @@ with rate-limiting.
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 
-def sparql_query(endpoint, query, nbatch=5000, test=False):
+def sparql_query(endpoint, query, nbatch=5000, batch_limit=None):
     """Query a given endpoint with rate-limiting in 'nbatch' batches
 
     Args:
         endpoint (str): SPARQL endpoint URL.
         query (str): SPARQL query string.
         nbatch (int): Batch size.
+        batch_limit (int): limit the number of batches, for testing
     Returns:
         (:obj:`list` of :obj:`dict`): Batch of results as a list of dictionaries
     """
@@ -24,6 +25,7 @@ def sparql_query(endpoint, query, nbatch=5000, test=False):
 
     # Execute the query in batches of nbatch
     n = 0
+    total_batches = 0
     while True:
         # Run the query and get the results
         batch_query = f"{query} LIMIT {nbatch} OFFSET {n}"
@@ -38,8 +40,13 @@ def sparql_query(endpoint, query, nbatch=5000, test=False):
         else:
             # Extract values for each item
             clean_batch = [{k: v['value'] for k, v in row.items()} for row in data]
-            n += nbatch
+            n += n_results
             yield clean_batch
 
-        if test:
+        total_batches += 1
+
+        if n_results < nbatch:
+            # less than full batch returned
+            break
+        if batch_limit and total_batches >= batch_limit:
             break
