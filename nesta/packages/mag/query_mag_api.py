@@ -3,9 +3,8 @@ from collections import defaultdict
 import logging
 import pandas as pd
 import requests
-import re
+from retrying import retry
 
-from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks import misctools
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.mag_orm import FieldOfStudy
@@ -71,6 +70,7 @@ def build_expr(query_items, entity_name, max_length=16000):
         yield query_prefix_format.format(','.join(expr))
 
 
+@retry(stop_max_attempt_number=10)
 def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
     """Posts a query to the Microsoft Academic Graph Evaluate API.
 
@@ -206,8 +206,6 @@ def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
 
 
 if __name__ == "__main__":
-    import json
-
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
@@ -230,7 +228,7 @@ if __name__ == "__main__":
                       'S': 'author_order'}
 
     field_mapping = {"Id": 'id',
-                     "Ti": 'title', # not needed
+                     "Ti": 'title',  # not needed
                      "F": 'fields_of_study',
                      "AA": 'authors',
                      "CC": 'citation_count'}
@@ -247,39 +245,6 @@ if __name__ == "__main__":
 
         break
 
-    # for row in data['entities']:
-    #     # clean up authors
-    #     for author in row['AA']:
-    #         for code, description in author_mapping.items():
-    #             try:
-    #                 author[description] = author.pop(code)
-    #             except KeyError:
-    #                 pass
-
-    #     # convert fields of study to a list
-    #     # row['F'] = [f['FId'] for f in row['F']]
-
-    #     # rename fields
-    #     for code, description in field_mapping.items():
-    #         try:
-    #             row[description] = row.pop(code)
-    #         except KeyError:
-    #             pass
-
-
-    # dupe_title = ['convergence of the discrete dipole approximation i theoretical analysis']
-    # dupe_title = ['convergence of the discrete dipole approximation ii an extrapolation technique to increase the accuracy']
-    # for expr in build_expr(dupe_title, 'Ti'):
-    #     # print(expr)
-    #     data = query_mag_api(expr, paper_fields, subscription_key)
-    #     print(json.dumps(data['entities'][0], indent=4))
-
-    #     break
-    # *** json to sql
-    # write_fields_of_study_to_db('mag_fields_of_study.json', 'dev')
-    # write_fields_of_study_to_db('mag_fields_of_study.json', 'production')
-
-
     # *** extract field ids from papers
     # fids = set()
     # for entity in data['entities']:
@@ -295,7 +260,6 @@ if __name__ == "__main__":
     #     print(fos_data)
     #     break
 
-
     # *** extract list of ids
     # fos_level_fields = ['Id', 'DFN', 'FL', 'FP.FId', 'FC.FId']  # id, display_name, level, parent_ids, children_ids
     # for expr in build_expr([2909385909, 2911099694], 'Id'):
@@ -303,38 +267,3 @@ if __name__ == "__main__":
     #     count = 1000
     #     data = query_mag_api(expr, fos_level_fields, query_count=count)
     #     print(data)
-
-
-
-    # *** partially completed data science approach to determining levels
-    # from sklearn.feature_extraction.text import CountVectorizer
-
-    # corpus = []
-    # for row in data["entities"]:
-    #     fields = " ".join(fos["DFN"].replace(" ", "_")
-    #                       for fos in row["F"])
-    #     corpus.append(fields)
-    # cv = CountVectorizer()
-    # _data = cv.fit_transform(corpus)
-
-    # import numpy as np
-
-    # _, n_fields = _data.shape
-    # features = cv.get_feature_names()
-    # threshold = 2
-    # for i_field in range(0, n_fields):
-    #     if i_field != 111:
-    #         continue
-    #     print(features[i_field])
-    #     condition = _data[:, i_field] > 0
-    #     condition = np.hstack(condition.toarray())
-    #     cooc = np.array(_data[condition].sum(axis=0))[0]
-    #     for name, count in zip(features, cooc):
-    #         if count >= threshold:
-    #             print(name, count)
-
-    # determine threshold (change to coocurrence fraction)
-    # e.g. AI occurs in 10 documents, CompSci occurs in 1000,
-    # but there are 9 AI docs which also have CompSci, so remove CompSci.
-    # The fraction threshold is 90% in this case, and the min count is at least 1000.
-    # Bonus: Could also require that a minimum number of "Fields of Study"
