@@ -338,43 +338,6 @@ class BatchedTitles():
                 yield title
 
 
-class BatchWriter(list):
-    """A list with functionality to monitor appends.
-    When a specified size is reached a function is called and the list cleared down.
-    """
-    def __init__(self, limit, function, *function_args, **function_kwargs):
-        """
-        Args:
-            limit (int): limit in length triggering a write
-            function (function): the function which will be called
-            args, kwargs: will be passed on to the function call
-        """
-        self.limit = limit
-        self.function = function
-        self.function_args = function_args
-        self.function_kwargs = function_kwargs
-
-    def append(self, item):
-        """Appends to the list and then checks current size against the set limit."""
-        super().append(item)
-        if len(self) >= self.limit:
-            self.write(self.copy())
-            self.clear()
-
-    def extend(self, items):
-        """Adds multiple items to the list then writes until it is below limit."""
-        super().extend(items)
-        while len(self) >= self.limit:
-            self.write(self[0:self.limit])
-            del self[0:self.limit]
-
-    def write(self, items=None):
-        """Calls the specified function with args and kwargs"""
-        if items is None:
-            items = self
-        self.function(items, *self.function_args, **self.function_kwargs)
-
-
 def add_new_articles(article_batch, session):
     """Adds new articles to the session and commits them.
     Args:

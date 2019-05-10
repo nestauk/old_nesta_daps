@@ -18,7 +18,6 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
-from nesta.packages.arxiv.collect_arxiv import BatchWriter
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
@@ -469,40 +468,3 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
     batcher = BatchedTitles([1, 2, 3, 4], batch_size=2, session=mocked_session)
     list(batcher)
     assert mocked_split_batches.mock_calls == [mock.call([1, 2, 3, 4], 2)]
-
-
-def test_batch_writer_append_calls_function_when_limit_exceeded():
-    mock_function_to_call = mock.Mock()
-    batch_writer = BatchWriter(limit=4, function=mock_function_to_call)
-
-    batch = [1, 2, 3, 4, 5]
-    for b in batch:
-        batch_writer.append(b)
-
-    mock_function_to_call.assert_called_once_with([1, 2, 3, 4])
-
-
-def test_batch_writer_extend_calls_while_limit_is_exceeded():
-    mock_function_to_call = mock.Mock()
-    batch_writer = BatchWriter(limit=3, function=mock_function_to_call)
-
-    batches = ([1, 2], [3, 4, 5, 6, 7])
-    for batch in batches:
-        batch_writer.extend(batch)
-
-    assert mock_function_to_call.mock_calls == [mock.call([1, 2, 3]),
-                                                mock.call([4, 5, 6])]
-
-
-def test_batch_writer_calls_function_with_args():
-    mock_function_to_call = mock.Mock()
-    mock_arg = mock.Mock()
-    mock_kwarg = mock.Mock()
-    batch_writer = BatchWriter(2, mock_function_to_call,
-                               mock_arg, some_kwarg=mock_kwarg)
-
-    batch = [1, 2]
-    for b in batch:
-        batch_writer.append(b)
-
-    mock_function_to_call.assert_called_once_with([1, 2], mock_arg, some_kwarg=mock_kwarg)
