@@ -1,3 +1,4 @@
+alphabet_detector==0.0.7
 beautifulsoup4==4.7.1
 boto3==1.9.9
 botocore==1.12.73
