@@ -11,6 +11,9 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.mag_orm import FieldOfStudy
 
 
+ENDPOINT = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
+
+
 def prepare_title(title):
     """Replaces non-alphanums from a paper title, allowing foreign characters and cleans
     up multiple spaces and trailing spaces.
@@ -82,14 +85,13 @@ def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
                 and 'entities' (the results) keys.
                 If there are no results 'entities' is an empty list.
     """
-    endpoint = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
     headers = {
         'Ocp-Apim-Subscription-Key': subscription_key,
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     query = f"{expr}&count={query_count}&offset={offset}&attributes={','.join(fields)}"
 
-    r = requests.post(endpoint, data=query.encode("utf-8"), headers=headers)
+    r = requests.post(ENDPOINT, data=query.encode("utf-8"), headers=headers)
     r.raise_for_status()
 
     return r.json()
