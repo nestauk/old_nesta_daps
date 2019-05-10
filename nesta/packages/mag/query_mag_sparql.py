@@ -45,7 +45,7 @@ def _batch_query_articles(articles, batch_size=10):
         raise ValueError("batch_size must be between 1 and 10")
 
     for articles_batch in split_batches(articles, batch_size):
-        clean_dois = [a['doi'].replace('\n', '').strip('\\') for a in articles_batch]
+        clean_dois = [a['doi'].replace('\n', '').replace('\\', '') for a in articles_batch]
         concat_dois = ','.join(f'"{a}"^^xsd:string' for a in clean_dois)
         article_filter = f"FILTER (?doi IN ({concat_dois}))"
 
