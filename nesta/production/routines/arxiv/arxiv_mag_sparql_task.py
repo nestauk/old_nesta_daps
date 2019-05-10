@@ -97,30 +97,35 @@ class MagSparqlTask(luigi.Task):
                     except KeyError:
                         pass
 
-                # logging.debug(f"fields_of study for {row.get('id')}: {row.get('fields_of_study')}")
-
                 if row.get('citation_count', None) is not None:
                     row['citation_count_updated'] = date.today()
 
                 # reformat fos_ids out of entity urls
-                logging.debug(f"{type(row.get('fields_of_study'))}")
                 try:
                     fos = row.pop('fields_of_study')
                     row['fields_of_study'] = {extract_entity_id(f) for f in fos.split(',')}
-                    logging.debug(f"{type(row['fields_of_study'])}")
                 except KeyError:
+                    # missing fields of study
                     row['fields_of_study'] = []
-                except AttributeError:
-                    logging.debug(f"Strangely pre-extracted fos ids? {fos}")
-                    logging.debug(f"{type(fos)}")
+                except (AttributeError, TypeError):
+                    # either of these could occur when the same doi is present in 2
+                    # articles in the same batch
+                    logging.debug("Already processed")
                     row['fields_of_study'] = fos
 
                 # reformat mag_id out of entity url
-                row['mag_id'] = extract_entity_id(row['mag_id'])
+                try:
+                    row['mag_id'] = extract_entity_id(row['mag_id'])
+                except TypeError:
+                    # id has already been extracted
+                    pass
 
                 # drop unnecessary fields
                 for f in ['score', 'title']:
-                    del row[f]
+                    try:
+                        del row[f]
+                    except KeyError:
+                        pass
 
                 # check fields of study exist in the database
                 logging.debug('Checking fields of study exist in db')

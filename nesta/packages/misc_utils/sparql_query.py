@@ -6,7 +6,10 @@ A wrapper to SPARQLWrapper to query a given SPARQL endpoint
 with rate-limiting.
 
 """
+import logging
 from SPARQLWrapper import SPARQLWrapper, JSON
+from SPARQLWrapper.SPARQLExceptions import EndPointNotFound
+import time
 
 
 def sparql_query(endpoint, query, nbatch=5000, batch_limit=None):
@@ -26,11 +29,21 @@ def sparql_query(endpoint, query, nbatch=5000, batch_limit=None):
     # Execute the query in batches of nbatch
     n = 0
     total_batches = 0
+    retry_attempts = 5
+    retry_delay = 5  # seconds
     while True:
         # Run the query and get the results
         batch_query = f"{query} LIMIT {nbatch} OFFSET {n}"
         sparql.setQuery(batch_query)
-        results = sparql.query().convert()
+        retries = retry_attempts
+        results = None
+        while retries > 0 and not results:
+            try:
+                results = sparql.query().convert()
+            except EndPointNotFound:
+                logging.warning("Couldn't connect to endpoint")
+                time.sleep(retry_delay)
+                retries -= 1
 
         # Extract the data values from the results
         data = results["results"]["bindings"]
