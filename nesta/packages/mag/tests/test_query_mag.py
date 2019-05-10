@@ -1,5 +1,5 @@
-from unittest import mock
 import pytest
+from unittest import mock
 
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.mag.query_mag_api import build_expr

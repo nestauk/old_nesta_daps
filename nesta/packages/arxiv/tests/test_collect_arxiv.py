@@ -18,7 +18,7 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
-from nesta.packages.arxiv.collect_arxiv import BatchWriter
+from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.orms.arxiv_orm import Article
 
@@ -402,12 +402,14 @@ def test_batched_titles_returns_all_prepared_titles(mocked_split_batches,
                                                     mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
 
+
     mocked_articles = [mocked_articles([{'id': 1, 'title': 'title A'},
                                         {'id': 2, 'title': 'title B'},
                                         {'id': 3, 'title': 'title C'}]),
                        mocked_articles([{'id': 4, 'title': 'title D'},
                                         {'id': 5, 'title': 'title E'},
                                         {'id': 6, 'title': 'title F'}])]
+  
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -434,6 +436,7 @@ def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
                                                   mocked_prepare_title,
                                                   mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
+
 
     mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'} for x in range(1, 7)])]
     mocked_session = mock.Mock()
@@ -472,40 +475,3 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
     batcher = BatchedTitles([1, 2, 3, 4], batch_size=2, session=mocked_session)
     list(batcher)
     assert mocked_split_batches.mock_calls == [mock.call([1, 2, 3, 4], 2)]
-
-
-def test_batch_writer_append_calls_function_when_limit_exceeded():
-    mock_function_to_call = mock.Mock()
-    batch_writer = BatchWriter(limit=4, function=mock_function_to_call)
-
-    batch = [1, 2, 3, 4, 5]
-    for b in batch:
-        batch_writer.append(b)
-
-    mock_function_to_call.assert_called_once_with([1, 2, 3, 4])
-
-
-def test_batch_writer_extend_calls_while_limit_is_exceeded():
-    mock_function_to_call = mock.Mock()
-    batch_writer = BatchWriter(limit=3, function=mock_function_to_call)
-
-    batches = ([1, 2], [3, 4, 5, 6, 7])
-    for batch in batches:
-        batch_writer.extend(batch)
-
-    assert mock_function_to_call.mock_calls == [mock.call([1, 2, 3]),
-                                                mock.call([4, 5, 6])]
-
-
-def test_batch_writer_calls_function_with_args():
-    mock_function_to_call = mock.Mock()
-    mock_arg = mock.Mock()
-    mock_kwarg = mock.Mock()
-    batch_writer = BatchWriter(2, mock_function_to_call,
-                               mock_arg, some_kwarg=mock_kwarg)
-
-    batch = [1, 2]
-    for b in batch:
-        batch_writer.append(b)
-
-    mock_function_to_call.assert_called_once_with([1, 2], mock_arg, some_kwarg=mock_kwarg)
