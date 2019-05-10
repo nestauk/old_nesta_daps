@@ -62,7 +62,7 @@ def get_gss_codes(test=False):
         List of UK geography codes.
     """
     CONFIG = find_filepath_from_pathstub("fetch_geography_codes.sparql")
-    n = 300 if test else None
+    n = 1 if test else None
     with open(CONFIG) as f:
         query = f.read().replace("\n", " ")
     data = sparql_query(ENDPOINT, query, batch_limit=n)
