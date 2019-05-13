@@ -10,8 +10,9 @@ import luigi
 import logging
 
 from arxiv_mag_task import QueryMagTask
-from nesta.packages.arxiv.collect_arxiv import BatchWriter, update_existing_articles
+from nesta.packages.arxiv.collect_arxiv import update_existing_articles
 from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql, extract_entity_id, query_mag_sparql_by_doi
+from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
