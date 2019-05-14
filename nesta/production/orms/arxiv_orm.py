@@ -8,13 +8,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
 
-from nesta.production.orms.orm_utils import merge_metadata
+from nesta.production.orms.grid_orm import Institutes
+from nesta.production.orms.grid_orm import Base as GridBase
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.mag_orm import Base as MagBase
+from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
-# Merge metadata with Microsoft Academic Graph declarative base
-merge_metadata(Base, MagBase)
+# Merge metadata with MAG and GRID
+merge_metadata(Base, MagBase, GridBase)
 
 
 """Association table for Arxiv articles and their categories."""
@@ -41,6 +43,18 @@ article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,
                                        primary_key=True))
 
 
+"""Association table to GRID institutes."""
+article_institutes = Table('arxiv_article_institutes', Base.metadata,
+                           Column('article_id',
+                                  VARCHAR(20),
+                                  ForeignKey('arxiv_articles.id'),
+                                  primary_key=True),
+                           Column('institute_id',
+                                  VARCHAR(20),
+                                  ForeignKey(Institutes.id),
+                                  primary_key=True))
+
+
 class Article(Base):
     """Arxiv articles and metadata."""
     __tablename__ = 'arxiv_articles'
@@ -64,7 +78,8 @@ class Article(Base):
                               secondary=article_categories)
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
-
+    institutes = relationship(Institutes,
+                              secondary=article_institutes)
 
 
 class Category(Base):
