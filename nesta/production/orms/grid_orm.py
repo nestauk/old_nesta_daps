@@ -22,7 +22,7 @@ class Institute(Base):
     address_line_2 = Column(VARCHAR(50, collation='utf8_bin'))
     address_line_3 = Column(VARCHAR(50, collation='utf8_bin'))
     postcode = Column(VARCHAR(30))
-    city = Column(VARCHAR(40))
+    city = Column(VARCHAR(40, collation='utf8_bin'))
     geonames_city_id = Column(INTEGER)
     state = Column(VARCHAR(40))
     state_code = Column(VARCHAR(10))

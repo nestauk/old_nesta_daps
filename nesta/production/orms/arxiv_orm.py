@@ -8,7 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
 
-from nesta.production.orms.grid_orm import Institutes
+from nesta.production.orms.grid_orm import Institute
 from nesta.production.orms.grid_orm import Base as GridBase
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.mag_orm import Base as MagBase
@@ -51,7 +51,7 @@ article_institutes = Table('arxiv_article_institutes', Base.metadata,
                                   primary_key=True),
                            Column('institute_id',
                                   VARCHAR(20),
-                                  ForeignKey(Institutes.id),
+                                  ForeignKey(Institute.id),
                                   primary_key=True))
 
 
@@ -78,7 +78,7 @@ class Article(Base):
                               secondary=article_categories)
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
-    institutes = relationship(Institutes,
+    institutes = relationship(Institute,
                               secondary=article_institutes)
 
 
