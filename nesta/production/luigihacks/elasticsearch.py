@@ -18,7 +18,7 @@ PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
 def _null_empty_str(row):
     """Nullify values if they are empty strings.
-    
+
     Args:
         row (dict): Row of data to evaluate.
     Returns:
@@ -32,7 +32,7 @@ def _null_empty_str(row):
 
 def _coordinates_as_floats(row):
     """Ensure coordinate data are always floats.
-    
+
     Args:
         row (dict): Row of data to evaluate.
     Returns:
@@ -51,7 +51,7 @@ def _coordinates_as_floats(row):
 def _country_lookup():
     """Extract country/nationality --> iso2 code lookup
     from a public json file.
-    
+
     Returns:
         lookup (dict): country/nationality --> iso2 code lookup.
     """
@@ -69,12 +69,12 @@ def _country_detection(row, lookup):
     """Append a list of countries detected from keywords
     discovered in all text fields. The new field name
     is titled according to the global variable COUNTRY_TAG.
-    
+
     Args:
         row (dict): Row of data to evaluate.
     Returns:
         _row (dict): Modified row.
-    """    
+    """
     _row = deepcopy(row)
     _row[COUNTRY_TAG] = []
     for k, v in row.items():
@@ -92,10 +92,10 @@ def _guess_delimiter(item, threshold=0.25):
     """Guess the delimiter in a splittable string.
     Note, the delimiter is assumed to be non-whitespace
     non-alphanumeric.
-    
+
     Args:
         item (str): A string that we want to split up.
-        threshold (float): If the mean fractional size of the split items 
+        threshold (float): If the mean fractional size of the split items
                            are greater than this threshold, it is assumed
                            that no delimiter exists.
     Returns:
@@ -114,7 +114,7 @@ def _guess_delimiter(item, threshold=0.25):
 def _listify_terms(row):
     """Split any 'terms' fields by a guessed delimiter if the
     field is a string.
-    
+
     Args:
         row (dict): Row of data to evaluate.
     Returns:
@@ -139,13 +139,16 @@ def _listify_terms(row):
             _row[k] = [v]
     return _row
 
+
 def _null_mapping(row, field_null_mapping):
     """Convert any values to null if the type of
     the value is listed in the field_null_mapping
-    for that field. For example a field_null_mapping of:
+    for that field. Note that a special keyword '<NEGATIVE>'
+    exists to signify that negative numbers should be nulled.
+    For example a field_null_mapping of:
 
     {
-        "field_1": ["", 123, "a"],
+        "field_1": ["", 123, "a", "<NEGATIVE>"],
         "field_2": [""]
     }
 
@@ -153,14 +156,14 @@ def _null_mapping(row, field_null_mapping):
 
     [{"field_1": 123, "field_2": "a"},
      {"field_1": "", "field_2": ""},
-     {"field_1": "b", "field_2": 123}]
+     {"field_1": -23, "field_2": 123}]
 
     being converted to:
-    
+
     [{"field_1": None, "field_2": "a"},
      {"field_1": None, "field_2": None},
-     {"field_1": "b", "field_2": 123}] 
-        
+     {"field_1": None, "field_2": 123}]
+
     Args:
         row (dict): Row of data to evaluate.
         field_null_mapping (dict): Mapping of field names to values to be interpreted as null.
@@ -169,9 +172,15 @@ def _null_mapping(row, field_null_mapping):
     """
     _row = deepcopy(row)
     for field_name, nullable_values in field_null_mapping.items():
+        if type(nullable_values) is not list:
+            raise ValueError("Nullable values in field_null_mapping should be a list "
+                             f"but {type(nullable_values)} [{nullable_values}] found.")
         if field_name not in _row:
             continue
         value = _row[field_name]
+        null_negative = (("<NEGATIVE>" in nullable_values) and
+                         (type(value) in (float, int)) and
+                         (value < 0))
         # This could apply to coordinates
         if type(value) is dict:
             for k, v in value.items():
@@ -179,7 +188,7 @@ def _null_mapping(row, field_null_mapping):
                     _row[field_name] = None
                     break
         # For non-iterables
-        elif _row[field_name] in nullable_values:
+        elif value in nullable_values or null_negative:
             _row[field_name] = None
     return _row
 
@@ -188,7 +197,7 @@ class ElasticsearchPlus(Elasticsearch):
     """Wrapper around the Elasticsearch API, which applies
     transformations (including schema mapping) to input data
     before indexing.
-    
+
     Args:
         schema_transformer_kwargs (dict): Schema transformation keyword arguments.
         field_null_mapping: A mapping of fields to values to be converted to None.
@@ -215,7 +224,7 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Convert other values to null as specified
         if len(field_null_mapping) > 0:
-            self.transforms.append(lambda row: _null_mapping(row, 
+            self.transforms.append(lambda row: _null_mapping(row,
                                                              field_null_mapping))
 
         # Convert coordinates to floats
@@ -234,7 +243,7 @@ class ElasticsearchPlus(Elasticsearch):
 
     def chain_transforms(self, row):
         """Apply all transforms sequentially to a given row of data.
-        
+
         Args:
             row (dict): Row of data to evaluate.
         Returns:
