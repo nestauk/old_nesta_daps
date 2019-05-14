@@ -1,4 +1,5 @@
 {  
-    "field_1": ["", 123, "a"],
-    "field_2": [""]
+    "cost": ["<NEGATIVE>", 0],
+    "cost_ref": ["<NEGATIVE>", 0],
+    "location": [{"latitude": null}, {"longitude": null}]
 }
