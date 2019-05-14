@@ -29,7 +29,8 @@ def lookup():
 @pytest.fixture
 def field_null_mapping():
     return {"non-empty str": ["blah"],
-            "coordinate_of_abc": [{"latitude": 123}]}
+            "coordinate_of_abc": [{"latitude": 123}],
+            "a negative number": ["<NEGATIVE>"]}
 
 @pytest.fixture
 def row():
@@ -40,6 +41,7 @@ def row():
             "coordinate_of_abc": {"latitude": 123,
                                   "longitude": 234},
             "coordinate_of_none": None,
+            "a negative number": -123,
             "a description field": ("Chinese and British people "
                                     "both live in Greece and Chile"),
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!",
@@ -125,6 +127,11 @@ def test_null_mapping(row, field_null_mapping):
     for k, v in field_null_mapping.items():
         assert _row[k] is None
         assert row[k] is not None
+    for k, v in _row.items():
+        if k in field_null_mapping:
+            assert v is None
+        else:
+            assert v == row[k]
 
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
 def test_chain_transforms(mocked_schema_transformer, row,
