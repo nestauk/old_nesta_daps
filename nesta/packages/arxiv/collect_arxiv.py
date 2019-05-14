@@ -350,7 +350,9 @@ def add_new_articles(article_batch, session):
 
 def update_existing_articles(article_batch, session):
     """Updates existing articles from a list of dictionaries. Bulk method is used for
-    non relationship fields, with the relationship fields updated row by row.
+    non relationship fields, with the relationship fields updated using the core orm
+    method.
+
     Args:
         article_batch (:obj:`list` of `dict`): articles to add to database
         session (:obj:`sqlalchemy.orm.session`): active session to use
@@ -366,6 +368,11 @@ def update_existing_articles(article_batch, session):
     article_fields_of_study = [dict(article_id=article['id'], fos_id=fos_id)
                                for article in article_batch
                                for fos_id in article.pop('fields_of_study', [])]
+
+    # convert lists of institutes into rows for association table
+    article_institutes = [dict(article_id=article['id'], institude_id=institute_id)
+                          for article in article_batch
+                          for institute_id in article.pop('institutes', [])]
 
     # update unlinked article data in bulk
     logging.debug("bulk update mapping on articles")
@@ -387,6 +394,11 @@ def update_existing_articles(article_batch, session):
     if article_fields_of_study:
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
+
+    logging.debug("core orm insert on institutes")
+    if article_institutes:
+        session.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
+                        article_institutes)
 
     session.commit()
 
