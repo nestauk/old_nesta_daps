@@ -6,35 +6,75 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 import pymysql
 import os
-
 import json
-
 import logging
 import time
 
-def filter_out_duplicates(db_env, section, database, Base, _class, data, 
+def load_json_from_pathstub(pathstub, filename):
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        js = json.load(f)
+    return js
+
+def get_es_mapping(dataset, aliases):
+    '''Get the configuration from a file in the luigi config path
+    directory, and convert the key-value pairs under the config :code:`header`
+    into a `dict`.
+
+    Parameters:
+        file_name (str): The configuation file name.
+        header (str): The header key in the config file.
+
+    Returns:
+        :obj:`dict`
+    '''
+    # Get the mapping and lookup
+    mapping = load_json_from_pathstub("production/orms/",
+                                      f"{dataset}_es_config.json")
+    alias_lookup = load_json_from_pathstub("production/tier_1/aliases/",
+                                           f"{aliases}.json")
+    # Get a list of valid fields for verification
+    fields = mapping["mappings"]["_doc"]["properties"].keys()
+    # Add any aliases to the mapping
+    for alias, lookup in alias_lookup.items():
+        if dataset not in lookup:
+            continue
+        # Validate the field
+        field = lookup[dataset]
+        if field not in fields:
+            raise ValueError(f"Alias '{alias}' to '{field}' but '{field}'"
+                             "does not exist in the mapping.")
+        # Add the alias to the mapping
+        value = {"type": "alias", "path": lookup[dataset]}
+        mapping["mappings"]["_doc"]["properties"][alias] = value
+    return mapping
+
+
+def filter_out_duplicates(db_env, section, database, Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
     already exist in the data.
 
     Args:
-        db_env: See :obj:`get_mysql_engine`                                                 
-        section: See :obj:`get_mysql_engine`                                                
-        database: See :obj:`get_mysql_engine`                                               
-        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.                          
-        _class (:obj:`sqlalchemy.Base`): The ORM for this data.                             
-        data (:obj:`list` of :obj:`dict`): Rows of data to insert                           
-        low_memory (bool): To speed things up significantly, you can read                   
-                           all pkeys into memory first, but this will blow                  
-                           up for heavy pkeys or large tables.                              
+        db_env: See :obj:`get_mysql_engine`
+        section: See :obj:`get_mysql_engine`
+        database: See :obj:`get_mysql_engine`
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): To speed things up significantly, you can read
+                           all pkeys into memory first, but this will blow
+                           up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
-                                    were in the supplied data but not imported (for checks)     
-                                                                                        
-    Returns:                                                                                
-        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.      
+                                    were in the supplied data but not imported (for checks)
+
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
@@ -105,8 +145,8 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section, 
-                                                             database=database, 
+    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section,
+                                                             database=database,
                                                              Base=Base, _class=_class, data=data,
                                                              low_memory=low_memory)
 
