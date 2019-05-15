@@ -6,7 +6,7 @@ import logging
 from nesta.packages.arxiv.collect_arxiv import update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
-from nesta.production.orms.grid_orm import Institute
+from nesta.production.orms.grid_orm import Institute, Alias
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -62,25 +62,43 @@ class GridTask(luigi.Task):
         Base.metadata.create_all(self.engine)
 
         with db_session(self.engine) as session:
-            articles_to_process = (session
-                                   .query(Article)
-                                   .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
-                                   .all())
-            logging.info(f"{len(articles_to_process)} articles without institutes")
-
             # extract affiliations for each article
-            articles_with_affiliation = defaultdict(set)
-            for article in articles_to_process:
+            articles_to_process = defaultdict(set)
+            for article in (session
+                            .query(Article)
+                            .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
+                            .all()):
                 for author in article.mag_authors:
                     try:
-                        afiliation = author['author_affiliation']
+                        affiliation = author['author_affiliation']
                     except KeyError:
                         pass
-                    if afiliation is not None:
-                        articles_with_affiliation[id].add(afiliation)
+                    else:
+                        articles_to_process[article.id].add(affiliation)
+            logging.info(f"{len(articles_to_process)} articles with affiliations")
 
-            logging.info(f"{len(articles_with_affiliation)} articles with affiliations")
+            # extract GRID data
+            institute_name_lookup = {}
+            for institute in session.query(Institute).all():
+                institute_name_lookup.update({institute.name.lower(): institute.id})
+
+            for alias in session.query(Alias).all():
+                institute_name_lookup.update({alias.alias.lower(): alias.grid_id})
+
+            # look for exact matches
+            matches = {}
+            for id, affiliations in articles_to_process.items():
+                for affiliation in affiliations:
+                    try:
+                        matches.update({id: institute_name_lookup[affiliation]})
+                    except KeyError:
+                        pass
+            logging.info(f"Matched {len(matches)} on exact match")
+            # *****add lower to the name searching for also?
+
+                    
 
 
 
-
+            # build lookup table of previous matches so they do not have to be recalculated
+            # result needs to be a dict of {article_id: institute_id} for direct load to the association table
