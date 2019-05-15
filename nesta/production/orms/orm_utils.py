@@ -7,6 +7,8 @@ from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import get_config
+from elasticsearch import Elasticsearch
 
 import pymysql
 import os
@@ -14,7 +16,73 @@ import json
 import logging
 import time
 
+def assert_correct_config(test, config, key):
+    """Assert that config key and 'index' value are consistent with the
+    running mode.    
+    
+    Args:
+        test (bool): Are we running in test mode?
+        config (dict): Elasticsearch config file data.
+        key (str): The name of the config key.
+    """
+    err_msg = ("In test mode='{test}', config key '{key}' "
+               "must end with '{suffix}'")
+    if test and not key.endswith("_dev"):
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
+    elif not self.test and not index_name.endswith("_prod"):
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
+    index = config[key]['index']
+    if test and not index.endswith("_dev"):
+        raise ValueError(f"In test mode the index '{key}' "
+                         "must end with '_dev'")
+
+
+def setup_es(es_mode, test_mode, reindex_mode, dataset, aliases=None):
+    """Retrieve the ES connection, ES config and setup the index 
+    if required.
+    
+    Args:
+        es_mode (str): One of "prod" or "dev".
+        test_mode (bool): Running in test mode?
+        reindex_mode (bool): Running in reindex mode?
+        dataset (str): Name of the dataset for the ES mapping.
+        aliases (str): Name of the aliases for the ES mapping.
+    Returns:
+        {es, es_config}: Elasticsearch connection and config dict.
+    """
+    if es_mode not in ("prod", "dev"):
+        raise ValueError("es_mode required to be one of "
+                         f"'prod' or 'dev', but '{es_mode}' provided.")
+
+    # Get and check the config
+    es_config = get_config('elasticsearch.config', es_mode)
+    assert_correct_config(test_mode, es_mode, es_config)    
+    # Make the ES connection
+    es = Elasticsearch(es_config['host'], port=es_config['port'], 
+                       use_ssl=True)
+    # Drop the index if required (must be in test mode to do this)         
+    _index = es_config['index']
+    if reindex_mode and test_mode:
+        es.indices.delete(index=_index)
+    # Create the index if required                                         
+    if not es.indices.exists(index=_index):
+        mapping = get_es_mapping(dataset, aliases=aliases)
+        es.indices.create(index=_index, body=mapping)
+    else:
+        print("It exists?")
+    return es, es_config
+
+
 def load_json_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be json).
+    
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
+    Returns:
+        The file contents as a json object.
+    """
     _path = find_filepath_from_pathstub(pathstub)
     _path = os.path.join(_path, filename)
     with open(_path) as f:

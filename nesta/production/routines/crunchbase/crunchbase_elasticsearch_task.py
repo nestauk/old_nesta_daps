@@ -9,7 +9,6 @@ flattened and it is all stored in the same index.
 '''
 
 import boto3
-from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 import logging
 import luigi
@@ -27,26 +26,6 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-
-def assert_correct_config(test, config, key):
-    """Assert that config key and 'index' value are consistent with the
-    running mode.
-
-    Args:
-        test (bool): Are we running in test mode?
-        config (dict): Elasticsearch config file data.
-        key (str): The name of the config key.
-    """
-    err_msg = "In test mode='{test}', config key '{key}' must end with '{suffix}'"
-    if test and not key.endswith("_dev"):
-        raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
-    elif not self.test and not index_name.endswith("_prod")
-        raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
-
-    index = config[key]['index']
-    if test and not index.endswith("_dev"):
-        raise ValueError(f"In test mode the index '{key}' must end with '_dev'")
-
 
 class ElasticsearchTask(autobatch.AutoBatchTask):
     '''Download tar file of csvs and load them into the MySQL server.
@@ -85,47 +64,44 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def prepare(self):
-        # mysql setup
-        self.database = 'dev' if self.test else 'production'
-        engine = get_mysql_engine(self.db_config_env, 'mysqldb', self.database)
-
-        # elasticsearch setup
-        #es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
-        es_config = get_config('elasticsearch.config', self.es_mode)
-        assert_correct_config(self.test, self.es_mode, es_config)
-
-        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
         if self.test:
             self.process_batch_size = 1000
-            logging.warning(f"Batch size restricted to {self.process_batch_size}"
+            logging.warning("Batch size restricted to "
+                            f"{self.process_batch_size}"
                             " while in test mode")
-        # Drop the index if required (must be in test mode to do this)
-        _index = es_config['index']
-        if self.reindex and self.test:
-            es.indices.delete(index=_index)
-        # Create the index if required
-        if not es.indices.exists(index=_index):
-            mapping = get_es_mapping('crunchbase', aliases='health_scanner')
-            es.indices.create(index=_index, body=mapping)
 
-        # get set of existing ids from elasticsearch via scroll
-        query = {"_source": False}
-        scanner = scan(es, query, index=_index, doc_type=es_config['type'])
+        # MySQL setup
+        self.database = 'dev' if self.test else 'production'
+        engine = get_mysql_engine(self.db_config_env, 'mysqldb', 
+                                  self.database)
+        
+        # Elasticsearch setup
+        es, es_config = setup_es(self.es_mode, self.test, self.reindex, 
+                                 dataset='crunchbase', 
+                                 aliases='health_scanner')
+        # Get set of existing ids from elasticsearch via scroll
+        scanner = scan(es, query={"_source": False}, 
+                       index=es_config['index'], 
+                       doc_type=es_config['type'])
         existing_ids = {s['_id'] for s in scanner}
-        logging.info(f"Collected {len(existing_ids)} existing in Elasticsearch")
+        logging.info(f"Collected {len(existing_ids)} existing in "
+                     "Elasticsearch")
 
-        # get set of all organisations from mysql
+        # Get set of all organisations from mysql
         all_orgs = all_org_ids(engine)
         logging.info(f"{len(all_orgs)} organisations in MYSQL")
 
-        # remove previously processed
-        orgs_to_process = (org for org in all_orgs if org not in existing_ids)
+        # Remove previously processed
+        orgs_to_process = (org for org in all_orgs 
+                           if org not in existing_ids)
 
         job_params = []
         for count, batch in enumerate(split_batches(orgs_to_process,
-                                                    self.process_batch_size), 1):
+                                                    self.process_batch_size),
+                                      1):
             # write batch of ids to s3
-            batch_file = put_s3_batch(batch, self.intermediate_bucket, 'crunchbase_to_es')
+            batch_file = put_s3_batch(batch, self.intermediate_bucket, 
+                                      'crunchbase_to_es')
             params = {"batch_file": batch_file,
                       "config": 'mysqldb.config',
                       "db_name": self.database,
@@ -140,10 +116,12 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
             logging.info(params)
             job_params.append(params)
             if self.test and count > 1:
-                logging.warning("Breaking after 2 batches while in test mode.")
+                logging.warning("Breaking after 2 batches while in "
+                                "test mode.")
                 break
 
-        logging.warning(f"Batch preparation completed, with {len(job_params)} batches")
+        logging.warning("Batch preparation completed, "
+                        f"with {len(job_params)} batches")
         return job_params
 
     def combine(self, job_params):
