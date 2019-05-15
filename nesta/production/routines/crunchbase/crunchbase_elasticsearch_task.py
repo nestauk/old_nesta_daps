@@ -92,7 +92,6 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         # elasticsearch setup
         #es_mode = 'crunchbase_orgs_dev' if self.test else 'crunchbase_orgs_prod'
         es_config = get_config('elasticsearch.config', self.es_mode)
-        es_mapping = get_es_mapping('crunchbase', aliases='health_scanner')
         assert_correct_config(self.test, self.es_mode, es_config)
 
         es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
@@ -101,16 +100,17 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
             logging.warning(f"Batch size restricted to {self.process_batch_size}"
                             " while in test mode")
         # Drop the index if required (must be in test mode to do this)
+        _index = es_config['index']
         if self.reindex and self.test:
-            es.indices.delete(index=es_config['index'])
+            es.indices.delete(index=_index)
         # Create the index if required
-        if not es.indices.exists(index=es_config['index']):
-            es.indices.create(index=es_config['index'], body=mapping)
-
+        if not es.indices.exists(index=_index):
+            mapping = get_es_mapping('crunchbase', aliases='health_scanner')
+            es.indices.create(index=_index, body=mapping)
 
         # get set of existing ids from elasticsearch via scroll
         query = {"_source": False}
-        scanner = scan(es, query, index=es_config['index'], doc_type=es_config['type'])
+        scanner = scan(es, query, index=_index, doc_type=es_config['type'])
         existing_ids = {s['_id'] for s in scanner}
         logging.info(f"Collected {len(existing_ids)} existing in Elasticsearch")
 
