@@ -15,6 +15,7 @@ from nesta.production.orms.orm_utils import insert_data
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.orm_utils import get_es_mapping
 from nesta.production.orms.orm_utils import setup_es
+from nesta.production.orms.orm_utils import Elasticsearch
 
 @pytest.fixture
 def alias_lookup():
@@ -157,11 +158,11 @@ def test_setup_es_true_test_delete_called(mock_get_es_mapping,
                                           mock_Elasticsearch, 
                                           mock_assert_correct_config, 
                                           mock_get_config):
-    mock_Elasticsearch.indices.exists.return_value = False
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(es_mode="dev", test_mode=True, reindex_mode=True, 
              dataset=None, aliases=None)
-    assert mock_Elasticsearch.indices.delete.call_count == 1
-    assert mock_Elasticsearch.indices.create.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
 @mock.patch("nesta.production.orms.orm_utils.get_config")
 @mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
@@ -171,11 +172,11 @@ def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
                                                mock_Elasticsearch, 
                                                mock_assert_correct_config, 
                                                mock_get_config):
-    mock_Elasticsearch.indices.exists.return_value = False
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(es_mode="dev", test_mode=False, reindex_mode=True, 
              dataset=None, aliases=None)
-    assert mock_Elasticsearch.indices.delete.call_count == 0
-    assert mock_Elasticsearch.indices.create.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
 @mock.patch("nesta.production.orms.orm_utils.get_config")
 @mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
@@ -185,11 +186,11 @@ def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
                                                   mock_Elasticsearch, 
                                                   mock_assert_correct_config, 
                                                   mock_get_config):
-    mock_Elasticsearch.indices.exists.return_value = False
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(es_mode="dev", test_mode=True, reindex_mode=False, 
              dataset=None, aliases=None)
-    assert mock_Elasticsearch.indices.delete.call_count == 0
-    assert mock_Elasticsearch.indices.create.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
 @mock.patch("nesta.production.orms.orm_utils.get_config")
 @mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
@@ -199,8 +200,8 @@ def test_setup_es_no_create_if_exists(mock_get_es_mapping,
                                       mock_Elasticsearch, 
                                       mock_assert_correct_config, 
                                       mock_get_config):
-    mock_Elasticsearch.indices.exists.return_value = True
+    mock_Elasticsearch.return_value.indices.exists.return_value = True
     setup_es(es_mode="dev", test_mode=True, reindex_mode=False, 
              dataset=None, aliases=None)
-    assert mock_Elasticsearch.indices.delete.call_count == 0
-    assert mock_Elasticsearch.indices.create.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 0

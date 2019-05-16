@@ -64,12 +64,11 @@ def setup_es(es_mode, test_mode, reindex_mode, dataset, aliases=None):
     _index = es_config['index']
     if reindex_mode and test_mode:
         es.indices.delete(index=_index)
-    # Create the index if required                                         
-    if not es.indices.exists(index=_index):
+    # Create the index if required
+    exists = es.indices.exists(index=_index)
+    if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
         es.indices.create(index=_index, body=mapping)
-    else:
-        print("It exists?")
     return es, es_config
 
 

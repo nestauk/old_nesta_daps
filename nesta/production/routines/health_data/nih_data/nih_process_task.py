@@ -18,6 +18,7 @@ from nesta.production.routines.health_data.nih_data.nih_collect_task import Coll
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.nih_orm import Projects
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
@@ -37,6 +38,8 @@ class ProcessTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
+    es_mode = luigi.Parameter(default="dev")
+    reindex = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
@@ -101,9 +104,10 @@ class ProcessTask(autobatch.AutoBatchTask):
         project_query = session.query(Projects)
 
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
+        es, es_config = setup_es(self.es_mode, self.test, self.reindex,
+                                 dataset='nih',
+                                 aliases='health_scanner')
+
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []

@@ -15,6 +15,9 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+def _add_entity_type(row, entity_type):
+    row['type_of_entity'] = entity_type
+    return row
 
 def _null_empty_str(row):
     """Nullify values if they are empty strings.
@@ -109,7 +112,6 @@ def _guess_delimiter(item, threshold=0.25):
     p, score = Counter(scores).most_common()[-1]
     if score < threshold:
         return p
-
 
 def _listify_terms(row):
     """Split any 'terms' fields by a guessed delimiter if the
@@ -207,7 +209,7 @@ class ElasticsearchPlus(Elasticsearch):
         listify_terms (bool): Attempt to convert all 'terms' fields to lists?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
-    def __init__(self,
+    def __init__(self, entity_type,
                  strans_kwargs={},
                  field_null_mapping={},
                  null_empty_str=True,
@@ -216,7 +218,10 @@ class ElasticsearchPlus(Elasticsearch):
                  listify_terms=True,
                  *args, **kwargs):
         # Apply the schema mapping
-        self.transforms = [lambda row: schema_transformer(row, **strans_kwargs)]
+        self.transforms = [lambda row: schema_transformer(row, 
+                                                                **strans_kwargs),
+                           lambda row: _add_entity_type(row,
+                                                              entity_type)]
 
         # Convert values to null as required
         if null_empty_str:
@@ -225,7 +230,7 @@ class ElasticsearchPlus(Elasticsearch):
         # Convert other values to null as specified
         if len(field_null_mapping) > 0:
             self.transforms.append(lambda row: _null_mapping(row,
-                                                             field_null_mapping))
+                                                                   field_null_mapping))
 
         # Convert coordinates to floats
         if coordinates_as_floats:
