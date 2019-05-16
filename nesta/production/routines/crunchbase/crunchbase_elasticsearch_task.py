@@ -21,6 +21,7 @@ from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import setup_es
 
 
 S3 = boto3.resource('s3')
@@ -45,6 +46,8 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=10000)
     insert_batch_size = luigi.IntParameter()
     intermediate_bucket = luigi.Parameter()
+    es_mode = luigi.Parameter(default="dev")
+    reindex = luigi.BoolParameter(default=False)
 
     def requires(self):
         yield ParentIdCollectTask(date=self.date,

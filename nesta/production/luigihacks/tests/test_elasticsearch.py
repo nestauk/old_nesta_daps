@@ -9,6 +9,7 @@ from nesta.production.luigihacks.elasticsearch import COUNTRY_TAG
 from nesta.production.luigihacks.elasticsearch import _guess_delimiter
 from nesta.production.luigihacks.elasticsearch import _listify_terms
 from nesta.production.luigihacks.elasticsearch import _null_mapping
+from nesta.production.luigihacks.elasticsearch import _add_entity_type
 
 from nesta.production.luigihacks.elasticsearch import ElasticsearchPlus
 
@@ -44,7 +45,7 @@ def row():
             "a negative number": -123,
             "a description field": ("Chinese and British people "
                                     "both live in Greece and Chile"),
-            "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!",
+            "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
 
 def test_null_empty_str(row):
@@ -120,6 +121,12 @@ def test_listify_good_terms(mocked_guess_delimiter, row):
     row["terms_of_xyz"] = row["terms_of_xyz"].split(";")
     assert _listify_terms(row) == row
 
+def test_add_entity_type(row):
+    entity_type = "something"
+    _row = _add_entity_type(row, entity_type)
+    assert _row.pop('type_of_entity') == entity_type
+    assert _row == row
+
 def test_null_mapping(row, field_null_mapping):
     _row = _null_mapping(row, field_null_mapping)
     assert len(_row) == len(row)
@@ -136,16 +143,15 @@ def test_null_mapping(row, field_null_mapping):
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
 def test_chain_transforms(mocked_schema_transformer, row,
                           field_null_mapping):
-    es = ElasticsearchPlus(field_null_mapping=field_null_mapping)
+    es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
     assert len(_row) == len(row) + 1
     
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
 def test_index(mocked_chain_transform, mocked_super_index, row):
-    es = ElasticsearchPlus()
+    es = ElasticsearchPlus('dummy')
     body = [row]*12
     with pytest.raises(ValueError):
         es.index()
     es.index(body=body)
-
