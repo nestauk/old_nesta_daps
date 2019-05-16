@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Article, Category
+from nesta.production.orms.arxiv_orm import Base, Article, Category, ArticleInstitute
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -359,6 +359,11 @@ def update_existing_articles(article_batch, session):
     """
     logging.info(f"Updating a batch of {len(article_batch)} existing articles")
 
+    # look for any institutes in provided article_batch
+    for article in article_batch:
+        if article.get('institutes'):
+            raise TypeError("Institute links cannot be written using this method. Use add_article_institutes instead")
+
     # convert lists of category ids into rows for association table
     article_categories = [dict(article_id=article['id'], category_id=cat_id)
                           for article in article_batch
@@ -368,11 +373,6 @@ def update_existing_articles(article_batch, session):
     article_fields_of_study = [dict(article_id=article['id'], fos_id=fos_id)
                                for article in article_batch
                                for fos_id in article.pop('fields_of_study', [])]
-
-    # convert lists of institutes into rows for association table
-    article_institutes = [dict(article_id=article['id'], institude_id=institute_id)
-                          for article in article_batch
-                          for institute_id in article.pop('institutes', [])]
 
     # update unlinked article data in bulk
     logging.debug("bulk update mapping on articles")
@@ -395,12 +395,12 @@ def update_existing_articles(article_batch, session):
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
 
-    logging.debug("core orm insert on institutes")
-    if article_institutes:
-        session.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
-                        article_institutes)
-
     session.commit()
+
+
+def add_article_institutes(article_institutes, engine):
+    """Writes to the association table for article/institute links using the core orm"""
+    engine.execute(ArticleInstitute.insert(), article_institutes)
 
 
 if __name__ == '__main__':

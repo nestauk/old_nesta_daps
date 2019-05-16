@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -30,6 +31,20 @@ def read_aliases(filepath):
     aliases = pd.read_csv(f"{filepath}/full_tables/aliases.csv", low_memory=False)
 
     return aliases
+
+
+class ComboFuzzer:
+    def __init__(self, fuzzers):
+        self.fuzzers = fuzzers
+        # Define the normalisation variable in advance
+        self.norm = 1 / np.sqrt(len(fuzzers))
+
+    def combo_fuzz(self, target, candidate):
+        _score = 0
+        for _fuzz in self.fuzzers:
+            _raw_score = (_fuzz(target, candidate) / 100)
+            _score += _raw_score ** 2
+        return np.sqrt(_score) * self.norm
 
 
 if __name__ == '__main__':

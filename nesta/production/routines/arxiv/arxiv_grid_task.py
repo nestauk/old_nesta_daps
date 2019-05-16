@@ -1,9 +1,13 @@
 from collections import defaultdict
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process as fuzzy_proc
 import luigi
 import logging
+import re
 
-# from arxiv_mag_task import QueryMagTask
-from nesta.packages.arxiv.collect_arxiv import update_existing_articles
+from arxiv_mag_sparql_task import MagSparqlTask
+from nesta.packages.arxiv.collect_arxiv import add_article_institutes
+from nesta.packages.grid.grid import ComboFuzzer
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.grid_orm import Institute, Alias
@@ -45,14 +49,14 @@ class GridTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
-        yield QueryMagTask(date=self.date,
-                           _routine_id=self._routine_id,
-                           db_config_path=self.db_config_path,
-                           db_config_env=self.db_config_env,
-                           mag_config_path=self.mag_config_path,
-                           test=self.test,
-                           articles_from_date=self.articles_from_date,
-                           insert_batch_size=self.insert_batch_size)
+        yield MagSparqlTask(date=self.date,
+                            _routine_id=self._routine_id,
+                            db_config_path=self.db_config_path,
+                            db_config_env=self.db_config_env,
+                            mag_config_path=self.mag_config_path,
+                            test=self.test,
+                            articles_from_date=self.articles_from_date,
+                            insert_batch_size=self.insert_batch_size)
 
     def run(self):
         # database setup
@@ -60,6 +64,12 @@ class GridTask(luigi.Task):
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         Base.metadata.create_all(self.engine)
+
+        article_institute_batcher = BatchWriter(self.insert_batch_size,
+                                                add_article_institutes,
+                                                self.engine)
+
+        combo_fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio])
 
         with db_session(self.engine) as session:
             # extract affiliations for each article
@@ -75,30 +85,83 @@ class GridTask(luigi.Task):
                         pass
                     else:
                         articles_to_process[article.id].add(affiliation)
-            logging.info(f"{len(articles_to_process)} articles with affiliations")
+            logging.info(f"Found {len(articles_to_process)} articles with affiliations")
 
             # extract GRID data
             institute_name_lookup = {}
             for institute in session.query(Institute).all():
-                institute_name_lookup.update({institute.name.lower(): institute.id})
+                institute_name_lookup.update({institute.name.lower(): [institute.id]})
+            logging.info(f"{len(institute_name_lookup)} institutes in GRID")
 
             for alias in session.query(Alias).all():
-                institute_name_lookup.update({alias.alias.lower(): alias.grid_id})
+                institute_name_lookup.update({alias.alias.lower(): [alias.grid_id]})
+            logging.info(f"{len(institute_name_lookup)} institutes after adding aliases")
 
-            # look for exact matches
-            matches = {}
-            for id, affiliations in articles_to_process.items():
-                for affiliation in affiliations:
-                    try:
-                        matches.update({id: institute_name_lookup[affiliation]})
-                    except KeyError:
-                        pass
-            logging.info(f"Matched {len(matches)} on exact match")
-            # *****add lower to the name searching for also?
+            # look for institute names containing brackets: IBM (United Kingdom)
+            with_country = defaultdict(list)
+            for bracketed in (session
+                              .query(Institute)
+                              .filter(Institute.name.contains('(') & Institute.name.contains(')'))
+                              .all()):
 
-                    
+                found = re.match(r'(.*) \((.*)\)', bracketed.name)
+                if found:
+                    # combine all matches to a cleaned country name {IBM : [grid_id1, grid_id2]}
+                    with_country[found.groups()[0]].append(bracketed.id)
+            logging.info(f"{len(with_country)} institutes with country in the title")
 
+        # append to the lookup table
+        institute_name_lookup.update(with_country)
+        logging.info(f"{len(institute_name_lookup)} institutes after cleaning those with country in the title")
 
+        fuzzy_matches = {}
+        failed_fuzzy_matches = set()
+        logging.debug("Starting the matching process")
+        for count, (article_id, affiliations) in enumerate(articles_to_process.items(),
+                                                           start=1):
+            for affiliation in affiliations:
+                try:
+                    # look for an exact match
+                    institute_ids = institute_name_lookup[affiliation]
+                    score = 1
+                    logging.debug(f"Found an exact match for: {affiliation}")
+                except KeyError:
+                    if affiliation in failed_fuzzy_matches:
+                        continue
+                    # check previous fuzzy matches
+                    match, score = fuzzy_matches.get(affiliation, (None, None))
+                    if not match:
+                        # attempt a new fuzzy match
+                        match, score = fuzzy_proc.extractOne(query=affiliation,
+                                                             choices=institute_name_lookup.keys(),
+                                                             scorer=combo_fuzzer.combo_fuzz)
+                    if score < 0.85:  # definitely a bad match
+                        logging.debug(f"Failed to find a match for: {affiliation}")
+                        failed_fuzzy_matches.add(affiliation)
+                        continue
+                    else:
+                        fuzzy_matches.update({affiliation: (match, score)})
+                        institute_ids = institute_name_lookup(match)
+                        logging.debug(f"Found a fuzzy match: {affiliation} {score} {match}")
 
-            # build lookup table of previous matches so they do not have to be recalculated
-            # result needs to be a dict of {article_id: institute_id} for direct load to the association table
+                # add an entry in the link table for each grid id (there will be
+                # multiple if the org is multinational)
+                for institute_id in institute_ids:
+                    article_institute_batcher.append({'article_id': article_id,
+                                                      'institute_id': institute_id,
+                                                      'is_multinational': len(institute_ids) > 1,
+                                                      'matching_score': score})
+            if not count % 1000:
+                logging.info(f"{count} processed articles")
+
+            if self.test and count > 10:
+                logging.warning("Exiting after 10 articles in test mode")
+                break
+
+        # pick up any left over in the batch
+        if article_institute_batcher:
+            article_institute_batcher.write()
+
+        # mark as done
+        logging.warning("Task complete")
+        self.output().touch()

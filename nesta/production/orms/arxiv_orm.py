@@ -6,7 +6,7 @@ from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
+from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN
 
 from nesta.production.orms.grid_orm import Institute
 from nesta.production.orms.grid_orm import Base as GridBase
@@ -43,16 +43,15 @@ article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,
                                        primary_key=True))
 
 
-"""Association table to GRID institutes."""
-article_institutes = Table('arxiv_article_institutes', Base.metadata,
-                           Column('article_id',
-                                  VARCHAR(20),
-                                  ForeignKey('arxiv_articles.id'),
-                                  primary_key=True),
-                           Column('institute_id',
-                                  VARCHAR(20),
-                                  ForeignKey(Institute.id),
-                                  primary_key=True))
+class ArticleInstitute(Base):
+    """Association table to GRID institutes."""
+    __tablename__ = 'arxiv_article_institutes'
+
+    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
+    institute_id = Column(VARCHAR(20), ForeignKey(Institute.id), primary_key=True)
+    is_multinational = Column(BOOLEAN)
+    matching_score = Column(FLOAT)
+    institute = relationship(Institute)
 
 
 class Article(Base):
@@ -78,8 +77,7 @@ class Article(Base):
                               secondary=article_categories)
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
-    institutes = relationship(Institute,
-                              secondary=article_institutes)
+    institutes = relationship('ArticleInstitute')
 
 
 class Category(Base):
