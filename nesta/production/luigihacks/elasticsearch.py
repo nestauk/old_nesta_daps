@@ -219,9 +219,9 @@ class ElasticsearchPlus(Elasticsearch):
                  *args, **kwargs):
         # Apply the schema mapping
         self.transforms = [lambda row: schema_transformer(row, 
-                                                                **strans_kwargs),
+                                                          **strans_kwargs),
                            lambda row: _add_entity_type(row,
-                                                              entity_type)]
+                                                        entity_type)]
 
         # Convert values to null as required
         if null_empty_str:
@@ -230,7 +230,7 @@ class ElasticsearchPlus(Elasticsearch):
         # Convert other values to null as specified
         if len(field_null_mapping) > 0:
             self.transforms.append(lambda row: _null_mapping(row,
-                                                                   field_null_mapping))
+                                                             field_null_mapping))
 
         # Convert coordinates to floats
         if coordinates_as_floats:

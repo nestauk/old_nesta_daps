@@ -19,6 +19,7 @@ def run():
     es_port = os.environ["BATCHPAR_out_port"]
     es_index = os.environ["BATCHPAR_out_index"]
     es_type = os.environ["BATCHPAR_out_type"]
+    entity_type = os.environ["BATCHPAR_entity_type"]
     db = os.environ["BATCHPAR_db"]
 
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
@@ -61,18 +62,30 @@ def run():
     # currency is the same for the whole dataset
     df['total_cost_currency'] = 'USD'
 
-    # apply schema
-    df = schema_transformer(df, filename="nih.json",
-                            from_key='tier_0', to_key='tier_1',
-                            ignore=['application_id'])
-
     # output to elasticsearch
-    es = Elasticsearch(es_host, port=es_port, use_ssl=True)
+    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mapping/",
+                                                 "health_scanner.json")
+    strans_kwargs={'filename':'nih.json',
+                   'from_key':'tier_0',
+                   'to_key':'tier_1',
+                   'ignore':['application_id']}
+    es = ElasticsearchPlus(hosts=es_host,
+                           port=es_port,
+                           use_ssl=True,
+                           entity_type=entity_type,
+                           strans_kwargs=strans_kwargs,
+                           field_null_mapping=field_null_mapping,
+                           null_empty_str=True,
+                           coordinates_as_floats=True,
+                           country_detection=True,
+                           listify_terms=True)
+
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
         uid = doc.pop("application_id")
-        es.index(es_index, doc_type=es_type, id=uid, body=doc)
+        es.index(index=es_index, 
+                 doc_type=es_type, id=uid, body=doc)
 
 
 if __name__ == '__main__':
