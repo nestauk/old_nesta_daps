@@ -165,5 +165,5 @@ class ClioTask(luigi.Task):
         es.indices.delete(index=es_config['index'])
         es.indices.create(index=es_config['index'], body=mapping)
         for id_, row in zip(uid, cleaned_json):
-            es.index(es_config['index'], doc_type=es_config['type'],
+            es.index(index=es_config['index'], doc_type=es_config['type'],
                      id=id_, body=row)
