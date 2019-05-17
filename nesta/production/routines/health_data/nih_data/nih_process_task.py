@@ -122,7 +122,8 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'out_type': es_config['type'],
                       'done': es.exists(index=es_config['index'],
                                         doc_type=es_config['type'],
-                                        id=end)
+                                        id=end),
+                      'entity_type': 'paper'
                       }
             print(params)
             job_params.append(params)

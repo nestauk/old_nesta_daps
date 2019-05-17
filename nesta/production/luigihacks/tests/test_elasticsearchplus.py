@@ -1,19 +1,19 @@
 import pytest
 from unittest import mock
 
-from nesta.production.luigihacks.elasticsearch import _null_empty_str
-from nesta.production.luigihacks.elasticsearch import _coordinates_as_floats
-from nesta.production.luigihacks.elasticsearch import _country_lookup
-from nesta.production.luigihacks.elasticsearch import _country_detection
-from nesta.production.luigihacks.elasticsearch import COUNTRY_TAG
-from nesta.production.luigihacks.elasticsearch import _guess_delimiter
-from nesta.production.luigihacks.elasticsearch import _listify_terms
-from nesta.production.luigihacks.elasticsearch import _null_mapping
-from nesta.production.luigihacks.elasticsearch import _add_entity_type
+from nesta.production.luigihacks.elasticsearchplus import _null_empty_str
+from nesta.production.luigihacks.elasticsearchplus import _coordinates_as_floats
+from nesta.production.luigihacks.elasticsearchplus import _country_lookup
+from nesta.production.luigihacks.elasticsearchplus import _country_detection
+from nesta.production.luigihacks.elasticsearchplus import COUNTRY_TAG
+from nesta.production.luigihacks.elasticsearchplus import _guess_delimiter
+from nesta.production.luigihacks.elasticsearchplus import _listify_terms
+from nesta.production.luigihacks.elasticsearchplus import _null_mapping
+from nesta.production.luigihacks.elasticsearchplus import _add_entity_type
 
-from nesta.production.luigihacks.elasticsearch import ElasticsearchPlus
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 
-PATH="nesta.production.luigihacks.elasticsearch"
+PATH="nesta.production.luigihacks.elasticsearchplus"
 GUESS_DELIMITER=f"{PATH}._guess_delimiter"
 SCHEMA_TRANS=f"{PATH}.schema_transformer"
 CHAIN_TRANS=f"{PATH}.ElasticsearchPlus.chain_transforms"
