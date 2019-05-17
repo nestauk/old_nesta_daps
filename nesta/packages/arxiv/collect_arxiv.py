@@ -400,7 +400,9 @@ def update_existing_articles(article_batch, session):
 
 def add_article_institutes(article_institutes, engine):
     """Writes to the association table for article/institute links using the core orm"""
-    engine.execute(ArticleInstitute.insert(), article_institutes)
+    logging.debug(article_institutes)
+    engine.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
+                   article_institutes)
 
 
 if __name__ == '__main__':

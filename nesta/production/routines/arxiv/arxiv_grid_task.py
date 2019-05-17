@@ -88,14 +88,14 @@ class GridTask(luigi.Task):
             logging.info(f"Found {len(articles_to_process)} articles with affiliations")
 
             # extract GRID data
-            institute_name_lookup = {}
+            institute_name_id_lookup = {}
             for institute in session.query(Institute).all():
-                institute_name_lookup.update({institute.name.lower(): [institute.id]})
-            logging.info(f"{len(institute_name_lookup)} institutes in GRID")
+                institute_name_id_lookup.update({institute.name.lower(): [institute.id]})
+            logging.info(f"{len(institute_name_id_lookup)} institutes in GRID")
 
             for alias in session.query(Alias).all():
-                institute_name_lookup.update({alias.alias.lower(): [alias.grid_id]})
-            logging.info(f"{len(institute_name_lookup)} institutes after adding aliases")
+                institute_name_id_lookup.update({alias.alias.lower(): [alias.grid_id]})
+            logging.info(f"{len(institute_name_id_lookup)} institutes after adding aliases")
 
             # look for institute names containing brackets: IBM (United Kingdom)
             with_country = defaultdict(list)
@@ -111,8 +111,8 @@ class GridTask(luigi.Task):
             logging.info(f"{len(with_country)} institutes with country in the title")
 
         # append to the lookup table
-        institute_name_lookup.update(with_country)
-        logging.info(f"{len(institute_name_lookup)} institutes after cleaning those with country in the title")
+        institute_name_id_lookup.update(with_country)
+        logging.info(f"{len(institute_name_id_lookup)} institutes after cleaning those with country in the title")
 
         fuzzy_matches = {}
         failed_fuzzy_matches = set()
@@ -122,7 +122,7 @@ class GridTask(luigi.Task):
             for affiliation in affiliations:
                 try:
                     # look for an exact match
-                    institute_ids = institute_name_lookup[affiliation]
+                    institute_ids = institute_name_id_lookup[affiliation]
                     score = 1
                     logging.debug(f"Found an exact match for: {affiliation}")
                 except KeyError:
@@ -133,15 +133,14 @@ class GridTask(luigi.Task):
                     if not match:
                         # attempt a new fuzzy match
                         match, score = fuzzy_proc.extractOne(query=affiliation,
-                                                             choices=institute_name_lookup.keys(),
+                                                             choices=institute_name_id_lookup.keys(),
                                                              scorer=combo_fuzzer.combo_fuzz)
-                    if score < 0.85:  # definitely a bad match
+                    if score < 0.85:  # <0.85 is definitely a bad match
                         logging.debug(f"Failed to find a match for: {affiliation}")
                         failed_fuzzy_matches.add(affiliation)
-                        continue
                     else:
                         fuzzy_matches.update({affiliation: (match, score)})
-                        institute_ids = institute_name_lookup(match)
+                        institute_ids = institute_name_id_lookup[match]
                         logging.debug(f"Found a fuzzy match: {affiliation} {score} {match}")
 
                 # add an entry in the link table for each grid id (there will be
@@ -150,12 +149,13 @@ class GridTask(luigi.Task):
                     article_institute_batcher.append({'article_id': article_id,
                                                       'institute_id': institute_id,
                                                       'is_multinational': len(institute_ids) > 1,
-                                                      'matching_score': score})
+                                                      'matching_score': float(score)})
             if not count % 1000:
                 logging.info(f"{count} processed articles")
 
             if self.test and count > 10:
                 logging.warning("Exiting after 10 articles in test mode")
+                logging.debug(article_institute_batcher)
                 break
 
         # pick up any left over in the batch
