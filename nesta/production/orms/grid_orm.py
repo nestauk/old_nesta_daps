@@ -4,6 +4,7 @@ Global Research Identifier Database (GRID)
 '''
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, DECIMAL
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import INTEGER
@@ -30,7 +31,8 @@ class Institute(Base):
     country_code = Column(VARCHAR(3))
     latitude = Column(DECIMAL(precision=8, scale=6))
     longitude = Column(DECIMAL(precision=9, scale=6))
-    aliases = relationship("Alias")
+    _aliases = relationship("Alias")
+    aliases = association_proxy('_aliases', 'alias')  # direct access to the alias field
 
 
 class Alias(Base):
