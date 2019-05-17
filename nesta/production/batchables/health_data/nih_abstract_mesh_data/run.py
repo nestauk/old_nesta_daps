@@ -5,7 +5,7 @@ import os
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
-from nesta.production.luigihacks.elasticsearch import ElasticsearchPlus
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
 from nesta.packages.health_data.process_mesh import format_mesh_terms
 from nesta.packages.health_data.process_mesh import retrieve_duplicate_map

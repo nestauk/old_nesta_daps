@@ -82,6 +82,8 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(self.es_mode, self.test, self.reindex, 
                                  dataset='crunchbase', 
                                  aliases='health_scanner')
+        print(es_config)
+        assert False
         # Get set of existing ids from elasticsearch via scroll
         scanner = scan(es, query={"_source": False}, 
                        index=es_config['index'], 
@@ -92,7 +94,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # Get set of all organisations from mysql
         all_orgs = all_org_ids(engine)
-        logging.info(f"{len(all_orgs)} organisations in MYSQL")
+        logging.info(f"{len(all_orgs)} organisations in MySQL")
 
         # Remove previously processed
         orgs_to_process = (org for org in all_orgs 
@@ -114,6 +116,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                       'out_port': es_config['port'],
                       'out_index': es_config['index'],
                       'out_type': es_config['type'],
+                      'entity_type': 'company',
                       "test": self.test
                       }
             logging.info(params)

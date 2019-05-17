@@ -209,6 +209,7 @@ class PeopleGeocodeTask(GeocodeBatchTask):
                                     insert_batch_size=self.insert_batch_size,
                                     batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_collect"),
                                     env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                               find_filepath_from_pathstub("orms/orm_utils.py"),
                                                find_filepath_from_pathstub("config/mysqldb.config"),
                                                find_filepath_from_pathstub("config/crunchbase.config")],
                                     job_def="py36_amzn1_image",

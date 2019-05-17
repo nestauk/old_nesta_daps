@@ -1,6 +1,6 @@
 from ast import literal_eval
 import boto3
-from nesta.production.luigihacks.elasticsearch import ElasticsearchPlus
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 import json
 import logging
 import os
