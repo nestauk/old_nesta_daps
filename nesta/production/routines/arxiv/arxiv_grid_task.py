@@ -73,24 +73,42 @@ class GridTask(luigi.Task):
 
         with db_session(self.engine) as session:
             # extract affiliations for each article
-            articles_to_process = defaultdict(set)
-            for article in (session
-                            .query(Article)
-                            .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
-                            .all()):
-                for author in article.mag_authors:
-                    try:
-                        affiliation = author['author_affiliation']
-                    except KeyError:
-                        pass
-                    else:
-                        articles_to_process[article.id].add(affiliation)
-            logging.info(f"Found {len(articles_to_process)} articles with affiliations")
 
-            # extract GRID data
-            institute_name_id_lookup = {}
-            for institute in session.query(Institute).all():
-                institute_name_id_lookup.update({institute.name.lower(): [institute.id]})
+            # articles_to_process = defaultdict(set)
+            # # for batch in split_batches(session
+            #                              .query(Article)
+            #                              .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
+            #                              .all()):
+            #     for article in batch:
+            #         for author in article.mag_authors:
+            #             try:
+            #                 affiliation = author['author_affiliation']
+            #             except KeyError:
+            #                 pass
+            #             else:
+            #                 articles_to_process[article.id].add(affiliation)
+
+                    # articles_to_process[article.id].add(affiliation)
+
+            author_affiliation_to_process = ({article.id: author.get('author_affiliation')}
+                                             for article in (session
+                                                             .query(Article)
+                                                             .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
+                                                             .all())
+                                             for author in article.mag_authors
+                                             if author.get('author_affiliation') is not None)
+
+             #            try:
+             #                affiliation = author['author_affiliation']
+             #            except KeyError:
+             #                pass
+             #            else:
+             #                articles_to_process[article.id].add(affiliation)
+                # logging.info(f"Found {len(articles_to_process)} articles with affiliations")
+
+            # extract GRID data - seems to be OK to hold in memory
+            institute_name_id_lookup = {institute.name.lower(): [institute.id]
+                                        for institute in session.query(Institute).all()}
             logging.info(f"{len(institute_name_id_lookup)} institutes in GRID")
 
             for alias in session.query(Alias).all():
@@ -117,39 +135,41 @@ class GridTask(luigi.Task):
         fuzzy_matches = {}
         failed_fuzzy_matches = set()
         logging.debug("Starting the matching process")
-        for count, (article_id, affiliations) in enumerate(articles_to_process.items(),
-                                                           start=1):
-            for affiliation in affiliations:
-                try:
-                    # look for an exact match
-                    institute_ids = institute_name_id_lookup[affiliation]
-                    score = 1
-                    logging.debug(f"Found an exact match for: {affiliation}")
-                except KeyError:
-                    if affiliation in failed_fuzzy_matches:
-                        continue
-                    # check previous fuzzy matches
-                    match, score = fuzzy_matches.get(affiliation, (None, None))
-                    if not match:
-                        # attempt a new fuzzy match
-                        match, score = fuzzy_proc.extractOne(query=affiliation,
-                                                             choices=institute_name_id_lookup.keys(),
-                                                             scorer=combo_fuzzer.combo_fuzz)
-                    if score < 0.85:  # <0.85 is definitely a bad match
-                        logging.debug(f"Failed to find a match for: {affiliation}")
-                        failed_fuzzy_matches.add(affiliation)
-                    else:
-                        fuzzy_matches.update({affiliation: (match, score)})
-                        institute_ids = institute_name_id_lookup[match]
-                        logging.debug(f"Found a fuzzy match: {affiliation} {score} {match}")
 
-                # add an entry in the link table for each grid id (there will be
-                # multiple if the org is multinational)
-                for institute_id in institute_ids:
-                    article_institute_batcher.append({'article_id': article_id,
-                                                      'institute_id': institute_id,
-                                                      'is_multinational': len(institute_ids) > 1,
-                                                      'matching_score': float(score)})
+        for count, (article_id, affiliation) in enumerate(author_affiliation_to_process.items(),
+                                                          start=1):
+        # for count, (article_id, affiliations) in enumerate(articles_to_process.items(),
+        #                                                    start=1):
+            try:
+                # look for an exact match
+                institute_ids = institute_name_id_lookup[affiliation]
+                score = 1
+                logging.debug(f"Found an exact match for: {affiliation}")
+            except KeyError:
+                if affiliation in failed_fuzzy_matches:
+                    continue
+                # check previous fuzzy matches
+                match, score = fuzzy_matches.get(affiliation, (None, None))
+                if not match:
+                    # attempt a new fuzzy match
+                    match, score = fuzzy_proc.extractOne(query=affiliation,
+                                                         choices=institute_name_id_lookup.keys(),
+                                                         scorer=combo_fuzzer.combo_fuzz)
+                if score < 0.85:  # <0.85 is definitely a bad match
+                    logging.debug(f"Failed to find a match for: {affiliation}")
+                    failed_fuzzy_matches.add(affiliation)
+                else:
+                    fuzzy_matches.update({affiliation: (match, score)})
+                    institute_ids = institute_name_id_lookup[match]
+                    logging.debug(f"Found a fuzzy match: {affiliation} {score} {match}")
+
+            # add an entry in the link table for each grid id (there will be
+            # multiple if the org is multinational)
+            for institute_id in institute_ids:
+                article_institute_batcher.append({'article_id': article_id,
+                                                  'institute_id': institute_id,
+                                                  'is_multinational': len(institute_ids) > 1,
+                                                  'matching_score': float(score)})
             if not count % 1000:
                 logging.info(f"{count} processed articles")
 
