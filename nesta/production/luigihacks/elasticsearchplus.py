@@ -47,8 +47,8 @@ def _coordinates_as_floats(row):
             continue
         if v is None:
             continue
-        _row[k]['latitude'] = float(v['latitude'])
-        _row[k]['longitude'] = float(v['longitude'])
+        _row[k]['lat'] = float(v['lat'])
+        _row[k]['lon'] = float(v['lon'])
     return _row
 
 def _country_lookup():
@@ -256,14 +256,38 @@ class ElasticsearchPlus(Elasticsearch):
         """
         return reduce(lambda _row, f: f(_row), self.transforms, row)
 
-    def index(self, **kwargs):
+    def index(self, aws_auth_region=None, no_commit=False, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the
         transformation chain before indexing. Note: only keyword arguments
-        are accepted.
+        are accepted for core :obj:`Elasticsearch` API.
+
+        Args:
+            aws_auth_region (str): AWS region to be for authentication.
+                                   If not None, use HTTPS and AWS 
+                                   authentication from boto3 credentials.
+            no_commit (bool): Call the super index method? Useful for 
+                              dry-runs of the transformation chain.
+            kwargs: All other args to pass to the core Elasticsearch API.
+        Returns:
+            body (dict): The transformed body, as passed to Elasticsearch.
         """
         try:
             _body = kwargs.pop("body")
         except KeyError:
             raise ValueError("Keyword argument 'body' was not provided.")
-        _body = map(lambda row: self.chain_transforms(row), _body)
-        super().index(body=list(_body), **kwargs)
+
+        if aws_auth_region is not None:
+            credentials = boto3.Session().get_credentials()
+            http_auth = AWS4Auth(credentials.access_key, 
+                                 credentials.secret_key,
+                                 aws_auth_region, 'es')
+            kwargs["http_auth"] = http_auth
+            kwargs["use_ssl"] = True
+            kwargs["verify_certs"] = True
+            kwargs["connection_class"] = RequestsHttpConnection
+
+        body = dict(self.chain_transforms(_body))
+        if not no_commit:
+            print(kwargs)
+            super().index(body=body, **kwargs)
+        return body

@@ -29,9 +29,9 @@ def assert_correct_config(test, config, key):
                "must end with '{suffix}'")
     if test and not key.endswith("_dev"):
         raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
-    elif not self.test and not index_name.endswith("_prod"):
+    elif not test and not index_name.endswith("_prod"):
         raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
-    index = config[key]['index']
+    index = config['index']
     if test and not index.endswith("_dev"):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
@@ -55,8 +55,9 @@ def setup_es(es_mode, test_mode, reindex_mode, dataset, aliases=None):
                          f"'prod' or 'dev', but '{es_mode}' provided.")
 
     # Get and check the config
-    es_config = get_config('elasticsearch.config', es_mode)
-    assert_correct_config(test_mode, es_mode, es_config)    
+    key = f"{dataset}_{es_mode}"
+    es_config = get_config('elasticsearch.config', key)
+    assert_correct_config(test_mode, es_config, key)
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'], 
                        use_ssl=True)
@@ -103,7 +104,7 @@ def get_es_mapping(dataset, aliases):
     # Get the mapping and lookup
     mapping = load_json_from_pathstub("production/orms/",
                                       f"{dataset}_es_config.json")
-    alias_lookup = load_json_from_pathstub("production/tier_1/aliases/",
+    alias_lookup = load_json_from_pathstub("tier_1/aliases/",
                                            f"{aliases}.json")
     # Get a list of valid fields for verification
     fields = mapping["mappings"]["_doc"]["properties"].keys()
@@ -319,6 +320,8 @@ def get_mysql_engine(db_env, section, database="production_tests"):
                   username="travis",
                   database=database)
     else:
+        if not os.path.exists(conf_path):
+            raise FileNotFoundError(conf_path)
         cp = ConfigParser()
         cp.read(conf_path)
         conf = dict(cp._sections[section])

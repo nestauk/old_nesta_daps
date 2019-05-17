@@ -30,17 +30,17 @@ def lookup():
 @pytest.fixture
 def field_null_mapping():
     return {"non-empty str": ["blah"],
-            "coordinate_of_abc": [{"latitude": 123}],
+            "coordinate_of_abc": [{"lat": 123}],
             "a negative number": ["<NEGATIVE>"]}
 
 @pytest.fixture
 def row():
     return {"empty str": "",
             "non-empty str": "blah",
-            "coordinate_of_xyz": {"latitude": "123",
-                                  "longitude": "234"},
-            "coordinate_of_abc": {"latitude": 123,
-                                  "longitude": 234},
+            "coordinate_of_xyz": {"lat": "123",
+                                  "lon": "234"},
+            "coordinate_of_abc": {"lat": 123,
+                                  "lon": 234},
             "coordinate_of_none": None,
             "a negative number": -123,
             "a description field": ("Chinese and British people "
@@ -151,7 +151,6 @@ def test_chain_transforms(mocked_schema_transformer, row,
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
 def test_index(mocked_chain_transform, mocked_super_index, row):
     es = ElasticsearchPlus('dummy')
-    body = [row]*12
     with pytest.raises(ValueError):
         es.index()
-    es.index(body=body)
+    es.index(body=row)

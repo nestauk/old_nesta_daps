@@ -123,6 +123,7 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'done': es.exists(index=es_config['index'],
                                         doc_type=es_config['type'],
                                         id=end),
+                      'aws_auth_region': es_config['region'],
                       'entity_type': 'paper'
                       }
             print(params)

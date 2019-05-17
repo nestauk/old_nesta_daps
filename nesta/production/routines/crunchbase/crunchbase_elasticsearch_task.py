@@ -82,8 +82,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(self.es_mode, self.test, self.reindex, 
                                  dataset='crunchbase', 
                                  aliases='health_scanner')
-        print(es_config)
-        assert False
+
         # Get set of existing ids from elasticsearch via scroll
         scanner = scan(es, query={"_source": False}, 
                        index=es_config['index'], 
@@ -107,18 +106,20 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
             # write batch of ids to s3
             batch_file = put_s3_batch(batch, self.intermediate_bucket, 
                                       'crunchbase_to_es')
-            params = {"batch_file": batch_file,
-                      "config": 'mysqldb.config',
-                      "db_name": self.database,
-                      "bucket": self.intermediate_bucket,
-                      "done": False,
-                      'outinfo': es_config['host'],
-                      'out_port': es_config['port'],
-                      'out_index': es_config['index'],
-                      'out_type': es_config['type'],
-                      'entity_type': 'company',
-                      "test": self.test
-                      }
+            params = {
+                "batch_file": batch_file,
+                "config": 'mysqldb.config',
+                "db_name": self.database,
+                "bucket": self.intermediate_bucket,
+                "done": False,
+                'outinfo': es_config['host'],
+                'out_port': es_config['port'],
+                'out_index': es_config['index'],
+                'out_type': es_config['type'],
+                'aws_auth_region': es_config['region'],
+                'entity_type': 'company',
+                "test": self.test
+            }
             logging.info(params)
             job_params.append(params)
             if self.test and count > 1:
