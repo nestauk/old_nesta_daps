@@ -63,7 +63,7 @@ def run():
     df['total_cost_currency'] = 'USD'
 
     # output to elasticsearch
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mapping/",
+    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
                                                  "health_scanner.json")
     strans_kwargs={'filename':'nih.json',
                    'from_key':'tier_0',
