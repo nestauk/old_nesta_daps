@@ -1,16 +1,13 @@
-from collections import defaultdict
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process as fuzzy_proc
 import luigi
 import logging
-import re
 
 from arxiv_mag_sparql_task import MagSparqlTask
 from nesta.packages.arxiv.collect_arxiv import add_article_institutes
-from nesta.packages.grid.grid import ComboFuzzer
+from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
-from nesta.production.orms.grid_orm import Institute, Alias
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -71,32 +68,10 @@ class GridTask(luigi.Task):
 
         combo_fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio])
 
+        # extract GRID data - seems to be OK to hold in memory
+        institute_name_id_lookup = grid_name_lookup(self.engine)
+
         with db_session(self.engine) as session:
-            # extract GRID data - seems to be OK to hold in memory
-            institute_name_id_lookup = {institute.name.lower(): [institute.id]
-                                        for institute in session.query(Institute).all()}
-            logging.info(f"{len(institute_name_id_lookup)} institutes in GRID")
-
-            for alias in session.query(Alias).all():
-                institute_name_id_lookup.update({alias.alias.lower(): [alias.grid_id]})
-            logging.info(f"{len(institute_name_id_lookup)} institutes after adding aliases")
-
-            # look for institute names containing brackets: IBM (United Kingdom)
-            with_country = defaultdict(list)
-            for bracketed in (session
-                              .query(Institute)
-                              .filter(Institute.name.contains('(') & Institute.name.contains(')'))
-                              .all()):
-                found = re.match(r'(.*) \((.*)\)', bracketed.name)
-                if found:
-                    # combine all matches to a cleaned country name {IBM : [grid_id1, grid_id2]}
-                    with_country[found.groups()[0]].append(bracketed.id)
-            logging.info(f"{len(with_country)} institutes with country name in the title")
-
-            # append cleaned names to the lookup table
-            institute_name_id_lookup.update(with_country)
-            logging.info(f"{len(institute_name_id_lookup)} total institute names in lookup")
-
             logging.debug("Starting the matching process")
             successful_fuzzy_matches = {}
             failed_fuzzy_matches = set()

@@ -1,8 +1,11 @@
+from collections import defaultdict
+import logging
 import numpy as np
 import pandas as pd
+import re
 
-
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.grid_orm import Institute, Alias
+from nesta.production.orms.orm_utils import db_session
 
 
 def read_institutes(filepath):
@@ -47,14 +50,59 @@ class ComboFuzzer:
         return np.sqrt(_score) * self.norm
 
 
+def grid_name_lookup(engine):
+    """Constructs a lookup table of Institute names to ids by combining names with
+    aliases and cleaned names containing country names in brackets. Multinationals are
+    detected.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.base.Engine`): connection to the database
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): lookup table [{name: [id1, id2, id3]}]
+                Where ids are different country entities for multinational institutes.
+                Most entities just have a singe [id1]
+    """
+    with db_session(engine) as session:
+        institute_name_id_lookup = {institute.name.lower(): [institute.id]
+                                    for institute in session.query(Institute).all()}
+        logging.info(f"{len(institute_name_id_lookup)} institutes in GRID")
+
+        for alias in session.query(Alias).all():
+            institute_name_id_lookup.update({alias.alias.lower(): [alias.grid_id]})
+        logging.info(f"{len(institute_name_id_lookup)} institutes after adding aliases")
+
+        # look for institute names containing brackets: IBM (United Kingdom)
+        with_country = defaultdict(list)
+        for bracketed in (session
+                          .query(Institute)
+                          .filter(Institute.name.contains('(') & Institute.name.contains(')'))
+                          .all()):
+            found = re.match(r'(.*) \((.*)\)', bracketed.name)
+            if found:
+                # combine all matches to a cleaned country name {IBM : [grid_id1, grid_id2]}
+                with_country[found.groups()[0]].append(bracketed.id)
+        logging.info(f"{len(with_country)} institutes with country name in the title")
+
+        # append cleaned names to the lookup table
+        institute_name_id_lookup.update(with_country)
+        logging.info(f"{len(institute_name_id_lookup)} total institute names in lookup")
+
+    return institute_name_id_lookup
+
+
 if __name__ == '__main__':
+    from nesta.production.orms.orm_utils import get_mysql_engine
+
     database = 'dev'
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', database)
 
     filepath = "~/Downloads/grid-2019-02-17"
 
+    # load institute file to sql
     institutes = read_institutes(filepath)
     institutes.to_sql('grid_institutes', engine, if_exists='append', index=False)
 
+    # load aliases file to sql
     aliases = read_aliases(filepath)
     aliases.to_sql('grid_aliases', engine, if_exists='append', index=False)
