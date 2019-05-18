@@ -100,10 +100,13 @@ class GridTask(luigi.Task):
             logging.debug("Starting the matching process")
             successful_fuzzy_matches = {}
             failed_fuzzy_matches = set()
-            for count, article in enumerate(session
-                                            .query(Article)
-                                            .filter(~Article.institutes.any() & Article.mag_authors.isnot(None))
-                                            .all(), start=1):
+            article_query = (session
+                             .query(Article)
+                             .filter(~Article.institutes.any() & Article.mag_authors.isnot(None)))
+            total = article_query.count()
+            logging.info(f"Total articles with authors and no institutes links: {total}")
+
+            for count, article in enumerate(article_query.all(), start=1):
                 article_institute_links = []
                 for affiliation in {author.get('author_affiliation')
                                     for author in article.mag_authors
@@ -146,7 +149,7 @@ class GridTask(luigi.Task):
                 article_institute_batcher.extend(article_institute_links)
 
                 if not count % 100:
-                    logging.info(f"{count} processed articles")
+                    logging.info(f"{count} processed articles from {total} : {int(count / total)}%")
 
                 if self.test and count > 10:
                     logging.warning("Exiting after 10 articles in test mode")
@@ -157,6 +160,9 @@ class GridTask(luigi.Task):
         if article_institute_batcher:
             article_institute_batcher.write()
 
-        # mark as done
         logging.info("Task complete")
+        logging.info(f"Made {len(successful_fuzzy_matches)} fuzzy matches")
+        logging.info(f"Failed to match {len(failed_fuzzy_matches)} institute names")
+
+        # mark as done
         self.output().touch()

@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Article, Category, ArticleInstitute
+from nesta.production.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -400,6 +400,7 @@ def update_existing_articles(article_batch, session):
 
 def add_article_institutes(article_institutes, engine):
     """Writes to the association table for article/institute links using the core orm"""
+    logging.info(f"Inserting a batch of {len(article_institutes)} article institutes")
     logging.debug(article_institutes)
     engine.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
                    article_institutes)
