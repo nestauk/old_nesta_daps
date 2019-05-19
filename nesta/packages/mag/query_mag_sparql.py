@@ -12,11 +12,12 @@ from nesta.production.orms.mag_orm import FieldOfStudy
 MAG_ENDPOINT = 'http://ma-graph.org/sparql'
 
 
-def _batch_query_articles(articles, batch_size=10):
+def _batch_query_articles_by_doi(query, articles, batch_size=10):
     """Manages batches and generates sparql queries for articles and queries them from
     mag via the sparql api using the supplied `doi`.
 
     Args:
+        query (str): sparql query containing a format string placeholder {}
         articles (:obj:`list` of :obj:`dict`): articles to query in MAG.
             Must contatin at least `id` and `doi` in each dict.
         batch_size (int): number of ids to query in a batch. Max size = 50
@@ -24,23 +25,6 @@ def _batch_query_articles(articles, batch_size=10):
     Returns:
         (:obj:`list` of :obj:`dict`): yields batches of data returned from MAG
     """
-    query = '''PREFIX dcterms: <http://purl.org/dc/terms/>
-    PREFIX datacite: <http://purl.org/spar/datacite/>
-    PREFIX fabio: <http://purl.org/spar/fabio/>
-    PREFIX magp: <http://ma-graph.org/property/>
-
-    SELECT ?paper ?doi ?paperTitle ?citationCount
-           GROUP_CONCAT(DISTINCT ?fieldOfStudy; separator=",") as ?fieldsOfStudy
-    WHERE {{
-        ?paper datacite:doi ?doi .
-        ?paper magp:citationCount ?citationCount .
-        ?paper dcterms:title ?paperTitle .
-        ?paper magp:citationCount ?citationCount .
-        ?paper fabio:hasDiscipline ?fieldOfStudy .
-        {article_filter}
-    }}
-    GROUP BY ?paper ?doi ?paperTitle ?citationCount
-    ORDER BY ?paper'''
     if not 1 <= batch_size <= 10:  # max limit for uri length
         raise ValueError("batch_size must be between 1 and 10")
 
@@ -53,7 +37,7 @@ def _batch_query_articles(articles, batch_size=10):
             yield articles_batch, results_batch
 
 
-def query_mag_sparql_by_doi(articles):
+def query_articles_by_doi(articles):
     """Queries Microsoft Academic Graph via the SPARQL endpoint, using doi.
     Deduplication is applied by identifying the closest match on title.
 
@@ -64,7 +48,31 @@ def query_mag_sparql_by_doi(articles):
     Returns:
         (:obj:`list` of :obj:`dict`): data returned from MAG
     """
-    for articles_batch, results_batch in _batch_query_articles(articles):
+    query = '''
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+    PREFIX datacite: <http://purl.org/spar/datacite/>
+    PREFIX fabio: <http://purl.org/spar/fabio/>
+    PREFIX magp: <http://ma-graph.org/property/>
+
+    SELECT ?paper
+           ?doi
+           ?paperTitle
+           ?citationCount
+           GROUP_CONCAT(DISTINCT ?fieldOfStudy; separator=",") as ?fieldsOfStudy
+           GROUP_CONCAT(DISTINCT ?author; separator=",") as ?authors
+    WHERE {{
+        ?paper datacite:doi ?doi .
+        ?paper magp:citationCount ?citationCount .
+        ?paper dcterms:title ?paperTitle .
+        ?paper magp:citationCount ?citationCount .
+        ?paper fabio:hasDiscipline ?fieldOfStudy .
+        ?paper dcterms:creator ?author .
+        {article_filter}
+    }}
+    GROUP BY ?paper ?doi ?paperTitle ?citationCount
+    ORDER BY ?paper
+    '''
+    for articles_batch, results_batch in _batch_query_articles_by_doi(query, articles):
         # combine results by doi
         articles_to_dedupe = defaultdict(list)
         for result in results_batch:
@@ -94,56 +102,42 @@ def query_mag_sparql_by_doi(articles):
             yield best_match
 
 
-def _batch_query_entities(ids=None, batch_size=50):
-    """Manages batches and generates sparql queries for entities and queries them from
+def _batch_query_sparql(query, concat_format=None, filter_on=None, ids=None, batch_size=50):
+    """Manages batching of sparql queries, with filtering and yielding of single rows
     mag via the sparql api.
 
     Args:
+        query (str): sparql query containing a format string placeholder {}
+        concat_format (str): string format to be applied when concatenating ids
+            requires a placeholder for id {}
+        filter_on (str): name of the field to use in the filter WITHOUT ?
         ids (list): If ids are supplied they are queried as batches, otherwise
             all entities are queried
-        batch_size (int): number of ids to query in a batch. Max size = 50
+        batch_size (int): number of ids to query in a batch. Maximum = 50
 
     Returns:
         (dict): single rows of returned data are yielded
     """
-    query_template = '''PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-    PREFIX magc: <http://ma-graph.org/class/>
-    PREFIX magp: <http://ma-graph.org/property/>
-
-    SELECT ?field ?name ?level
-           GROUP_CONCAT(DISTINCT ?parent; separator=",") as ?parents
-           GROUP_CONCAT(?child; separator=",") as ?children
-    WHERE {{
-        ?field rdf:type magc:FieldOfStudy .
-        ?field magp:level ?level .
-        OPTIONAL {{ ?field foaf:name ?name }}
-        OPTIONAL {{ ?field magp:hasParent ?parent }}
-        OPTIONAL {{ ?child magp:hasParent ?field }}
-        {entity_filter}
-    }}
-    GROUP BY ?field ?name ?level'''
-
     if not 1 <= batch_size <= 50:  # max limit for uri length
         raise ValueError("batch_size must be between 1 and 50")
 
-    if ids is None:
-        # retrieve all fields of study
-        for batch in sparql_query(MAG_ENDPOINT, query_template.format(entity_filter='')):
-            for row in batch:
-                yield row
-    else:
+    if all([concat_format, filter_on, ids]):
         for batch_of_ids in split_batches(ids, batch_size):
-            entities = ','.join(f"<http://ma-graph.org/entity/{i}>" for i in batch_of_ids)
-            entity_filter = f"FILTER (?field IN ({entities}))"
-            for batch in sparql_query(MAG_ENDPOINT,
-                                      query_template.format(entity_filter=entity_filter)):
-                for row in batch:
-                    yield row
+            entities = ','.join(concat_format.format(i) for i in batch_of_ids)
+            entity_filter = f"FILTER (?{filter_on} IN ({entities}))"
+    elif any([concat_format, filter_on, ids]):
+        raise ValueError("concat_format, filter_on and ids must all be supplied together or not at all")
+    else:
+        # retrieve all fields of study
+        entity_filter = ''
+
+    for batch in sparql_query(MAG_ENDPOINT, query.format(entity_filter)):
+        for row in batch:
+            yield row
 
 
 def extract_entity_id(entity):
-    """Extracts the id from a string of a mag entity.
+    """Extracts the id from the end of an entity url returned from sparql.
 
     Args:
         entity (str): the entity url from MAG
@@ -151,7 +145,7 @@ def extract_entity_id(entity):
     Returns:
         (int): the id of the entity
     """
-    rex = r'.+/(\d+)$'
+    rex = r'.+/(.+)$'  # capture anything after the last /
     match = re.match(rex, entity)
     if match is None:
         raise ValueError(f"Unable to extract id from {entity}")
@@ -169,7 +163,32 @@ def query_fields_of_study_sparql(ids=None, results_limit=None):
     Returns:
         (dict): processed field of study
     """
-    for count, row in enumerate(_batch_query_entities(ids), start=1):
+    query = '''
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX magc: <http://ma-graph.org/class/>
+    PREFIX magp: <http://ma-graph.org/property/>
+
+    SELECT ?field
+           ?name
+           ?level
+           GROUP_CONCAT(DISTINCT ?parent; separator=",") as ?parents
+           GROUP_CONCAT(?child; separator=",") as ?children
+    WHERE {{
+        ?field rdf:type magc:FieldOfStudy .
+        ?field magp:level ?level .
+        OPTIONAL {{ ?field foaf:name ?name }}
+        OPTIONAL {{ ?field magp:hasParent ?parent }}
+        OPTIONAL {{ ?child magp:hasParent ?field }}
+        {}
+    }}
+    GROUP BY ?field ?name ?level'''
+    concat_format = "<http://ma-graph.org/entity/{}>"
+
+    for count, row in enumerate(_batch_query_sparql(query,
+                                                    concat_format=concat_format,
+                                                    filter_on='field',
+                                                    id=ids), start=1):
         # reformat field, parents, children out of urls.
         row['id'] = extract_entity_id(row.pop('field'))
 
@@ -222,6 +241,61 @@ def update_field_of_study_ids_sparql(session, fos_ids):
     session.commit()
     logging.info("Added new fields of study to database")
     return fos_not_found
+
+
+def query_authors(ids=None, results_limit=None):
+    """Queries the MAG for authors and their affiliations.
+
+    Args:
+        ids: (:obj:`list` of `int`): author ids to query, all are returned if None
+        results_limit (int): limit the number of results returned (for testing)
+
+    Returns:
+        (dict): yields a single author at a time, with affiliation
+    """
+    query = '''
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX org: <http://www.w3.org/ns/org#>
+    PREFIX magp: <http://ma-graph.org/property/>
+    PREFIX magc: <http://ma-graph.org/class/>
+
+    SELECT ?author
+           ?authorName
+           ?affiliation
+           ?affiliationName
+           ?gridId
+    WHERE {{
+        ?author rdf:type magc:Author .
+        ?author foaf:name ?authorName .
+        ?author org:memberOf ?affiliation .
+        ?affiliation magp:grid ?gridId .
+        ?affiliation foaf:name ?affiliationName .
+        {}
+    }}
+    '''
+    concat_format = "<http://ma-graph.org/entity/{}>"
+
+    logging.debug(f"Querying MAG for authors: {ids}")
+    for count, row in enumerate(_batch_query_sparql(query,
+                                                    concat_format=concat_format,
+                                                    filter_on='author',
+                                                    id=ids), start=1):
+        # rename and reformat fields out of entity urls
+        row['author_id'] = extract_entity_id(row.pop('author'))
+        row['author_name'] = row.pop('authorName')
+        row['author_affiliation_id'] = extract_entity_id(row.pop('affiliation'))
+        row['author_affiliation'] = row.pop('affiliationName')
+        row['affiliation_grid_id'] = extract_entity_id(row.pop('gridId'))
+
+        yield row
+
+        if not count % 1000:
+            logging.info(count)
+
+        if results_limit is not None and count >= results_limit:
+            logging.warning(f"Breaking after {results_limit} for testing")
+            break
 
 
 if __name__ == "__main__":
