@@ -136,7 +136,7 @@ class GridTask(luigi.Task):
             article_institute_batcher.write()
 
         logging.info("Task complete")
-        logging.info(f"Made {len(successful_fuzzy_matches)} fuzzy matches")
+        logging.info(f"Successfully fuzzy matched {len(successful_fuzzy_matches)} institute names")
         logging.info(f"Failed to match {len(failed_fuzzy_matches)} institute names")
 
         # mark as done
