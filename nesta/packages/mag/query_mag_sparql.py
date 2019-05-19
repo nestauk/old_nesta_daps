@@ -145,11 +145,27 @@ def extract_entity_id(entity):
     Returns:
         (int): the id of the entity
     """
-    rex = r'.+/(.+)$'  # capture anything after the last /
+    rex = r'.+/(\d+)$'  # capture digits after the last /
     match = re.match(rex, entity)
     if match is None:
         raise ValueError(f"Unable to extract id from {entity}")
     return int(match.groups()[0])
+
+
+def extract_grid_id(entity):
+    """Extracts the id from the end of an entity url returned from sparql.
+
+    Args:
+        entity (str): the entity url from MAG
+
+    Returns:
+        (str): the id of the entity
+    """
+    rex = r'.+/(.+)$'  # capture anything after the last /
+    match = re.match(rex, entity)
+    if match is None:
+        raise ValueError(f"Unable to extract id from {entity}")
+    return match.groups()[0]
 
 
 def query_fields_of_study_sparql(ids=None, results_limit=None):
@@ -188,7 +204,7 @@ def query_fields_of_study_sparql(ids=None, results_limit=None):
     for count, row in enumerate(_batch_query_sparql(query,
                                                     concat_format=concat_format,
                                                     filter_on='field',
-                                                    id=ids), start=1):
+                                                    ids=ids), start=1):
         # reformat field, parents, children out of urls.
         row['id'] = extract_entity_id(row.pop('field'))
 
@@ -280,13 +296,13 @@ def query_authors(ids=None, results_limit=None):
     for count, row in enumerate(_batch_query_sparql(query,
                                                     concat_format=concat_format,
                                                     filter_on='author',
-                                                    id=ids), start=1):
+                                                    ids=ids), start=1):
         # rename and reformat fields out of entity urls
         row['author_id'] = extract_entity_id(row.pop('author'))
         row['author_name'] = row.pop('authorName')
         row['author_affiliation_id'] = extract_entity_id(row.pop('affiliation'))
         row['author_affiliation'] = row.pop('affiliationName')
-        row['affiliation_grid_id'] = extract_entity_id(row.pop('gridId'))
+        row['affiliation_grid_id'] = extract_grid_id(row.pop('gridId'))
 
         yield row
 

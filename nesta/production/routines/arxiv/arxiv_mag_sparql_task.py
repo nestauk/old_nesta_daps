@@ -124,7 +124,7 @@ class MagSparqlTask(luigi.Task):
 
                 # query for author and affiliation details
                 try:
-                    author_ids = {extract_entity_id(a) for a in row.pop('authors')}
+                    author_ids = {extract_entity_id(a) for a in row.pop('authors').split(',')}
                     row['mag_authors'] = list(query_authors(author_ids))
                 except KeyError:
                     pass
@@ -135,7 +135,6 @@ class MagSparqlTask(luigi.Task):
                         del row[f]
                     except KeyError:
                         pass
-
 
                 # check fields of study exist in the database
                 logging.debug('Checking fields of study exist in db')
