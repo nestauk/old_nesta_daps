@@ -67,7 +67,7 @@ class GridTask(luigi.Task):
                                                 self.engine)
 
         fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio],
-                                   store_history=True)
+                             store_history=True)
 
         # extract lookup of GRID institute names to ids - seems to be OK to hold in memory
         institute_name_id_lookup = grid_name_lookup(self.engine)
@@ -77,19 +77,20 @@ class GridTask(luigi.Task):
             all_grid_ids = {i.id for i in session.query(Institute).all()}
             logging.info(f"{len(all_grid_ids)} institutes in GRID")
 
-            logging.debug("Starting the matching process")
             article_query = (session
                              .query(Article)
-                             .filter(~Article.institutes.any() & Article.mag_authors.isnot(None)))
+                             .filter(~Article.institutes.any()
+                                     & Article.mag_authors.isnot(None)))
             total = article_query.count()
             logging.info(f"Total articles with authors and no institutes links: {total}")
 
+            logging.debug("Starting the matching process")
             for count, article in enumerate(article_query.all(), start=1):
                 article_institute_links = []
                 for author in article.mag_authors:
                     # prevent duplicates when a mixture of institute aliases are used in the same article
-                    found_institute_ids = {link['institute_id']
-                                           for link in article_institute_links}
+                    existing_article_institute_ids = {link['institute_id']
+                                                      for link in article_institute_links}
 
                     # extract and validate grid_id
                     try:
@@ -99,7 +100,7 @@ class GridTask(luigi.Task):
                     else:
                         # check grid id is valid
                         if (extracted_grid_id in all_grid_ids
-                                and extracted_grid_id not in found_institute_ids):
+                                and extracted_grid_id not in existing_article_institute_ids):
                             links = create_article_institute_links(article=article,
                                                                    institute_ids=[extracted_grid_id],
                                                                    score=1)
@@ -121,7 +122,7 @@ class GridTask(luigi.Task):
                     except KeyError:
                         pass
                     else:
-                        institute_ids = set(institute_ids) - found_institute_ids
+                        institute_ids = set(institute_ids) - existing_article_institute_ids
                         links = create_article_institute_links(article=article,
                                                                institute_ids=institute_ids,
                                                                score=1)
@@ -139,7 +140,7 @@ class GridTask(luigi.Task):
                         continue
                     else:
                         institute_ids = institute_name_id_lookup[match]
-                        institute_ids = set(institute_ids) - found_institute_ids
+                        institute_ids = set(institute_ids) - existing_article_institute_ids
                         links = create_article_institute_links(article=article,
                                                                institute_ids=institute_ids,
                                                                score=score)
@@ -150,7 +151,7 @@ class GridTask(luigi.Task):
                 article_institute_batcher.extend(article_institute_links)
 
                 if not count % 100:
-                    logging.info(f"{count} processed articles from {total} : {int(count / total)}%")
+                    logging.info(f"{count} processed articles from {total} : {(count / total) * 100:.1f}%")
 
                 if self.test and count > 50:
                     logging.warning("Exiting after 50 articles in test mode")

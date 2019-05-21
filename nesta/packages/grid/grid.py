@@ -10,6 +10,15 @@ from nesta.production.orms.orm_utils import db_session
 
 
 def read_institutes(filepath):
+    """Reads the grid.csv and addresses.csv flatfiles, loads it into a dataframes and
+    combines them, dropping duplicate and redundant data.
+
+    Args:
+        filepath (str): location of the folder containg the extracted files
+
+    Returns
+        (:obj:`pandas.DataFrame`): all data from the file
+    """
     df = pd.read_csv(f"{filepath}/grid.csv", low_memory=False)
     addresses = pd.read_csv(f"{filepath}/full_tables/addresses.csv", low_memory=False)
 
@@ -32,29 +41,67 @@ def read_institutes(filepath):
 
 
 def read_aliases(filepath):
+    """Reads the aliases.csv flatfile and loads it into a dataframe.
+
+    Args:
+        filepath (str): location of the folder containg the extracted files
+
+    Returns
+        (:obj:`pandas.DataFrame`): all data from the file
+    """
     aliases = pd.read_csv(f"{filepath}/full_tables/aliases.csv", low_memory=False)
 
     return aliases
 
 
 class ComboFuzzer:
+    """Combines multiple fuzzy matching methods. Can keep previous successful and failed
+    matches in memory for faster checks if data is likely to contain duplicates.
+    """
     def __init__(self, fuzzers, store_history=False):
+        """
+        Args:
+            fuzzers (function): fuzzy matching function returning a number between 0:100
+            store_history (bool): keep previous attempts in memory for faster checking
+        """
         self.fuzzers = fuzzers
         # Define the normalisation variable in advance
         self.norm = 1 / np.sqrt(len(fuzzers))
 
+        self.store_history = store_history
         self.successful_fuzzy_matches = {}
         self.failed_fuzzy_matches = set()
-        self.store_history = store_history
 
     def combo_fuzz(self, target, candidate):
+        """Scorer to be applied during a fuzzy match.
+
+        Args:
+            target (str): string to find
+            candidate (str): string to score against target
+
+        Returns:
+            (float): score between 0 and 1
+        """
         _score = 0
         for _fuzz in self.fuzzers:
             _raw_score = (_fuzz(target, candidate) / 100)
             _score += _raw_score ** 2
         return np.sqrt(_score) * self.norm
 
-    def fuzzy_match_one(self, query, choices):
+    def fuzzy_match_one(self, query, choices, lowest_match_score=0.85):
+        """Find the best fuzzy match from provided choices. If storing_history is set to
+        True, previous failed and successful fuzzy matched are stored in memory for
+        faster checking. KeyError is raised for failed queries.
+
+        Args:
+            query (str): target string
+            choices (list): items to fuzzy match against
+            lowest_match_score (float): a score below this value is considered a fail
+
+        Returns:
+            (str): the closest match
+            (float): score between 0 and 1
+        """
         if query in self.failed_fuzzy_matches:
             raise KeyError(f"Fuzzy match failed previously: {query}")
 
@@ -65,8 +112,7 @@ class ComboFuzzer:
             match, score = fuzzy_proc.extractOne(query=query,
                                                  choices=choices,
                                                  scorer=self.combo_fuzz)
-
-        if score < 0.85:  # <0.85 is definitely a bad match
+        if score < lowest_match_score:
             if self.store_history:
                 self.failed_fuzzy_matches.add(query)
             raise KeyError(f"Failed to fuzzy match: {query}")
@@ -77,7 +123,18 @@ class ComboFuzzer:
 
 
 def create_article_institute_links(article, institute_ids, score):
-    # add an entry to the link table for each grid id (there will be multiple if the org is multinational)
+    """Creates data for the article/institutes association table.
+    There will be multiple links if the institute is multinational, one for each country
+    entity.
+
+    Args:
+        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        institute_ids (list): institute ids to link with the article
+        score (float): score for the match
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): article institute links ready to load to database
+    """
     return [{'article_id': article.id,
              'institute_id': institute_id,
              'is_multinational': len(institute_ids) > 1,
