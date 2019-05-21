@@ -1,13 +1,13 @@
 from fuzzywuzzy import fuzz
-from fuzzywuzzy import process as fuzzy_proc
 import luigi
 import logging
 
 from arxiv_mag_sparql_task import MagSparqlTask
 from nesta.packages.arxiv.collect_arxiv import add_article_institutes
-from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup
+from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup, create_article_institute_links
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
+from nesta.production.orms.grid_orm import Institute
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -66,15 +66,18 @@ class GridTask(luigi.Task):
                                                 add_article_institutes,
                                                 self.engine)
 
-        combo_fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio])
+        fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio],
+                                   store_history=True)
 
-        # extract GRID data - seems to be OK to hold in memory
+        # extract lookup of GRID institute names to ids - seems to be OK to hold in memory
         institute_name_id_lookup = grid_name_lookup(self.engine)
 
         with db_session(self.engine) as session:
+            # used to check GRID ids from MAG are valid (they are not all...)
+            all_grid_ids = {i.id for i in session.query(Institute).all()}
+            logging.info(f"{len(all_grid_ids)} institutes in GRID")
+
             logging.debug("Starting the matching process")
-            successful_fuzzy_matches = {}
-            failed_fuzzy_matches = set()
             article_query = (session
                              .query(Article)
                              .filter(~Article.institutes.any() & Article.mag_authors.isnot(None)))
@@ -83,42 +86,65 @@ class GridTask(luigi.Task):
 
             for count, article in enumerate(article_query.all(), start=1):
                 article_institute_links = []
-                for affiliation in {author.get('author_affiliation')
-                                    for author in article.mag_authors
-                                    if author.get('author_affiliation') is not None}:
-                    institute_ids = []
-                    try:
-                        # look for an exact match
-                        institute_ids = institute_name_id_lookup[affiliation]
-                        score = 1
-                        logging.debug(f"Found an exact match for: {affiliation}")
-                    except KeyError:
-                        if affiliation in failed_fuzzy_matches:
-                            continue
-                        # check previous fuzzy matches
-                        match, score = successful_fuzzy_matches.get(affiliation, (None, None))
-                        if not match:
-                            # attempt a new fuzzy match
-                            match, score = fuzzy_proc.extractOne(query=affiliation,
-                                                                 choices=institute_name_id_lookup.keys(),
-                                                                 scorer=combo_fuzzer.combo_fuzz)
-                        if score < 0.85:  # <0.85 is definitely a bad match
-                            logging.debug(f"Failed to find a match for: {affiliation}")
-                            failed_fuzzy_matches.add(affiliation)
-                        else:
-                            successful_fuzzy_matches.update({affiliation: (match, score)})
-                            institute_ids = institute_name_id_lookup[match]
-                            logging.debug(f"Found a fuzzy match: {affiliation} {score} {match}")
-
+                for author in article.mag_authors:
                     # prevent duplicates when a mixture of institute aliases are used in the same article
-                    found_institute_ids = {link['institute_id'] for link in article_institute_links}
-                    # add an entry to the link table for each grid id (there will be multiple if the org is multinational)
-                    article_institute_links.extend({'article_id': article.id,
-                                                    'institute_id': institute_id,
-                                                    'is_multinational': len(institute_ids) > 1,
-                                                    'matching_score': float(score)}
-                                                   for institute_id in institute_ids
-                                                   if institute_id not in found_institute_ids)
+                    found_institute_ids = {link['institute_id']
+                                           for link in article_institute_links}
+
+                    # extract and validate grid_id
+                    try:
+                        extracted_grid_id = author['affiliation_grid_id']
+                    except KeyError:
+                        pass
+                    else:
+                        # check grid id is valid
+                        if (extracted_grid_id in all_grid_ids
+                                and extracted_grid_id not in found_institute_ids):
+                            links = create_article_institute_links(article=article,
+                                                                   institute_ids=[extracted_grid_id],
+                                                                   score=1)
+                            article_institute_links.extend(links)
+                            logging.debug(f"Used grid_id: {extracted_grid_id}")
+                            continue
+
+                    # extract author affiliation
+                    try:
+                        affiliation = author['author_affiliation']
+                    except KeyError:
+                        # no grid id or affiliation for this author
+                        logging.debug(f"No affiliation found in: {author}")
+                        continue
+
+                    # look for an exact match on affiliation name
+                    try:
+                        institute_ids = institute_name_id_lookup[affiliation]
+                    except KeyError:
+                        pass
+                    else:
+                        institute_ids = set(institute_ids) - found_institute_ids
+                        links = create_article_institute_links(article=article,
+                                                               institute_ids=institute_ids,
+                                                               score=1)
+                        article_institute_links.extend(links)
+                        logging.debug(f"Found an exact match for: {affiliation}")
+                        continue
+
+                    # fuzzy matching
+                    try:
+                        match, score = fuzzer.fuzzy_match_one(affiliation,
+                                                              institute_name_id_lookup.keys())
+                    except KeyError:
+                        # failed fuzzy match
+                        logging.debug(f"Failed fuzzy match: {affiliation}")
+                        continue
+                    else:
+                        institute_ids = institute_name_id_lookup[match]
+                        institute_ids = set(institute_ids) - found_institute_ids
+                        links = create_article_institute_links(article=article,
+                                                               institute_ids=institute_ids,
+                                                               score=score)
+                        article_institute_links.extend(links)
+                        logging.debug(f"Found a fuzzy match: {affiliation}  {score}  {match}")
 
                 # add links for this article to the batch queue
                 article_institute_batcher.extend(article_institute_links)
@@ -126,8 +152,8 @@ class GridTask(luigi.Task):
                 if not count % 100:
                     logging.info(f"{count} processed articles from {total} : {int(count / total)}%")
 
-                if self.test and count > 10:
-                    logging.warning("Exiting after 10 articles in test mode")
+                if self.test and count > 50:
+                    logging.warning("Exiting after 50 articles in test mode")
                     logging.debug(article_institute_batcher)
                     break
 
@@ -135,9 +161,10 @@ class GridTask(luigi.Task):
         if article_institute_batcher:
             article_institute_batcher.write()
 
-        logging.info("Task complete")
-        logging.info(f"Successfully fuzzy matched {len(successful_fuzzy_matches)} institute names")
-        logging.info(f"Failed to match {len(failed_fuzzy_matches)} institute names")
+        logging.info("All articles processed")
+        logging.info(f"Total successful fuzzy matches for institute names: {len(fuzzer.successful_fuzzy_matches)}")
+        logging.info(f"Total failed fuzzy matches for institute names{len(fuzzer.failed_fuzzy_matches): }")
 
         # mark as done
+        logging.info("Task complete")
         self.output().touch()

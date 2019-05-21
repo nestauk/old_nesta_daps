@@ -1,4 +1,5 @@
 from collections import defaultdict
+from fuzzywuzzy import process as fuzzy_proc
 import logging
 import numpy as np
 import pandas as pd
@@ -37,10 +38,14 @@ def read_aliases(filepath):
 
 
 class ComboFuzzer:
-    def __init__(self, fuzzers):
+    def __init__(self, fuzzers, store_history=False):
         self.fuzzers = fuzzers
         # Define the normalisation variable in advance
         self.norm = 1 / np.sqrt(len(fuzzers))
+
+        self.successful_fuzzy_matches = {}
+        self.failed_fuzzy_matches = set()
+        self.store_history = store_history
 
     def combo_fuzz(self, target, candidate):
         _score = 0
@@ -48,6 +53,36 @@ class ComboFuzzer:
             _raw_score = (_fuzz(target, candidate) / 100)
             _score += _raw_score ** 2
         return np.sqrt(_score) * self.norm
+
+    def fuzzy_match_one(self, query, choices):
+        if query in self.failed_fuzzy_matches:
+            raise KeyError(f"Fuzzy match failed previously: {query}")
+
+        try:
+            match, score = self.successful_fuzzy_matches[query]
+        except KeyError:
+            # attempt a new fuzzy match
+            match, score = fuzzy_proc.extractOne(query=query,
+                                                 choices=choices,
+                                                 scorer=self.combo_fuzz)
+
+        if score < 0.85:  # <0.85 is definitely a bad match
+            if self.store_history:
+                self.failed_fuzzy_matches.add(query)
+            raise KeyError(f"Failed to fuzzy match: {query}")
+
+        if self.store_history:
+            self.successful_fuzzy_matches.update({query: (match, score)})
+        return match, score
+
+
+def create_article_institute_links(article, institute_ids, score):
+    # add an entry to the link table for each grid id (there will be multiple if the org is multinational)
+    return [{'article_id': article.id,
+             'institute_id': institute_id,
+             'is_multinational': len(institute_ids) > 1,
+             'matching_score': float(score)}
+            for institute_id in institute_ids]
 
 
 def grid_name_lookup(engine):
