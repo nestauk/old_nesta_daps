@@ -51,6 +51,9 @@
                 "title_of_project": {
                     "type": "text"
                 },
+                "type_of_entity": {
+                    "type": "keyword"
+                },		
                 "cost_total_project": {
                     "type": "integer"
                 },

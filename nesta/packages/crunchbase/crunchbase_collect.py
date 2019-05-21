@@ -5,11 +5,12 @@ import re
 import requests
 import tarfile
 from tempfile import NamedTemporaryFile
+from collections import defaultdict
 
 from nesta.packages.crunchbase.utils import split_str  # required for unpickling of split_health_flag: vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
-from nesta.packages.misc_utils.batches import split_batches
+#from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.luigihacks import misctools
 from nesta.production.orms.orm_utils import db_session, insert_data
 from nesta.production.orms.crunchbase_orm import Organization
@@ -118,64 +119,64 @@ def _generate_composite_key(**kwargs):
         return None
 
 
-def total_records(data_dict, append_to=None):
-    """Calculates totals for a dictionary of records and appends a grand total.
+# def total_records(data_dict, append_to=None):
+#     """Calculates totals for a dictionary of records and appends a grand total.
 
-    Args:
-        data_dict (dict): data with description as the key, and list of dicts as the
-                value
-        append_to (dict): a previously returned dict from this function, will add
-                the values for batch operation
+#     Args:
+#         data_dict (dict): data with description as the key, and list of dicts as the
+#                 value
+#         append_to (dict): a previously returned dict from this function, will add
+#                 the values for batch operation
 
-    Returns:
-        (dict): labels as per the provided data_dict, with totals as the values.
-                `total` is appended with a sum of all values, plus `batch_total` if
-                append_to is provided
-    """
-    totals = {}
-    total = 0
-    for k, v in data_dict.items():
-        length = len(v)
-        totals[k] = length
-        total += length
-    totals['total'] = total
+#     Returns:
+#         (dict): labels as per the provided data_dict, with totals as the values.
+#                 `total` is appended with a sum of all values, plus `batch_total` if
+#                 append_to is provided
+#     """
+#     totals = defaultdict(int)
+#     total = 0
+#     for k, v in data_dict.items():
+#         length = len(v)
+#         totals[k] = length
+#         total += length
+#     totals['total'] = total
 
-    if append_to is not None:
-        for k, v in totals.items():
-            totals[k] += append_to[k]
-    totals['batch_total'] = total
+#     if append_to is not None:
+#         for k, v in totals.items():
+#             totals[k] += append_to[k]
+#     totals['batch_total'] = total
 
-    return totals
+#     return totals
 
 
-def _insert_data(config, section, database, base, table, data, batch_size=500):
-    """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
+# def _insert_data(config, section, database, base, table, data, batch_size=500):
+#     """Writes out a dataframe to MySQL and checks totals are equal, or raises error.
 
-    Args:
-        table (:obj:`sqlalchemy.mapping`): table where the data should be written
-        data (:obj:`list` of :obj:`dict`): data to be written
-        batch_size (int): size of bulk inserts into the db
-    """
-    total_rows_in = len(data)
-    logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
+#     Args:
+#         table (:obj:`sqlalchemy.mapping`): table where the data should be written
+#         data (:obj:`list` of :obj:`dict`): data to be written
+#         batch_size (int): size of bulk inserts into the db
+#     """
+#     total_rows_in = len(data)
+#     logging.info(f"Inserting {total_rows_in} rows of data into {table.__tablename__}")
 
-    totals = None
-    for batch in split_batches(data, batch_size):
-        returned = {}
-        returned['inserted'], returned['existing'], returned['failed'] = insert_data(
-                                                        config, section, database,
-                                                        base, table, batch,
-                                                        return_non_inserted=True)
+#     totals = None
+#     for batch in split_batches(data, batch_size):
+#         returned = {}
+#         returned['inserted'], returned['existing'], returned['failed'] = insert_data(
+#                                                         config, section, database,
+#                                                         base, table, batch,
+#                                                         return_non_inserted=True)
 
-        totals = total_records(returned, totals)
-        for k, v in totals.items():
-            logging.debug(f"{k} rows: {v}")
-        logging.debug("--------------")
-        if totals['batch_total'] != len(batch):
-            raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
+#         totals = total_records(returned, totals)
+#         for k, v in totals.items():
+#             logging.debug(f"{k} rows: {v}")
+#         logging.debug("--------------")
+#         if totals['batch_total'] != len(batch):
+#             raise ValueError(f"Inserted {table} data is not equal to original: {len(batch)}")
 
-    if totals['total'] != total_rows_in:
-        raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
+#     if totals['total'] != total_rows_in:
+#         raise ValueError(f"Inserted {table} data is not equal to original: {total_rows_in}")
 
 
 def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
@@ -230,7 +231,7 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
             # many of these are missing
             pass
 
-        if not (idx + 1) % 10000:
+        if not (idx + 1) % 25000:
             logging.info(f"Processed {idx + 1} organizations")
     logging.info(f"Processed {idx + 1} organizations")
 

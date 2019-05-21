@@ -14,15 +14,15 @@ from nesta.production.orms.crunchbase_orm import OrganizationCategory
 from nesta.production.orms.crunchbase_orm import CategoryGroup
 from nesta.production.orms.geographic_orm import Geographic
 
-
 def run():
+
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
 
     db_name = os.environ["BATCHPAR_db_name"]
     es_host = os.environ['BATCHPAR_outinfo']
-    es_port = os.environ['BATCHPAR_out_port']
+    es_port = int(os.environ['BATCHPAR_out_port'])
     es_index = os.environ['BATCHPAR_out_index']
     es_type = os.environ['BATCHPAR_out_type']
     entity_type = os.environ["BATCHPAR_entity_type"]
@@ -46,6 +46,7 @@ def run():
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
+                           no_commit=("AWSBATCHTEST" in os.environ),
                            entity_type=entity_type,
                            strans_kwargs=strans_kwargs,
                            field_null_mapping=field_null_mapping,
@@ -55,7 +56,7 @@ def run():
                            listify_terms=True)
 
     # collect file
-    nrows = 1000 if test else None
+    nrows = 20 if test else None
 
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
@@ -102,10 +103,12 @@ def run():
             # Add a field for US state name
             state_code = row_combined['state_code']
             row_combined['placeName_state_organization'] = states_lookup[state_code]
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
             uid = row_combined.pop('id')
+            print("Does it break here? ", row_combined)
             _row = es.index(index=es_index, doc_type=es_type,
-                            id=uid, body=row_combined,
-                            no_commit=("AWSBATCHTEST" in os.environ))
+                            id=uid, body=row_combined)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
@@ -119,19 +122,19 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        environ = {"AWSBATCHTEST": "",
+        #"AWSBATCHTEST": "",
+        environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
                    "BATCHPAR_outinfo": ("search-health-scanner-"
                                         "5cs7g52446h7qscocqmiky5dn4"
                                         ".eu-west-2.es.amazonaws.com"),
                    "BATCHPAR_config":"/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
                    "BATCHPAR_bucket":"nesta-production-intermediate",
-                   "BATCHPAR_S3FILE_TIMESTAMP":"run-1558095059102697851.zip",
                    "BATCHPAR_done":"False",
-                   "BATCHPAR_batch_file":"crunchbase_to_es-15580950567558687.json",
+                   "BATCHPAR_batch_file":"crunchbase_to_es-15584588946449678.json",
                    "BATCHPAR_out_type": "_doc",
                    "BATCHPAR_out_port": "443",
                    "BATCHPAR_test":"True",
-                   "BATCHPAR_db_name":"dev",
+                   "BATCHPAR_db_name":"production",
                    "BATCHPAR_out_index":"companies_dev",
                    "BATCHPAR_entity_type":"company"}
         for k, v in environ.items():

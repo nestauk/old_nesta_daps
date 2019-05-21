@@ -46,7 +46,6 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=10000)
     insert_batch_size = luigi.IntParameter()
     intermediate_bucket = luigi.Parameter()
-    es_mode = luigi.Parameter(default="dev")
     reindex = luigi.BoolParameter(default=False)
 
     def requires(self):
@@ -79,7 +78,8 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                                   self.database)
         
         # Elasticsearch setup
-        es, es_config = setup_es(self.es_mode, self.test, self.reindex, 
+        es_mode = 'dev' if self.test else 'prod'
+        es, es_config = setup_es(es_mode, self.test, self.reindex, 
                                  dataset='crunchbase', 
                                  aliases='health_scanner')
 
