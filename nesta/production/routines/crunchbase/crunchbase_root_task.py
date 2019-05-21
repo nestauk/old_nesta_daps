@@ -24,6 +24,7 @@ class RootTask(luigi.WrapperTask):
                            mode (False, default), or production mode (True).
     '''
     date = luigi.DateParameter(default=datetime.date.today())
+    reindex = luigi.BoolParameter(default=False)
     production = luigi.BoolParameter(default=False)
     insert_batch_size = luigi.IntParameter(default=500)
 
@@ -35,6 +36,7 @@ class RootTask(luigi.WrapperTask):
         yield ElasticsearchTask(date=self.date,
                                 _routine_id=_routine_id,
                                 test=not self.production,
+                                reindex=self.reindex,
                                 db_config_env="MYSQLDB",
                                 insert_batch_size=self.insert_batch_size,
                                 intermediate_bucket='nesta-production-intermediate',

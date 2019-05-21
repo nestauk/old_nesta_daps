@@ -112,6 +112,9 @@
                     "type":   "date",
                     "format": "yyyy-MM-dd HH:mm:ss"
                 },
+                "type_of_entity": {
+                    "type": "keyword"
+                },
                 "type_of_organisation": {
                     "type": "keyword"
                 },

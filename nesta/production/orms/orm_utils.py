@@ -29,7 +29,7 @@ def assert_correct_config(test, config, key):
                "must end with '{suffix}'")
     if test and not key.endswith("_dev"):
         raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
-    elif not test and not index_name.endswith("_prod"):
+    elif not test and not key.endswith("_prod"):
         raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
     index = config['index']
     if test and not index.endswith("_dev"):
@@ -135,9 +135,10 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
-        low_memory (bool): To speed things up significantly, you can read
-                           all pkeys into memory first, but this will blow
-                           up for heavy pkeys or large tables.
+        low_memory (bool): If the pkeys are few or small types (i.e. they won't
+                           occupy lots of memory) then set this to True. 
+                           This will speed things up significantly (like x 100), 
+                           but will blow up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                     were in the supplied data but not imported (for checks)
 

@@ -1,12 +1,15 @@
 from collections import Counter
 from collections import defaultdict
 from elasticsearch import Elasticsearch
+from elasticsearch import RequestsHttpConnection
 from functools import reduce
 import numpy as np
 import pandas as pd
 import re
 import string
 from copy import deepcopy
+import boto3
+from requests_aws4auth import AWS4Auth
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 
@@ -46,6 +49,9 @@ def _coordinates_as_floats(row):
         if not k.startswith("coordinate_"):
             continue
         if v is None:
+            continue
+        if v['lat'] is None or v['lon'] is None:
+            _row[k] = None
             continue
         _row[k]['lat'] = float(v['lat'])
         _row[k]['lon'] = float(v['lon'])
@@ -201,6 +207,11 @@ class ElasticsearchPlus(Elasticsearch):
     before indexing.
 
     Args:
+        aws_auth_region (str): AWS region to be for authentication.
+                               If not None, use HTTPS and AWS
+                               authentication from boto3 credentials.
+        no_commit (bool): Call the super index method? Useful for
+                          dry-runs of the transformation chain.
         schema_transformer_kwargs (dict): Schema transformation keyword arguments.
         field_null_mapping: A mapping of fields to values to be converted to None.
         null_empty_str (bool): Convert empty strings to None?
@@ -210,6 +221,8 @@ class ElasticsearchPlus(Elasticsearch):
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
+                 aws_auth_region=None,
+                 no_commit=False,
                  strans_kwargs={},
                  field_null_mapping={},
                  null_empty_str=True,
@@ -217,8 +230,22 @@ class ElasticsearchPlus(Elasticsearch):
                  country_detection=True,
                  listify_terms=True,
                  *args, **kwargs):
+
+        self.no_commit = no_commit
+        # If aws auth is required, fill up the kwargs with more
+        # arguments to pass to the core API.
+        if aws_auth_region is not None:
+            credentials = boto3.Session().get_credentials()
+            http_auth = AWS4Auth(credentials.access_key,
+                                 credentials.secret_key,
+                                 aws_auth_region, 'es')
+            kwargs["http_auth"] = http_auth
+            kwargs["use_ssl"] = True
+            kwargs["verify_certs"] = True
+            kwargs["connection_class"] = RequestsHttpConnection
+
         # Apply the schema mapping
-        self.transforms = [lambda row: schema_transformer(row, 
+        self.transforms = [lambda row: schema_transformer(row,
                                                           **strans_kwargs),
                            lambda row: _add_entity_type(row,
                                                         entity_type)]
@@ -256,18 +283,13 @@ class ElasticsearchPlus(Elasticsearch):
         """
         return reduce(lambda _row, f: f(_row), self.transforms, row)
 
-    def index(self, aws_auth_region=None, no_commit=False, **kwargs):
+    def index(self, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the
         transformation chain before indexing. Note: only keyword arguments
         are accepted for core :obj:`Elasticsearch` API.
 
         Args:
-            aws_auth_region (str): AWS region to be for authentication.
-                                   If not None, use HTTPS and AWS 
-                                   authentication from boto3 credentials.
-            no_commit (bool): Call the super index method? Useful for 
-                              dry-runs of the transformation chain.
-            kwargs: All other args to pass to the core Elasticsearch API.
+            kwargs: All kwargs to pass to the core Elasticsearch API.
         Returns:
             body (dict): The transformed body, as passed to Elasticsearch.
         """
@@ -276,18 +298,8 @@ class ElasticsearchPlus(Elasticsearch):
         except KeyError:
             raise ValueError("Keyword argument 'body' was not provided.")
 
-        if aws_auth_region is not None:
-            credentials = boto3.Session().get_credentials()
-            http_auth = AWS4Auth(credentials.access_key, 
-                                 credentials.secret_key,
-                                 aws_auth_region, 'es')
-            kwargs["http_auth"] = http_auth
-            kwargs["use_ssl"] = True
-            kwargs["verify_certs"] = True
-            kwargs["connection_class"] = RequestsHttpConnection
-
         body = dict(self.chain_transforms(_body))
-        if not no_commit:
-            print(kwargs)
+        print(body)
+        if not self.no_commit:
             super().index(body=body, **kwargs)
         return body
