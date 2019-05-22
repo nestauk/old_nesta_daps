@@ -14,6 +14,7 @@ from nesta.production.orms.crunchbase_orm import OrganizationCategory
 from nesta.production.orms.crunchbase_orm import CategoryGroup
 from nesta.production.orms.geographic_orm import Geographic
 
+
 def run():
 
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -67,6 +68,8 @@ def run():
 
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
                   'continent', 'latitude', 'longitude']
+
+    engine.raw_connection().connection.text_factory = lambda x: x.decode('utf8')
     with db_session(engine) as session:
         rows = (session
                 .query(Organization, Geographic)
@@ -79,10 +82,8 @@ def run():
             row_combined = {k: v for k, v in row.Organization.__dict__.items()
                             if k in org_fields}
             row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
-
             row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
                                  if k in geo_fields})
-
             # reformat coordinates
             row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
                                            'lon': row_combined.pop('longitude')}
@@ -106,7 +107,6 @@ def run():
             row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
             
             uid = row_combined.pop('id')
-            print("Does it break here? ", row_combined)
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row_combined)
             if not count % 1000:
