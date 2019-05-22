@@ -73,7 +73,7 @@
                     "type": "integer"
                 },
                 "cost_of_funding": {
-                    "type": "integer"
+                    "type": "long"
                 },
                 "currency_of_funding": {
                     "type": "keyword"

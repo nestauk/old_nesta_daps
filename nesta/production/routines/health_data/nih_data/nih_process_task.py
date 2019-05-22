@@ -108,7 +108,6 @@ class ProcessTask(autobatch.AutoBatchTask):
                                  dataset='nih',
                                  aliases='health_scanner')
 
-
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
         for start, end in batches:

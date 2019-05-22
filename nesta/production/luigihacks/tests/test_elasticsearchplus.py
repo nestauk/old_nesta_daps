@@ -10,6 +10,7 @@ from nesta.production.luigihacks.elasticsearchplus import _guess_delimiter
 from nesta.production.luigihacks.elasticsearchplus import _listify_terms
 from nesta.production.luigihacks.elasticsearchplus import _null_mapping
 from nesta.production.luigihacks.elasticsearchplus import _add_entity_type
+from nesta.production.luigihacks.elasticsearchplus import _clean_up_lists
 
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 
@@ -29,7 +30,8 @@ def lookup():
 
 @pytest.fixture
 def field_null_mapping():
-    return {"non-empty str": ["blah"],
+    return {"<ALL_FIELDS>": ["None", "UNKNOWN"],
+            "non-empty str": ["blah"],
             "coordinate_of_abc": [{"lat": 123}],
             "a negative number": ["<NEGATIVE>"]}
 
@@ -42,6 +44,8 @@ def row():
             "coordinate_of_abc": {"lat": 123,
                                   "lon": 234},
             "coordinate_of_none": None,
+            "ugly_list" : ["UNKNOWN", "none", "None", None, "23", "23"],
+            "empty_list" : [],
             "a negative number": -123,
             "a description field": ("Chinese and British people "
                                     "both live in Greece and Chile"),
@@ -57,6 +61,20 @@ def test_null_empty_str(row):
             assert v is None
         else:
             assert v == row[k]
+
+def test_clean_up_lists(row):
+    _row = _clean_up_lists(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    for k, v in row.items():
+        if type(v) is not list:
+            continue
+        if len(v) == 0:
+            assert _row[k] is None
+            continue
+        if None in v:
+            assert None not in _row[k]
+        assert list(set(_row[k])).sort() == _row[k].sort()
 
 def test_coordinates_as_floats(row):
     _row = _coordinates_as_floats(row)
@@ -82,6 +100,7 @@ def test_country_lookup():
     # Assert many-to-few mapping
     assert len(all_tags) < len(lookup)
 
+
 def test_country_detection(row, lookup):
     _row = _country_detection(row, lookup)
     assert len(_row) == len(row) + 1  # added one field
@@ -90,6 +109,7 @@ def test_country_detection(row, lookup):
     assert all(x in _row[COUNTRY_TAG]
                for x in ("CN", "GB", "CL", "GR"))
     assert type(_row[COUNTRY_TAG]) == list
+
 
 def test_guess_delimiter(row):
     assert _guess_delimiter(row["terms_of_xyz"]) == ";"
@@ -129,9 +149,17 @@ def test_add_entity_type(row):
 
 def test_null_mapping(row, field_null_mapping):
     _row = _null_mapping(row, field_null_mapping)
+    print(row)
+    print(_row)
     assert len(_row) == len(row)
     assert _row != row
     for k, v in field_null_mapping.items():
+        if k == "<ALL_FIELDS>":
+            for key, value in _row.items():
+                assert value not in v
+                if type(value) is list:
+                    assert not any(item in v for item in value)
+            continue
         assert _row[k] is None
         assert row[k] is not None
     for k, v in _row.items():
@@ -139,6 +167,7 @@ def test_null_mapping(row, field_null_mapping):
             assert v is None
         else:
             assert v == row[k]
+
 
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
 def test_chain_transforms(mocked_schema_transformer, row,

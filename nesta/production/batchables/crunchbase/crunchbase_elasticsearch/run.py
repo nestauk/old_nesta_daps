@@ -35,6 +35,9 @@ def run():
     states_lookup = {row['state_code']: row['state_name']
                      for _, row in  pd.read_sql_table('us_states_lookup',
                                                       static_engine).iterrows()}
+    states_lookup["AE"] = "Armed Forces (Canada, Europe, Middle East)"
+    states_lookup["AA"] = "Armed Forces (Americas)"
+    states_lookup["AP"] = "Armed Forces (Pacific)"
     states_lookup[None] = None  # default lookup for non-US countries
 
     # es setup

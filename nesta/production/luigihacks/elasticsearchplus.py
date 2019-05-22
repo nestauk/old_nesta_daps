@@ -18,6 +18,26 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+def _clean_up_lists(row):
+    """Deduplicate, remove None and nullify empties in any list fields.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is not list:
+            continue    
+        v = list(set(v))  # deduplicate
+        if None in v:
+            v.remove(None)
+        if len(v) == 0:
+            v = None
+        _row[k] = v
+    return _row
+
 def _add_entity_type(row, entity_type):
     row['type_of_entity'] = entity_type
     return row
@@ -64,12 +84,12 @@ def _country_lookup():
     Returns:
         lookup (dict): country/nationality --> iso2 code lookup.
     """
-    df = pd.read_csv(COUNTRY_LOOKUP, encoding='latin')
+    df = pd.read_csv(COUNTRY_LOOKUP, encoding='latin', na_filter = False)
     lookup = defaultdict(list)
     for _, row in df.iterrows():
         iso2 = row.pop("ISO 3166 Code")
         for k, v in row.items():
-            if pd.isnull(v):
+            if pd.isnull(v) or len(v) == 0:
                 continue
             lookup[v].append(iso2)
     return lookup
@@ -90,8 +110,9 @@ def _country_detection(row, lookup):
         if type(v) is not str:
             continue
         for country in lookup:
-            if country in v:
-                _row[COUNTRY_TAG] += lookup[country]
+            if country not in v:
+                continue
+            _row[COUNTRY_TAG] += lookup[country]
     tags = _row[COUNTRY_TAG]
     _row[COUNTRY_TAG] = None if len(tags) == 0 else list(set(tags))
     return _row
@@ -183,8 +204,26 @@ def _null_mapping(row, field_null_mapping):
         if type(nullable_values) is not list:
             raise ValueError("Nullable values in field_null_mapping should be a list "
                              f"but {type(nullable_values)} [{nullable_values}] found.")
-        if field_name not in _row:
+        all_fields = (field_name == "<ALL_FIELDS>")
+        if not (all_fields or field_name in _row):
             continue
+        # Special case: apply these null mappings to any field
+        if all_fields:
+            # Iterate over all fields
+            for k, v in row.items():
+                # If the value is nullable...
+                if v in nullable_values:
+                    _row[k] = None
+                # ...or if the value is a list...
+                if type(v) is not list:
+                    continue
+                # ... then remove any nullable value
+                for item in v:
+                    while (item in v) and (item in nullable_values):
+                        v.remove(item)
+                _row[k] = v
+            continue
+
         value = _row[field_name]
         null_negative = (("<NEGATIVE>" in nullable_values) and
                          (type(value) in (float, int)) and
@@ -271,6 +310,9 @@ class ElasticsearchPlus(Elasticsearch):
         # Convert items which SHOULD be lists to lists
         if listify_terms:
             self.transforms.append(_listify_terms)
+
+        # Clean up lists (dedup, remove None, empty lists are None)
+        self.transforms.append(_clean_up_lists)
         super().__init__(*args, **kwargs)
 
     def chain_transforms(self, row):
@@ -299,7 +341,6 @@ class ElasticsearchPlus(Elasticsearch):
             raise ValueError("Keyword argument 'body' was not provided.")
 
         body = dict(self.chain_transforms(_body))
-        print(body)
         if not self.no_commit:
             super().index(body=body, **kwargs)
         return body
