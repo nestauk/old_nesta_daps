@@ -1,3 +1,4 @@
+alphabet_detector==0.0.7
 beautifulsoup4==4.7.1
 boto3==1.9.9
 botocore==1.12.73
@@ -25,3 +26,5 @@ scikit_learn==0.20.2
 selenium==3.14.1
 setuptools==40.4.3
 SQLAlchemy==1.3.3
+SPARQLWrapper==1.8.2
+urllib3==1.24
