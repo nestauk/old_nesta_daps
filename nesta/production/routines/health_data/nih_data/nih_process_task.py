@@ -10,6 +10,7 @@ processing and indexing the data to ElasticSearch.
 
 import datetime
 from elasticsearch import Elasticsearch
+
 import logging
 import luigi
 from sqlalchemy.orm import sessionmaker

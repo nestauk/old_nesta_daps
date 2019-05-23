@@ -30,14 +30,16 @@ class RootTask(luigi.WrapperTask):
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
     reindex = luigi.BoolParameter(default=False)
+    ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
         _routine_id = "{}-{}".format(self.date, self.production)
 
-        logging.getLogger().setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.INFO)        
         yield AbstractsMeshTask(date=self.date,
+                                ignore_missing=self.ignore_missing,
                                 reindex=False,
                                 _routine_id=_routine_id,
                                 db_config_path=self.db_config_path,
