@@ -63,6 +63,7 @@ def run():
         try:
             abstract = session.query(Abstracts).filter(Abstracts.application_id == doc_id).one()
         except NoResultFound:
+            logging.warning(f'Not found {doc_id} in database')
             raise NoResultFound(doc_id)
         clean_abstract_text = clean_abstract(abstract.abstract_text)
         docs.append({'doc_id': doc_id,
