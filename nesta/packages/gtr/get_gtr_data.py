@@ -147,17 +147,26 @@ def deduplicate_participants(data):
     Args:
         data (:obj:`defaultdict(list)`): Data holder, mapping entities to rows of data
     """
-    # Iterate through participants
-    for row in data.pop('participant'):
-        # Find a matching organisation
-        for _row in data['organisations']:
-            if row['organisationId'] != _row['id']:
-                continue
-            # Extract the two specific bonus fields
-            for key in ('projectCost', 'grantOffer'):
-                _row[key] = row[key]
-            # Stop iterating, since we've found the organisation
-            break
+    # Iterate through participants and generate a composite key
+    for row in data['participant']:
+        org_id = row.pop('organisationId')
+        row['id'] = org_id + row['project_id']
+        row['organisation_id'] = org_id
+        row['rel'] = row.pop('role')
+        del row['organisationName']
+
+
+    # # Iterate through participants
+    # for row in data.pop('participant'):
+    #     # Find a matching organisation
+    #     for _row in data['organisations']:
+    #         if row['organisationId'] != _row['id']:
+    #             continue
+    #         # Extract the two specific bonus fields
+    #         for key in ('projectCost', 'grantOffer'):
+    #             _row[key] = row[key]
+    #         # Stop iterating, since we've found the organisation
+    #         break
 
 
 def unpack_funding(row):

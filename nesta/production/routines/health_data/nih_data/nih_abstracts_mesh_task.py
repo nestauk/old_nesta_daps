@@ -22,8 +22,8 @@ from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
 class AbstractsMeshTask(autobatch.AutoBatchTask):
-    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL and projects in
-    Elasticsearch.
+    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL 
+    and projects in Elasticsearch.
 
     Args:
         date (str): Date used to label the outputs
@@ -33,11 +33,15 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
+    reindex = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
         logging.getLogger().setLevel(logging.INFO)
+
+        logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
+                          reindex=self.reindex,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
                           batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
@@ -53,6 +57,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                           test=self.test,
                           memory=2048,
                           max_live_jobs=2)
+
 
     def output(self):
         '''Points to the input database target'''
