@@ -18,6 +18,49 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+def _remove_padding(row):
+    """Remove padding from text or list text
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is str:
+            _row[k] = v.strip()
+        elif type(v) is list:
+            _row[k] = [item.strip() if type(item) is str else item
+                       for item in v]
+    return _row
+
+def _caps_to_camel_case_by_value(v):
+    if type(v) is not str:
+        return v
+    if len(v) < 4:
+        return v
+    if v != v.upper():
+        return v
+    return v.lower().title()
+
+def _caps_to_camel_case(row):
+    """Convert CAPITAL TERMS to Camel Case
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is str:
+            _row[k] = _caps_to_camel_case_by_value(v)
+        elif type(v) is list:
+            _row[k] = [_caps_to_camel_case_by_value(item) for item in v]
+    return _row
+
+
 def _clean_up_lists(row):
     """Deduplicate, remove None and nullify empties in any list fields.
 
@@ -30,9 +73,16 @@ def _clean_up_lists(row):
     for k, v in row.items():
         if type(v) is not list:
             continue    
+        # Remove empty strings
+        to_remove = [item for item in v 
+                     if type(item) is str and item.strip() == ""]
+        for item in to_remove:
+            v.remove(item)
         v = list(set(v))  # deduplicate
+        # Remove Nones
         if None in v:
             v.remove(None)
+        # Nullify empty lists
         if len(v) == 0:
             v = None
         _row[k] = v
@@ -140,7 +190,7 @@ def _guess_delimiter(item, threshold=0.25):
     if score < threshold:
         return p
 
-def _listify_terms(row):
+def _listify_terms(row, delimiters=None):
     """Split any 'terms' fields by a guessed delimiter if the
     field is a string.
 
@@ -161,11 +211,16 @@ def _listify_terms(row):
         elif _type is not str:
             raise TypeError(f"Type for '{k}' is '{_type}' but expected 'str' or 'list'.")
         # Now determine the delimiter
-        delimiter = _guess_delimiter(v)
-        if delimiter is not None:
-            _row[k] = v.split(delimiter)
+        if delimiters is None:
+            delimiter = _guess_delimiter(v)
+            if delimiter is not None:
+                _row[k] = v.split(delimiter)
+            else:
+                _row[k] = [v]
         else:
-            _row[k] = [v]
+            for d in delimiters:
+                v = v.replace(d, "SPLITME")
+            _row[k] = v.split("SPLITME")
     return _row
 
 
@@ -257,6 +312,10 @@ class ElasticsearchPlus(Elasticsearch):
         coordinates_as_floats (bool): Convert all coordinate fields to floats?
         country_detection (bool): Append new field listing country name mentions?
         listify_terms (bool): Attempt to convert all 'terms' fields to lists?
+        terms_delimiters (tuple): Convert all 'terms' fields to list if these delimiters are specified.
+        caps_to_camel_case (bool): Convert all upper case text fields (longer than 3 chars)
+                                   to camel case?
+        remove_padding (bool): Remove all whitespace padding?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
@@ -268,6 +327,8 @@ class ElasticsearchPlus(Elasticsearch):
                  coordinates_as_floats=True,
                  country_detection=True,
                  listify_terms=True,
+                 terms_delimiters=None,
+                 caps_to_camel_case=False,
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -309,10 +370,15 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Convert items which SHOULD be lists to lists
         if listify_terms:
-            self.transforms.append(_listify_terms)
+            self.transforms.append(lambda row: _listify_terms(row, terms_delimiters))
+
+        # Convert upper case text to camel case
+        if caps_to_camel_case:
+            self.transforms.append(_caps_to_camel_case)
 
         # Clean up lists (dedup, remove None, empty lists are None)
         self.transforms.append(_clean_up_lists)
+        self.transforms.append(_remove_padding)
         super().__init__(*args, **kwargs)
 
     def chain_transforms(self, row):

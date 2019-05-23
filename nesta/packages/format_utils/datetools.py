@@ -38,7 +38,7 @@ def extract_year(date):
     return int(year)
 
 
-def extract_date(date, date_format='%Y-%m-%d'):
+def extract_date(date, date_format='%Y-%m-%d', return_date_object=False):
     '''
     Determine the date format, convert and return in YYYY-MM-DD format.
 
@@ -58,4 +58,6 @@ def extract_date(date, date_format='%Y-%m-%d'):
     if not date_object:
         raise ValueError(f"No date conversion possible for: {date}")
 
+    if return_date_object:
+        return date_object
     return date_object.strftime(date_format)

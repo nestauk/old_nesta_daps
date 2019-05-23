@@ -11,6 +11,8 @@ from nesta.production.luigihacks.elasticsearchplus import _listify_terms
 from nesta.production.luigihacks.elasticsearchplus import _null_mapping
 from nesta.production.luigihacks.elasticsearchplus import _add_entity_type
 from nesta.production.luigihacks.elasticsearchplus import _clean_up_lists
+from nesta.production.luigihacks.elasticsearchplus import _caps_to_camel_case
+from nesta.production.luigihacks.elasticsearchplus import _remove_padding
 
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 
@@ -38,6 +40,9 @@ def field_null_mapping():
 @pytest.fixture
 def row():
     return {"empty str": "",
+            "CAPS str": "THIS IS TOO LOUD",
+            "whitespace padded": "\ntoo much padding \r",
+            "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
@@ -51,6 +56,28 @@ def row():
                                     "both live in Greece and Chile"),
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
+
+def test_remove_padding(row):
+    _row = _remove_padding(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    assert _row["whitespace padded"] == "too much padding"
+    assert _row["whitespace padded list"] == ["too much padding"]
+
+
+def test_caps_to_camel_case(row):
+    _row = _caps_to_camel_case(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    for k, v in row.items():
+        if type(v) is not str:
+            assert _row[k] == v
+        elif len(v) < 4 or v.upper() != v:
+            assert _row[k] == v
+        else:
+            assert len(_row[k]) == len(v)
+            assert _row[k] != v
+
 
 def test_null_empty_str(row):
     _row = _null_empty_str(row)
@@ -117,6 +144,14 @@ def test_guess_delimiter(row):
 @mock.patch(GUESS_DELIMITER, return_value=";")
 def test_listify_splittable_terms(mocked_guess_delimiter, row):
     _row = _listify_terms(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    terms = _row["terms_of_xyz"]
+    assert type(terms) is list
+    assert len(terms) == 6
+
+def test_listify_splittable_terms_with_delimiter(row):
+    _row = _listify_terms(row, ";")
     assert len(_row) == len(row)
     assert _row != row
     terms = _row["terms_of_xyz"]
