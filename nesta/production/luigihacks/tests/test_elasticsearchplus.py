@@ -65,18 +65,25 @@ def test_remove_padding(row):
     assert _row["whitespace padded list"] == ["too much padding"]
 
 
+def _test_caps_to_camel_case(a, b):
+    if type(a) is not str:
+        assert a == b
+    elif type(a) is str and len(a) < 4 or a.upper() != a:
+        assert a == b
+    else:
+        assert len(a) == len(b)
+        assert a != b  
+
 def test_caps_to_camel_case(row):
     _row = _caps_to_camel_case(row)
     assert len(_row) == len(row)
     assert _row != row
     for k, v in row.items():
-        if type(v) is not str:
-            assert _row[k] == v
-        elif len(v) < 4 or v.upper() != v:
-            assert _row[k] == v
+        if type(v) is not list:
+            _test_caps_to_camel_case(v, _row[k])
         else:
-            assert len(_row[k]) == len(v)
-            assert _row[k] != v
+            for item1, item2 in zip(v,_row[k]):
+                _test_caps_to_camel_case(item1, item2)
 
 
 def test_null_empty_str(row):
