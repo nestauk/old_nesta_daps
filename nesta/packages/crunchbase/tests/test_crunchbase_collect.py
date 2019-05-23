@@ -7,8 +7,6 @@ from unittest import mock
 
 from nesta.packages.crunchbase.crunchbase_collect import rename_uuid_columns
 from nesta.packages.crunchbase.crunchbase_collect import process_orgs
-from nesta.packages.crunchbase.crunchbase_collect import split_batches
-from nesta.packages.crunchbase.crunchbase_collect import total_records
 from nesta.packages.crunchbase.crunchbase_collect import bool_convert
 from nesta.packages.crunchbase.crunchbase_collect import process_non_orgs
 from nesta.packages.crunchbase.crunchbase_collect import crunchbase_tar
@@ -97,40 +95,6 @@ def generate_test_data():
     def _generate_test_data(n):
         return [{'data': 'foo', 'other': 'bar'} for i in range(n)]
     return _generate_test_data
-
-
-def test_total_records_returns_correct_totals(generate_test_data):
-    returned_data = {'inserted': generate_test_data(100),
-                     'existing': generate_test_data(0),
-                     'failed': generate_test_data(230)
-                     }
-    expected_result = {'inserted': 100,
-                       'existing': 0,
-                       'failed': 230,
-                       'total': 330,
-                       'batch_total': 330
-                       }
-    assert total_records(returned_data) == expected_result
-
-
-def test_total_records_returns_correct_totals_with_batches(generate_test_data):
-    returned_data = {'inserted': generate_test_data(0),
-                     'existing': generate_test_data(40),
-                     'failed': generate_test_data(920)
-                     }
-    previous_totals = {'inserted': 100,
-                       'existing': 0,
-                       'failed': 230,
-                       'total': 330,
-                       'batch_total': 100
-                       }
-    expected_result = {'inserted': 100,
-                       'existing': 40,
-                       'failed': 1150,
-                       'total': 1290,
-                       'batch_total': 960
-                       }
-    assert total_records(returned_data, previous_totals) == expected_result
 
 
 class TestProcessOrgs():
