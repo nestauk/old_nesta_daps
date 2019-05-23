@@ -140,7 +140,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                       'outinfo': es_config,
                       'done': self.done_check(es, index=es_config['index'],
                                               doc_type=es_config['type'],
-                                              key=key)
+                                              key=key),
+                      'entity_type': 'paper'
                       }
             logging.info(params)
             job_params.append(params)
