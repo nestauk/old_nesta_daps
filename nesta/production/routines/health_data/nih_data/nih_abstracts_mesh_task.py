@@ -11,10 +11,12 @@ processing and indexing the data to ElasticSearch.
 import boto3
 import datetime
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import NotFoundError
 import logging
 import luigi
 import re
 
+from nesta.production.orms.orm_utils import setup_es
 from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -34,11 +36,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
     reindex = luigi.BoolParameter(default=False)
+    ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
-        logging.getLogger().setLevel(logging.INFO)
-
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
                           reindex=self.reindex,
@@ -83,8 +84,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         s3bucket = s3.Bucket(bucket)
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
-    @staticmethod
-    def done_check(es_client, index, doc_type, key):
+
+    def done_check(self, es_client, index, doc_type, key):
         '''
         Checks elasticsearch for mesh terms in the first and last documents in the
         batch.
@@ -104,7 +105,11 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
             raise ValueError("Could not extract start and end doc_ids from meshed file")
 
         for idx in match.groups():
-            res = es_client.get(index=index, doc_type=doc_type, id=idx)
+            try:
+                res = es_client.get(index=index, doc_type=doc_type, id=idx)
+            except NotFoundError:
+                if self.ignore_missing:
+                    return True
             if res['_source'].get('terms_mesh_abstract') is None:
                 return False
         return True
@@ -114,9 +119,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         db = 'production' if not self.test else 'dev'
 
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
+        es_mode = 'dev' if self.test else 'prod'
+        es, es_config = setup_es(es_mode, self.test, self.reindex,
+                                 dataset='nih',
+                                 aliases='health_scanner')
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'
