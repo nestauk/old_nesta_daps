@@ -85,7 +85,7 @@ def run():
                    'from_key':'tier_0',
                    'to_key':'tier_1',
                    'ignore':['doc_id']}
-    es = ElasticsearchPlus(hosts=es_host,
+    es = Elasticsearch(hosts=es_host,
                            port=es_port,
                            use_ssl=True,
                            entity_type=entity_type,
