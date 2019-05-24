@@ -35,11 +35,7 @@ def missing_value_count_pair_both(data_frame):
             both_null_dict[(pair[0],pair[1])] = 0
             both_null_dict[(pair[1],pair[0])] = 0
 
-    ser = pd.Series(list(both_null_dict.values()),
-                  index=pd.MultiIndex.from_tuples(both_null_dict.keys()))
-    heat_df = ser.unstack().fillna(0)
-
-    return heat_df
+    return both_null_dict
 
 def missing_value_count_pair_either(data_frame):
     pair_list = []
@@ -61,8 +57,12 @@ def missing_value_count_pair_either(data_frame):
             either_null_dict[(pair[0],pair[1])] = 0
             either_null_dict[(pair[1],pair[0])] = 0
 
-    ser = pd.Series(list(either_null_dict.values()),
-                  index=pd.MultiIndex.from_tuples(either_null_dict.keys()))
+    return either_null_dict
+
+def melt_dict_to_df(calc_dict):
+    #used for pairs
+    ser = pd.Series(list(calc_dict.values()),
+                  index=pd.MultiIndex.from_tuples(calc_dict.keys()))
     heat_df = ser.unstack().fillna(0)
 
     return heat_df

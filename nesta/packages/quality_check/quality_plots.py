@@ -37,3 +37,4 @@ def missing_value_count_pair_plot(pair_dataframe):
     plt.figure(figsize=(15,8))
     sns.heatmap(pair_dataframe)
     plt.xticks(rotation=295, ha = 'left')
+    plt.show()
