@@ -1,5 +1,7 @@
 from numpy.testing import assert_almost_equal
 import pytest
+from sqlalchemy.orm import session
+from sqlalchemy import engine
 from unittest import mock
 
 from nesta.packages.grid.grid import ComboFuzzer
@@ -23,7 +25,7 @@ class TestComboFuzzer:
         for expected_score in [0.92533, 1, 0.43011, 0]:
             assert_almost_equal(fuzzer.combo_fuzz('a', 'b'), expected_score, decimal=5)
 
-    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne")
+    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne", autospec=True)
     def test_fuzzy_match_doesnt_keep_history_by_default(self, mocked_fuzzy_extract):
         mocked_fuzzy_extract.return_value = ('c', 0.9)
 
@@ -34,7 +36,7 @@ class TestComboFuzzer:
         # not storing history so fuzzy match is done twice
         assert mocked_fuzzy_extract.call_count == 2
 
-    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne")
+    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne", autospec=True)
     def test_fuzzy_match_one_checks_previous_successful(self, mocked_fuzzy_extract):
         mocked_fuzzy_extract.return_value = ('c', 0.9)
 
@@ -45,7 +47,7 @@ class TestComboFuzzer:
         # storing history so fuzzy match is done once only
         assert mocked_fuzzy_extract.call_count == 1
 
-    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne")
+    @mock.patch("nesta.packages.grid.grid.fuzzy_proc.extractOne", autospec=True)
     def test_fuzzy_match_one_raises_key_error_when_previously_failed(self,
                                                                      mocked_fuzzy_extract):
         mocked_fuzzy_extract.return_value = ('c', 0.5)
@@ -76,7 +78,7 @@ class TestComboFuzzer:
 class TestGridNameLookup:
     @pytest.fixture
     def mocked_session(self):
-        mocked_session = mock.Mock()
+        mocked_session = mock.Mock(spec=session)
         all_institutes = [Institute(id='1', name='TEST Institute'),
                           Institute(id='2', name='Institute of Testing')]
 
@@ -93,7 +95,7 @@ class TestGridNameLookup:
 
     @mock.patch("nesta.packages.grid.grid.db_session", autospec=True)
     def test_institute_names_are_all_lowered(self, mocked_db_session, mocked_session):
-        mocked_engine = mock.Mock()
+        mocked_engine = mock.Mock(spec=engine)
         mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
 
         lookup = grid_name_lookup(mocked_engine)
@@ -104,7 +106,7 @@ class TestGridNameLookup:
     def test_institute_names_and_ids_are_found_in_final_dataset(self,
                                                                 mocked_db_session,
                                                                 mocked_session):
-        mocked_engine = mock.Mock()
+        mocked_engine = mock.Mock(spec=engine)
         mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
 
         lookup = grid_name_lookup(mocked_engine)
@@ -115,7 +117,7 @@ class TestGridNameLookup:
     def test_aliases_and_ids_are_found_in_final_dataset(self,
                                                         mocked_db_session,
                                                         mocked_session):
-        mocked_engine = mock.Mock()
+        mocked_engine = mock.Mock(spec=engine)
         mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
 
         lookup = grid_name_lookup(mocked_engine)
@@ -126,7 +128,7 @@ class TestGridNameLookup:
     def test_names_with_brackets_are_found_with_have_country_removed(self,
                                                                      mocked_db_session,
                                                                      mocked_session):
-        mocked_engine = mock.Mock()
+        mocked_engine = mock.Mock(spec=engine)
         mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
 
         lookup = grid_name_lookup(mocked_engine)
