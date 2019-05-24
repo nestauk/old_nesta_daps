@@ -1,5 +1,5 @@
+sys.argv[0]
 
-args
 # i = 0
 total_length = 0
 
