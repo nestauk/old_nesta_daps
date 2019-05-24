@@ -32,5 +32,6 @@
     {"tier_0": "updated_at", "tier_1": "datetime_updated_organisation"},
     {"tier_0": "primary_role", "tier_1": "type_of_organisation"},
     {"tier_0": "parent_id", "tier_1": "id_parent_organisation"},
-    {"tier_0": "is_health", "tier_1": "booleanFlag_health_organisation"}
+    {"tier_0": "is_health", "tier_1": "booleanFlag_health_organisation"},
+    {"tier_0": "mesh_terms", "tier_1": "terms_mesh_description"}
 ]
