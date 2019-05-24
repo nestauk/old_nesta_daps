@@ -1,4 +1,8 @@
-def missing_value_plot(counts):
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+def missing_value_plot(counts,total_length):
     """
     Input: dict
     """
@@ -8,9 +12,9 @@ def missing_value_plot(counts):
     plt.gca().invert_yaxis()
     plt.title('Number of Missing Values')
     plt.ylabel('Column')
-#     plt.xlabel('Frequency'.format(total_length))
-#     plt.axvline(x=total_length, linestyle='--', color="grey",alpha=0.6)
-#     plt.text(total_length-0.5,39, "Max: {}".format(total_length), color="grey",alpha=0.6)
+    plt.xlabel('Frequency'.format(total_length))
+    plt.axvline(x=total_length, linestyle='--', color="grey",alpha=0.6)
+    plt.text(total_length-0.5,39, "Max: {}".format(total_length), color="grey",alpha=0.6)
     # plt.xticks(rotation=90)
     plt.grid(alpha=0.08)
     plt.show()
@@ -29,7 +33,7 @@ def missing_value_column_count_plot(out_counts):
     plt.show()
 
 def missing_value_count_pair_plot(pair_dataframe):
-    pair_dataframe=pair_dataframe.where(np.triu(np.ones(heat_df.shape)).astype(np.bool)).T
+    pair_dataframe=pair_dataframe.where(np.triu(np.ones(pair_dataframe.shape)).astype(np.bool)).T
     plt.figure(figsize=(15,8))
     sns.heatmap(pair_dataframe)
     plt.xticks(rotation=295, ha = 'left')
