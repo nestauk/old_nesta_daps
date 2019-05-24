@@ -22,6 +22,7 @@ from nesta.packages.arxiv.collect_arxiv import BatchedTitles
 from nesta.packages.arxiv.collect_arxiv import create_article_institute_links
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.orms.arxiv_orm import Article
 
 
 @pytest.fixture(scope='session')
@@ -439,6 +440,7 @@ def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
 
     mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'}
                        for x in range(1, 7)])]
+    
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
