@@ -5,6 +5,8 @@ install:
   - pip install --upgrade setuptools
   - python setup.py install
   - pip install -r requirements.txt
+  - python -m nltk.downloader punkt
+  - python -m nltk.downloader stopwords
   - pip install lxml
   - python -c "import sys; print(sys.path)"
 before_script:
