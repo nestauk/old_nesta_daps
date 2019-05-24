@@ -1,5 +1,6 @@
 from collections import defaultdict
 import datetime
+import numpy as np
 import pandas as pd
 import pytest
 from sqlalchemy.orm.exc import NoResultFound
@@ -18,9 +19,9 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_arxiv_batch_rows
 from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
+from nesta.packages.arxiv.collect_arxiv import create_article_institute_links
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
-from nesta.production.orms.arxiv_orm import Article
 
 
 @pytest.fixture(scope='session')
@@ -402,14 +403,13 @@ def test_batched_titles_returns_all_prepared_titles(mocked_split_batches,
                                                     mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
 
-
     mocked_articles = [mocked_articles([{'id': 1, 'title': 'title A'},
                                         {'id': 2, 'title': 'title B'},
                                         {'id': 3, 'title': 'title C'}]),
                        mocked_articles([{'id': 4, 'title': 'title D'},
                                         {'id': 5, 'title': 'title E'},
                                         {'id': 6, 'title': 'title F'}])]
-  
+
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -437,8 +437,8 @@ def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
                                                   mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
-
-    mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'} for x in range(1, 7)])]
+    mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'}
+                       for x in range(1, 7)])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -475,3 +475,40 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
     batcher = BatchedTitles([1, 2, 3, 4], batch_size=2, session=mocked_session)
     list(batcher)
     assert mocked_split_batches.mock_calls == [mock.call([1, 2, 3, 4], 2)]
+
+
+class TestArticleInstituteLinks:
+    def test_data_is_returned_in_correct_format(self):
+        score = np.float64(1.11111)
+        article = Article(id=1)
+
+        links = create_article_institute_links(article, ['a'], score)
+        expected_result = [{'article_id': 1,
+                            'institute_id': 'a',
+                            'is_multinational': False,
+                            'matching_score': 1.11111}]
+        assert links == expected_result
+
+    def test_create_article_institute_links_converts_score_to_float(self):
+        score = np.float64(1.11111)
+        article = Article(id=1)
+
+        links = create_article_institute_links(article, ['a'], score)
+        assert type(links[0]['matching_score']) == float
+
+    def test_multinational_flag_is_set_correctly(self):
+        score = np.float64(1.21111)
+        article = Article(id=2)
+
+        links = create_article_institute_links(article, ['a'], score)
+        assert links[0]['is_multinational'] is False
+
+        links = create_article_institute_links(article, ['a', 'b', 'c'], score)
+        assert links[0]['is_multinational'] is True
+
+    def test_multiple_results_are_returned_for_multinationals(self):
+        score = np.float64(1.31111)
+        article = Article(id=3)
+
+        links = create_article_institute_links(article, ['a', 'b', 'c'], score)
+        assert len(links) == 3

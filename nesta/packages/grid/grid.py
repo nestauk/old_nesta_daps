@@ -55,8 +55,10 @@ def read_aliases(filepath):
 
 
 class ComboFuzzer:
-    """Combines multiple fuzzy matching methods. Can keep previous successful and failed
-    matches in memory for faster checks if data is likely to contain duplicates.
+    """Combines multiple fuzzy matching methods and provides a wrapper
+    around fuzzy_proc.extractOne to enable keeping previous successful and failed
+    matches in memory for faster checks; use if data is likely to contain duplicates.
+    This can consume a lot of memory if ids are large or if there is a lot of data.
     """
     def __init__(self, fuzzers, store_history=False):
         """
@@ -80,7 +82,7 @@ class ComboFuzzer:
             candidate (str): string to score against target
 
         Returns:
-            (float): score between 0 and 1
+            (numpy.float64): score between 0 and 1
         """
         _score = 0
         for _fuzz in self.fuzzers:
@@ -122,26 +124,6 @@ class ComboFuzzer:
         return match, score
 
 
-def create_article_institute_links(article, institute_ids, score):
-    """Creates data for the article/institutes association table.
-    There will be multiple links if the institute is multinational, one for each country
-    entity.
-
-    Args:
-        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
-        institute_ids (list): institute ids to link with the article
-        score (float): score for the match
-
-    Returns:
-        (:obj:`list` of :obj:`dict`): article institute links ready to load to database
-    """
-    return [{'article_id': article.id,
-             'institute_id': institute_id,
-             'is_multinational': len(institute_ids) > 1,
-             'matching_score': float(score)}
-            for institute_id in institute_ids]
-
-
 def grid_name_lookup(engine):
     """Constructs a lookup table of Institute names to ids by combining names with
     aliases and cleaned names containing country names in brackets. Multinationals are
@@ -172,8 +154,8 @@ def grid_name_lookup(engine):
                           .all()):
             found = re.match(r'(.*) \((.*)\)', bracketed.name)
             if found:
-                # combine all matches to a cleaned country name {IBM : [grid_id1, grid_id2]}
-                with_country[found.groups()[0]].append(bracketed.id)
+                # combine all matches to a cleaned and lowered country name {IBM : [grid_id1, grid_id2]}
+                with_country[found.groups()[0].lower()].append(bracketed.id)
         logging.info(f"{len(with_country)} institutes with country name in the title")
 
         # append cleaned names to the lookup table

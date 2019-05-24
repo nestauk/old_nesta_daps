@@ -137,7 +137,6 @@ class GridTask(luigi.Task):
                     except KeyError:
                         # failed fuzzy match
                         logging.debug(f"Failed fuzzy match: {affiliation}")
-                        continue
                     else:
                         institute_ids = institute_name_id_lookup[match]
                         institute_ids = set(institute_ids) - existing_article_institute_ids

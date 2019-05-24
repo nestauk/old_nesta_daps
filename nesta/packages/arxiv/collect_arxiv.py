@@ -412,6 +412,26 @@ def add_article_institutes(article_institutes, engine):
                    article_institutes)
 
 
+def create_article_institute_links(article, institute_ids, score):
+    """Creates data for the article/institutes association table.
+    There will be multiple links if the institute is multinational, one for each country
+    entity.
+
+    Args:
+        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
+        score (numpy.float64): score for the match
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): article institute links ready to load to database
+    """
+    return [{'article_id': article.id,
+             'institute_id': institute_id,
+             'is_multinational': len(institute_ids) > 1,
+             'matching_score': float(score)}
+            for institute_id in institute_ids]
+
+
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
