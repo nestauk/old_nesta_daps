@@ -54,7 +54,7 @@ class TestComboFuzzer:
 
         fuzzer = ComboFuzzer(fuzzers=['mock_fuzzer1', 'mock_fuzzer2'], store_history=True)
         try:
-            # should be added to failed history here
+            # should fail and be added to failed history here
             fuzzer.fuzzy_match_one('a', ['a', 'b'], lowest_match_score=0.6)
         except KeyError:
             pass
@@ -70,7 +70,6 @@ class TestComboFuzzer:
         mocked_fuzzy_extract.return_value = ('c', 0.5)
 
         fuzzer = ComboFuzzer(fuzzers=['mock_fuzzer1', 'mock_fuzzer2'], store_history=True)
-
         with pytest.raises(KeyError):
             fuzzer.fuzzy_match_one('a', ['a', 'b'], lowest_match_score=0.6)
 

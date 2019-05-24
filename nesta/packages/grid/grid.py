@@ -10,7 +10,7 @@ from nesta.production.orms.orm_utils import db_session
 
 
 def read_institutes(filepath):
-    """Reads the grid.csv and addresses.csv flatfiles, loads it into a dataframes and
+    """Reads the grid.csv and addresses.csv flatfiles, loads it into a dataframe and
     combines them, dropping duplicate and redundant data.
 
     Args:
