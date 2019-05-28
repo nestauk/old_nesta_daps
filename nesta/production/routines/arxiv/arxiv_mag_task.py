@@ -13,7 +13,7 @@ import pprint
 from arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
-from nesta.packages.mag.query_mag import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
+from nesta.packages.mag.query_mag_api import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
@@ -65,6 +65,8 @@ class QueryMagTask(luigi.Task):
 
     def run(self):
         pp = pprint.PrettyPrinter(indent=4, width=100)
+        mag_config = misctools.get_config(self.mag_config_path, 'mag')
+        mag_subscription_key = mag_config['subscription_key']
 
         # database setup
         database = 'dev' if self.test else 'production'
@@ -73,9 +75,6 @@ class QueryMagTask(luigi.Task):
         Base.metadata.create_all(self.engine)
 
         with db_session(self.engine) as session:
-            mag_config = misctools.get_config(self.mag_config_path, 'mag')
-            mag_subscription_key = mag_config['subscription_key']
-
             paper_fields = ["Id", "Ti", "F.FId", "CC",
                             "AA.AuN", "AA.AuId", "AA.AfN", "AA.AfId", "AA.S"]
 
@@ -184,7 +183,7 @@ class QueryMagTask(luigi.Task):
                 missing_fos_ids = batch_field_of_study_ids - found_fos_ids
                 if missing_fos_ids:
                     #  query mag for details if not found
-                    update_field_of_study_ids(missing_fos_ids)
+                    update_field_of_study_ids(mag_subscription_key, session, missing_fos_ids)
 
                 # add this batch to the queue
                 all_articles_to_update.extend(batch_article_data)

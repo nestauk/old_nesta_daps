@@ -1,9 +1,12 @@
-import mock
+import pytest
+from unittest import mock
 
-from nesta.packages.mag.query_mag import prepare_title
-from nesta.packages.mag.query_mag import build_expr
-from nesta.packages.mag.query_mag import query_mag_api
-from nesta.packages.mag.query_mag import dedupe_entities
+from nesta.packages.mag.query_mag_api import prepare_title
+from nesta.packages.mag.query_mag_api import build_expr
+from nesta.packages.mag.query_mag_api import query_mag_api
+from nesta.packages.mag.query_mag_api import dedupe_entities
+from nesta.packages.mag.query_mag_sparql import extract_entity_id
+from nesta.packages.mag.query_mag_sparql import query_mag_sparql_by_doi
 
 
 def test_prepare_title_removes_extra_spaces():
@@ -29,7 +32,7 @@ def test_build_expr_respects_query_limit_and_returns_remainder():
     assert list(build_expr([1, 2, 3], 'Id', 21)) == ["expr=OR(Id=1,Id=2)", "expr=OR(Id=3)"]
 
 
-@mock.patch('nesta.packages.mag.query_mag.requests.post')
+@mock.patch('nesta.packages.mag.query_mag_api.requests.post')
 def test_query_mag_api_sends_correct_request(mocked_requests):
     sub_key = 123
     fields = ['Id', 'Ti']
@@ -50,3 +53,51 @@ def test_dedupe_entities_picks_highest_for_each_title():
                 {'Id': 4, 'Ti': 'another title', 'logprob': 10}]
 
     assert dedupe_entities(entities) == {1, 4}
+
+
+def test_extract_entity_id_returns_id():
+    assert extract_entity_id('http://ma-graph.org/entity/109214941') == 109214941
+    assert extract_entity_id('http://ma-graph.org/entity/19694890') == 19694890
+    assert extract_entity_id('http://ma-graph.org/entity/13203339') == 13203339
+
+
+def test_extract_entity_id_raises_value_error_when_not_found():
+    with pytest.raises(ValueError):
+        extract_entity_id('bad_url')
+
+
+@mock.patch('nesta.packages.mag.query_mag_sparql._batch_query_articles')
+@mock.patch('nesta.packages.mag.query_mag_sparql.levenshtein_distance')
+def test_query_mag_sparql_by_doi_returns_closest_match(mocked_lev_distance,
+                                                       mocked_batch):
+    missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
+                        {'id': 2, 'doi': '2.2/4321', 'title': 'title_b'}]
+
+    results_batch = [{'paperTitle': 'title_aaa', 'doi': '1.1/1234'},
+                     {'paperTitle': 'title_aa', 'doi': '1.1/1234'},
+                     {'paperTitle': 'title_b', 'doi': '2.2/4321'},
+                     {'paperTitle': 'title_c', 'doi': '2.2/4321'}]
+
+    mocked_batch.return_value = [(missing_articles, results_batch)]
+    mocked_lev_distance.side_effect = [2, 1, 0, 1]
+
+    result = list(query_mag_sparql_by_doi(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'},
+                      {'paperTitle': 'title_b', 'score': 0, 'id': 2, 'doi': '2.2/4321'}]
+
+
+@mock.patch('nesta.packages.mag.query_mag_sparql._batch_query_articles')
+@mock.patch('nesta.packages.mag.query_mag_sparql.levenshtein_distance')
+def test_query_mag_sparql_by_doi_returns_no_results_when_doi_not_found(mocked_lev_distance,
+                                                                       mocked_batch):
+    missing_articles = [{'id': 1, 'doi': '1.1/1234', 'title': 'title_a'},
+                        {'id': 2, 'doi': 'bad_doi', 'title': 'title_b'}]
+
+    results_batch = [{'paperTitle': 'title_aaa', 'doi': '1.1/1234'},
+                     {'paperTitle': 'title_aa', 'doi': '1.1/1234'}]
+
+    mocked_batch.return_value = [(missing_articles, results_batch)]
+    mocked_lev_distance.side_effect = [2, 1]
+
+    result = list(query_mag_sparql_by_doi(missing_articles))
+    assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'}]

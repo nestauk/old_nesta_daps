@@ -20,6 +20,7 @@ from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.orms.arxiv_orm import Article
 
 
 @pytest.fixture(scope='session')
@@ -390,8 +391,7 @@ def test_last_update_date_raises_valueerror_if_none_found():
 def mocked_articles():
     def _mocked_articles(articles):
         """creates a list of Article instances from the supplied details"""
-        return [mock.Mock(spec=Article, **{'id': id, 'title': title})
-                for (id, title) in articles]
+        return [mock.Mock(spec=Article, **a) for a in articles]
     return _mocked_articles
 
 
@@ -402,8 +402,14 @@ def test_batched_titles_returns_all_prepared_titles(mocked_split_batches,
                                                     mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3], [4, 5, 6]])  # mocking a generator
 
-    mocked_articles = [mocked_articles([(1, 'title A'), (2, 'title B'), (3, 'title C')]),
-                       mocked_articles([(4, 'title D'), (5, 'title E'), (6, 'title F')])]
+
+    mocked_articles = [mocked_articles([{'id': 1, 'title': 'title A'},
+                                        {'id': 2, 'title': 'title B'},
+                                        {'id': 3, 'title': 'title C'}]),
+                       mocked_articles([{'id': 4, 'title': 'title D'},
+                                        {'id': 5, 'title': 'title E'},
+                                        {'id': 6, 'title': 'title F'}])]
+  
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -431,7 +437,8 @@ def test_batched_titles_generates_title_id_lookup(mocked_split_batches,
                                                   mocked_articles):
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
-    mocked_articles = [mocked_articles([(x, 'dummy_title') for x in range(1, 7)])]
+
+    mocked_articles = [mocked_articles([{'id': x, 'title': 'dummy_title'} for x in range(1, 7)])]
     mocked_session = mock.Mock()
     mocked_session.query().filter().all.side_effect = mocked_articles
 
@@ -461,7 +468,7 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
     mocked_split_batches.return_value = iter([[1, 2, 3, 4, 5, 6]])
 
     mocked_session = mock.Mock()
-    mocked_session.query().filter().all.return_value = mocked_articles([(1, 'dummy_title')])
+    mocked_session.query().filter().all.return_value = mocked_articles([{'id': 1, 'title': 'dummy_title'}])
 
     mocked_prepare_title.return_value = 'clean title A'
 
