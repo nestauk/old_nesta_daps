@@ -108,6 +108,7 @@
             "continent",
             "cost",
             "country",
+            "description",
             "funding",
             "group",
             "member",
