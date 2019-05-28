@@ -64,8 +64,12 @@ def quality_check(stream = None):
         missing_val_df = missing_values(df)
         missing_value_plot(missing_val_df, len(df))
 
-        #EITHER OR AND missing pairwise
-        missing_val_column_pair = missing_value_column_count(df)
-        missing_value_column_count_plot(missing_val_column_pair)
-
+        #missing distribution
         missing_value_column_count_plot(dict(missing_val_df).sort_values(ascending=False))
+
+        #EITHER OR AND missing pairwise
+        both_null_dict = missing_value_count_pair_both(df)
+        either_null_dict = missing_value_count_pair_either(df)
+
+        missing_value_count_pair_plot(both_null_dict)
+        missing_value_count_pair_plot(either_null_dict)
