@@ -16,7 +16,7 @@ def missing_value_plot(counts,total_length):
     plt.axvline(x=total_length, linestyle='--', color="grey",alpha=0.6)
     plt.text(total_length-0.5,39, "Max: {}".format(total_length), color="grey",alpha=0.6)
     # plt.xticks(rotation=90)
-    plt.grid(alpha=0.08)
+    plt.grid(alpha=0.1)
     plt.show()
 
 
