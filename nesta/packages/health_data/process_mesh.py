@@ -6,19 +6,19 @@ import pandas as pd
 import s3fs  # not called but needed to allow pandas to access s3
 
 
-def retrieve_mesh_terms(bucket, abstract_file):
+def retrieve_mesh_terms(bucket, key):
     """
     Retrieves mesh terms from an s3 bucket.
 
     Args:
         bucket (str): s3 bucket
-        abstract_file (str): path to the abstract file
+        key (str): path to the meshed file
 
     Returns:
         (dataframe): whole mesh terms file, with headers appended
     """
-    target = f"s3://{bucket}/{abstract_file}"
-    logging.debug(f"Retrieving mesh terms from S3: {target}")
+    target = f"s3://{bucket}/{key}"
+    logging.info(f"Retrieving mesh terms from S3: {target}")
 
     return pd.read_csv(target, sep='|', header=None,
                        names=['doc_id', 'term', 'term_id', 'cui', 'score', 'indices'])
@@ -29,17 +29,17 @@ def format_mesh_terms(df):
     Removes unrequired columns and pivots the mesh terms data into a dictionary.
 
     Args:
-        df (dataframe): mesh terms
+        df (dataframe): mesh terms as returned from retrieve_mesh_terms
 
     Returns:
         (dict): document_id: list of mesh terms
     """
-    logging.debug("Formatting mesh terms")
+    logging.info("Formatting mesh terms")
     # remove PRC rows
-    df.drop(df[df.term == 'PRC'].index, axis=0, inplace=True)
+    df = df.drop(df[df.term == 'PRC'].index, axis=0)
 
     # remove invalid error rows
-    df.drop(df[df.doc_id.astype(str).str.contains('ERROR.*ERROR', na=False)].index, axis=0, inplace=True)
+    df = df.drop(df[df.doc_id.astype(str).str.contains('ERROR.*ERROR', na=False)].index, axis=0)
 
     # pivot and remove unrequired columns
     doc_terms = {doc_id: list(grouped.term) for doc_id, grouped in df.groupby("doc_id")}

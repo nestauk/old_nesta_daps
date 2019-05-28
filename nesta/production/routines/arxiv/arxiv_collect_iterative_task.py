@@ -8,7 +8,8 @@ from datetime import datetime
 import luigi
 import logging
 
-from nesta.packages.arxiv.collect_arxiv import add_new_articles, BatchWriter, retrieve_all_arxiv_rows, update_existing_articles
+from nesta.packages.arxiv.collect_arxiv import add_new_articles, retrieve_all_arxiv_rows, update_existing_articles
+from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Article, Category
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 from nesta.production.luigihacks import misctools

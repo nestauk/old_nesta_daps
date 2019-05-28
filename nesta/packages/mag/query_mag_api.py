@@ -10,6 +10,9 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.mag_orm import FieldOfStudy
 
 
+ENDPOINT = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
+
+
 def prepare_title(title):
     """Replaces non-alphanums from a paper title, allowing foreign characters and cleans
     up multiple spaces and trailing spaces.
@@ -82,14 +85,13 @@ def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
                 and 'entities' (the results) keys.
                 If there are no results 'entities' is an empty list.
     """
-    endpoint = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
     headers = {
         'Ocp-Apim-Subscription-Key': subscription_key,
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     query = f"{expr}&count={query_count}&offset={offset}&attributes={','.join(fields)}"
 
-    r = requests.post(endpoint, data=query.encode("utf-8"), headers=headers)
+    r = requests.post(ENDPOINT, data=query.encode("utf-8"), headers=headers)
     r.raise_for_status()
 
     return r.json()
@@ -109,7 +111,7 @@ def query_fields_of_study(subscription_key,
         ids: (:obj:`list` of `int`): field of study ids to query
         levels (:obj:`list` of `int`): levels to extract. 0 is highest, 5 is lowest
         fields (:obj:`list` of `str`): codes of fields to return, as per mag documentation
-        query_count (int): number of items to return
+        query_count (int): number of items to return from each query
         results_limit (int): break and return as close to this number of results as the
                              offset and query_count allow (for testing)
 
@@ -192,9 +194,8 @@ def dedupe_entities(entities):
 def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
     logging.info(f"Missing field of study ids: {fos_ids}")
     logging.info(f"Querying MAG for {len(fos_ids)} missing fields of study")
-    new_fos_to_import = (FieldOfStudy(**fos) for fos
-                         in query_fields_of_study(mag_subscription_key,
-                                                  ids=fos_ids))
+    new_fos_to_import = [FieldOfStudy(**fos) for fos
+                         in query_fields_of_study(mag_subscription_key, ids=fos_ids)]
     logging.info(f"Retrieved {len(new_fos_to_import)} new fields of study from MAG")
     fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
     if fos_not_found:

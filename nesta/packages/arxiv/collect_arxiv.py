@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import time
 import xml.etree.ElementTree as ET
 
-from nesta.packages.mag.query_mag import prepare_title
+from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.arxiv_orm import Base, Article, Category
@@ -245,7 +245,7 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
             start_cursor = int(resumption_token.split("|")[1])
         for row in batch:
             yield row
-
+                     
 
 def retrieve_all_arxiv_rows(**kwargs):
     """Iterate through batches and yield single rows through the whole dataset.
@@ -267,7 +267,6 @@ def retrieve_all_arxiv_rows(**kwargs):
 
 def extract_last_update_date(prefix, updates):
     """Determine the latest valid date from a list of update_ids.
-
     Args:
         prefix (str): valid prefix in the update id
         updates (list of str): update ids extracted from the luigi_table_updates

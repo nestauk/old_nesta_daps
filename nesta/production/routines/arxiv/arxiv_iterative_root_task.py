@@ -8,7 +8,7 @@ import datetime
 import logging
 import luigi
 
-from arxiv_mag_task import QueryMagTask
+from arxiv_mag_sparql_task import MagSparqlTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -36,11 +36,11 @@ class RootTask(luigi.WrapperTask):
         level = logging.DEBUG if self.debug else logging.INFO
         logging.getLogger().setLevel(level)
 
-        yield QueryMagTask(date=self.date,
-                           _routine_id=_routine_id,
-                           db_config_path=self.db_config_path,
-                           db_config_env='MYSQLDB',
-                           mag_config_path='mag.config',
-                           test=not self.production,
-                           insert_batch_size=self.insert_batch_size,
-                           articles_from_date=self.articles_from_date)
+        yield MagSparqlTask(date=self.date,
+                            _routine_id=_routine_id,
+                            db_config_path=self.db_config_path,
+                            db_config_env='MYSQLDB',
+                            mag_config_path='mag.config',
+                            test=not self.production,
+                            insert_batch_size=self.insert_batch_size,
+                            articles_from_date=self.articles_from_date)

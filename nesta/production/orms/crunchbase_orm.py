@@ -50,6 +50,7 @@ class Organization(Base):
     long_description = Column(TEXT(convert_unicode=True, collation='utf8mb4_unicode_ci'))
     parent_id = Column(VARCHAR(50))
     is_health = Column(BOOLEAN)
+    mesh_terms = Column(TEXT)
     categories = relationship('CategoryGroup',
                               secondary='crunchbase_organizations_categories')
 
