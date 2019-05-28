@@ -74,8 +74,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         Args:
             bucket (str): s3 bucket
-            key_prefix (str): prefix to identify the files, ie the folder and start of
-                                filename
+            key_prefix (str): prefix to identify the files, ie 
+                              the folder and start of a filename
 
         Returns:
             (set of str): keys of the files
@@ -109,7 +109,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                 res = es_client.get(index=index, doc_type=doc_type, id=idx)
             except NotFoundError:
                 if self.ignore_missing:
-                    return True
+                    return False
             if res['_source'].get('terms_mesh_abstract') is None:
                 return False
         return True
