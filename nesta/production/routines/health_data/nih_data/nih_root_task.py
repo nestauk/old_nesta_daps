@@ -29,7 +29,7 @@ class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.date.today())
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
-    reindex = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
     ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
@@ -40,7 +40,7 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)        
         yield AbstractsMeshTask(date=self.date,
                                 ignore_missing=self.ignore_missing,
-                                reindex=False,
+                                drop_and_recreate=self.drop_and_recreate,
                                 _routine_id=_routine_id,
                                 db_config_path=self.db_config_path,
                                 test=(not self.production),

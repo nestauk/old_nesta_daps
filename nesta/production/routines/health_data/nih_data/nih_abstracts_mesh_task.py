@@ -35,14 +35,14 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    reindex = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
     ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
-                          reindex=self.reindex,
+                          drop_and_recreate=self.drop_and_recreate,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
                           batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
@@ -120,7 +120,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.reindex,
+        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
                                  dataset='nih',
                                  aliases='health_scanner')
 
