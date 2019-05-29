@@ -78,7 +78,7 @@
     },
     "terms": {
         "nih": "terms_mesh_abstract",
-        "crunchbase": "_terms_mesh_description"
+        "crunchbase": "terms_mesh_description"
     },
     "title": {
         "nih": "title_of_project"

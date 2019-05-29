@@ -133,7 +133,7 @@
 		"_terms_sdg_summary":{
 		    "type": "keyword"
 		},
-                "_terms_mesh_description": {
+                "terms_mesh_description": {
                     "type": "keyword"
                 }
             }
