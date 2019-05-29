@@ -59,7 +59,7 @@ def run():
 
     # clean start and end dates
     for col in ["project_start", "project_end"]:
-        df[col] = df[col].apply(lambda x: _extract_date(x)) #, return_date_object=True))
+        df[col] = df[col].apply(lambda x: _extract_date(x))
 
     # currency is the same for the whole dataset
     df['total_cost_currency'] = 'USD'

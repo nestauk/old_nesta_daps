@@ -46,7 +46,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=10000)
     insert_batch_size = luigi.IntParameter()
     intermediate_bucket = luigi.Parameter()
-    reindex = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
         yield DescriptionMeshTask(date=self.date,
@@ -79,7 +79,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.reindex, 
+        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate, 
                                  dataset='crunchbase', 
                                  aliases='health_scanner')
 

@@ -37,14 +37,14 @@ def assert_correct_config(test, config, key):
                          "must end with '_dev'")
 
 
-def setup_es(es_mode, test_mode, reindex_mode, dataset, aliases=None):
+def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
     """Retrieve the ES connection, ES config and setup the index 
     if required.
     
     Args:
         es_mode (str): One of "prod" or "dev".
         test_mode (bool): Running in test mode?
-        reindex_mode (bool): Running in reindex mode?
+        drop_and_recreate (bool): Drop and recreate ES index?
         dataset (str): Name of the dataset for the ES mapping.
         aliases (str): Name of the aliases for the ES mapping.
     Returns:
@@ -63,7 +63,7 @@ def setup_es(es_mode, test_mode, reindex_mode, dataset, aliases=None):
                        use_ssl=True)
     # Drop the index if required (must be in test mode to do this)         
     _index = es_config['index']
-    if reindex_mode and test_mode:
+    if drop_and_recreate and test_mode:
         es.indices.delete(index=_index)
     # Create the index if required
     exists = es.indices.exists(index=_index)
