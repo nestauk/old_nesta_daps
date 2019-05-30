@@ -38,6 +38,7 @@
             "capitalCity",
             "category",
             "city",
+            "continent",
             "country",
             "created",
             "crunchBase",
@@ -90,9 +91,10 @@
             "summary",
             "topics",
             "total",
-            "twitter",
+            "twitter",	    
             "update",
             "updated",
+	    "usd2018",
             "worldRegion",
             "zipcode"
         ]

@@ -7,6 +7,7 @@ Discover all GtR data via the API.
 import luigi
 import datetime
 import boto3
+import logging
 
 from nesta.packages.gtr.get_gtr_data import read_xml_from_url
 from nesta.packages.gtr.get_gtr_data import TOP_URL
@@ -15,6 +16,7 @@ from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks import autobatch
 from nesta.production.luigihacks import s3
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
 # Define these globally since they are shared resources
@@ -88,5 +90,5 @@ class GtrOnlyRootTask(luigi.WrapperTask):
                       vcpus=2,
                       poll_time=10,
                       memory=2048,
-                      max_live_jobs=200,
+                      max_live_jobs=50,
                       test=(not self.production))

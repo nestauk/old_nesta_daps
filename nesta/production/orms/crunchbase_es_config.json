@@ -21,6 +21,12 @@
                 "placeName_country_organisation": {
                     "type": "keyword"
                 },
+		"placeName_continent_organisation": {
+                    "type": "keyword"
+                },
+                "placeName_state_organisation": {
+                    "type": "keyword"
+                },
                 "id_iso2_country": {
                     "type": "keyword"
                 },
@@ -67,7 +73,7 @@
                     "type": "integer"
                 },
                 "cost_of_funding": {
-                    "type": "integer"
+                    "type": "long"
                 },
                 "currency_of_funding": {
                     "type": "keyword"
@@ -106,6 +112,9 @@
                     "type":   "date",
                     "format": "yyyy-MM-dd HH:mm:ss"
                 },
+                "type_of_entity": {
+                    "type": "keyword"
+                },
                 "type_of_organisation": {
                     "type": "keyword"
                 },
@@ -114,6 +123,18 @@
                 },
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
+                },
+		"_cost_usd2018_organisation": {
+		    "type": "float"
+		},
+		"terms_of_countryTags": {
+		    "type": "keyword"
+		},
+		"_terms_sdg_summary":{
+		    "type": "keyword"
+		},
+                "terms_mesh_description": {
+                    "type": "keyword"
                 }
             }
         }

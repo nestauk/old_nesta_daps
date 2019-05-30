@@ -6,7 +6,8 @@ import os
 from urllib.parse import urlsplit
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_non_orgs
-from nesta.packages.crunchbase.crunchbase_collect import _insert_data
+from nesta.production.orms.orm_utils import insert_data
+from nesta.packages.misc_utils.batches import split_batches
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.production.orms.orm_utils import get_class_by_tablename, db_session
 from nesta.production.orms.crunchbase_orm import Base
@@ -48,8 +49,9 @@ def run():
 
     # process and insert data
     processed_rows = process_non_orgs(df, existing_rows, pk_names)
-    _insert_data("BATCHPAR_config", 'mysqldb', db_name, Base, table_class,
-                 processed_rows, batch_size=batch_size)
+    for batch in split_batches(processed_rows, batch_size):
+        insert_data("BATCHPAR_config", 'mysqldb', db_name, Base, table_class,
+                    processed_rows, low_memory=True)
 
     logging.warning(f"Marking task as done to {s3_path}")
     s3 = boto3.resource('s3')
