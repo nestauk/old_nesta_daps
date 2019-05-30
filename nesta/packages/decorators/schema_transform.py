@@ -55,8 +55,10 @@ def schema_transform(filename, from_key, to_key):
                          if k in transformer} for row in data]
             # Otherwise throw an error
             else:
-                raise ValueError("Schema transform expects EITHER a pandas.DataFrame "
-                                 "OR a list of dict from the wrapped function.")
+                raise ValueError("Schema transform expects EITHER a "
+                                 "pandas.DataFrame "
+                                 "OR a list of dict from the wrapped "
+                                 "function.")
             return data
         return transformed
     return wrapper
@@ -87,7 +89,8 @@ def schema_transformer(data, *, filename, from_key, to_key, ignore=[]):
     elif type(data) == list and all(type(row) == dict for row in data):
         transformed_data = []
         for row in data:
-            transformed = {transformer[k]: v for k, v in row.items() if k in transformer}
+            transformed = {transformer[k]: v for k, v in row.items() 
+                           if k in transformer}
             ignored = {k: v for k, v in row.items() if k in ignore}
             transformed_data.append({**transformed, **ignored})
         return transformed_data
@@ -100,5 +103,8 @@ def schema_transformer(data, *, filename, from_key, to_key, ignore=[]):
 
     # Otherwise throw an error
     else:
-        raise ValueError("Schema transform expects EITHER a pandas.DataFrame "
-                         "OR a list of dict, OR a single dict from the wrapped function.")
+        raise ValueError("Schema transform expects EITHER a "
+                         "pandas.DataFrame "
+                         "OR a list of dict, "
+                         "OR a single dict from the "
+                         "wrapped function.")

@@ -24,6 +24,7 @@ class RootTask(luigi.WrapperTask):
                            mode (False, default), or production mode (True).
     '''
     date = luigi.DateParameter(default=datetime.date.today())
+    drop_and_recreate = luigi.BoolParameter(default=False)
     production = luigi.BoolParameter(default=False)
     insert_batch_size = luigi.IntParameter(default=500)
 
@@ -35,6 +36,7 @@ class RootTask(luigi.WrapperTask):
         yield ElasticsearchTask(date=self.date,
                                 _routine_id=_routine_id,
                                 test=not self.production,
+                                drop_and_recreate=self.drop_and_recreate,
                                 db_config_env="MYSQLDB",
                                 insert_batch_size=self.insert_batch_size,
                                 process_batch_size=50000,
@@ -50,4 +52,4 @@ class RootTask(luigi.WrapperTask):
                                 region_name="eu-west-2",
                                 poll_time=10,
                                 memory=2048,
-                                max_live_jobs=2)
+                                max_live_jobs=100)

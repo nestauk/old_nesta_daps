@@ -10,6 +10,7 @@ processing and indexing the data to ElasticSearch.
 
 import datetime
 from elasticsearch import Elasticsearch
+
 import logging
 import luigi
 from sqlalchemy.orm import sessionmaker
@@ -18,6 +19,7 @@ from nesta.production.routines.health_data.nih_data.nih_collect_task import Coll
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.nih_orm import Projects
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
@@ -37,6 +39,7 @@ class ProcessTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
+    reindex = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
@@ -101,9 +104,10 @@ class ProcessTask(autobatch.AutoBatchTask):
         project_query = session.query(Projects)
 
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
+        es_mode = 'dev' if self.test else 'prod'
+        es, es_config = setup_es(es_mode, self.test, self.reindex,
+                                 dataset='nih',
+                                 aliases='health_scanner')
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []
@@ -116,9 +120,12 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'out_port': es_config['port'],
                       'out_index': es_config['index'],
                       'out_type': es_config['type'],
+                      'aws_auth_region': es_config['region'],
                       'done': es.exists(index=es_config['index'],
                                         doc_type=es_config['type'],
-                                        id=end)
+                                        id=end),
+                      'aws_auth_region': es_config['region'],
+                      'entity_type': 'paper'
                       }
             print(params)
             job_params.append(params)
@@ -126,6 +133,46 @@ class ProcessTask(autobatch.AutoBatchTask):
 
     def combine(self, job_params):
         self.output().touch()
+
+
+class ProcessRootTask(luigi.WrapperTask):
+    '''A dummy root task, which collects the database configurations
+    and executes the central task.
+
+    Args:
+        date (datetime): Date used to label the outputs
+        db_config_path (str): Path to the MySQL database configuration
+        production (bool): Flag indicating whether running in testing
+                           mode (False, default), or production mode (True).
+    '''
+    date = luigi.DateParameter(default=datetime.date.today())
+    db_config_path = luigi.Parameter(default="mysqldb.config")
+    production = luigi.BoolParameter(default=False)
+    reindex = luigi.BoolParameter(default=False)
+
+    def requires(self):
+        '''Collects the database configurations
+        and executes the central task.'''
+        _routine_id = "{}-{}".format(self.date, self.production)
+
+        logging.getLogger().setLevel(logging.INFO)
+        yield ProcessTask(date=self.date,
+                          reindex=self.reindex,
+                          _routine_id=_routine_id,
+                          db_config_path=self.db_config_path,
+                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
+                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                                     find_filepath_from_pathstub("config/mysqldb.config"),
+                                     find_filepath_from_pathstub("config/elasticsearch.config"),
+                                     find_filepath_from_pathstub("nih.json")],
+                          job_def="py36_amzn1_image",
+                          job_name="ProcessTask-%s" % _routine_id,
+                          job_queue="HighPriority",
+                          region_name="eu-west-2",
+                          poll_time=10,
+                          test=not self.production,
+                          memory=2048,
+                          max_live_jobs=2)
 
 
 if __name__ == '__main__':
