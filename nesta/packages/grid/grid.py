@@ -13,6 +13,9 @@ def read_institutes(filepath):
     """Reads the grid.csv and addresses.csv flatfiles, loads it into a dataframe and
     combines them, dropping duplicate and redundant data.
 
+    Not currently implemented into any pipeline, but should be. Scraping may be required
+    to identify the latest file.
+
     Args:
         filepath (str): location of the folder containg the extracted files
 
@@ -42,6 +45,9 @@ def read_institutes(filepath):
 
 def read_aliases(filepath):
     """Reads the aliases.csv flatfile and loads it into a dataframe.
+
+    Not currently implemented into any pipeline, but should be. Scraping may be required
+    to identify the latest file.
 
     Args:
         filepath (str): location of the folder containg the extracted files

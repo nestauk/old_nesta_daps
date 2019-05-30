@@ -362,7 +362,7 @@ def update_existing_articles(article_batch, session):
     # look for any institutes in provided article_batch
     for article in article_batch:
         if article.get('institutes'):
-            raise TypeError("Institute links cannot be written using this method. Use add_article_institutes instead")
+            raise ValueError("Institute links cannot be written using this method. Use add_article_institutes instead")
 
     # convert lists of category ids into rows for association table
     article_categories = [dict(article_id=article['id'], category_id=cat_id)

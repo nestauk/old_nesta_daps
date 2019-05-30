@@ -110,7 +110,7 @@ def _batch_query_sparql(query, concat_format=None, filter_on=None, ids=None, bat
         query (str): sparql query containing a format string placeholder {}
         concat_format (str): string format to be applied when concatenating ids
             requires a placeholder for id {}
-        filter_on (str): name of the field to use in the filter WITHOUT ?
+        filter_on (str): name of the field to use in the filter (no '?' required)
         ids (list): If ids are supplied they are queried as batches, otherwise
             all entities are queried
         batch_size (int): number of ids to query in a batch. Maximum = 50
@@ -132,8 +132,7 @@ def _batch_query_sparql(query, concat_format=None, filter_on=None, ids=None, bat
         entity_filter = ''
 
     for batch in sparql_query(MAG_ENDPOINT, query.format(entity_filter)):
-        for row in batch:
-            yield row
+        yield from batch
 
 
 def extract_entity_id(entity):
@@ -297,12 +296,19 @@ def query_authors(ids=None, results_limit=None):
                                                     concat_format=concat_format,
                                                     filter_on='author',
                                                     ids=ids), start=1):
-        # rename and reformat fields out of entity urls
-        row['author_id'] = extract_entity_id(row.pop('author'))
-        row['author_name'] = row.pop('authorName')
-        row['author_affiliation_id'] = extract_entity_id(row.pop('affiliation'))
-        row['author_affiliation'] = row.pop('affiliationName')
-        row['affiliation_grid_id'] = extract_grid_id(row.pop('gridId'))
+        renaming = {'author_id': 'author',
+                    'author_name': 'authorName',
+                    'author_affiliation_id': 'affiliation',
+                    'author_affiliation': 'affiliationName',
+                    'affiliation_grid_id': 'gridId'}
+
+        for old, new in renaming.items():
+            row[new] = row.pop(old)
+
+        # reformat fields from url to id
+        row['author_id'] = extract_entity_id(row['author'])
+        row['author_affiliation_id'] = extract_entity_id(row['affiliation'])
+        row['affiliation_grid_id'] = extract_grid_id(row['gridId'])
 
         yield row
 
