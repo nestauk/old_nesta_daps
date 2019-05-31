@@ -1,5 +1,7 @@
 import pytest
 import unittest
+from unittest import mock
+import pytest
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
@@ -12,8 +14,40 @@ from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
 from nesta.production.orms.orm_utils import insert_data
+
+from nesta.production.orms.orm_utils import load_json_from_pathstub
+from nesta.production.orms.orm_utils import get_es_mapping
+from nesta.production.orms.orm_utils import setup_es
+from nesta.production.orms.orm_utils import Elasticsearch
 from nesta.production.orms.orm_utils import merge_metadata
 
+
+@pytest.fixture
+def alias_lookup():
+    return {
+        "alias1": {
+            "dataset1": "field1a",
+            "dataset2": "field1b"
+        },
+        "alias2": {
+            "dataset1": "field2a",
+            "dataset2": "field2b"
+        }
+    }
+
+@pytest.fixture
+def mapping():
+    return {
+        'mappings': {
+            '_doc': {
+                'properties': {
+                    'field1a': {'type': 'keyword'},
+                    'field2a': {'type': 'text'},
+                }
+            }
+        }        
+    }
+    
 
 Base = declarative_base()
 
@@ -84,6 +118,100 @@ class TestOrmUtils(unittest.TestCase):
         '''Test that non-OperationalError lead to an exception'''
         dfw = DummyFunctionWrapper(Exception)
         self.assertRaises(Exception, try_until_allowed, dfw.f)
+
+
+def test_load_json_from_pathstub():
+    for ds in ["nih", "crunchbase"]:
+        js = load_json_from_pathstub("production/orms/",
+                                     f"{ds}_es_config.json")
+        assert len(js) > 0
+
+@mock.patch("nesta.production.orms.orm_utils.load_json_from_pathstub")
+def test_get_es_mapping(mocked_load_json_from_pathstub, alias_lookup, 
+                        mapping):
+    mocked_load_json_from_pathstub.side_effect = (mapping, 
+                                                  alias_lookup)
+    _mapping = get_es_mapping("dataset1", "blah")    
+    alias1 = _mapping["mappings"]["_doc"]["properties"].pop("alias1")
+    alias2 = _mapping["mappings"]["_doc"]["properties"].pop("alias2")
+    assert mapping == _mapping
+    assert alias1 == {'type': 'alias', 'path': 'field1a'}
+    assert alias2 == {'type': 'alias', 'path': 'field2a'}
+
+@mock.patch("nesta.production.orms.orm_utils.load_json_from_pathstub")
+def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub, 
+                                  alias_lookup, mapping):
+    mocked_load_json_from_pathstub.side_effect = (mapping, 
+                                                  alias_lookup)
+    with pytest.raises(ValueError):
+        get_es_mapping("dataset2", "blah")
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_bad_es_mode(mock_get_es_mapping, mock_Elasticsearch, 
+                              mock_assert_correct_config, mock_get_config):
+    with pytest.raises(ValueError):
+        setup_es(es_mode="dave", test_mode=False, drop_and_recreate=False, 
+                 dataset=None, aliases=None)
+
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_true_test_delete_called(mock_get_es_mapping, 
+                                          mock_Elasticsearch, 
+                                          mock_assert_correct_config, 
+                                          mock_get_config):
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
+    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=True, 
+             dataset=None, aliases=None)
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_false_test_delete_not_called(mock_get_es_mapping, 
+                                               mock_Elasticsearch, 
+                                               mock_assert_correct_config, 
+                                               mock_get_config):
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
+    setup_es(es_mode="dev", test_mode=False, drop_and_recreate=True, 
+             dataset=None, aliases=None)
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping, 
+                                                  mock_Elasticsearch, 
+                                                  mock_assert_correct_config, 
+                                                  mock_get_config):
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
+    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=False, 
+             dataset=None, aliases=None)
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_no_create_if_exists(mock_get_es_mapping, 
+                                      mock_Elasticsearch, 
+                                      mock_assert_correct_config, 
+                                      mock_get_config):
+    mock_Elasticsearch.return_value.indices.exists.return_value = True
+    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=False, 
+             dataset=None, aliases=None)
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 0
 
 
 @pytest.fixture

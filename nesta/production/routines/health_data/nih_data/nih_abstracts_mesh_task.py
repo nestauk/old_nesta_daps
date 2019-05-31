@@ -11,10 +11,12 @@ processing and indexing the data to ElasticSearch.
 import boto3
 import datetime
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import NotFoundError
 import logging
 import luigi
 import re
 
+from nesta.production.orms.orm_utils import setup_es
 from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -22,8 +24,8 @@ from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 
 class AbstractsMeshTask(autobatch.AutoBatchTask):
-    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL and projects in
-    Elasticsearch.
+    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL 
+    and projects in Elasticsearch.
 
     Args:
         date (str): Date used to label the outputs
@@ -33,11 +35,14 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
+    drop_and_recreate = luigi.BoolParameter(default=False)
+    ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
+                          drop_and_recreate=self.drop_and_recreate,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
                           batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
@@ -54,6 +59,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                           memory=2048,
                           max_live_jobs=2)
 
+
     def output(self):
         '''Points to the input database target'''
         update_id = "NihAbstractMeshData-%s" % self._routine_id
@@ -68,8 +74,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         Args:
             bucket (str): s3 bucket
-            key_prefix (str): prefix to identify the files, ie the folder and start of
-                                filename
+            key_prefix (str): prefix to identify the files, ie 
+                              the folder and start of a filename
 
         Returns:
             (set of str): keys of the files
@@ -78,8 +84,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         s3bucket = s3.Bucket(bucket)
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
-    @staticmethod
-    def done_check(es_client, index, doc_type, key):
+
+    def done_check(self, es_client, index, doc_type, key):
         '''
         Checks elasticsearch for mesh terms in the first and last documents in the
         batch.
@@ -99,7 +105,11 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
             raise ValueError("Could not extract start and end doc_ids from meshed file")
 
         for idx in match.groups():
-            res = es_client.get(index=index, doc_type=doc_type, id=idx)
+            try:
+                res = es_client.get(index=index, doc_type=doc_type, id=idx)
+            except NotFoundError:
+                if self.ignore_missing:
+                    return False
             if res['_source'].get('terms_mesh_abstract') is None:
                 return False
         return True
@@ -109,9 +119,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         db = 'production' if not self.test else 'dev'
 
         # elasticsearch setup
-        es_mode = 'rwjf_prod' if not self.test else 'rwjf_dev'
-        es_config = misctools.get_config('elasticsearch.config', es_mode)
-        es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
+        es_mode = 'dev' if self.test else 'prod'
+        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
+                                 dataset='nih',
+                                 aliases='health_scanner')
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'
@@ -129,7 +140,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                       'outinfo': es_config,
                       'done': self.done_check(es, index=es_config['index'],
                                               doc_type=es_config['type'],
-                                              key=key)
+                                              key=key),
+                      'entity_type': 'paper'
                       }
             logging.info(params)
             job_params.append(params)

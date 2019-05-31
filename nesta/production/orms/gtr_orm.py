@@ -38,7 +38,7 @@ class LinkTable(Base):
     It provides links to the Project spine."""
     __tablename__ = 'gtr_link_table'
 
-    id = Column(VARCHAR(36), primary_key=True, index=True)
+    id = Column(VARCHAR(72), primary_key=True, index=True)
     project_id = Column(VARCHAR(36), primary_key=True, index=True)
     rel = Column(VARCHAR(50), index=True)
     table_name = Column(VARCHAR(50), index=True)
@@ -59,6 +59,13 @@ class Organisation(Base):
     id = Column(VARCHAR(36), primary_key=True)
     name = Column(VARCHAR(200))
     addresses = Column(JSON)
+
+
+class Participant(Base):
+    __tablename__ = "gtr_participant"
+    
+    id = Column(VARCHAR(72), primary_key=True)
+    organisation_id = Column(VARCHAR(36), index=True)
     projectCost = Column(FLOAT)
     grantOffer = Column(FLOAT)
 

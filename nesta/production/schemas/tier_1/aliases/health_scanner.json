@@ -1,0 +1,86 @@
+{
+    "body": {
+        "nih": "textBody_descriptive_project",
+        "crunchbase": "textBody_descriptive_organisation"
+    },
+    "city": {
+        "nih": "placeName_city_organisation",
+        "crunchbase": "placeName_city_organisation"
+    },
+    "continent": {
+        "nih": "placeName_continent_organisation",
+        "crunchbase": "placeName_continent_organisation"
+    },
+    "cost": {
+        "nih": "cost_total_project",
+        "crunchbase": "cost_of_funding"
+    },
+    "cost_ref": {
+        "nih": "cost_total_project",
+        "crunchbase": "cost_of_funding"
+    },
+    "countries_codes": {
+        "nih": "terms_of_countryTags",
+        "crunchbase": "terms_of_countryTags"
+    },
+    "country": {
+        "nih": "placeName_country_organisation",
+        "crunchbase": "placeName_country_organisation"
+    },
+    "country_id": {
+        "nih": "id_iso2_country",
+        "crunchbase": "id_iso2_country"
+    },
+    "currency": {
+        "nih": "currency_total_cost",
+        "crunchbase": "currency_of_funding"
+    },
+    "end": {
+        "nih": "date_end_project",
+        "crunchbase": "date_death_organisation"
+    },
+    "is_duplicate": {
+        "nih": "booleanFlag_duplicate_abstract"
+    },
+    "is_health_related": {
+        "crunchbase": "booleanFlag_health_organisation"
+    },
+    "location": {
+        "nih": "coordinate_of_organisation",
+        "crunchbase": "coordinate_of_city"
+    },
+    "name": {
+        "nih": "title_of_organisation",
+        "crunchbase": "name_of_organisation"
+    },
+    "novelty": {
+        "nih": "cost_total_project",
+        "crunchbase": "cost_of_funding"
+    },
+    "region": {
+        "crunchbase": "placeName_region_organisation"
+    },
+    "sdg_labels": {
+        "nih": "_terms_sdg_abstract",
+        "crunchbase": "_terms_sdg_summary"
+    },
+    "start": {
+        "nih": "date_start_project",
+        "crunchbase": "date_birth_organisation"
+    },
+    "state": {
+        "nih": "placeName_state_organisation",
+        "crunchbase": "placeName_state_organisation"
+    },
+    "summary": {
+        "nih": "textBody_abstract_project",
+        "crunchbase": "textBody_summary_organisation"
+    },
+    "terms": {
+        "nih": "terms_mesh_abstract",
+        "crunchbase": "terms_mesh_description"
+    },
+    "title": {
+        "nih": "title_of_project"
+    }
+}

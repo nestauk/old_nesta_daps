@@ -14,9 +14,10 @@ from nesta.packages.format_utils.datetools import extract_date
 from nesta.packages.format_utils.datetools import extract_year
 from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
+from datetime import datetime as dt
 
 
-def _extract_date(date, date_format='%Y-%m-%d'):
+def _extract_date(date, date_format='%Y-%m-%d', return_date_object=False):
     '''
     Extract the date if a valid format exists, otherwise just extract the year
     and return {year}-01-01.
@@ -31,7 +32,7 @@ def _extract_date(date, date_format='%Y-%m-%d'):
     '''
     # Try to extract the date if a valid format exists
     try:
-        date = extract_date(date, date_format)
+        date = extract_date(date, date_format, return_date_object)
     except ValueError:
         pass
     else:
@@ -44,6 +45,8 @@ def _extract_date(date, date_format='%Y-%m-%d'):
         return None
     else:
         # Default formatting if only a year is found
+        if return_date_object:
+            return dt.strptime(f'{year}-01-01', '%Y-%m-%d')
         return f'{year}-01-01'
 
 
