@@ -5,7 +5,6 @@ A collection of miscellaneous tools.
 import configparser
 import os
 
-
 def get_config(file_name, header):
     '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`

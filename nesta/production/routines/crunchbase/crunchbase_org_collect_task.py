@@ -10,12 +10,14 @@ import logging
 import os
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_orgs
-from nesta.packages.crunchbase.crunchbase_collect import _insert_data, rename_uuid_columns
+from nesta.packages.crunchbase.crunchbase_collect import rename_uuid_columns
 from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.crunchbase_orm import Base, CategoryGroup, Organization, OrganizationCategory
 from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
 from nesta.production.orms.orm_utils import filter_out_duplicates
+from nesta.production.orms.orm_utils import insert_data
+from nesta.packages.misc_utils.batches import split_batches
 
 class OrgCollectTask(luigi.Task):
     """Download tar file of Organization csvs and load them into the MySQL server.
@@ -57,28 +59,44 @@ class OrgCollectTask(luigi.Task):
                                                                 nrows=nrows)
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
-        _insert_data(self.db_config_env, 'mysqldb', database,
-                     Base, CategoryGroup, cat_groups.to_dict(orient='records'))
+        insert_data(self.db_config_env, 'mysqldb', database,
+                    Base, CategoryGroup, cat_groups.to_dict(orient='records'), 
+                    low_memory=True)
 
         # process organizations and categories
         with db_session(self.engine) as session:
             existing_orgs = session.query(Organization.id).all()
-        existing_orgs = {o[0] for o in existing_orgs}
+        existing_orgs = {org[0] for org in existing_orgs}
+
+        logging.info("Summary of organisation data:")
+        logging.info(f"Total number of organisations:\t {len(orgs)}")
+        logging.info(f"Number of organisations already in the database:\t {len(existing_orgs)}")
+        logging.info(f"Number of category groups and text descriptions:\t"
+                     f"{len(cat_groups)}, {len(org_descriptions)}")
 
         processed_orgs, org_cats, missing_cat_groups = process_orgs(orgs,
                                                                     existing_orgs,
                                                                     cat_groups,
                                                                     org_descriptions)
-        _insert_data(self.db_config_env, 'mysqldb', database,
-                     Base, CategoryGroup, missing_cat_groups)
-        _insert_data(self.db_config_env, 'mysqldb', database,
-                     Base, Organization, processed_orgs, self.insert_batch_size)
+        # Insert CatGroups
+        insert_data(self.db_config_env, 'mysqldb', database,
+                    Base, CategoryGroup, missing_cat_groups)        
+        # Insert orgs in batches
+        n_batches = round(len(processed_orgs)/self.insert_batch_size)
+        logging.info(f"Inserting {n_batches} batches of size {self.insert_batch_size}")
+        for i, batch in enumerate(split_batches(processed_orgs, self.insert_batch_size)):
+            if i % 100 == 0:
+                logging.info(f"Inserting batch {i} of {n_batches}")
+            insert_data(self.db_config_env, 'mysqldb', database,
+                        Base, Organization, batch, low_memory=True)
 
         # link table needs to be inserted via non-bulk method to enforce relationship
+        logging.info("Filtering duplicates...")
         org_cats, existing_org_cats, failed_org_cats = filter_out_duplicates(self.db_config_env, 
                                                                              'mysqldb', database, Base, 
                                                                              OrganizationCategory, 
-                                                                             org_cats)
+                                                                             org_cats, 
+                                                                             low_memory=True)
         logging.info(f"Inserting {len(org_cats)} org categories "
                      f"({len(existing_org_cats)} already existed and {len(failed_org_cats)} failed)")
         #org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]

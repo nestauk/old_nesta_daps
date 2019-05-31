@@ -138,7 +138,6 @@ def geocode_batch_dataframe(df, city='city', country='country',
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
     """
-
     if query_method not in ['city_country_only', 'query_only', 'both']:
         raise ValueError("Invalid query method, must be 'city_country_only', 'query_only' or 'both'")
 

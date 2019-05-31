@@ -77,5 +77,5 @@ def country_iso_code_to_name(code):
     """
     try:
         return pycountry.countries.get(alpha_3=code).name
-    except KeyError:
+    except (KeyError, AttributeError):
         return None

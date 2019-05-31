@@ -87,12 +87,14 @@ class TestGtr(TestCase):
         self.assertEqual(data['one_point'], 1.)
 
     def test_deduplicate_participants(self):
-        data = {'participant': [{"organisationId":20, 'projectCost':1, 'grantOffer':0}],
-                'organisations': [{'id':20}]}
+        data = {'participant': [{"organisationId":20, 'projectCost':1, 'grantOffer':0, 
+                                 "project_id":2, "role": "something", 
+                                 "organisationName": "something else"}]}
         deduplicate_participants(data)
-        self.assertNotIn('participant', data)
-        self.assertIn('projectCost', data['organisations'][0])
-        self.assertIn('grantOffer', data['organisations'][0])
+        self.assertIn('participant', data)
+        self.assertIn('rel', data['participant'][0])
+        self.assertIn('id', data['participant'][0])
+        self.assertIn('organisation_id', data['participant'][0])
 
     def test_unpack_funding(self):
         row = {"money_stuff":{"currencyCode":"GBP", "value":20},

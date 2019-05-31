@@ -1,9 +1,10 @@
-from elasticsearch import Elasticsearch
 import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 
-from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.production.orms.orm_utils import load_json_from_pathstub
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
+
 from nesta.packages.health_data.process_nih import _extract_date
 from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
@@ -19,7 +20,9 @@ def run():
     es_port = os.environ["BATCHPAR_out_port"]
     es_index = os.environ["BATCHPAR_out_index"]
     es_type = os.environ["BATCHPAR_out_type"]
+    entity_type = os.environ["BATCHPAR_entity_type"]
     db = os.environ["BATCHPAR_db"]
+    aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
 
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)
@@ -56,23 +59,38 @@ def run():
 
     # clean start and end dates
     for col in ["project_start", "project_end"]:
-        df[col] = df[col].apply(_extract_date)
+        df[col] = df[col].apply(lambda x: _extract_date(x))
 
     # currency is the same for the whole dataset
     df['total_cost_currency'] = 'USD'
 
-    # apply schema
-    df = schema_transformer(df, filename="nih.json",
-                            from_key='tier_0', to_key='tier_1',
-                            ignore=['application_id'])
-
     # output to elasticsearch
-    es = Elasticsearch(es_host, port=es_port, use_ssl=True)
+    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
+                                                 "health_scanner.json")
+    strans_kwargs={'filename':'nih.json',
+                   'from_key':'tier_0',
+                   'to_key':'tier_1',
+                   'ignore':['application_id']}
+
+    es = ElasticsearchPlus(hosts=es_host,
+                           port=es_port,
+                           aws_auth_region=aws_auth_region,
+                           no_commit=("AWSBATCHTEST" in os.environ),
+                           entity_type=entity_type,
+                           strans_kwargs=strans_kwargs,
+                           field_null_mapping=field_null_mapping,
+                           null_empty_str=True,
+                           coordinates_as_floats=True,
+                           country_detection=True,
+                           listify_terms=True,
+                           terms_delimiters=(";",","),
+                           caps_to_camel_case=True)
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
         uid = doc.pop("application_id")
-        es.index(es_index, doc_type=es_type, id=uid, body=doc)
+        es.index(index=es_index, 
+                 doc_type=es_type, id=uid, body=doc)
 
 
 if __name__ == '__main__':
