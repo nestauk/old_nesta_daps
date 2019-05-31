@@ -3,8 +3,8 @@ import luigi
 import logging
 
 from arxiv_mag_sparql_task import MagSparqlTask
-from nesta.packages.arxiv.collect_arxiv import add_article_institutes
-from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup, create_article_institute_links
+from nesta.packages.arxiv.collect_arxiv import add_article_institutes, create_article_institute_links
+from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.grid_orm import Institute
