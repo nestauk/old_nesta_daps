@@ -57,15 +57,16 @@ def get_children(base, geocodes, max_attempts=5):
 
 def get_gss_codes(test=False):
     """Get all UK geography codes.
-    
+
     Returns:
         List of UK geography codes.
     """
     CONFIG = find_filepath_from_pathstub("fetch_geography_codes.sparql")
+    n = 1 if test else None
     with open(CONFIG) as f:
         query = f.read().replace("\n", " ")
-    data = sparql_query(ENDPOINT, query, test=test)
-    return [row["area_code"] for row in data]
+    data = sparql_query(ENDPOINT, query, batch_limit=n)
+    return [row["area_code"] for batch in data for row in batch]
 
 
 if __name__ == "__main__":
