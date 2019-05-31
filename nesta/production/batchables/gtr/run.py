@@ -34,7 +34,7 @@ def run():
 
     # Get all projects on this page
     projects = read_xml_from_url(TOP_URL, p=page, s=PAGE_SIZE)
-    for project in projects.getchildren():
+    for project in projects.getchildren():        
         # Extract the data for the project into 'row'
         # Then recursively extract data from nested rows into the parent 'row'
         _, row = extract_data(project)
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     if "BATCHPAR_outinfo" not in os.environ:
         os.environ['BATCHPAR_TOPURL'] = "https://gtr.ukri.org/gtr/api/projects"
         os.environ['BATCHPAR_PAGESIZE'] = "100"
-        os.environ['BATCHPAR_page'] = "1"
+        os.environ['BATCHPAR_page'] = "647"
         os.environ["BATCHPAR_db"] = "dev"
         os.environ["BATCHPAR_outinfo"] = ""
         os.environ["BATCHPAR_config"] = os.environ["MYSQLDBCONF"]

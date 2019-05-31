@@ -350,12 +350,19 @@ def add_new_articles(article_batch, session):
 
 def update_existing_articles(article_batch, session):
     """Updates existing articles from a list of dictionaries. Bulk method is used for
-    non relationship fields, with the relationship fields updated row by row.
+    non relationship fields, with the relationship fields updated using the core orm
+    method.
+
     Args:
         article_batch (:obj:`list` of `dict`): articles to add to database
         session (:obj:`sqlalchemy.orm.session`): active session to use
     """
     logging.info(f"Updating a batch of {len(article_batch)} existing articles")
+
+    # look for any institutes in provided article_batch
+    for article in article_batch:
+        if article.get('institutes'):
+            raise ValueError("Institute links cannot be written using this method. Use add_article_institutes instead")
 
     # convert lists of category ids into rows for association table
     article_categories = [dict(article_id=article['id'], category_id=cat_id)
@@ -371,7 +378,6 @@ def update_existing_articles(article_batch, session):
     logging.debug("bulk update mapping on articles")
     session.bulk_update_mappings(Article, article_batch)
 
-    logging.debug("core orm delete and insert on categories")
     if article_categories:
         # remove and re-create links
         article_cats_table = Base.metadata.tables['arxiv_article_categories']
@@ -383,12 +389,46 @@ def update_existing_articles(article_batch, session):
         session.execute(article_cats_table.insert(),
                         article_categories)
 
-    logging.debug("core orm insert on fields of study")
     if article_fields_of_study:
+        # remove and re-create links
+        article_fos_table = Base.metadata.tables['arxiv_article_fields_of_study']
+        all_article_ids = {a['id'] for a in article_batch}
+        logging.debug("core orm delete on fields of study")
+        session.execute(article_fos_table.delete()
+                        .where(article_fos_table.columns['article_id'].in_(all_article_ids)))
+        logging.debug("core orm insert on fields of study")
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
 
     session.commit()
+
+
+def add_article_institutes(article_institutes, engine):
+    """Writes to the association table for article/institute links using the core orm"""
+    logging.info(f"Inserting a batch of {len(article_institutes)} article institutes")
+    logging.debug(article_institutes)
+    engine.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
+                   article_institutes)
+
+
+def create_article_institute_links(article, institute_ids, score):
+    """Creates data for the article/institutes association table.
+    There will be multiple links if the institute is multinational, one for each country
+    entity.
+
+    Args:
+        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
+        score (numpy.float64): score for the match
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): article institute links ready to load to database
+    """
+    return [{'article_id': article.id,
+             'institute_id': institute_id,
+             'is_multinational': len(institute_ids) > 1,
+             'matching_score': float(score)}
+            for institute_id in institute_ids]
 
 
 if __name__ == '__main__':

@@ -6,35 +6,144 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import get_config
+from elasticsearch import Elasticsearch
 
 import pymysql
 import os
-
 import json
-
 import logging
 import time
 
-def filter_out_duplicates(db_env, section, database, Base, _class, data, 
+def assert_correct_config(test, config, key):
+    """Assert that config key and 'index' value are consistent with the
+    running mode.    
+    
+    Args:
+        test (bool): Are we running in test mode?
+        config (dict): Elasticsearch config file data.
+        key (str): The name of the config key.
+    """
+    err_msg = ("In test mode='{test}', config key '{key}' "
+               "must end with '{suffix}'")
+    if test and not key.endswith("_dev"):
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_dev'))
+    elif not test and not key.endswith("_prod"):
+        raise ValueError(err_msg.format(test=test, key=key, suffix='_prod'))
+    index = config['index']
+    if test and not index.endswith("_dev"):
+        raise ValueError(f"In test mode the index '{key}' "
+                         "must end with '_dev'")
+
+
+def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
+    """Retrieve the ES connection, ES config and setup the index 
+    if required.
+    
+    Args:
+        es_mode (str): One of "prod" or "dev".
+        test_mode (bool): Running in test mode?
+        drop_and_recreate (bool): Drop and recreate ES index?
+        dataset (str): Name of the dataset for the ES mapping.
+        aliases (str): Name of the aliases for the ES mapping.
+    Returns:
+        {es, es_config}: Elasticsearch connection and config dict.
+    """
+    if es_mode not in ("prod", "dev"):
+        raise ValueError("es_mode required to be one of "
+                         f"'prod' or 'dev', but '{es_mode}' provided.")
+
+    # Get and check the config
+    key = f"{dataset}_{es_mode}"
+    es_config = get_config('elasticsearch.config', key)
+    assert_correct_config(test_mode, es_config, key)
+    # Make the ES connection
+    es = Elasticsearch(es_config['host'], port=es_config['port'], 
+                       use_ssl=True)
+    # Drop the index if required (must be in test mode to do this)         
+    _index = es_config['index']
+    if drop_and_recreate and test_mode:
+        es.indices.delete(index=_index)
+    # Create the index if required
+    exists = es.indices.exists(index=_index)
+    if not exists:
+        mapping = get_es_mapping(dataset, aliases=aliases)
+        es.indices.create(index=_index, body=mapping)
+    return es, es_config
+
+
+def load_json_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be json).
+    
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
+    Returns:
+        The file contents as a json object.
+    """
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        js = json.load(f)
+    return js
+
+def get_es_mapping(dataset, aliases):
+    '''Get the configuration from a file in the luigi config path
+    directory, and convert the key-value pairs under the config :code:`header`
+    into a `dict`.
+
+    Parameters:
+        file_name (str): The configuation file name.
+        header (str): The header key in the config file.
+
+    Returns:
+        :obj:`dict`
+    '''
+    # Get the mapping and lookup
+    mapping = load_json_from_pathstub("production/orms/",
+                                      f"{dataset}_es_config.json")
+    alias_lookup = load_json_from_pathstub("tier_1/aliases/",
+                                           f"{aliases}.json")
+    # Get a list of valid fields for verification
+    fields = mapping["mappings"]["_doc"]["properties"].keys()
+    # Add any aliases to the mapping
+    for alias, lookup in alias_lookup.items():
+        if dataset not in lookup:
+            continue
+        # Validate the field
+        field = lookup[dataset]
+        if field not in fields:
+            raise ValueError(f"Alias '{alias}' to '{field}' but '{field}'"
+                             "does not exist in the mapping.")
+        # Add the alias to the mapping
+        value = {"type": "alias", "path": lookup[dataset]}
+        mapping["mappings"]["_doc"]["properties"][alias] = value
+    return mapping
+
+
+def filter_out_duplicates(db_env, section, database, Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
     already exist in the data.
 
     Args:
-        db_env: See :obj:`get_mysql_engine`                                                 
-        section: See :obj:`get_mysql_engine`                                                
-        database: See :obj:`get_mysql_engine`                                               
-        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.                          
-        _class (:obj:`sqlalchemy.Base`): The ORM for this data.                             
-        data (:obj:`list` of :obj:`dict`): Rows of data to insert                           
-        low_memory (bool): To speed things up significantly, you can read                   
-                           all pkeys into memory first, but this will blow                  
-                           up for heavy pkeys or large tables.                              
+        db_env: See :obj:`get_mysql_engine`
+        section: See :obj:`get_mysql_engine`
+        database: See :obj:`get_mysql_engine`
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): If the pkeys are few or small types (i.e. they won't
+                           occupy lots of memory) then set this to True. 
+                           This will speed things up significantly (like x 100), 
+                           but will blow up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
-                                    were in the supplied data but not imported (for checks)     
-                                                                                        
-    Returns:                                                                                
-        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.      
+                                    were in the supplied data but not imported (for checks)
+
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
     """
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
@@ -105,8 +214,8 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section, 
-                                                             database=database, 
+    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section,
+                                                             database=database,
                                                              Base=Base, _class=_class, data=data,
                                                              low_memory=low_memory)
 
@@ -212,6 +321,8 @@ def get_mysql_engine(db_env, section, database="production_tests"):
                   username="travis",
                   database=database)
     else:
+        if not os.path.exists(conf_path):
+            raise FileNotFoundError(conf_path)
         cp = ConfigParser()
         cp.read(conf_path)
         conf = dict(cp._sections[section])

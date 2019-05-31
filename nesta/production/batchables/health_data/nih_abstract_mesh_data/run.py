@@ -1,17 +1,18 @@
 from ast import literal_eval
-from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError
 import logging
 import os
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
-from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
 from nesta.packages.health_data.process_mesh import format_mesh_terms
 from nesta.packages.health_data.process_mesh import retrieve_duplicate_map
 from nesta.packages.health_data.process_mesh import format_duplicate_map
 from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import load_json_from_pathstub
+
 from nesta.production.orms.nih_orm import Abstracts
 
 
@@ -41,6 +42,7 @@ def run():
     dupe_file = os.environ["BATCHPAR_dupe_file"]
     es_config = literal_eval(os.environ["BATCHPAR_outinfo"])
     db = os.environ["BATCHPAR_db"]
+    entity_type = os.environ["BATCHPAR_entity_type"]
 
     # mysql setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
@@ -61,6 +63,7 @@ def run():
         try:
             abstract = session.query(Abstracts).filter(Abstracts.application_id == doc_id).one()
         except NoResultFound:
+            logging.warning(f'Not found {doc_id} in database')
             raise NoResultFound(doc_id)
         clean_abstract_text = clean_abstract(abstract.abstract_text)
         docs.append({'doc_id': doc_id,
@@ -76,13 +79,24 @@ def run():
                          'duplicate_abstract': True
                          })
 
-    # apply schema
-    docs = schema_transformer(docs, filename="nih.json",
-                              from_key='tier_0', to_key='tier_1',
-                              ignore=['doc_id'])
-
     # output to elasticsearch
-    es = Elasticsearch(es_config['host'], port=es_config['port'], use_ssl=True)
+    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mapping/",
+                                                 "health_scanner.json")
+    strans_kwargs={'filename':'nih.json',
+                   'from_key':'tier_0',
+                   'to_key':'tier_1',
+                   'ignore':['doc_id']}
+    es = Elasticsearch(hosts=es_host,
+                           port=es_port,
+                           use_ssl=True,
+                           entity_type=entity_type,
+                           strans_kwargs=strans_kwargs,
+                           field_null_mapping=field_null_mapping,
+                           null_empty_str=True,
+                           coordinates_as_floats=True,
+                           country_detection=True,
+                           listify_terms=True)
+
     logging.warning(f'writing {len(docs)} documents to elasticsearch')
     for doc in docs:
         uid = doc.pop("doc_id")
@@ -92,7 +106,8 @@ def run():
             logging.warning(f"Missing project for abstract: {uid}")
         else:
             doc = {**existing, **doc}
-            es.index(es_config['index'], doc_type=es_config['type'], id=uid, body=doc)
+            es.index(index=es_config['index'], 
+                     doc_type=es_config['type'], id=uid, body=doc)
 
 
 if __name__ == '__main__':

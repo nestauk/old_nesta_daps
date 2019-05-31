@@ -48,6 +48,9 @@ def extract_link_table(data):
                 rel = row.pop('rel')                
             if project_id is None or rel is None:
                 continue
+            ### Added recently, check logic
+            if 'id' not in row:
+                continue
             link_table.append(dict(project_id=project_id, rel=rel,
                                    id=row['id'], table_name=f"gtr_{table_name}"))
     data['link_table'] = link_table
@@ -147,17 +150,26 @@ def deduplicate_participants(data):
     Args:
         data (:obj:`defaultdict(list)`): Data holder, mapping entities to rows of data
     """
-    # Iterate through participants
-    for row in data.pop('participant'):
-        # Find a matching organisation
-        for _row in data['organisations']:
-            if row['organisationId'] != _row['id']:
-                continue
-            # Extract the two specific bonus fields
-            for key in ('projectCost', 'grantOffer'):
-                _row[key] = row[key]
-            # Stop iterating, since we've found the organisation
-            break
+    # Iterate through participants and generate a composite key
+    for row in data['participant']:
+        org_id = row.pop('organisationId')
+        row['id'] = org_id + row['project_id']
+        row['organisation_id'] = org_id
+        row['rel'] = row.pop('role')
+        del row['organisationName']
+
+
+    # # Iterate through participants
+    # for row in data.pop('participant'):
+    #     # Find a matching organisation
+    #     for _row in data['organisations']:
+    #         if row['organisationId'] != _row['id']:
+    #             continue
+    #         # Extract the two specific bonus fields
+    #         for key in ('projectCost', 'grantOffer'):
+    #             _row[key] = row[key]
+    #         # Stop iterating, since we've found the organisation
+    #         break
 
 
 def unpack_funding(row):
@@ -232,7 +244,8 @@ def extract_link_data(url):
     row = TypeDict()
     # Note: Ignore any links and hrefs, as this will lead to
     # infinite recursion!
-    extract_data_recursive(et, row, ignore=['links', 'href'])
+    if et is not None:
+        extract_data_recursive(et, row, ignore=['links', 'href'])
     return row
 
 
@@ -328,6 +341,8 @@ def read_xml_from_url(url, **kwargs):
         An `:obj:`xml.etree.ElementTree` of the full XML tree.
     """
     r = requests.get(url, params=kwargs)
+    if "Unable to find" in r.text:
+        return None
     r.raise_for_status()
     et = ET.fromstring(r.text)
     return et

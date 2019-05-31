@@ -45,7 +45,7 @@ echo "Added $DEPCOUNTER objects to the environment"
 
 # Generate pip requirements
 pip install pipreqs &> /dev/null
-pipreqs run
+pipreqs --use-local --ignore scripts,schemas,docs,.travis,.git run
 
 # Zip it up and copy to s3
 echo "Will zip up the following environment:"

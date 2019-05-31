@@ -67,7 +67,8 @@ class CollectTask(autobatch.AutoBatchTask):
                           "config": "mysqldb.config",
                           "db_name": "production" if not self.test else "dev",
                           "outinfo": "s3://nesta-production-intermediate/%s" % url,
-                          "done": done}
+                          "done": done,
+                          "entity_type": 'paper'}
                 job_params.append(params)
         return job_params
 

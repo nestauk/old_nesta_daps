@@ -18,7 +18,9 @@
     {"tier_0": "country_alpha_3", "tier_1": "id_iso3_country"},
     {"tier_0": "country_numeric", "tier_1": "id_isoNumeric_country"},
     {"tier_0": "continent", "tier_1": "id_of_continent"},
+    {"tier_0": "continent_name", "tier_1": "placeName_continent_organisation"},
     {"tier_0": "total_cost_currency", "tier_1": "currency_total_cost"},
+    {"tier_0": "_total_cost_usd2018", "tier_1": "_cost_usd2018_project"},
     {"tier_0": "mesh_terms", "tier_1": "terms_mesh_abstract"},
     {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"}
 ]
