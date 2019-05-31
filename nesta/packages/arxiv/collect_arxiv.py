@@ -378,7 +378,6 @@ def update_existing_articles(article_batch, session):
     logging.debug("bulk update mapping on articles")
     session.bulk_update_mappings(Article, article_batch)
 
-    logging.debug("core orm delete and insert on categories")
     if article_categories:
         # remove and re-create links
         article_cats_table = Base.metadata.tables['arxiv_article_categories']
@@ -390,7 +389,6 @@ def update_existing_articles(article_batch, session):
         session.execute(article_cats_table.insert(),
                         article_categories)
 
-    logging.debug("core orm insert on fields of study")
     if article_fields_of_study:
         # remove and re-create links
         article_fos_table = Base.metadata.tables['arxiv_article_fields_of_study']
@@ -398,6 +396,7 @@ def update_existing_articles(article_batch, session):
         logging.debug("core orm delete on fields of study")
         session.execute(article_fos_table.delete()
                         .where(article_fos_table.columns['article_id'].in_(all_article_ids)))
+        logging.debug("core orm insert on fields of study")
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
 
