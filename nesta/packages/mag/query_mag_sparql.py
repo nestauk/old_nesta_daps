@@ -142,29 +142,16 @@ def extract_entity_id(entity):
         entity (str): the entity url from MAG
 
     Returns:
-        (int): the id of the entity
-    """
-    rex = r'.+/(\d+)$'  # capture digits after the last /
-    match = re.match(rex, entity)
-    if match is None:
-        raise ValueError(f"Unable to extract id from {entity}")
-    return int(match.groups()[0])
-
-
-def extract_grid_id(entity):
-    """Extracts the id from the end of an entity url returned from sparql.
-
-    Args:
-        entity (str): the entity url from MAG
-
-    Returns:
-        (str): the id of the entity
+        (int or str): the id of the entity
     """
     rex = r'.+/(.+)$'  # capture anything after the last /
     match = re.match(rex, entity)
-    if match is None:
+    try:
+        return int(match.groups()[0])
+    except ValueError:
+        return match.groups()[0]
+    except AttributeError:
         raise ValueError(f"Unable to extract id from {entity}")
-    return match.groups()[0]
 
 
 def query_fields_of_study_sparql(ids=None, results_limit=None):
@@ -296,19 +283,17 @@ def query_authors(ids=None, results_limit=None):
                                                     concat_format=concat_format,
                                                     filter_on='author',
                                                     ids=ids), start=1):
-        renaming = {'author_id': 'author',
-                    'author_name': 'authorName',
-                    'author_affiliation_id': 'affiliation',
-                    'author_affiliation': 'affiliationName',
-                    'affiliation_grid_id': 'gridId'}
+        renaming = {'author': 'author_id',
+                    'authorName': 'author_name',
+                    'affiliation': 'author_affiliation_id',
+                    'affiliationName': 'author_affiliation',
+                    'gridId': 'affiliation_grid_id'}
 
         for old, new in renaming.items():
-            row[new] = row.pop(old)
-
-        # reformat fields from url to id
-        row['author_id'] = extract_entity_id(row['author'])
-        row['author_affiliation_id'] = extract_entity_id(row['affiliation'])
-        row['affiliation_grid_id'] = extract_grid_id(row['gridId'])
+            if new.endswith('_id'):
+                row[new] = extract_entity_id(row.pop(old))
+            else:
+                row[new] = row.pop(old)
 
         yield row
 

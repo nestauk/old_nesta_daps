@@ -55,10 +55,16 @@ def test_dedupe_entities_picks_highest_for_each_title():
     assert dedupe_entities(entities) == {1, 4}
 
 
-def test_extract_entity_id_returns_id():
+def test_extract_entity_id_returns_integer_id():
     assert extract_entity_id('http://ma-graph.org/entity/109214941') == 109214941
     assert extract_entity_id('http://ma-graph.org/entity/19694890') == 19694890
     assert extract_entity_id('http://ma-graph.org/entity/13203339') == 13203339
+
+
+def test_extract_entity_id_returns_string_id():
+    assert extract_entity_id('http://ma-graph.org/entity/test_id') == 'test_id'
+    assert extract_entity_id('http://ma-graph.org/entity/another_id') == 'another_id'
+    assert extract_entity_id('http://ma-graph.org/entity/grid.011.5') == 'grid.011.5'
 
 
 def test_extract_entity_id_raises_value_error_when_not_found():
