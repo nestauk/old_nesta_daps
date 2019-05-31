@@ -242,3 +242,24 @@ def create_elasticsearch_index(es_client, index, config_path=None):
             config = json.load(f)
     response = es_client.indices.create(index=index, body=config)
     return response
+
+
+def merge_metadata(base, *other_bases):
+    """Combines the metadata from multiple declarative bases so base.metadata
+    functions such as create_all can be achieved with orms kept in seperate
+    files.
+
+    Args:
+        base (sqlalchemy.ext.declarative.declarative_base): main declarative
+            base that the others will be merged into
+        other_bases (sqlalchemy.ext.declarative.declarative_base): other
+            declarative bases to be merged
+
+    Returns:
+        (sqlalchemy.ext.declarative.declarative_base): original base with the
+            others merged
+    """
+    for b in other_bases:
+        for (table_name, table) in b.metadata.tables.items():
+            base.metadata._add_table(table_name, table.schema, table)
+    return base

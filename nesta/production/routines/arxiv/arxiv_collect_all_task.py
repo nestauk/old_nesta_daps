@@ -22,8 +22,8 @@ DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 BATCH_SIZE = 10000
 
 
-class CollectTask(autobatch.AutoBatchTask):
-    '''Collect data from the arXiv api and dump the
+class CollectAllTask(autobatch.AutoBatchTask):
+    '''Collect all data from the arXiv api and dump the
     data in the MySQL server.
 
     Args:
