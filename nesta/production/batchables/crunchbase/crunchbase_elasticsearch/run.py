@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pandas as pd
+import requests
 
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 from nesta.production.orms.orm_utils import load_json_from_pathstub
@@ -40,6 +41,11 @@ def run():
     states_lookup["AP"] = "Armed Forces (Pacific)"
     states_lookup[None] = None  # default lookup for non-US countries
 
+    # Get continent lookup
+    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
+    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+    
+
     # es setup
     field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
                                                  "health_scanner.json")
@@ -58,6 +64,7 @@ def run():
                            coordinates_as_floats=True,
                            country_detection=True,
                            listify_terms=True,
+                           terms_delimiters=("|",),
                            null_pairs={"currency_of_funding", "cost_of_funding"})
 
     # collect file
@@ -108,8 +115,10 @@ def run():
             # Add a field for US state name
             state_code = row_combined['state_code']
             row_combined['placeName_state_organization'] = states_lookup[state_code]
-            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-            
+            continent_code = row_combined['continent']
+            row_combined['placeName_continent_organization'] = continent_lookup[continent_code]
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')            
+
             uid = row_combined.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row_combined)
