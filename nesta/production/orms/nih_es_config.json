@@ -45,6 +45,9 @@
                 "title_of_organisation": {
                     "type": "text"
                 },
+		"title_of_funder": {
+                    "type": "text"
+		},
                 "textBody_descriptive_project": {
                     "type": "text"
                 },

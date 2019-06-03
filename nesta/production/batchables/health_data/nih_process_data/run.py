@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
+import requests
 
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -24,6 +25,17 @@ def run():
     db = os.environ["BATCHPAR_db"]
     aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
 
+    # Read in the US states
+    static_engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "static_data")
+    states_lookup = {row['state_name']: row['state_code']
+                     for _, row in  pd.read_sql_table('us_states_lookup',
+                                                      static_engine).iterrows()}
+    states_lookup[None] = None
+
+    # Get continent lookup                                                                        
+    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
+    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -41,7 +53,8 @@ def run():
             "project_terms",
             "project_title",
             "total_cost",
-            "phr"
+            "phr",
+            "ic_name"
             ]
     cols_attrs = [getattr(Projects, c) for c in cols]
     batch_selection = session.query(*cols_attrs).filter(
@@ -89,6 +102,9 @@ def run():
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
+        doc['id_state_organisation'] = states_lookup[doc['placeName_state_organisation']]
+        continent_code = row_combined['continent']
+        doc['placeName_continent_organization'] = continent_lookup[continent_code]
         uid = doc.pop("application_id")
         es.index(index=es_index, 
                  doc_type=es_type, id=uid, body=doc)
