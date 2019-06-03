@@ -6,15 +6,17 @@ from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT
+from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN
 
-from nesta.production.orms.orm_utils import merge_metadata
+from nesta.production.orms.grid_orm import Institute
+from nesta.production.orms.grid_orm import Base as GridBase
 from nesta.production.orms.mag_orm import FieldOfStudy
 from nesta.production.orms.mag_orm import Base as MagBase
+from nesta.production.orms.orm_utils import merge_metadata
 
 Base = declarative_base()
-# Merge metadata with Microsoft Academic Graph declarative base
-merge_metadata(Base, MagBase)
+# Merge metadata with MAG and GRID
+merge_metadata(Base, MagBase, GridBase)
 
 
 """Association table for Arxiv articles and their categories."""
@@ -41,6 +43,17 @@ article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,
                                        primary_key=True))
 
 
+class ArticleInstitute(Base):
+    """Association table to GRID institutes."""
+    __tablename__ = 'arxiv_article_institutes'
+
+    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
+    institute_id = Column(VARCHAR(20), ForeignKey(Institute.id), primary_key=True)
+    is_multinational = Column(BOOLEAN)
+    matching_score = Column(FLOAT)
+    institute = relationship(Institute)
+
+
 class Article(Base):
     """Arxiv articles and metadata."""
     __tablename__ = 'arxiv_articles'
@@ -64,7 +77,7 @@ class Article(Base):
                               secondary=article_categories)
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
-
+    institutes = relationship('ArticleInstitute')
 
 
 class Category(Base):
