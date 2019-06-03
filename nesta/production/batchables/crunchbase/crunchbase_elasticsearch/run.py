@@ -57,7 +57,8 @@ def run():
                            null_empty_str=True,
                            coordinates_as_floats=True,
                            country_detection=True,
-                           listify_terms=True)
+                           listify_terms=True,
+                           null_pairs={"currency_of_funding", "cost_of_funding"})
 
     # collect file
     nrows = 20 if test else None

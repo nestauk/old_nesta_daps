@@ -84,7 +84,8 @@ def run():
                            country_detection=True,
                            listify_terms=True,
                            terms_delimiters=(";",","),
-                           caps_to_camel_case=True)
+                           caps_to_camel_case=True,
+                           null_pairs={"currency_total_cost", "cost_total_project"})
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
