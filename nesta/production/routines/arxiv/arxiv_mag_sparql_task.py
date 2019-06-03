@@ -11,7 +11,7 @@ import logging
 
 from arxiv_mag_task import QueryMagTask
 from nesta.packages.arxiv.collect_arxiv import update_existing_articles
-from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql, extract_entity_id, query_mag_sparql_by_doi
+from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql, extract_entity_id, query_articles_by_doi, query_authors
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.production.orms.arxiv_orm import Base, Article
 from nesta.production.orms.mag_orm import FieldOfStudy
@@ -80,7 +80,8 @@ class MagSparqlTask(luigi.Task):
             articles_to_process = [dict(id=a.id, doi=a.doi, title=a.title) for a in
                                    (session
                                    .query(Article)
-                                   .filter(~Article.fields_of_study.any() & Article.doi.isnot(None))
+                                   .filter((Article.mag_authors.is_(None) | ~Article.fields_of_study.any())
+                                           & Article.doi.isnot(None))
                                    .all())]
             total_arxiv_ids_to_process = len(articles_to_process)
             logging.info(f"{total_arxiv_ids_to_process} articles to process")
@@ -89,7 +90,7 @@ class MagSparqlTask(luigi.Task):
                                                  update_existing_articles,
                                                  session)
 
-            for count, row in enumerate(query_mag_sparql_by_doi(articles_to_process),
+            for count, row in enumerate(query_articles_by_doi(articles_to_process),
                                         start=1):
                 # renaming and reformatting
                 for code, description in field_mapping.items():
@@ -121,6 +122,13 @@ class MagSparqlTask(luigi.Task):
                     # id has already been extracted
                     pass
 
+                # query for author and affiliation details
+                try:
+                    author_ids = {extract_entity_id(a) for a in row.pop('authors').split(',')}
+                    row['mag_authors'] = list(query_authors(author_ids))
+                except KeyError:
+                    pass
+
                 # drop unnecessary fields
                 for f in ['score', 'title']:
                     try:
@@ -150,8 +158,8 @@ class MagSparqlTask(luigi.Task):
 
                 if not count % 1000:
                     logging.info(f"{count} done. {total_arxiv_ids_to_process - count} articles left to process")
-                if self.test and count == 300:
-                    logging.warning("Exiting after 300 rows in test mode")
+                if self.test and count == 150:
+                    logging.warning("Exiting after 150 rows in test mode")
                     break
 
             # pick up any left over in the batch
