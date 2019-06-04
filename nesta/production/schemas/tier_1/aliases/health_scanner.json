@@ -12,7 +12,7 @@
         "crunchbase": "placeName_continent_organisation"
     },
     "continent_id": {
-        "nih": "id_continent_organisation",
+        "nih": "id_of_continent",
         "crunchbase": "id_continent_organisation"
     },
     "cost": {

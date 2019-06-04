@@ -89,10 +89,7 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.load(f)
     if sort_on_load:
         _js = json.dumps(js, sort_keys=True)
-        js = js.loads(_js)
-    return data 
-
-
+        js = json.loads(_js)
     return js
 
 def get_es_mapping(dataset, aliases):

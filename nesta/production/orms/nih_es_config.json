@@ -92,6 +92,9 @@
                 "id_of_continent": {
                     "type": "keyword"
                 },
+		"id_state_organisation": {
+		    "type": "keyword"
+		},
                 "terms_mesh_abstract": {
                     "type": "text",
                     "fields": {
@@ -116,7 +119,16 @@
 		},
 		"_terms_sdg_abstract": {
 		    "type": "keyword"
-		}
+		},
+                "terms_of_funders": {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
+                }
             }
         }
     }

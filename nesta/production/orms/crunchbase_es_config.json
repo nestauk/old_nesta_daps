@@ -3,6 +3,19 @@
         "index": {
             "number_of_shards": "5",
             "number_of_replicas": "1"
+        },
+	"analysis": {
+            "analyzer": {
+                "mesh_terms_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                        ]
+                }
+            }
         }
     },
     "mappings": {
@@ -27,6 +40,9 @@
                 "placeName_state_organisation": {
                     "type": "keyword"
                 },
+		"id_continent_organisation": {
+		    "type": "keyword"
+		},
                 "id_iso2_country": {
                     "type": "keyword"
                 },
@@ -134,7 +150,22 @@
 		    "type": "keyword"
 		},
                 "terms_mesh_description": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
+                },
+                "terms_of_funders": {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "analyzer": "mesh_terms_analyzer"
                 }
             }
         }
