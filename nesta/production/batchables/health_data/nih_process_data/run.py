@@ -105,6 +105,7 @@ def run():
         doc['id_state_organisation'] = states_lookup[doc['placeName_state_organisation']]
         continent_code = row_combined['continent']
         doc['placeName_continent_organization'] = continent_lookup[continent_code]
+        doc['ic_name'] = [doc['ic_name']]
         uid = doc.pop("application_id")
         es.index(index=es_index, 
                  doc_type=es_type, id=uid, body=doc)

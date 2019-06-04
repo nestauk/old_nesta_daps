@@ -8,6 +8,8 @@ import os
 import pandas as pd
 import requests
 
+from nesta.packages.crunchbase.utils import parse_investor_names
+
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.crunchbase_orm import Organization
@@ -79,51 +81,58 @@ def run():
 
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
                   'continent', 'latitude', 'longitude']
+    funding_fields = ['investor_names']
 
     engine.raw_connection().connection.text_factory = lambda x: x.decode('utf8')
     with db_session(engine) as session:
         rows = (session
-                .query(Organization, Geographic)
+                .query(Organization, Geographic, FundingRound)
                 .join(Geographic, Organization.location_id==Geographic.id)
+                .join(FundingRound, Organization.id==FundingRound.company_id)
                 .filter(Organization.id.in_(org_ids))
                 .limit(nrows)
                 .all())
-        for count, row in enumerate(rows, 1):
-            # convert sqlalchemy to dictionary
-            row_combined = {k: v for k, v in row.Organization.__dict__.items()
-                            if k in org_fields}
-            row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
-            row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
-                                 if k in geo_fields})
-            # reformat coordinates
-            row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
-                                           'lon': row_combined.pop('longitude')}
 
-            # iterate through categories and groups
-            row_combined['category_list'] = []
-            row_combined['category_group_list'] = []
-            for category in (session.query(CategoryGroup)
-                             .select_from(OrganizationCategory)
-                             .join(CategoryGroup)
-                             .filter(OrganizationCategory.organization_id==row.Organization.id)
-                             .all()):
-                row_combined['category_list'].append(category.category_name)
-                row_combined['category_group_list'] += [group for group
-                                                        in str(category.category_group_list).split('|')
-                                                        if group is not 'None']
+    for count, row in enumerate(rows, 1):
+        # convert sqlalchemy to dictionary
+        row_combined = {k: v for k, v in row.Organization.__dict__.items()
+                        if k in org_fields}
+        row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
+        row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
+                             if k in geo_fields})
+        row_combined.update({k: v for k, v in row.FundingRound.__dict__.items() 
+                     if k in funding_fields})  
+        row_combined['investor_names'] = parse_investor_names(row_combined['investor_names'])
 
-            # Add a field for US state name
-            state_code = row_combined['state_code']
-            row_combined['placeName_state_organization'] = states_lookup[state_code]
-            continent_code = row_combined['continent']
-            row_combined['placeName_continent_organization'] = continent_lookup[continent_code]
-            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')            
+        # reformat coordinates
+        row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
+                                       'lon': row_combined.pop('longitude')}
 
-            uid = row_combined.pop('id')
-            _row = es.index(index=es_index, doc_type=es_type,
-                            id=uid, body=row_combined)
-            if not count % 1000:
-                logging.info(f"{count} rows loaded to elasticsearch")
+        # iterate through categories and groups
+        row_combined['category_list'] = []
+        row_combined['category_group_list'] = []
+        for category in (session.query(CategoryGroup)
+                         .select_from(OrganizationCategory)
+                         .join(CategoryGroup)
+                         .filter(OrganizationCategory.organization_id==row.Organization.id)
+                         .all()):
+            row_combined['category_list'].append(category.category_name)
+            row_combined['category_group_list'] += [group for group
+                                                    in str(category.category_group_list).split('|')
+                                                    if group is not 'None']
+
+        # Add a field for US state name
+        state_code = row_combined['state_code']
+        row_combined['placeName_state_organization'] = states_lookup[state_code]
+        continent_code = row_combined['continent']
+        row_combined['placeName_continent_organization'] = continent_lookup[continent_code]
+        row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')            
+
+        uid = row_combined.pop('id')
+        _row = es.index(index=es_index, doc_type=es_type,
+                        id=uid, body=row_combined)
+        if not count % 1000:
+            logging.info(f"{count} rows loaded to elasticsearch")
 
     logging.warning("Batch job complete.")
 

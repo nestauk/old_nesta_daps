@@ -43,8 +43,9 @@
         "nih": "date_end_project",
         "crunchbase": "date_death_organisation"
     },
-    "funder": {
-	"nih": "title_of_funder"
+    "funders": {
+	"nih": "terms_of_funders",
+	"crunchbase": "terms_of_funders"
     },
     "is_duplicate": {
         "nih": "booleanFlag_duplicate_abstract"
