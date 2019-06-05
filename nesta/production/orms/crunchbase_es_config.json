@@ -1,170 +1,170 @@
 {
     "settings": {
-        "index": {
-            "number_of_shards": "5",
-            "number_of_replicas": "1"
-        },
+	"index": {
+	    "number_of_shards": "5",
+	    "number_of_replicas": "1"
+	},
 	"analysis": {
-            "analyzer": {
-                "mesh_terms_analyzer": {
-                    "type": "custom",
-                    "tokenizer": "standard",
-                    "filter": [
-                        "standard",
-                        "lowercase",
-                        "stop"
-                        ]
-                }
-            }
-        }
+	    "analyzer": {
+		"mesh_terms_analyzer": {
+		    "type": "custom",
+		    "tokenizer": "standard",
+		    "filter": [
+			"standard",
+			"lowercase",
+			"stop"
+			]
+		}
+	    }
+	}
     },
     "mappings": {
-        "_doc": {
-            "dynamic": "strict",
-            "properties": {
-                "name_of_organisation": {
-                    "type": "text"
-                },
-                "terms_roles_organisation": {
-                    "type": "keyword"
-                },
-                "url_of_organisation": {
-                    "type": "keyword"
-                },
-                "placeName_country_organisation": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    }
-                },
+	"_doc": {
+	    "dynamic": "strict",
+	    "properties": {
+		"name_of_organisation": {
+		    "type": "text"
+		},
+		"terms_roles_organisation": {
+		    "type": "keyword"
+		},
+		"url_of_organisation": {
+		    "type": "keyword"
+		},
+		"placeName_country_organisation": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    }
+		},
 		"placeName_continent_organisation": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    }
-                },
-                "placeName_state_organisation": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    }
-                },
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    }
+		},
+		"placeName_state_organisation": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    }
+		},
 		"id_continent_organisation": {
 		    "type": "keyword"
 		},
-                "id_iso2_country": {
-                    "type": "keyword"
-                },
-                "id_iso3_country": {
-                    "type": "keyword"
-                },
-                "id_isoNumeric_country": {
-                    "type": "integer"
-                },
-                "id_of_continent": {
-                    "type": "keyword"
-                },
-                "coordinate_of_city": {
-                    "type": "geo_point"
-                },
-                "id_state_organisation": {
-                    "type": "keyword"
-                },
-                "placeName_region_organisation": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    }
-                },
-                "placeName_city_organisation": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    }
-                },
-                "address_of_organisation": {
-                    "type": "keyword"
-                },
-                "status_of_organisation": {
-                    "type": "keyword"
-                },
-                "textBody_summary_organisation": {
-                    "type": "text"
-                },
-                "textBody_descriptive_organisation": {
-                    "type": "text"
-                },
-                "terms_subcategory_organisation": {
-                    "type": "keyword"
-                },
-                "terms_category_organisation": {
-                    "type": "keyword"
-                },
-                "count_rounds_funding": {
-                    "type": "integer"
-                },
-                "cost_of_funding": {
-                    "type": "long"
-                },
-                "currency_of_funding": {
-                    "type": "keyword"
-                },
-                "date_birth_organisation": {
-                    "type":   "date",
-                    "format": "yyyy-MM-dd"
-                },
-                "date_last_funding": {
-                    "type":   "date",
-                    "format": "yyyy-MM-dd"
-                },
-                "date_death_organisation": {
-                    "type":   "date",
-                    "format": "yyyy-MM-dd"
-                },
-                "count_employee_organisation": {
-                    "type": "keyword"
-                },
-                "url_facebook_organisation": {
-                    "type": "keyword"
-                },
-                "url_linkedIn_organisation": {
-                    "type": "keyword"
-                },
-                "url_crunchBase_organisation": {
-                    "type": "keyword"
-                },
-                "url_twitter_organisation": {
-                    "type": "keyword"
-                },
-                "terms_alias_organisation": {
-                    "type": "keyword"
-                },
-                "datetime_updated_organisation": {
-                    "type":   "date",
-                    "format": "yyyy-MM-dd HH:mm:ss"
-                },
-                "type_of_entity": {
-                    "type": "keyword"
-                },
-                "type_of_organisation": {
-                    "type": "keyword"
-                },
-                "id_parent_organisation": {
-                    "type": "keyword"
-                },
-                "booleanFlag_health_organisation": {
-                    "type": "boolean"
-                },
+		"id_iso2_country": {
+		    "type": "keyword"
+		},
+		"id_iso3_country": {
+		    "type": "keyword"
+		},
+		"id_isoNumeric_country": {
+		    "type": "integer"
+		},
+		"id_of_continent": {
+		    "type": "keyword"
+		},
+		"coordinate_of_city": {
+		    "type": "geo_point"
+		},
+		"id_state_organisation": {
+		    "type": "keyword"
+		},
+		"placeName_region_organisation": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    }
+		},
+		"placeName_city_organisation": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    }
+		},
+		"address_of_organisation": {
+		    "type": "keyword"
+		},
+		"status_of_organisation": {
+		    "type": "keyword"
+		},
+		"textBody_summary_organisation": {
+		    "type": "text"
+		},
+		"textBody_descriptive_organisation": {
+		    "type": "text"
+		},
+		"terms_subcategory_organisation": {
+		    "type": "keyword"
+		},
+		"terms_category_organisation": {
+		    "type": "keyword"
+		},
+		"count_rounds_funding": {
+		    "type": "integer"
+		},
+		"cost_of_funding": {
+		    "type": "long"
+		},
+		"currency_of_funding": {
+		    "type": "keyword"
+		},
+		"date_birth_organisation": {
+		    "type":   "date",
+		    "format": "yyyy-MM-dd"
+		},
+		"date_last_funding": {
+		    "type":   "date",
+		    "format": "yyyy-MM-dd"
+		},
+		"date_death_organisation": {
+		    "type":   "date",
+		    "format": "yyyy-MM-dd"
+		},
+		"count_employee_organisation": {
+		    "type": "keyword"
+		},
+		"url_facebook_organisation": {
+		    "type": "keyword"
+		},
+		"url_linkedIn_organisation": {
+		    "type": "keyword"
+		},
+		"url_crunchBase_organisation": {
+		    "type": "keyword"
+		},
+		"url_twitter_organisation": {
+		    "type": "keyword"
+		},
+		"terms_alias_organisation": {
+		    "type": "keyword"
+		},
+		"datetime_updated_organisation": {
+		    "type":   "date",
+		    "format": "yyyy-MM-dd HH:mm:ss"
+		},
+		"type_of_entity": {
+		    "type": "keyword"
+		},
+		"type_of_organisation": {
+		    "type": "keyword"
+		},
+		"id_parent_organisation": {
+		    "type": "keyword"
+		},
+		"booleanFlag_health_organisation": {
+		    "type": "boolean"
+		},
 		"_cost_usd2018_organisation": {
 		    "type": "float"
 		},
@@ -174,25 +174,25 @@
 		"_terms_sdg_summary":{
 		    "type": "keyword"
 		},
-                "terms_mesh_description": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "analyzer": "mesh_terms_analyzer"
-                },
-                "terms_of_funders": {
-                    "type": "text",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "analyzer": "mesh_terms_analyzer"
-                }
-            }
-        }
+		"terms_mesh_description": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    },
+		    "analyzer": "mesh_terms_analyzer"
+		},
+		"terms_of_funders": {
+		    "type": "text",
+		    "fields": {
+			"keyword": {
+			    "type": "keyword"
+			}
+		    },
+		    "analyzer": "mesh_terms_analyzer"
+		}
+	    }
+	}
     }
 }
