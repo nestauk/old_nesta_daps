@@ -110,6 +110,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
             except NotFoundError:
                 if self.ignore_missing:
                     return False
+                logging.warning(f"{idx} not found")
+                raise NotFoundError
             if res['_source'].get('terms_mesh_abstract') is None:
                 return False
         return True

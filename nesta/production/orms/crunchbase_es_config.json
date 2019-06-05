@@ -32,13 +32,28 @@
                     "type": "keyword"
                 },
                 "placeName_country_organisation": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
 		"placeName_continent_organisation": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_state_organisation": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
 		"id_continent_organisation": {
 		    "type": "keyword"
@@ -62,10 +77,20 @@
                     "type": "keyword"
                 },
                 "placeName_region_organisation": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "placeName_city_organisation": {
-                    "type": "keyword"
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
                 },
                 "address_of_organisation": {
                     "type": "keyword"

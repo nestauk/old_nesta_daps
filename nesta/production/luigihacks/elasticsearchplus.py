@@ -1,5 +1,6 @@
 from collections import Counter
 from collections import defaultdict
+from collections import OrderedDict
 from elasticsearch import Elasticsearch
 from elasticsearch import RequestsHttpConnection
 from functools import reduce
@@ -414,7 +415,7 @@ class ElasticsearchPlus(Elasticsearch):
         Returns:
             _row (dict): Modified row.
         """
-        return reduce(lambda _row, f: f(_row), self.transforms, row)
+        return reduce(lambda _row, f: f(_row), self.transforms, row)        
 
     def index(self, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the
@@ -432,6 +433,8 @@ class ElasticsearchPlus(Elasticsearch):
             raise ValueError("Keyword argument 'body' was not provided.")
 
         body = dict(self.chain_transforms(_body))
+        # Sort the body
+        body = OrderedDict(sorted(body.items()))
         if not self.no_commit:
             super().index(body=body, **kwargs)
         return body
