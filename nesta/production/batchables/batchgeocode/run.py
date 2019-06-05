@@ -36,10 +36,10 @@ def run():
 
     # convert to list of dict and output to database
     rows = df.to_dict(orient='records')
+
     logging.info(f"Writing {len(rows)} rows to database")
     with db_session(engine) as session:
         session.bulk_update_mappings(Geographic, rows)
-
     logging.warning("Batch task complete")
 
 
@@ -48,4 +48,14 @@ if __name__ == '__main__':
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
+
+    if False:
+        environ = {"BATCHPAR_done": "False",
+                   "BATCHPAR_batch_file" : "geocoding_batch_15597590150867765.json",
+                   "BATCHPAR_config": "/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
+                   "BATCHPAR_bucket": "nesta-production-intermediate",
+                   "BATCHPAR_test": "True",
+                   "BATCHPAR_db_name": "dev"}
+        for k, v in environ.items():
+            os.environ[k] = v 
     run()
