@@ -1,15 +1,18 @@
 {
     "body": {
         "nih": "textBody_descriptive_project",
-        "crunchbase": "textBody_descriptive_organisation"
+        "crunchbase": "textBody_descriptive_organisation",
+	"meetup": "textBody_descriptive_group"
     },
     "city": {
         "nih": "placeName_city_organisation",
-        "crunchbase": "placeName_city_organisation"
+        "crunchbase": "placeName_city_organisation",
+	"meetup": "placeName_city_group"	
     },
     "continent": {
         "nih": "placeName_continent_organisation",
-        "crunchbase": "placeName_continent_organisation"
+        "crunchbase": "placeName_continent_organisation",
+	"meetup": "placeName_continent_group"
     },
     "cost": {
         "nih": "cost_total_project",
@@ -21,15 +24,18 @@
     },
     "countries_codes": {
         "nih": "terms_of_countryTags",
-        "crunchbase": "terms_of_countryTags"
+        "crunchbase": "terms_of_countryTags",
+        "meetup": "terms_of_countryTags"
     },
     "country": {
         "nih": "placeName_country_organisation",
-        "crunchbase": "placeName_country_organisation"
+        "crunchbase": "placeName_country_organisation",
+        "meetup": "placeName_country_group"
     },
     "country_id": {
         "nih": "id_iso2_country",
-        "crunchbase": "id_iso2_country"
+        "crunchbase": "id_iso2_country",
+	"meetup": "id_iso2_group"
     },
     "currency": {
         "nih": "currency_total_cost",
@@ -47,11 +53,13 @@
     },
     "location": {
         "nih": "coordinate_of_organisation",
-        "crunchbase": "coordinate_of_city"
+        "crunchbase": "coordinate_of_city",
+	"meetup": "coordinate_of_group"
     },
     "name": {
         "nih": "title_of_organisation",
-        "crunchbase": "name_of_organisation"
+        "crunchbase": "name_of_organisation",
+	"meetup": "name_of_group"
     },
     "novelty": {
         "nih": "cost_total_project",
@@ -70,7 +78,8 @@
     },
     "state": {
         "nih": "placeName_state_organisation",
-        "crunchbase": "placeName_state_organisation"
+        "crunchbase": "placeName_state_organisation",
+        "meetup": "placeName_state_group"
     },
     "summary": {
         "nih": "textBody_abstract_project",
