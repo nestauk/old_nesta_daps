@@ -36,6 +36,8 @@ def run():
     # Get continent lookup                                                                        
     url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
     continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+    continent_lookup[None] = None
+    continent_lookup[''] = None
 
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)
@@ -110,12 +112,10 @@ def run():
                 doc['continent'] = "NA"
             doc['placeName_state_organisation'] = states_lookup[doc['org_state']]
 
-            # See what's going on with broken continents
-            try:
+            if 'continent' in doc:
                 continent_code = doc['continent']
-            except KeyError as exp:
-                print(doc)
-                raise exp
+            else:
+                continent_code = None
             doc['placeName_continent_organisation'] = continent_lookup[continent_code]
         
         if 'ic_name'in doc:
