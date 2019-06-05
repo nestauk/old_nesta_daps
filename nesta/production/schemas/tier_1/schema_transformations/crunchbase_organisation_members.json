@@ -36,5 +36,7 @@
     {"tier_0": "parent_id", "tier_1": "id_parent_organisation"},
     {"tier_0": "is_health", "tier_1": "booleanFlag_health_organisation"},
     {"tier_0": "mesh_terms", "tier_1": "terms_mesh_description"},
-    {"tier_0": "investor_names", "tier_1": "terms_of_funders"}
+    {"tier_0": "investor_names", "tier_1": "terms_of_funders"},
+    {"tier_0": "placeName_state_organisation", "tier_1": "placeName_state_organisation"},
+    {"tier_0": "placeName_continent_organisation", "tier_1": "placeName_continent_organisation"}
 ]

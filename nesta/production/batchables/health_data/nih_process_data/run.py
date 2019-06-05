@@ -27,10 +27,11 @@ def run():
 
     # Read in the US states
     static_engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "static_data")
-    states_lookup = {row['state_name']: row['state_code']
+    states_lookup = {row['state_code']: row['state_name']
                      for _, row in  pd.read_sql_table('us_states_lookup',
                                                       static_engine).iterrows()}
     states_lookup[None] = None
+    states_lookup[''] = None
 
     # Get continent lookup                                                                        
     url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
@@ -98,14 +99,28 @@ def run():
                            listify_terms=True,
                            terms_delimiters=(";",","),
                            caps_to_camel_case=True,
-                           null_pairs={"currency_total_cost", "cost_total_project"})
+                           null_pairs={"currency_total_cost": "cost_total_project"})
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
-        doc['id_state_organisation'] = states_lookup[doc['placeName_state_organisation']]
-        continent_code = row_combined['continent']
-        doc['placeName_continent_organization'] = continent_lookup[continent_code]
-        doc['ic_name'] = [doc['ic_name']]
+        if 'country' in doc:
+            # Try to patch broken US data
+            if doc['country'] == '' and doc['org_state'] != '':
+                doc['country'] = "United States"
+                doc['continent'] = "NA"
+            doc['placeName_state_organisation'] = states_lookup[doc['org_state']]
+
+            # See what's going on with broken continents
+            try:
+                continent_code = doc['continent']
+            except KeyError as exp:
+                print(doc)
+                raise exp
+            doc['placeName_continent_organisation'] = continent_lookup[continent_code]
+        
+        if 'ic_name'in doc:
+            doc['ic_name'] = [doc['ic_name']]
+
         uid = doc.pop("application_id")
         es.index(index=es_index, 
                  doc_type=es_type, id=uid, body=doc)
