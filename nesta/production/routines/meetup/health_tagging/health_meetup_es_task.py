@@ -1,0 +1,83 @@
+'''
+Meetup data to elasticsearch
+================================
+
+Luigi routine to load the Meetup Group data from MYSQL into Elasticsearch.
+'''
+
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
+
+from nesta.production.luigihacks.estask import ElasticsearchTask
+from nesta.production.orms.meetup import Group
+from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
+from nesta.production.meetup.health_tagging.topic_discovery_task import TopicDiscoveryTask
+
+class MeetupHealthElasticsearchTask(ElasticsearchTask):
+    def requires(self):
+        yield GeocodeBatchTask(date=self.date,
+                               _routine_id=self._routine_id,
+                               test=self.test,
+                               db_config_env=self.db_config_env,
+                               city_col=Group.city,
+                               country_col=Group.country,
+                               insert_batch_size=10000,
+                               env_files=[f3p("nesta/nesta/"),
+                                          f3p("config/mysqldb.config"),
+                                          f3p("config/crunchbase.config")],
+                               job_def="py36_amzn1_image",
+                               job_name=f"HealthMeetupGeocodeBatchTask-{self._routine_id}",
+                               job_queue="HighPriority",
+                               region_name="eu-west-2",
+                               poll_time=10,
+                               memory=4096,
+                               max_live_jobs=2)
+
+        yield TopicDiscoveryTask(routine_id=self.routine_id,
+                                 core_categories=self.core_categories,
+                                 members_perc=self.members_perc,
+                                 topic_perc=self.topic_perc,
+                                 db_config_env=self.db_config_env,
+                                 test=self.test)
+
+
+class RootTask(luigi.WrapperTask):
+    production = luigi.BoolParameter(default=False)
+    date = luigi.DateParameter(default=datetime.datetime.today())
+    core_categories = luigi.ListParameter(default=["community-environment",
+                                                   "health-wellbeing",
+                                                   "fitness"])
+    members_perc = luigi.IntParameter(default=10)
+    topic_perc = luigi.IntParameter(default=99)
+    db_config_env = luigi.Parameter(default="MYSQLDB")    
+    drop_and_recreate = luigi.BoolParameter(default=False)
+
+    def requires(self):
+        routine_id = (f"{self.date}-{'--'.join(self.core_categories)}"
+                      f"-{self.members_perc}-{self.topic_perc}-{self.production}")
+        yield MeetupHealthElasticsearchTask(routine_id=routine_id,                                            
+                                            date=self.date
+                                            process_batch_size=10000,
+                                            insert_batch_size=10000,
+                                            drop_and_recreate=self.drop_and_recreate,
+                                            aliases='health_scanner',
+                                            dataset='meetup',
+                                            id_field=Group.id,
+                                            entity_type='meetup group',
+                                            core_categories=self.core_categories,
+                                            members_perc=self.members_perc,
+                                            topic_perc=self.topic_perc,
+                                            db_config_env=self.db_config_env,
+                                            test=not self.production,
+                                            intermediate_bucket='nesta-production-intermediate',
+                                            batchable=f3p("batchables/meetup/topic_tag_elasticsearch"),
+                                            env_files=[f3p("nesta/nesta/"),
+                                                       f3p("config/mysqldb.config"),
+                                                       f3p("schema_transformations/meetup.json"),
+                                                       f3p("config/elasticsearch.config")],
+                                            job_def="py36_amzn1_image",
+                                            job_name=f"MeetupHealthElasticsearchTask-{routine_id}",
+                                            job_queue="HighPriority",
+                                            region_name="eu-west-2",
+                                            poll_time=10,
+                                            memory=2048,
+                                            max_live_jobs=100)

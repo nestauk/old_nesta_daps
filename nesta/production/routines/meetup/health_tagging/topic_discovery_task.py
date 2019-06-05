@@ -15,6 +15,7 @@ from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.packages.meetup.meetup_utils import get_members_by_percentile
 from nesta.packages.meetup.meetup_utils import get_core_topics
 
+
 S3PREFIX = "s3://nesta-production-intermediate"
 
 
@@ -48,23 +49,3 @@ class TopicDiscoveryTask(luigi.Task):
         # Write the intermediate output
         with self.output().open('wb') as outstream:
             outstream.write(json.dumps(list(topics)).encode('utf8'))
-
-class RootTask(luigi.WrapperTask):
-    production = luigi.BoolParameter(default=False)
-    date = luigi.DateParameter(default=datetime.datetime.today())
-    core_categories = luigi.ListParameter(default=["community-environment",
-                                                   "health-wellbeing",
-                                                   "fitness"])
-    members_perc = luigi.IntParameter(default=10)
-    topic_perc = luigi.IntParameter(default=99)
-    db_config_env = luigi.Parameter("MYSQLDB")
-
-    def requires(self):
-        routine_id = (f"{self.date}-{'--'.join(self.core_categories)}"
-                      f"-{self.members_perc}-{self.topic_perc}-{self.production}")
-        yield TopicDiscoveryTask(routine_id=routine_id,
-                                 core_categories=self.core_categories,
-                                 members_perc=self.members_perc,                                 
-                                 topic_perc=self.topic_perc,
-                                 db_config_env=self.db_config_env,
-                                 test=not self.production)
