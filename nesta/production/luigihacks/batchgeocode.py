@@ -32,7 +32,7 @@ class GeocodeBatchTask(AutoBatchTask):
     db_config_env = luigi.Parameter()
     city_col = luigi.Parameter()
     country_col = luigi.Parameter()
-    location_key_col = luigi.Parameter()
+    location_key_col = luigi.Parameter(default=None)
     batch_size = luigi.IntParameter(default=1000)
     intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
     batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))
@@ -60,6 +60,29 @@ class GeocodeBatchTask(AutoBatchTask):
             logging.warning(f"Adding {len(new_locations)} new locations to database")
             insert_data(self.db_config_env, "mysqldb", self.database,
                         Base, Geographic, new_locations)
+
+    def _insert_new_locations_no_id(self):
+        """Checks for new city/country combinations and appends them to the geographic
+        data table in mysql IF NO location_key_col IS PROVIDED.
+        """
+        limit = 100 if self.test else None
+        with db_session(self.engine) as session:
+            existing_location_ids = {i[0] for i in session.query(Geographic.id).all()}
+            new_locations = []
+            all_locations = {(city, country) for city, country in
+                             (session.query(self.city_col, self.country_col).limit(limit))}
+            for city, country in all_locations:
+                key = generate_composite_key(city, country)
+                if key not in existing_location_ids and key is not None:
+                    logging.info(f"new location {city}, {country}")
+                    new_locations.append(dict(id=key, city=city, country=country))
+                    existing_location_ids.add(key)
+
+        if new_locations:
+            logging.warning(f"Adding {len(new_locations)} new locations to database")
+            insert_data(self.db_config_env, "mysqldb", self.database,
+                        Base, Geographic, new_locations)
+
 
     def _get_uncoded(self):
         """Identifies all the locations in the geographic data table which have not
@@ -129,7 +152,10 @@ class GeocodeBatchTask(AutoBatchTask):
         self.s3 = boto3.resource('s3')
 
         # identify new locations in the input table and copy them to the geographic table
-        self._insert_new_locations()
+        if self.location_key_col is not None:
+            self._insert_new_locations()
+        else:
+            self._insert_new_locations_no_id()
 
         # create batches from all locations which have not previously been coded
         job_params = []
