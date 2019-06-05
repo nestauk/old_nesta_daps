@@ -13,7 +13,9 @@ def missing_value_column_count(data_frame):
     bins_list = [i for i in range(100+1) if i%10 == 0]
     out = pd.cut(data_frame.isnull().mean().apply(lambda x: round(100*x,5)), bins=bins_list, include_lowest=True)
 
-    return out.value_counts(sort=False)
+data_frame_missing = data_frame.isnull().sum() / data_frame.shape[0]
+out = np.histogram(data_frame_missing, bins=range(0, 101, 10))
+return out
 
 def missing_value_count_pair_both(data_frame):
 #include here or in script itself
