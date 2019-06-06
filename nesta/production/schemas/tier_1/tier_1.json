@@ -112,6 +112,7 @@
             "cost",
             "country",
             "description",
+            "funders",
             "funding",
             "group",
             "member",
