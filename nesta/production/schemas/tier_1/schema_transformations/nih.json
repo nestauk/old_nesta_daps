@@ -3,7 +3,7 @@
     {"tier_0": "fy", "tier_1": "year_fiscal_funding"},
     {"tier_0": "city", "tier_1": "placeName_city_organisation"},
     {"tier_0": "country", "tier_1": "placeName_country_organisation"},
-    {"tier_0": "org_state", "tier_1": "placeName_state_organisation"},
+    {"tier_0": "org_state", "tier_1": "id_state_organisation"},
     {"tier_0": "org_zipcode", "tier_1": "placeName_zipcode_organisation"},
     {"tier_0": "org_name", "tier_1": "title_of_organisation"},
     {"tier_0": "phr", "tier_1": "textBody_descriptive_project"},
@@ -18,9 +18,10 @@
     {"tier_0": "country_alpha_3", "tier_1": "id_iso3_country"},
     {"tier_0": "country_numeric", "tier_1": "id_isoNumeric_country"},
     {"tier_0": "continent", "tier_1": "id_of_continent"},
-    {"tier_0": "continent_name", "tier_1": "placeName_continent_organisation"},
     {"tier_0": "total_cost_currency", "tier_1": "currency_total_cost"},
     {"tier_0": "_total_cost_usd2018", "tier_1": "_cost_usd2018_project"},
     {"tier_0": "mesh_terms", "tier_1": "terms_mesh_abstract"},
-    {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"}
+    {"tier_0": "duplicate_abstract", "tier_1": "booleanFlag_duplicate_abstract"},
+    {"tier_0": "placeName_state_organisation", "tier_1": "placeName_state_organisation"},
+    {"tier_0": "placeName_continent_organisation", "tier_1": "placeName_continent_organisation"}
 ]

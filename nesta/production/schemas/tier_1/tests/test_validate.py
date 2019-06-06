@@ -54,8 +54,10 @@ class TestValidate():
             all_fields[dataset_name] = tier_1
             # Assert no duplicates
             _, count = Counter(tier_0).most_common(1)[0]
+            print(Counter(tier_0).most_common(1)[0])
             assert count == 1
             _, count = Counter(tier_1).most_common(1)[0]
+            print(Counter(tier_1).most_common(1)[0])
             assert count == 1
 
     def test_aliases(self):    

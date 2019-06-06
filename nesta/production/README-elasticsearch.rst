@@ -2,7 +2,7 @@ Elasticsearch
 =============
 
 The following steps will take you through setting up elasticsearch on an EC2
-instance.
+instance. 
 
 Launch the EC2 instance and ssh in so the following can be installed:
 
