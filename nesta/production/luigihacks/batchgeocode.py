@@ -103,7 +103,6 @@ class GeocodeBatchTask(AutoBatchTask):
             logging.warning(f"{len(nulls)} locations had a null city or "
                             "country, so won't be processed.")
             logging.warning(nulls)
-            assert False
         if new_locations:
             logging.warning(f"Adding {len(new_locations)} new locations to database")
             insert_data(self.db_config_env, "mysqldb", self.database,

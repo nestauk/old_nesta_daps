@@ -23,7 +23,6 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
 
     # Fetch the input parameters
-    #s3_key = os.environ["BATCHPAR_key"]
     s3_bucket = os.environ["BATCHPAR_bucket"]
     batch_file = os.environ["BATCHPAR_batch_file"]
     members_perc = int(os.environ["BATCHPAR_members_perc"])
@@ -107,7 +106,8 @@ def run():
             row['coordinate'] = dict(lat=geo['latitude'], lon=geo['longitude'])
             row['created'] = dt.strftime(dt.fromtimestamp(row['created']/1000), 
                                          format="%Y-%m-%d")
-            row['description'] = BeautifulSoup(row['description'], 'lxml').text
+            if row['description'] is not None:
+                row['description'] = BeautifulSoup(row['description'], 'lxml').text                
             row['continent'] = continent_lookup[geo['continent']]
             row['country_name'] = geo['country']
             row['continent_id'] = geo['continent']
@@ -115,6 +115,7 @@ def run():
             row['iso3'] = geo['country_alpha_3']
             row['isoNumeric'] = geo['country_numeric']
 
+            # Insert to ES
             _row = es.index(index=es_index, doc_type=es_type,
                             id=row['id'], body=row)
             if not count % 1000:
@@ -133,27 +134,28 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        environ = { 'batch_file': ('2019-06-05-community-environment'
-                    '--health-wellbeing'
-                    '--fitness-10-99-False-15598125328068535.json'),
+        environ = { 'batch_file': ('2019-06-06-community-environment'
+                                   '--health-wellbeing'
+                                   '--fitness-10-99-True-15598283679714198.json'),
                     'config': ('/home/ec2-user/nesta/nesta/production/'
                                'config/mysqldb.config'),
-                    'db_name': 'dev',
+                    'db_name': 'production',
                     'bucket': 'nesta-production-intermediate',
                     'done': 'False',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),
                     'out_port': '443',
-                    'out_index': 'meetup_dev',
+                    'out_index': 'meetup_v0',
                     'out_type': '_doc',
                     'aws_auth_region': 'eu-west-2',
                     'entity_type': 'meetup group',
                     'test': 'True',
                     'members_perc': '10',
-                    'routine_id': ('2019-06-05-community-environment'
-                                   '--health-wellbeing'
-                                   '--fitness-10-99-False')}
+                    'routine_id': ('2019-06-06-community-environment'
+                                   '--health-wellbeing--fitness-10-99-True')}
+
+
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v
         #os.environ["AWSBATCHTEST"] = ""
