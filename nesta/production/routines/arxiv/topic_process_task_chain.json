@@ -1,0 +1,31 @@
+[
+    {
+	"job_name": "ngram",
+	"batch_size": 10000,
+	"batchable": "batchables/nlp/ngrammer",
+	"env_files": ["/nesta/nesta","/config/mysqldb.config"],
+	"job_def": "py36_amzn1_image",
+	"job_queue": "HighPriority",
+	"region_name": "eu-west-2",
+	"poll_time": 10,
+	"memory": 4000
+    },
+    {
+	"job_name": "vectorizer", 
+	"batchable": "batchables/nlp/vectorizer",
+	"memory": 16000
+        "extra": {
+            "binary": true,
+	    "min_df": 0.001,
+	    "ngram_range" : 2
+        }	
+    },    
+    {
+	"job_name": "corex_topic_model", 
+	"batchable": "batchables/nlp/corex_topic_model",
+	"memory": 16000
+        "extra": {
+            "n_hidden": [[10, 60, 1]]
+        }	
+    }
+]
