@@ -42,6 +42,7 @@ class GeocodeBatchTask(AutoBatchTask):
     batch_size = luigi.IntParameter(default=1000)
     intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
     batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))
+    test_limit = luigi.IntParameter(default=100)
 
     def output(self):
         '''Points to the output database engine'''
@@ -55,7 +56,7 @@ class GeocodeBatchTask(AutoBatchTask):
         """Checks for new city/country combinations and appends them to the geographic
         data table in mysql.
         """
-        limit = 100 if self.test else None
+        limit = self.test_limit if self.test else None
         with db_session(self.engine) as session:
             existing_location_ids = {i[0] for i in session.query(Geographic.id).all()}
             new_locations = []
@@ -79,18 +80,18 @@ class GeocodeBatchTask(AutoBatchTask):
         """Checks for new city/country combinations and appends them to the geographic
         data table in mysql IF NO location_key_col IS PROVIDED.
         """
-        limit = 100 if self.test else None        
+        limit = self.test_limit if self.test else None
         with db_session(self.engine) as session:
             existing_location_ids = {i[0] for i in session.query(Geographic.id).all()}
             new_locations = []
             all_locations = {(city, country) for city, country in
                              (session.query(self.city_col, self.country_col).limit(limit))}
-            nulls = 0
+            nulls = []
             for city, country in all_locations:
                 if self.country_is_iso2:
                     country = country_iso_code_to_name(country, iso2=True)
                 if city is None or country is None:
-                    nulls += 1
+                    nulls.append((city, country))
                     continue
                 key = generate_composite_key(city, country)
                 if key not in existing_location_ids and key is not None:
@@ -98,9 +99,11 @@ class GeocodeBatchTask(AutoBatchTask):
                     new_locations.append(dict(id=key, city=city, country=country))
                     existing_location_ids.add(key)
 
-        if nulls > 0:
-            logging.warning(f"{nulls} locations had a null city or "
+        if len(nulls) > 0:
+            logging.warning(f"{len(nulls)} locations had a null city or "
                             "country, so won't be processed.")
+            logging.warning(nulls)
+            assert False
         if new_locations:
             logging.warning(f"Adding {len(new_locations)} new locations to database")
             insert_data(self.db_config_env, "mysqldb", self.database,

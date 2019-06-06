@@ -2,6 +2,7 @@
 ElasticsearchTask
 =================
 
+
 '''
 
 from elasticsearch.helpers import scan
@@ -15,10 +16,11 @@ from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import setup_es
+from nesta.production.orms.orm_utils import db_session
 
 
 class ElasticsearchTask(autobatch.AutoBatchTask):
-    '''Launches batch tasks to pipe data from MySQL to Elasticsearch.    
+    '''Launches batch tasks to pipe data from MySQL to Elasticsearch.
 
     Args:
         date (datetime): Datetime used to label the outputs.
@@ -31,6 +33,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         dataset (str): Name of the elasticsearch dataset.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
         entity_type (str): Name of the entity type to label this task with.
+        kwargs (dict): Any other job parameters to pass to the batchable.
     '''
     date = luigi.DateParameter()
     routine_id = luigi.Parameter()
@@ -43,6 +46,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     dataset = luigi.Parameter()
     id_field = luigi.Parameter()
     entity_type = luigi.Parameter()
+    kwargs = luigi.DictParameter(default={})
 
     def output(self):
         '''Points to the output database engine'''
@@ -97,7 +101,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
             params = {
                 "batch_file": batch_file,
                 "config": 'mysqldb.config',
-                "db_name": self.database,
+                "db_name": database,
                 "bucket": self.intermediate_bucket,
                 "done": False,
                 'outinfo': es_config['host'],
@@ -106,14 +110,17 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
                 'out_type': es_config['type'],
                 'aws_auth_region': es_config['region'],
                 'entity_type': self.entity_type,
-                "test": self.test
+                'test': self.test,
+                'routine_id': self.routine_id
             }
-
+            params.update(self.kwargs)
+            
             logging.info(params)
             job_params.append(params)
             if self.test and count > 1:
                 logging.warning("Breaking after 2 batches while in "
                                 "test mode.")
+                logging.warning(job_params)
                 break
 
         logging.warning("Batch preparation completed, "
