@@ -5,6 +5,8 @@ from nesta.production.orms.meetup_orm import Group
 from nesta.production.orms.meetup_orm import GroupMember
 from nesta.production.orms.orm_utils import get_mysql_engine
 from sqlalchemy.exc import IntegrityError
+from decimal import Decimal
+
 
 class TestMeetup(unittest.TestCase):
     '''Check that the meetup ORM works as expected'''
@@ -29,8 +31,8 @@ class TestMeetup(unittest.TestCase):
                       country="uk",
                       created=123,
                       description="something else",
-                      lat=20.3,
-                      lon=-3.1,
+                      lat=Decimal('20.3'),
+                      lon=Decimal('-3.1'),
                       members=23,
                       name="something",
                       topics={"something": ["else"]},
@@ -46,8 +48,8 @@ class TestMeetup(unittest.TestCase):
                           country="uk",
                           created=123,
                           description="something else",
-                          lat=20.3,
-                          lon=-3.1,
+                          lat=Decimal('20.3'),
+                          lon=Decimal('-3.1'),
                           members=23,
                           name="something",
                           topics={"something": ["else"]},

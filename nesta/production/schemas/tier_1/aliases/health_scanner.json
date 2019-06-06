@@ -11,6 +11,10 @@
         "nih": "placeName_continent_organisation",
         "crunchbase": "placeName_continent_organisation"
     },
+    "continent_id": {
+        "nih": "id_of_continent",
+        "crunchbase": "id_continent_organisation"
+    },
     "cost": {
         "nih": "cost_total_project",
         "crunchbase": "cost_of_funding"
@@ -19,7 +23,7 @@
         "nih": "cost_total_project",
         "crunchbase": "cost_of_funding"
     },
-    "countries_codes": {
+    "countries_ids": {
         "nih": "terms_of_countryTags",
         "crunchbase": "terms_of_countryTags"
     },
@@ -38,6 +42,10 @@
     "end": {
         "nih": "date_end_project",
         "crunchbase": "date_death_organisation"
+    },
+    "funders": {
+	"nih": "terms_of_funders",
+	"crunchbase": "terms_of_funders"
     },
     "is_duplicate": {
         "nih": "booleanFlag_duplicate_abstract"
@@ -71,6 +79,10 @@
     "state": {
         "nih": "placeName_state_organisation",
         "crunchbase": "placeName_state_organisation"
+    },
+    "state_id": {
+        "nih": "id_state_organisation",
+        "crunchbase": "id_state_organisation"
     },
     "summary": {
         "nih": "textBody_abstract_project",

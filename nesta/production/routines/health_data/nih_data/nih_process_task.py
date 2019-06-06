@@ -39,7 +39,7 @@ class ProcessTask(autobatch.AutoBatchTask):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    reindex = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
@@ -105,7 +105,7 @@ class ProcessTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.reindex,
+        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
                                  dataset='nih',
                                  aliases='health_scanner')
 
