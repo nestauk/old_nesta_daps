@@ -1,4 +1,5 @@
 import logging
+import lxml  # To force pipreqs' hand
 
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
@@ -56,7 +57,7 @@ def run():
     strans_kwargs={'filename':'meetup.json',
                    'from_key':'tier_0',
                    'to_key':'tier_1',
-                   'ignore':['id']}
+                   'ignore':[]}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -104,7 +105,8 @@ def run():
             row['topics'] = topics
             row['urlname'] = f"https://www.meetup.com/{row['urlname']}"
             row['coordinate'] = dict(lat=geo['latitude'], lon=geo['longitude'])
-            row['created'] = dt.fromtimestamp(row['created']/1000)
+            row['created'] = dt.strftime(dt.fromtimestamp(row['created']/1000), 
+                                         format="%Y-%m-%d")
             row['description'] = BeautifulSoup(row['description'], 'lxml').text
             row['continent'] = continent_lookup[geo['continent']]
             row['country_name'] = geo['country']
@@ -154,5 +156,5 @@ if __name__ == "__main__":
                                    '--fitness-10-99-False')}
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v
-        os.environ["AWSBATCHTEST"] = ""
+        #os.environ["AWSBATCHTEST"] = ""
     run()
