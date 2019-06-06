@@ -13,6 +13,7 @@ from nesta.production.luigihacks.elasticsearchplus import _add_entity_type
 from nesta.production.luigihacks.elasticsearchplus import _clean_up_lists
 from nesta.production.luigihacks.elasticsearchplus import _caps_to_camel_case
 from nesta.production.luigihacks.elasticsearchplus import _remove_padding
+from nesta.production.luigihacks.elasticsearchplus import _nullify_pairs
 
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 
@@ -57,6 +58,17 @@ def row():
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
 
+def test_nullify_pairs(row):
+    _row = _nullify_pairs(row, {"coordinate_of_none": "coordinate_of_abc"})
+    assert len(_row) == len(row)
+    for k, v in _row.items():
+        if k != "coordinate_of_abc":
+            assert v == row[k]
+        else:
+            assert v is None
+    
+    
+    
 def test_remove_padding(row):
     _row = _remove_padding(row)
     assert len(_row) == len(row)

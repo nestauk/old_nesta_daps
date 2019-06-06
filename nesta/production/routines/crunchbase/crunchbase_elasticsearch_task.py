@@ -74,37 +74,40 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # MySQL setup
         self.database = 'dev' if self.test else 'production'
-        engine = get_mysql_engine(self.db_config_env, 'mysqldb', 
+        engine = get_mysql_engine(self.db_config_env, 'mysqldb',
                                   self.database)
-        
+
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate, 
-                                 dataset='crunchbase', 
+        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
+                                 dataset='crunchbase',
                                  aliases='health_scanner')
 
         # Get set of existing ids from elasticsearch via scroll
-        scanner = scan(es, query={"_source": False}, 
-                       index=es_config['index'], 
+        scanner = scan(es, query={"_source": False},
+                       index=es_config['index'],
                        doc_type=es_config['type'])
         existing_ids = {s['_id'] for s in scanner}
         logging.info(f"Collected {len(existing_ids)} existing in "
                      "Elasticsearch")
 
         # Get set of all organisations from mysql
-        all_orgs = all_org_ids(engine)
+        all_orgs = list(all_org_ids(engine))
         logging.info(f"{len(all_orgs)} organisations in MySQL")
 
         # Remove previously processed
-        orgs_to_process = (org for org in all_orgs 
-                           if org not in existing_ids)
+        orgs_to_process = list(org for org in all_orgs
+                               if org not in existing_ids)
+        logging.info(f"{len(orgs_to_process)} to be processed")
 
         job_params = []
         for count, batch in enumerate(split_batches(orgs_to_process,
                                                     self.process_batch_size),
                                       1):
+            logging.info(f"Processing batch {count} with size {len(batch)}")
+
             # write batch of ids to s3
-            batch_file = put_s3_batch(batch, self.intermediate_bucket, 
+            batch_file = put_s3_batch(batch, self.intermediate_bucket,
                                       'crunchbase_to_es')
             params = {
                 "batch_file": batch_file,

@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
+import requests
 
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -24,6 +25,20 @@ def run():
     db = os.environ["BATCHPAR_db"]
     aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
 
+    # Read in the US states
+    static_engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "static_data")
+    states_lookup = {row['state_code']: row['state_name']
+                     for _, row in  pd.read_sql_table('us_states_lookup',
+                                                      static_engine).iterrows()}
+    states_lookup[None] = None
+    states_lookup[''] = None
+
+    # Get continent lookup                                                                        
+    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
+    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+    continent_lookup[None] = None
+    continent_lookup[''] = None
+
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -41,7 +56,8 @@ def run():
             "project_terms",
             "project_title",
             "total_cost",
-            "phr"
+            "phr",
+            "ic_name"
             ]
     cols_attrs = [getattr(Projects, c) for c in cols]
     batch_selection = session.query(*cols_attrs).filter(
@@ -84,10 +100,27 @@ def run():
                            country_detection=True,
                            listify_terms=True,
                            terms_delimiters=(";",","),
-                           caps_to_camel_case=True)
+                           caps_to_camel_case=True,
+                           null_pairs={"currency_total_cost": "cost_total_project"})
 
     for _, row in df.iterrows():
         doc = dict(row.loc[~pd.isnull(row)])
+        if 'country' in doc:
+            # Try to patch broken US data
+            if doc['country'] == '' and doc['org_state'] != '':
+                doc['country'] = "United States"
+                doc['continent'] = "NA"
+            doc['placeName_state_organisation'] = states_lookup[doc['org_state']]
+
+            if 'continent' in doc:
+                continent_code = doc['continent']
+            else:
+                continent_code = None
+            doc['placeName_continent_organisation'] = continent_lookup[continent_code]
+        
+        if 'ic_name'in doc:
+            doc['ic_name'] = [doc['ic_name']]
+
         uid = doc.pop("application_id")
         es.index(index=es_index, 
                  doc_type=es_type, id=uid, body=doc)
