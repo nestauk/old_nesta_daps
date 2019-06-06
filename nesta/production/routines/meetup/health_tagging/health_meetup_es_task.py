@@ -13,7 +13,6 @@ from nesta.production.luigihacks.estask import ElasticsearchTask
 from nesta.production.orms.meetup_orm import Group
 from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
 from nesta.production.routines.meetup.health_tagging.topic_discovery_task import TopicDiscoveryTask
-from nesta.production.routines.meetup.health_tagging.group_details_task import GroupDetailsTask
 
 
 class MeetupHealthElasticsearchTask(ElasticsearchTask):
@@ -23,14 +22,14 @@ class MeetupHealthElasticsearchTask(ElasticsearchTask):
 
     def requires(self):
         yield GeocodeBatchTask(_routine_id=self.routine_id,
-                               test=self.test,
+                               test=True,
+                               test_limit=None,
                                db_config_env=self.db_config_env,
                                city_col=Group.city,
                                country_col=Group.country,
                                country_is_iso2=True,
                                env_files=[f3p("nesta/"),
-                                          f3p("config/mysqldb.config"),
-                                          f3p("config/crunchbase.config")],
+                                          f3p("config/mysqldb.config")],
                                job_def="py36_amzn1_image",
                                job_name=f"HealthMeetupGeocodeBatchTask-{self.routine_id}",
                                job_queue="HighPriority",
@@ -88,4 +87,5 @@ class RootTask(luigi.WrapperTask):
                                             region_name="eu-west-2",
                                             poll_time=10,
                                             memory=2048,
-                                            max_live_jobs=100)
+                                            max_live_jobs=100,
+                                            kwargs={"members_perc": self.members_perc})
