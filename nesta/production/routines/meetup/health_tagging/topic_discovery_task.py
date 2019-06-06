@@ -20,10 +20,16 @@ S3PREFIX = "s3://nesta-production-intermediate"
 
 
 class TopicDiscoveryTask(luigi.Task):
-    '''An intermediate task which increments the age of the muppets by 1 year.
+    '''Task to automatically discover relevant topics from meetup data, 
+    defined as the most frequently occurring from a set of categories.
 
     Args:
-
+        db_config_env (str): Environmental variable pointing to the path of the DB config.
+        routine_id (str): The routine UID.
+        core_categories (list): A list of category_shortnames from which to identify topics.
+        members_perc (int): A percentile to evaluate the minimum number of members.
+        topic_perc (int): A percentile to evaluate the most frequent topics.
+        test (bool): Test mode.
     '''
     db_config_env = luigi.Parameter()
     routine_id = luigi.Parameter()

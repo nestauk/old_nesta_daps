@@ -16,13 +16,20 @@ from nesta.production.routines.meetup.health_tagging.topic_discovery_task import
 
 
 class MeetupHealthElasticsearchTask(ElasticsearchTask):
+    '''Task to pipe meetup data to ES. For other arguments, see :obj:`ElasticsearchTask`.
+    
+    Args:                                                                                   
+        core_categories (list): A list of category_shortnames from which to identify topics.
+        members_perc (int): A percentile to evaluate the minimum number of members.         
+        topic_perc (int): A percentile to evaluate the most frequent topics.                
+    '''
     core_categories = luigi.ListParameter()
     members_perc = luigi.IntParameter()
     topic_perc = luigi.IntParameter()
 
     def requires(self):
         yield GeocodeBatchTask(_routine_id=self.routine_id,
-                               test=True,
+                               test=self.test,
                                test_limit=None,
                                db_config_env=self.db_config_env,
                                city_col=Group.city,
