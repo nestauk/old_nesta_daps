@@ -90,7 +90,7 @@
     },
     "state": {
         "crunchbase": "placeName_state_organisation",
-        "meetup": "placeName_state_group",
+        "meetup": "_placeName_state_group",
         "nih": "placeName_state_organisation"
     },
     "state_id": {

@@ -90,7 +90,7 @@ def get_members_by_percentile(engine, perc=10):
         rows = (session
                 .query(Group.members)
                 .all())
-        rows = [r[0] for r in rows]
+        rows = [r.members for r in rows]
     return float(np.percentile(rows, perc))
 
 
@@ -113,7 +113,7 @@ def get_core_topics(engine, core_categories, members_limit, perc=99):
                 .filter(Group.members >= members_limit)
                 .filter(Group.category_shortname.in_(core_categories))
                 .all())
-        rows = [r[0] for r in rows]
+        rows = [r.topics for r in rows]
     topic_counts = Counter(t['name'] for topics in rows for t in topics)
     topic_cutoff = np.percentile(list(float(v) for v in topic_counts.values()), perc)
     return set(k for k, v in topic_counts.items() if v >= topic_cutoff)
