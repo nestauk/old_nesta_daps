@@ -1,9 +1,9 @@
 '''
 A collection of miscellaneous tools.
 '''
-
 import configparser
 import os
+
 
 def get_config(file_name, header):
     '''Get the configuration from a file in the luigi config path
@@ -46,7 +46,7 @@ def find_filepath_from_pathstub(path_stub):
     by moving the current working directory backwards, one step at a time until
     the file (or directory) is found. If the HOME directory is reached, the algorithm
     raises :obj:`FileNotFoundError`.
-    
+
     Args:
         path_stub (str): The partial file (or directory) path stub to find.
     Returns:
@@ -54,9 +54,9 @@ def find_filepath_from_pathstub(path_stub):
     '''
     relative = 0
     while True:
-        relative += 1
         for path in get_paths_from_relative(relative):
             if path.rstrip("/") == os.environ["HOME"]:
                 raise FileNotFoundError(f"Could not find {path_stub}")
             if path.endswith(path_stub.rstrip("/")):
                 return path
+        relative += 1
