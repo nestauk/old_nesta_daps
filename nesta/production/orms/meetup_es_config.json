@@ -3,13 +3,39 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
+                "_id_state_group": {
+                    "type": "keyword"
+                },
+                "_placeName_state_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "_rank_rhodonite_description": {
+                    "type": "float"
+                },
+                "_terms_memberOrigin_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "_terms_sdg_description": {
+                    "type": "keyword"
+                },
                 "coordinate_of_group": {
                     "type": "geo_point"
                 },
                 "count_member_group": {
                     "type": "integer"
                 },
-                "datetime_birth_group": {
+                "datetime_start_group": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
@@ -31,11 +57,13 @@
                 "id_of_group": {
                     "type": "keyword"
                 },
-                "id_state_group": {
-                    "type": "keyword"
-                },
                 "name_of_category": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "name_of_group": {
                     "fields": {
@@ -62,23 +90,6 @@
                     "type": "text"
                 },
                 "placeName_country_group": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "placeName_state_group": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_memberOrigin_group": {
-                    "analyzer": "mesh_terms_analyzer",
                     "fields": {
                         "keyword": {
                             "type": "keyword"
