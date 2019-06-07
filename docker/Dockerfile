@@ -67,4 +67,4 @@ RUN mkdir -p /var/log/luigi && \
     mv docker/run.sh /usr/bin/run.sh && \
     chmod +x /usr/bin/run.sh
 
-CMD ["run.sh"]
+ENTRYPOINT ["run.sh"]
