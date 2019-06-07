@@ -102,13 +102,15 @@ def _clean_up_lists(row):
                      if type(item) is str and item.strip() == ""]
         for item in to_remove:
             v.remove(item)
-        v = list(sorted((set(v))))  # deduplicate
+        v = list(set(v))  # deduplicate
         # Remove Nones
         if None in v:
             v.remove(None)
         # Nullify empty lists
         if len(v) == 0:
             v = None
+        else:
+            v = sorted(v)
         _row[k] = v
     return _row
 
