@@ -9,7 +9,7 @@ from datetime import date
 import luigi
 import logging
 
-from arxiv_mag_task import QueryMagTask
+from nesta.production.routines.arxiv.arxiv_mag_task import QueryMagTask
 from nesta.packages.arxiv.collect_arxiv import update_existing_articles
 from nesta.packages.mag.query_mag_sparql import update_field_of_study_ids_sparql, extract_entity_id, query_articles_by_doi, query_authors
 from nesta.packages.misc_utils.batches import BatchWriter

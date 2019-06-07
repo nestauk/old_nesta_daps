@@ -10,7 +10,7 @@ import luigi
 import logging
 import pprint
 
-from arxiv_iterative_date_task import DateTask
+from nesta.production.routines.arxiv.arxiv_iterative_date_task import DateTask
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.packages.mag.query_mag_api import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids

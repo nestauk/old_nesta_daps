@@ -10,7 +10,7 @@ import logging
 import luigi
 from sqlalchemy.sql import text
 
-from arxiv_collect_iterative_task import CollectNewTask
+from nesta.production.routines.arxiv.arxiv_collect_iterative_task import CollectNewTask
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 
