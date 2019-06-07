@@ -21,16 +21,16 @@ import math
 
 
 def get_subbucket(s3_path):
-    """Return subbucket name: s3:pathto/<subbucket_name>/keys
+    """Return subbucket path: <s3:pathto/subbucket_name>/keys
 
     Args:
         s3_path (str): S3 path string.
     Returns:
-        subbucket (str): Name of the subbucket.
+        subbucket_path (str): Path to the subbucket.
     """
-    _, s3_key = s3.parse_s3_path(s3_path)
+    s3_bucket, s3_key = s3.parse_s3_path(s3_path)
     subbucket, _ = os.path.split(s3_key)
-    return subbucket
+    return os.path.join(s3_bucket, subbucket)
 
 
 class DummyInputTask(luigi.ExternalTask):
@@ -61,14 +61,15 @@ class MLTask(autobatch.AutoBatchTask):
     batch_size = luigi.IntParameter(default=None)
     n_batches = luigi.IntParameter(default=None)
     child = luigi.DictParameter()
-    #use_intermediate_inputs = luigi.BoolParameter(default=False)
+    use_intermediate_inputs = luigi.BoolParameter(default=False)
+    combine_outputs = luigi.BoolParameter(default=False)
     extra = luigi.DictParameter(default={})
 
 
     def get_input_length(self):
         """Retrieve the length of the input, which is stored as the value
         of the output.length file."""
-        f = s3.S3Target(f"{self.s3_path_in}.length").open('rb')
+        f = s3.S3Target(f"{self.s3_path_in}.{self.test}.length").open('rb')
         total = json.load(f)
         f.close()
         return total
@@ -85,12 +86,12 @@ class MLTask(autobatch.AutoBatchTask):
 
     def output(self):
         """Points to the output"""
-        return s3.S3Target(self.s3_path_out)
+        if self.combine_outputs:
+            return s3.S3Target(self.s3_path_out)
+        return s3.S3Target(f"{self.s3_path_out}.{self.test}..length")
 
 
-    def prepare(self):
-        """Prepare the batch task parameters"""
-
+    def set_batch_parameters(self):
         # Assert that the batch size parameters aren't contradictory
         if self.batch_size is None and self.n_batches is None:
             raise ValueError("Neither batch_size for n_batches set")
@@ -104,33 +105,65 @@ class MLTask(autobatch.AutoBatchTask):
             n_unfull = int(total % self.batch_size > 0)
             self.n_batches = n_full + n_unfull
 
-        # Generate the task parameters
-        s3fs = s3.S3FS()
-        s3_key = self.s3_path_out
         logging.debug(f"{self.job_name}: Will use {self.n_batches} to "
                       f"process the task {total} "
                       f"with batch size {self.batch_size}")
+        return total
+
+
+    def calculate_batch_indices(self, i, total):
+        """Calculate the indices of this batch"""
+        first_index = i*self.batch_size
+        last_index = (i+1)*self.batch_size
+        if i == self.n_batches-1:
+            last_index = total
+        return first_index, last_index
+
+    def yield_batch(self, i, total):
+        s3_key = self.s3_path_out
+        # Mode 1: each batch is one of the intermediate inputs
+        if self.use_intermediate_inputs:            
+            first_key = 0
+            last_key = -1
+            S3 = boto3.resource('s3')
+            subbucket_path = get_subbucket(self.s3_key_in)
+            in_keys = S3.Bucket(subbucket_path).objects
+            i = 0
+            for in_key in in_keys.all():
+                if not in_key.endswith("-{self.test}.json"):
+                    continue
+                out_key = self.s3_path_out.replace(".json", f"-{i}-{self.test}.json")
+                yield first_index, last_index, in_key, out_key
+                i += 1
+            return
+
+        # Mode 2: each batch is a subset of the single input
+        total = self.set_batch_parameters()
+        for i in range(0, self.n_batches):
+            first_index, last_index = calculate_batch_indices(i, total)
+            out_key = self.s3_path_out.replace(".json", (f"-{first_index}-"
+                                                         f"{last_index}-"
+                                                         f"{self.test}.json"))
+            yield first_index, last_index, self.s3_key_in, out_key
+
+
+    def prepare(self):
+        """Prepare the batch task parameters"""
+        # Generate the task parameters
+        s3fs = s3.S3FS()
         job_params = []
         n_done = 0
-        for i in range(0, self.n_batches):
-            # Calculate the indices of this batch
-            first_index = i*self.batch_size
-            last_index = (i+1)*self.batch_size
-            if i == self.n_batches-1:
-                last_index = total
-
-            # Generate the output path key
-            key = s3_key.replace(".json", f"-{first_index}-{last_index}-{self.test}.json")
+        for first_index, last_index, in_key, out_key in self.yield_batch():
             # Fill the default params
-            params = {"s3_path_in":self.s3_path_in,
+            params = {"s3_path_in": in_key,
                       "first_index": first_index,
                       "last_index": last_index,
-                      "outinfo": key,
+                      "outinfo": out_key,
                       "done": s3fs.exists(key)}
+
             # Add in any bonus paramters
             for k, v in self.extra.items():
                 params[k] = v
-
             # Append and book-keeping
             n_done += int(done)
             job_params.append(params)
@@ -148,24 +181,28 @@ class MLTask(autobatch.AutoBatchTask):
         for params in job_params:
             _body = s3.S3Target(params["outinfo"]).open("rb")
             _data = _body.read().decode('utf-8')
-            outdata += json.loads(_data)
+            _outdata = json.loads(_data)
+            if self.combine_outputs:
+                outdata += _outdata
+            size += len(_outdata)
 
         # Write the output
         logging.debug(f"{self.job_name}: Writing the output (length {len(outdata)})...")
-        f = self.output().open("wb")
-        f.write(json.dumps(outdata).encode('utf-8'))
-        f.close()
+        if self.combine_outputs:
+            f = self.output().open("wb")
+            f.write(json.dumps(outdata).encode('utf-8'))
+            f.close()
 
         # Write the output length as well, for book-keeping
-        f = s3.S3Target(f"{self.s3_path_out}.length").open("wb")
-        f.write(str(len(outdata)).encode("utf-8"))
+        f = s3.S3Target(f"{self.s3_path_out}.{self.test}.length").open("wb")
+        f.write(str(size)).encode("utf-8"))
         f.close()
 
 
 class AutoMLTask(luigi.WrapperTask):
     """Parse and launch the MLTask chain based on an input
     configuration file.
-    
+
     Args:
         s3_path_in (str): Path to the input data.
         s3_path_prefix (str): Prefix of all paths to the output data.
@@ -184,13 +221,13 @@ class AutoMLTask(luigi.WrapperTask):
     def get_chain_parameters(self, env_keys=["batchable", "env_files"]):
         """Parse the chain parameters into a dictionary, and expand
         filepaths if specified.
-        
+
         Args:
-            env_keys (list): List (or list of lists) of partial 
-                             (note, not necessarily relative) filepaths to 
+            env_keys (list): List (or list of lists) of partial
+                             (note, not necessarily relative) filepaths to
                              expand into absolute filepaths. See :obj:`find_filepath_from_pathstub`
                              for more information.
-        """        
+        """
         with open(self.task_chain_filepath) as f:
             chain_parameters = json.load(f)
         # Expand filepaths if specified
@@ -211,7 +248,7 @@ class AutoMLTask(luigi.WrapperTask):
     def append_extras(params, output_name):
         """Append extra parameters to the output string, useful for
         identifying the task chain which led to producing this output.
-        
+
         Args:
             params (dict): Input job parameters.
             output_name (str): Output file prefix (so far).
@@ -232,8 +269,8 @@ class AutoMLTask(luigi.WrapperTask):
         identify the task chain which led to producing this output. Note that
         the function is recursive.
 
-        Args:                                              
-            params (dict): Input job parameters.           
+        Args:
+            params (dict): Input job parameters.
             output_name (str): Output file prefix (so far).
         Returns:
             output_name (str): Output file prefix (extended).
@@ -245,7 +282,7 @@ class AutoMLTask(luigi.WrapperTask):
 
     def prepare_chain_parameters(self, chain_parameters):
         """Convert chain parameters into a form ready for MLTask.
-        
+
         Args:
             chain_parameters (json): Parsed chain parameters.
         Returns:
@@ -257,7 +294,7 @@ class AutoMLTask(luigi.WrapperTask):
         s3_path_in = self.s3_path_in
         for task_params in chain_parameters:
             name = task_params["job_name"]
-        
+
             # If task has a child, look up the child by name (MUST exist)
             if "child" in task_params:
                 child_name = task_params.pop("child")
@@ -288,7 +325,7 @@ class AutoMLTask(luigi.WrapperTask):
 
             # Record the task parameters
             all_task_params[name] = parameters
-            child_params = parameters  # The next task is assumed to be this task's parent, 
+            child_params = parameters  # The next task is assumed to be this task's parent,
                                        # unless specified otherwise.
 
         return all_task_params
