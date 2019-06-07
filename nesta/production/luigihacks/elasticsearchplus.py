@@ -102,7 +102,7 @@ def _clean_up_lists(row):
                      if type(item) is str and item.strip() == ""]
         for item in to_remove:
             v.remove(item)
-        v = list(set(v))  # deduplicate
+        v = list(sorted((set(v))))  # deduplicate
         # Remove Nones
         if None in v:
             v.remove(None)
