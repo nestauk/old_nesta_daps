@@ -108,4 +108,7 @@
     "title": {
         "nih": "title_of_project"
     }
+    "url": {
+	"meetup": "url_of_group"
+    }
 }
