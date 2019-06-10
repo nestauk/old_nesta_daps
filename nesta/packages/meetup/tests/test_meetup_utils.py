@@ -1,6 +1,53 @@
 import unittest
 
 from nesta.packages.meetup.meetup_utils import flatten_data
+from nesta.packages.meetup.meetup_utils import get_members_by_percentile
+from nesta.packages.meetup.meetup_utils import get_core_topics
+
+from sqlalchemy.orm import sessionmaker
+from nesta.production.orms.meetup_orm import Base
+from nesta.production.orms.meetup_orm import Group
+from nesta.production.orms.orm_utils import get_mysql_engine
+
+class TestMeetupGetters(unittest.TestCase):
+    '''Check that the meetup ORM getters work as expected'''
+    engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+    Session = sessionmaker(engine)
+
+    def setUp(self):
+        '''Create the temporary table'''
+        Base.metadata.create_all(self.engine)
+
+    def tearDown(self):
+        '''Drop the temporary table'''
+        Base.metadata.drop_all(self.engine)
+
+    def test_get_members_by_percentile(self):
+        session = self.Session()
+        N = 100
+        for i in range(1, N+1):
+            group = Group(id=i, members=i)
+            session.add(group)
+            session.commit()
+
+        n = get_members_by_percentile(self.engine, perc=10)
+        assert n < N
+        assert n > 1
+
+    def test_get_core_topics(self):
+        session = self.Session()
+        N = 100
+        for i in range(1, N+1):            
+            group = Group(id=i, members=i, 
+                          category_shortname='dummy',
+                          topics=[{"name": str(j) for j in range(i)}])
+            session.add(group)
+            session.commit()
+
+        topics = get_core_topics(self.engine, core_categories=['dummy'],
+                                 members_limit=50, perc=50)
+        assert len(topics) > 1
+        assert len(topics) < N
 
 
 class TestMeetupUtils(unittest.TestCase):

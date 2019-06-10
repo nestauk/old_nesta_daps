@@ -70,6 +70,7 @@
             "longitude",
             "mathSubjectClassification",
             "member",
+            "memberOrigin",
             "mesh",
             "of",
             "official",
