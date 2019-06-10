@@ -18,7 +18,10 @@ import os
 import json
 import logging
 import math
+import numpy as np
 
+FLOAT = '([-+]?\d*\.\d+|\d+)' 
+NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)' 
 
 def get_subbucket(s3_path):
     """Return subbucket path: <s3:pathto/subbucket_name>/keys
@@ -31,6 +34,27 @@ def get_subbucket(s3_path):
     s3_bucket, s3_key = s3.parse_s3_path(s3_path)
     subbucket, _ = os.path.split(s3_key)
     return os.path.join(s3_bucket, subbucket)
+
+
+def arange(x): 
+    args = re.findall(NP_ARANGE, x.replace(' ',''))[0] 
+    for i in  np.arange(*[float(arg) for arg in args]):
+        yield i 
+
+     
+def each_value(value_range): 
+    if type(value_range) is str:  
+        if not value_range.startswith('np.arange'): 
+            raise ValueError 
+        value_range = arange(value_range) 
+         
+    try: 
+        iter(value_range) 
+    except TypeError: 
+        value_range = [value_range] 
+    finally: 
+        for value in value_range: 
+            yield value 
 
 
 class DummyInputTask(luigi.ExternalTask):
@@ -53,7 +77,7 @@ class MLTask(autobatch.AutoBatchTask):
         batch_size (int): Size of batch chunks.
         n_batches (int): The number of batches to submit (alternative to :obj:`batch_size`)
         child (dict): Parameters to spawn a child task with.
-        extra (dict): Extra environmental variables to pass to the batchable.
+        hyper (dict): Extra environmental variables to pass to the batchable.
     """
     name = luigi.Parameter()
     s3_path_in = luigi.Parameter()
@@ -63,7 +87,7 @@ class MLTask(autobatch.AutoBatchTask):
     child = luigi.DictParameter()
     use_intermediate_inputs = luigi.BoolParameter(default=False)
     combine_outputs = luigi.BoolParameter(default=False)
-    extra = luigi.DictParameter(default={})
+    hyper = luigi.DictParameter(default={})
 
 
     def get_input_length(self):
@@ -162,7 +186,7 @@ class MLTask(autobatch.AutoBatchTask):
                       "done": s3fs.exists(key)}
 
             # Add in any bonus paramters
-            for k, v in self.extra.items():
+            for k, v in self.hyper.items():
                 params[k] = v
             # Append and book-keeping
             n_done += int(done)
@@ -245,8 +269,8 @@ class AutoMLTask(luigi.WrapperTask):
 
 
     @staticmethod
-    def append_extras(params, output_name):
-        """Append extra parameters to the output string, useful for
+    def append_hypers(params, output_name):
+        """Append hyperparameters to the output string, useful for
         identifying the task chain which led to producing this output.
 
         Args:
@@ -256,8 +280,8 @@ class AutoMLTask(luigi.WrapperTask):
             output_name (str): Output file prefix (extended).
         """
         output_name += params["job_name"].upper()
-        if "extra" in params:
-            for k, v in params["extra"].items():
+        if "hyperparameters" in params:
+            for k, v in params["hyperparameters"].items():
                 output_name += f".{k}_{v}"
         output_name += "."
         return output_name
@@ -275,7 +299,7 @@ class AutoMLTask(luigi.WrapperTask):
         Returns:
             output_name (str): Output file prefix (extended).
         """
-        output_name = AutoMLTask.append_extras(params, output_name)
+        output_name = AutoMLTask.append_hypers(params, output_name)
         if params["child"] != {}:
             return AutoMLTask.join_child_parameters(params["child"], output_name)
         return output_name
@@ -301,7 +325,8 @@ class AutoMLTask(luigi.WrapperTask):
                 child_params = all_task_params[child_name]
 
             # Generate the output path, starting with the parameters of this task...
-            s3_path_out = AutoMLTask.append_extras(task_params, f"{self.s3_path_prefix}/{name}/")
+            s3_path_out = AutoMLTask.append_hypers(task_params, 
+                                                   f"{self.s3_path_prefix}/{name}/")
             # ... then append child parameters to the path...
             if child_params != {}:
                 s3_path_in = child_params["s3_path_out"]
