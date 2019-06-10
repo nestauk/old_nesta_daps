@@ -3,7 +3,6 @@ import boto3
 import json
 import time
 
-
 def split_batches(data, batch_size):
     """Breaks batches down into chunks consumable by the database.
 

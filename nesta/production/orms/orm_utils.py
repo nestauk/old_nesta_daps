@@ -73,7 +73,7 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
     return es, es_config
 
 
-def load_json_from_pathstub(pathstub, filename):
+def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
     """Basic wrapper around :obj:`find_filepath_from_pathstub`
     which also opens the file (assumed to be json).
     
@@ -87,6 +87,9 @@ def load_json_from_pathstub(pathstub, filename):
     _path = os.path.join(_path, filename)
     with open(_path) as f:
         js = json.load(f)
+    if sort_on_load:
+        _js = json.dumps(js, sort_keys=True)
+        js = json.loads(_js)
     return js
 
 def get_es_mapping(dataset, aliases):
