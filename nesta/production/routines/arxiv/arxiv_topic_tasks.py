@@ -1,13 +1,14 @@
 import luigi
 import os
+import datetime
+import json
 
 from sqlalchemy import or_
 from nesta.production.luigihacks import s3
 from nesta.production.orms.arxiv_orm import article_categories as ArtCat
 from nesta.production.orms.arxiv_orm import Article
-#from nesta.production.routines.automl import AutoMLTask
+from nesta.production.routines.automl import AutoMLTask
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
-import json
 
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -19,16 +20,17 @@ class PrepareArxivS3Data(luigi.Task):
     """Task that pipes SQL text fields to a number of S3 JSON files.
     This is particularly useful for preparing autoML tasks.
     """
-    s3_path_out = luigi.Parameter("s3://nesta-arxlive/raw-inputs/data")
+    s3_path_out = luigi.Parameter()
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     chunksize = luigi.IntParameter(default=10000)
     test = luigi.BoolParameter(default=True)
 
     def output(self):
-        return s3.S3Target(f"{self.s3_path_out}.{self.test}.length")
+        return s3.S3Target(f"{self.s3_path_out}/"
+                           f"data.{self.test}.length")
 
     def write_to_s3(self, data, ichunk):
-        f = s3.S3Target(f"{self.s3_path_out}-"
+        f = s3.S3Target(f"{self.s3_path_out}/data."
                         f"{ichunk}-{self.test}.json").open("wb")
         f.write(json.dumps(data).encode('utf-8'))
         f.close()
@@ -61,11 +63,17 @@ class PrepareArxivS3Data(luigi.Task):
 
 class TopicRootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
+    s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
+    raw_data_path = luigi.Parameter(default="raw-inputs")
 
     def requires(self):
         # Launch the dependencies
-        yield PrepareArxivS3Data(
-        # yield AutoMLTask(s3_path_in="LOCATION OF FLAT FILES TO BE BATCH GRAMMED",
-        #                  s3_path_prefix="s3://nesta-automl/arxiv/",
-        #                  task_chain_filepath=CHAIN_PARAMETER_PATH,
-        #                  test=not self.production)
+        raw_data_path = (f"{self.s3_path_prefix}/"
+                         f"{self.raw_data_path}/{self.date}")
+        yield PrepareArxivS3Data(s3_path_out=raw_data_path,
+                                 test=not self.production)
+        yield AutoMLTask(s3_path_in=(f"{raw_data_path}/"
+                                     f"data.{self.test}.length"),
+                         s3_path_prefix=f"{s3_path_prefix}/automl/",
+                         task_chain_filepath=CHAIN_PARAMETER_PATH,
+                         test=not self.production)

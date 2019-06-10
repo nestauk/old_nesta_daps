@@ -14,18 +14,18 @@
 	"job_name": "vectorizer", 
 	"batchable": "batchables/nlp/vectorizer",
 	"memory": 16000
-        "extra": {
+        "hyperparameters": {
             "binary": true,
 	    "min_df": 0.001,
-	    "ngram_range" : 2
+	    "ngram_range" : [1, 2]
         }	
     },    
     {
 	"job_name": "corex_topic_model", 
 	"batchable": "batchables/nlp/corex_topic_model",
 	"memory": 16000
-        "extra": {
-            "n_hidden": [[10, 60, 1]]
+        "hyperparameters": {
+            "n_hidden": 'np.arange(10, 60, 1)'
         }	
     }
 ]
