@@ -6,12 +6,17 @@ import json
 import logging
 import os
 import pandas as pd
+import requests
+from collections import defaultdict
+
+from nesta.packages.crunchbase.utils import parse_investor_names
 
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.crunchbase_orm import Organization
 from nesta.production.orms.crunchbase_orm import OrganizationCategory
 from nesta.production.orms.crunchbase_orm import CategoryGroup
+from nesta.production.orms.crunchbase_orm import FundingRound
 from nesta.production.orms.geographic_orm import Geographic
 
 
@@ -40,6 +45,11 @@ def run():
     states_lookup["AP"] = "Armed Forces (Pacific)"
     states_lookup[None] = None  # default lookup for non-US countries
 
+    # Get continent lookup
+    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
+    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+    continent_lookup[None] = None
+
     # es setup
     field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
                                                  "health_scanner.json")
@@ -57,7 +67,9 @@ def run():
                            null_empty_str=True,
                            coordinates_as_floats=True,
                            country_detection=True,
-                           listify_terms=True)
+                           listify_terms=True,
+                           terms_delimiters=("|",),
+                           null_pairs={"currency_of_funding": "cost_of_funding"})
 
     # collect file
     nrows = 20 if test else None
@@ -72,7 +84,20 @@ def run():
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
                   'continent', 'latitude', 'longitude']
 
-    engine.raw_connection().connection.text_factory = lambda x: x.decode('utf8')
+    # First get all funders
+    investor_names = defaultdict(list)
+    with db_session(engine) as session:
+        rows = (session
+                .query(Organization, FundingRound)
+                .join(FundingRound, Organization.id==FundingRound.company_id)
+                .filter(Organization.id.in_(org_ids))
+                .all())
+        for row in rows:
+            _id = row.Organization.id
+            _investor_names = row.FundingRound.investor_names
+            investor_names[_id] += parse_investor_names(_investor_names)
+
+    # Pipe orgs to ES
     with db_session(engine) as session:
         rows = (session
                 .query(Organization, Geographic)
@@ -87,6 +112,8 @@ def run():
             row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
             row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
                                  if k in geo_fields})
+            row_combined['investor_names'] = list(set(investor_names[row_combined['id']]))
+
             # reformat coordinates
             row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
                                            'lon': row_combined.pop('longitude')}
@@ -106,15 +133,17 @@ def run():
 
             # Add a field for US state name
             state_code = row_combined['state_code']
-            row_combined['placeName_state_organization'] = states_lookup[state_code]
+            row_combined['placeName_state_organisation'] = states_lookup[state_code]
+            continent_code = row_combined['continent']
+            row_combined['placeName_continent_organisation'] = continent_lookup[continent_code]
             row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-            
+
             uid = row_combined.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row_combined)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
-
+    
     logging.warning("Batch job complete.")
 
 
@@ -125,21 +154,42 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        #"AWSBATCHTEST": "",
-        environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
-                   "BATCHPAR_outinfo": ("search-health-scanner-"
-                                        "5cs7g52446h7qscocqmiky5dn4"
-                                        ".eu-west-2.es.amazonaws.com"),
-                   "BATCHPAR_config":"/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
-                   "BATCHPAR_bucket":"nesta-production-intermediate",
-                   "BATCHPAR_done":"False",
-                   "BATCHPAR_batch_file":"crunchbase_to_es-15584588946449678.json",
-                   "BATCHPAR_out_type": "_doc",
-                   "BATCHPAR_out_port": "443",
-                   "BATCHPAR_test":"True",
-                   "BATCHPAR_db_name":"production",
-                   "BATCHPAR_out_index":"companies_dev",
-                   "BATCHPAR_entity_type":"company"}
+        from nesta.production.orms.orm_utils import setup_es
+        es, es_config = setup_es('dev', True, True,
+                                 dataset='crunchbase',
+                                 aliases='health_scanner')
+
+        environ = {"AWSBATCHTEST": "",
+                   'BATCHPAR_batch_file': 'crunchbase_to_es-15597291977144725.json', 
+                   'BATCHPAR_config': ('/home/ec2-user/nesta/nesta/'
+                                       'production/config/mysqldb.config'),
+                   'BATCHPAR_db_name': 'production', 
+                   'BATCHPAR_bucket': 'nesta-production-intermediate', 
+                   'BATCHPAR_done': "False", 
+                   'BATCHPAR_outinfo': ('https://search-health-scanner-'
+                               '5cs7g52446h7qscocqmiky5dn4.'
+                               'eu-west-2.es.amazonaws.com'), 
+                   'BATCHPAR_out_port': '443', 
+                   'BATCHPAR_out_index': 'companies_v1', 
+                   'BATCHPAR_out_type': '_doc', 
+                   'BATCHPAR_aws_auth_region': 'eu-west-2', 
+                   'BATCHPAR_entity_type': 'company', 
+                   'BATCHPAR_test': "False"}
+
+        # environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
+        #            "BATCHPAR_outinfo": ("search-health-scanner-"
+        #                                 "5cs7g52446h7qscocqmiky5dn4"
+        #                                 ".eu-west-2.es.amazonaws.com"),
+        #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta/production/config/mysqldb.config",
+        #            "BATCHPAR_bucket":"nesta-production-intermediate",
+        #            "BATCHPAR_done":"False",
+        #            "BATCHPAR_batch_file":"crunchbase_to_es-1559658702669423.json",
+        #            "BATCHPAR_out_type": "_doc",
+        #            "BATCHPAR_out_port": "443",
+        #            "BATCHPAR_test":"True",
+        #            "BATCHPAR_db_name":"production",
+        #            "BATCHPAR_out_index":"companies_dev",
+        #            "BATCHPAR_entity_type":"company"}
         for k, v in environ.items():
             os.environ[k] = v
     run()

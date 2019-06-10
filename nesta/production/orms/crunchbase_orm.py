@@ -42,12 +42,12 @@ class Organization(Base):
     cb_url = Column(TEXT)
     logo_url = Column(TEXT)
     twitter_url = Column(TEXT)
-    aliases = Column(TEXT(convert_unicode=True, collation='utf8mb4_unicode_ci'))
+    aliases = Column(TEXT(collation='utf8mb4_unicode_ci'))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
     primary_role = Column(VARCHAR(50))
     type = Column(VARCHAR(50))
-    long_description = Column(TEXT(convert_unicode=True, collation='utf8mb4_unicode_ci'))
+    long_description = Column(TEXT(collation='utf8mb4_unicode_ci'))
     parent_id = Column(VARCHAR(50))
     is_health = Column(BOOLEAN)
     mesh_terms = Column(TEXT)
@@ -135,7 +135,7 @@ class FundingRound(Base):
     company_id = Column(VARCHAR(36))
     created_at = Column(DATETIME)
     updated_at = Column(DATETIME)
-    investor_names = Column(TEXT(convert_unicode=True, collation='utf8mb4_unicode_ci'))
+    investor_names = Column(TEXT(collation='utf8mb4_unicode_ci'))
     investor_ids = Column(TEXT)
 
 

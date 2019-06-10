@@ -1,5 +1,6 @@
 from collections import Counter
 from collections import defaultdict
+from collections import OrderedDict
 from elasticsearch import Elasticsearch
 from elasticsearch import RequestsHttpConnection
 from functools import reduce
@@ -17,6 +18,29 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
                 "/nesta-open-data/country_lookup/Countries-List.csv")
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
+
+def _nullify_pairs(row, null_pairs={}):
+    """Nullify any value if it's 'parent' is also null.
+    For example for null_pairs={'parent': 'child'} 
+    the following will occur:
+    
+    {'parent': None, 'child': 5} will become {'parent': None, 'child': None}
+    
+    however
+    
+    {'parent': 5, 'child': None} will remain unchanged.
+
+    Args:
+        row (dict): Row of data to evaluate.
+        null_pairs (dict): Null mapping, as described above.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for parent, child in null_pairs.items():
+        if _row[parent] is None:
+            _row[child] = None
+    return _row
 
 def _remove_padding(row):
     """Remove padding from text or list text
@@ -72,9 +96,9 @@ def _clean_up_lists(row):
     _row = deepcopy(row)
     for k, v in row.items():
         if type(v) is not list:
-            continue    
+            continue
         # Remove empty strings
-        to_remove = [item for item in v 
+        to_remove = [item for item in v
                      if type(item) is str and item.strip() == ""]
         for item in to_remove:
             v.remove(item)
@@ -85,6 +109,8 @@ def _clean_up_lists(row):
         # Nullify empty lists
         if len(v) == 0:
             v = None
+        else:
+            v = sorted(v)
         _row[k] = v
     return _row
 
@@ -329,6 +355,7 @@ class ElasticsearchPlus(Elasticsearch):
                  listify_terms=True,
                  terms_delimiters=None,
                  caps_to_camel_case=False,
+                 null_pairs={},
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -379,6 +406,7 @@ class ElasticsearchPlus(Elasticsearch):
         # Clean up lists (dedup, remove None, empty lists are None)
         self.transforms.append(_clean_up_lists)
         self.transforms.append(_remove_padding)
+        self.transforms.append(lambda row: _nullify_pairs(row, null_pairs))
         super().__init__(*args, **kwargs)
 
     def chain_transforms(self, row):
@@ -389,7 +417,7 @@ class ElasticsearchPlus(Elasticsearch):
         Returns:
             _row (dict): Modified row.
         """
-        return reduce(lambda _row, f: f(_row), self.transforms, row)
+        return reduce(lambda _row, f: f(_row), self.transforms, row)        
 
     def index(self, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the
@@ -407,6 +435,8 @@ class ElasticsearchPlus(Elasticsearch):
             raise ValueError("Keyword argument 'body' was not provided.")
 
         body = dict(self.chain_transforms(_body))
+        # Sort the body
+        body = OrderedDict(sorted(body.items()))
         if not self.no_commit:
             super().index(body=body, **kwargs)
         return body

@@ -3,55 +3,61 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
-                "_cost_usd2018_project": {
-                    "type": "float"
-                },
-                "_rank_rhodonite_abstract": {
-                    "type": "float"
-                },
-                "_terms_sdg_abstract": {
+                "_id_state_group": {
                     "type": "keyword"
                 },
-                "booleanFlag_duplicate_abstract": {
-                    "null_value": false,
-                    "type": "boolean"
+                "_placeName_state_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
-                "coordinate_of_organisation": {
+                "_rank_rhodonite_description": {
+                    "type": "float"
+                },
+                "_terms_memberOrigin_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "_terms_sdg_description": {
+                    "type": "keyword"
+                },
+                "coordinate_of_group": {
                     "type": "geo_point"
                 },
-                "cost_total_project": {
+                "count_member_group": {
                     "type": "integer"
                 },
-                "currency_total_cost": {
-                    "type": "keyword"
-                },
-                "date_end_project": {
+                "datetime_start_group": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
-                "date_start_project": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
-                },
-                "id_iso2_country": {
+                "id_continent_group": {
                     "type": "keyword"
                 },
-                "id_iso3_country": {
+                "id_country_group": {
                     "type": "keyword"
                 },
-                "id_isoNumeric_country": {
+                "id_iso2_group": {
+                    "type": "keyword"
+                },
+                "id_iso3_group": {
+                    "type": "keyword"
+                },
+                "id_isoNumeric_group": {
                     "type": "integer"
                 },
-                "id_of_continent": {
+                "id_of_group": {
                     "type": "keyword"
                 },
-                "id_of_project": {
-                    "type": "keyword"
-                },
-                "id_state_organisation": {
-                    "type": "keyword"
-                },
-                "placeName_city_organisation": {
+                "name_of_category": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -59,7 +65,7 @@
                     },
                     "type": "text"
                 },
-                "placeName_continent_organisation": {
+                "name_of_group": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -67,7 +73,7 @@
                     },
                     "type": "text"
                 },
-                "placeName_country_organisation": {
+                "placeName_city_group": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -75,7 +81,7 @@
                     },
                     "type": "text"
                 },
-                "placeName_state_organisation": {
+                "placeName_continent_group": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -83,14 +89,7 @@
                     },
                     "type": "text"
                 },
-                "placeName_zipcode_organisation": {
-                    "type": "keyword"
-                },
-                "terms_descriptive_project": {
-                    "type": "text"
-                },
-                "terms_mesh_abstract": {
-                    "analyzer": "mesh_terms_analyzer",
+                "placeName_country_group": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -101,7 +100,7 @@
                 "terms_of_countryTags": {
                     "type": "keyword"
                 },
-                "terms_of_funders": {
+                "terms_topics_group": {
                     "analyzer": "mesh_terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -110,26 +109,14 @@
                     },
                     "type": "text"
                 },
-                "textBody_abstract_project": {
-                    "type": "text"
-                },
-                "textBody_descriptive_project": {
-                    "type": "text"
-                },
-                "title_of_funder": {
-                    "type": "text"
-                },
-                "title_of_organisation": {
-                    "type": "text"
-                },
-                "title_of_project": {
+                "textBody_descriptive_group": {
                     "type": "text"
                 },
                 "type_of_entity": {
                     "type": "keyword"
                 },
-                "year_fiscal_funding": {
-                    "type": "integer"
+                "url_of_group": {
+                    "type": "keyword"
                 }
             }
         }
