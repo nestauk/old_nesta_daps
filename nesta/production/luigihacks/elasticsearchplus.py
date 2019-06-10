@@ -109,6 +109,8 @@ def _clean_up_lists(row):
         # Nullify empty lists
         if len(v) == 0:
             v = None
+        else:
+            v = sorted(v)
         _row[k] = v
     return _row
 
