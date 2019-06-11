@@ -15,6 +15,7 @@ from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 
 
+# prefix for the task name in luigi_table_updates
 UPDATE_PREFIX = 'ArxivIterativeCollect'
 
 
@@ -59,7 +60,7 @@ class DateTask(luigi.WrapperTask):
             try:
                 latest_update = extract_last_update_date(UPDATE_PREFIX, previous_updates)
             except ValueError:
-                raise ValueError("Date for iterative data collection could not be determined")
+                raise ValueError("Date for iterative data collection could not be determined. Set the date manually with --articles-from-date")
             self.articles_from_date = datetime.strftime(latest_update, '%Y-%m-%d')
 
         logging.info(f"Updating arxiv data from date: {self.articles_from_date}")
