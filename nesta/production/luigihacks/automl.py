@@ -219,7 +219,7 @@ class MLTask(autobatch.AutoBatchTask):
 
         # Write the output length as well, for book-keeping
         f = s3.S3Target(f"{self.s3_path_out}.{self.test}.length").open("wb")
-        f.write(str(size)).encode("utf-8"))
+        f.write(str(size).encode("utf-8"))
         f.close()
 
 
