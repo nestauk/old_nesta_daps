@@ -107,7 +107,7 @@
     },
     "title": {
         "nih": "title_of_project"
-    }
+    },
     "url": {
 	"crunchbase": "url_of_organisation",
 	"meetup": "url_of_group"
