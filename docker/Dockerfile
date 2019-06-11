@@ -52,7 +52,8 @@ ENV PYTHONPATH /app
 ENV MYSQLDB /app/nesta/production/config/mysqldb.config
 
 WORKDIR /app
-EXPOSE 8082/TCP
+# for the luigi central scheduler web interface
+# EXPOSE 8082/TCP
 
 ENV LUIGI_CONFIG_DIR /app/nesta/production/config
 ENV LUIGI_CONFIG_PATH /app/nesta/production/config/luigi.cfg
