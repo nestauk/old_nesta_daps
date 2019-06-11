@@ -7,7 +7,7 @@ from sqlalchemy import or_
 from nesta.production.luigihacks import s3
 from nesta.production.orms.arxiv_orm import article_categories as ArtCat
 from nesta.production.orms.arxiv_orm import Article
-from nesta.production.routines.automl import AutoMLTask
+from nesta.production.luigihacks.automl import AutoMLTask
 from nesta.production.orms.orm_utils import get_mysql_engine, db_session
 
 
@@ -65,15 +65,17 @@ class TopicRootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
     s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
     raw_data_path = luigi.Parameter(default="raw-inputs")
+    date = luigi.DateParameter(default=datetime.datetime.today())
 
     def requires(self):
         # Launch the dependencies
         raw_data_path = (f"{self.s3_path_prefix}/"
                          f"{self.raw_data_path}/{self.date}")
+        test = not self.production
         yield PrepareArxivS3Data(s3_path_out=raw_data_path,
-                                 test=not self.production)
+                                 test=test)
         yield AutoMLTask(s3_path_in=(f"{raw_data_path}/"
-                                     f"data.{self.test}.length"),
-                         s3_path_prefix=f"{s3_path_prefix}/automl/",
+                                     f"data.{test}.length"),
+                         s3_path_prefix=f"{self.s3_path_prefix}/automl/",
                          task_chain_filepath=CHAIN_PARAMETER_PATH,
-                         test=not self.production)
+                         test=test)

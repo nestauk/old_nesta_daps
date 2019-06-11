@@ -19,9 +19,45 @@ import json
 import logging
 import math
 import numpy as np
+import itertools
+from copy import deepcopy
+import re
 
 FLOAT = '([-+]?\d*\.\d+|\d+)' 
 NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)' 
+
+def upfill_child_parameters(chain_parameters):
+    for job_name, rows in chain_parameters.items():
+        for row in rows:
+            uid = generate_uid(job_name, row)
+            # Only parents after this point
+            if "child" not in row:
+                row['uid'] = uid
+                continue
+            # Upfill parameters to parents (including UID)
+            child = row["child"]
+            child_row = chain_parameters[child][0]
+            row['uid'] = uid + '.' + child_row["uid"]
+            for k, v in child_row.items():
+                if k == "hyperparameters":
+                    continue
+                if k not in row:
+                    row[k] = v
+            row["child"] = child_row["uid"]
+    return chain_parameters
+            
+
+def generate_uid(job_name, row):
+    # Generate the UID
+    uid = job_name.upper()
+    try:
+        hyps = row["hyperparameters"]
+    except KeyError:
+        pass
+    else:
+        uid += '.' + ".".join(f"{k}_{v}" for k, v in hyps.items())
+    finally:
+        return uid
 
 def get_subbucket(s3_path):
     """Return subbucket path: <s3:pathto/subbucket_name>/keys
@@ -254,6 +290,42 @@ class AutoMLTask(luigi.WrapperTask):
         """
         with open(self.task_chain_filepath) as f:
             chain_parameters = json.load(f)
+
+        #
+        job_names = []
+
+        # Expand hyperparameters if specified
+        _key = 'hyperparameters'
+        _chain_parameters = []
+        child = None
+        for row in chain_parameters:
+            job_name = row['job_name']
+            if job_name not in job_names:
+                job_names.append(job_name)
+
+            try:
+                child = row['child']
+            except KeyError:
+                pass
+
+            if _key not in row:
+                _chain_parameters.append(row)
+                child = job_name
+                continue
+
+
+            expanded_hyps = {k: each_value(values)
+                             for k, values in row[_key].items()}
+            hyp_values = itertools.product(*expanded_hyps.values())
+            for values in hyp_values:
+                hyps = {k: v for k, v in zip(expanded_hyps.keys(), values)}
+                _row = deepcopy(row)
+                _row[_key] = hyps
+                _row['child'] = child
+                _chain_parameters.append(_row)
+            child = job_name
+        chain_parameters = _chain_parameters
+
         # Expand filepaths if specified
         for row in chain_parameters:
             for k, v in row.items():
@@ -265,6 +337,11 @@ class AutoMLTask(luigi.WrapperTask):
                 # ...or from a string (assumed)
                 else:
                     row[k] = find_filepath_from_pathstub(v)
+
+        # Group by job name
+        chain_parameters = {job_name: [row for row in chain_parameters
+                                       if row['job_name'] == job_name]
+                            for job_name in job_names}
         return chain_parameters
 
 
@@ -279,7 +356,11 @@ class AutoMLTask(luigi.WrapperTask):
         Returns:
             output_name (str): Output file prefix (extended).
         """
-        output_name += params["job_name"].upper()
+        job_name = params["job_name"].upper()
+        #print(output_name, job_name, output_name.split("/")[-1].split("."))
+        if job_name in output_name.split("/")[-1].split("."):
+            return output_name
+        output_name += job_name
         if "hyperparameters" in params:
             for k, v in params["hyperparameters"].items():
                 output_name += f".{k}_{v}"
@@ -350,15 +431,19 @@ class AutoMLTask(luigi.WrapperTask):
 
             # Record the task parameters
             all_task_params[name] = parameters
-            child_params = parameters  # The next task is assumed to be this task's parent,
+            child_params = parameters  # The next task is assumed to be 
+                                       # this task's parent,
                                        # unless specified otherwise.
-
         return all_task_params
 
     def requires(self):
         """Generate task parameters and yield MLTasks"""
+        # Generate the parameters
         chain_parameters = self.get_chain_parameters()
-        all_task_params = self.prepare_chain_parameters(chain_parameters)
-        for name, parameters in all_task_params.items():
-            AutoMLTask.task_parameters[name] = parameters
-            yield MLTask(**parameters)
+        upfill_child_parameters(chain_parameters)
+        
+        # Launch jobs from the parameters
+        for job_name, all_parameters in chain_parameters.items():
+            AutoMLTask.task_parameters[job_name] = all_parameters
+            for parameters in all_parameters:
+                yield MLTask(**parameters)
