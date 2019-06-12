@@ -22,33 +22,103 @@ import numpy as np
 import itertools
 from copy import deepcopy
 import re
+from collections import defaultdict
 
-FLOAT = '([-+]?\d*\.\d+|\d+)' 
-NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)' 
+FLOAT = '([-+]?\d*\.\d+|\d+)'
+NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
 
-def upfill_child_parameters(chain_parameters):
+def expand_pathstub(pathstub):
+    """Expand the pathstub.
+    
+    Args:
+        pathstub (list or str): A pathstub or list of pathstubs to expand.
+    Returns:
+        fullpath (list or str): A fullpath or list of fullpaths
+    """
+    # Expand from a list...
+    if type(pathstub) is list:
+        return [find_filepath_from_pathstub(_v) for _v in pathstub]
+    # ...or from a string (assumed)
+    else:
+        return find_filepath_from_pathstub(pathstub)
+
+def expand_hyperparameters(row):
+    """Generate all hyperparameter combinations for this task.
+    
+    Args:
+        row (dict): Row containing hyperparameter space to expand
+    Returns:
+        rows (list): List of dict to every combination of hyperparameters
+    """
+    expanded_hyps = {name: expand_value_range(values) 
+                     for name, values
+                     in row.pop('hyperparameters').items()}
+    hyp_names = expanded_hyps.keys()
+    hyp_value_sets = itertools.product(*expanded_hyps.values())
+    # Generate one row per hyperparameters combination
+    return [dict(hyperparameters={name: value for name, value
+                                  in zip(hyp_names, hyp_values)},
+                 **row)
+            for hyp_values in hyp_value_sets]
+
+def ordered_groupby(collection, column):
+    """Group collection by a column, maintaining the key 
+    order from the collection.
+    
+    Args:
+        collection (list): List of flat dictionaries.
+        column (str): Column (dict key) by which to group the list.
+    Returns:
+        grouped (dict): Dict of the column to subcollections.
+    """
+    # Figure out the group order
+    group_order = []
+    for row in collection:
+        group = row[column]
+        if group not in group_order:
+            group_order.append(group)
+    # Group by in order
+    return {group: [row for row in collection
+                    if row[column] == group]
+            for group in group_order}
+
+
+def cascade_child_parameters(chain_parameters):
+    """Find upstream child parameters and cascade these
+    to the parent.
+    
+    Args:
+        chain_parameters (list): List of task parameters
+    Returns:
+        chain_parameters (list): List of task parameters, with children expanded.
+    """
+    _chain_parameters = defaultdict(list)
     for job_name, rows in chain_parameters.items():
         for row in rows:
             uid = generate_uid(job_name, row)
             # Only parents after this point
-            if "child" not in row:
+            if row["child"] is None:
                 row['uid'] = uid
+                _chain_parameters[job_name].append(deepcopy(row))
                 continue
-            # Upfill parameters to parents (including UID)
+            # Cascade parameters to parents (including UID)
             child = row["child"]
-            child_row = chain_parameters[child][0]
-            row['uid'] = uid + '.' + child_row["uid"]
-            for k, v in child_row.items():
-                if k == "hyperparameters":
-                    continue
-                if k not in row:
-                    row[k] = v
-            row["child"] = child_row["uid"]
-    return chain_parameters
-            
+            child_rows = _chain_parameters[child]
+            for child_row in child_rows:
+                _row = deepcopy(row)
+                _row["child"] = child_row["uid"]
+                _row['uid'] = uid + '.' + child_row["uid"]
+                for k, v in child_row.items():
+                    if k == "hyperparameters":
+                        continue
+                    if k not in _row:
+                        _row[k] = v   
+                _chain_parameters[job_name].append(_row)
+    return _chain_parameters
+
 
 def generate_uid(job_name, row):
-    # Generate the UID
+    """Generate the UID from the job name and children"""
     uid = job_name.upper()
     try:
         hyps = row["hyperparameters"]
@@ -72,25 +142,40 @@ def get_subbucket(s3_path):
     return os.path.join(s3_bucket, subbucket)
 
 
-def arange(x): 
-    args = re.findall(NP_ARANGE, x.replace(' ',''))[0] 
+def arange(expression):
+    """Expand and string representation of np.arange into a function call.
+    
+    Args:
+        expression (str): String representation of :obj:`np.arange` function call.
+    Yields:
+        Result of :obj:`np.arange` function call.
+    """
+    args = re.findall(NP_ARANGE, expression.replace(' ',''))[0]
     for i in  np.arange(*[float(arg) for arg in args]):
-        yield i 
+        yield i
 
-     
-def each_value(value_range): 
-    if type(value_range) is str:  
-        if not value_range.startswith('np.arange'): 
-            raise ValueError 
-        value_range = arange(value_range) 
-         
-    try: 
-        iter(value_range) 
-    except TypeError: 
-        value_range = [value_range] 
-    finally: 
-        for value in value_range: 
-            yield value 
+
+def expand_value_range(value_range_expression):
+    """Expand the value range expression.
+
+    Args:
+        value_range_expression: Value range or expression to expand.
+    Return:
+        iterable.
+    """
+    if type(value_range_expression) is str:
+        # Grid search
+        if value_range_expression.startswith('np.arange'):
+            value_range_expression = arange(value_range_expression)
+        # Random search
+        elif value_range.startswith('np.random'):
+            raise NotImplementedError('Random search space not implemented yet')
+    # If not an iterable, make it an iterable
+    try:
+        iter(value_range_expression)
+    except TypeError:
+        value_range_expression = [value_range_expression]
+    return value_range_expression
 
 
 class DummyInputTask(luigi.ExternalTask):
@@ -107,7 +192,7 @@ class MLTask(autobatch.AutoBatchTask):
     Note that other args are intended for autobatch.AutoBatchTask.
 
     Args:
-        name (str): Name of the task instance, for book-keeping.
+        job_name (str): Name of the task instance, for book-keeping.
         s3_path_in (str): Path to the input data.
         s3_path_out (str): Path to the output data.
         batch_size (int): Size of batch chunks.
@@ -115,41 +200,39 @@ class MLTask(autobatch.AutoBatchTask):
         child (dict): Parameters to spawn a child task with.
         hyper (dict): Extra environmental variables to pass to the batchable.
     """
-    name = luigi.Parameter()
+    job_name = luigi.Parameter()
     s3_path_in = luigi.Parameter()
     s3_path_out = luigi.Parameter()
     batch_size = luigi.IntParameter(default=None)
     n_batches = luigi.IntParameter(default=None)
-    child = luigi.DictParameter()
+    child = luigi.DictParameter(default=None)
     use_intermediate_inputs = luigi.BoolParameter(default=False)
     combine_outputs = luigi.BoolParameter(default=False)
-    hyper = luigi.DictParameter(default={})
-
-
-    def get_input_length(self):
-        """Retrieve the length of the input, which is stored as the value
-        of the output.length file."""
-        f = s3.S3Target(f"{self.s3_path_in}.{self.test}.length").open('rb')
-        total = json.load(f)
-        f.close()
-        return total
-
+    hyperparameters = luigi.DictParameter(default={})
 
     def requires(self):
         """Spawns a child if one exists, otherwise points to a static input."""
-        if len(self.child) == 0:
+        if self.child is None:
             logging.debug(f"{self.job_name}: Spawning DummyInput from {self.s3_path_in}")
             return DummyInputTask(s3_path_in=self.s3_path_in)
-        logging.debug(f"{self.job_name}: Spawning MLTask with child = {self.child['name']}")
+        logging.debug(f"{self.job_name}: Spawning MLTask with child = {self.child['job_name']}")
         return MLTask(**self.child)
-
 
     def output(self):
         """Points to the output"""
         if self.combine_outputs:
             return s3.S3Target(self.s3_path_out)
-        return s3.S3Target(f"{self.s3_path_out}.{self.test}..length")
+        return s3.S3Target(f"{self.s3_path_out}.length")
 
+    def get_input_length(self):
+        """Retrieve the length of the input, which is stored as the value
+        of the output.length file."""
+        fname = (self.s3_path_in if self.s3_path_in.endswith(".length")
+                 else f"{self.s3_path_in}.length")
+        f = s3.S3Target(fname).open('rb')
+        total = json.load(f)
+        f.close()
+        return total
 
     def set_batch_parameters(self):
         # Assert that the batch size parameters aren't contradictory
@@ -170,7 +253,6 @@ class MLTask(autobatch.AutoBatchTask):
                       f"with batch size {self.batch_size}")
         return total
 
-
     def calculate_batch_indices(self, i, total):
         """Calculate the indices of this batch"""
         first_index = i*self.batch_size
@@ -179,33 +261,30 @@ class MLTask(autobatch.AutoBatchTask):
             last_index = total
         return first_index, last_index
 
-    def yield_batch(self, i, total):
+    def yield_batch(self):
         s3_key = self.s3_path_out
         # Mode 1: each batch is one of the intermediate inputs
-        if self.use_intermediate_inputs:            
+        if self.use_intermediate_inputs:
             first_key = 0
             last_key = -1
             S3 = boto3.resource('s3')
-            subbucket_path = get_subbucket(self.s3_key_in)
+            subbucket_path = get_subbucket(self.s3_path_in)
             in_keys = S3.Bucket(subbucket_path).objects
             i = 0
             for in_key in in_keys.all():
-                if not in_key.endswith("-{self.test}.json"):
+                if not in_key.endswith(".json"):
                     continue
-                out_key = self.s3_path_out.replace(".json", f"-{i}-{self.test}.json")
+                out_key = self.s3_path_out.replace(".json", f"-{i}.json")
                 yield first_index, last_index, in_key, out_key
                 i += 1
-            return
-
         # Mode 2: each batch is a subset of the single input
-        total = self.set_batch_parameters()
-        for i in range(0, self.n_batches):
-            first_index, last_index = calculate_batch_indices(i, total)
-            out_key = self.s3_path_out.replace(".json", (f"-{first_index}-"
-                                                         f"{last_index}-"
-                                                         f"{self.test}.json"))
-            yield first_index, last_index, self.s3_key_in, out_key
-
+        else:
+            total = self.set_batch_parameters()
+            for i in range(0, self.n_batches):
+                first_index, last_index = self.calculate_batch_indices(i, total)
+                out_key = self.s3_path_out.replace(".json", (f"-{first_index}-"
+                                                             f"{last_index}.json"))
+                yield first_index, last_index, self.s3_path_in, out_key
 
     def prepare(self):
         """Prepare the batch task parameters"""
@@ -215,14 +294,14 @@ class MLTask(autobatch.AutoBatchTask):
         n_done = 0
         for first_index, last_index, in_key, out_key in self.yield_batch():
             # Fill the default params
+            done = s3fs.exists(out_key)
             params = {"s3_path_in": in_key,
                       "first_index": first_index,
                       "last_index": last_index,
                       "outinfo": out_key,
-                      "done": s3fs.exists(key)}
-
+                      "done": done}
             # Add in any bonus paramters
-            for k, v in self.hyper.items():
+            for k, v in self.hyperparameters.items():
                 params[k] = v
             # Append and book-keeping
             n_done += int(done)
@@ -254,7 +333,7 @@ class MLTask(autobatch.AutoBatchTask):
             f.close()
 
         # Write the output length as well, for book-keeping
-        f = s3.S3Target(f"{self.s3_path_out}.{self.test}.length").open("wb")
+        f = s3.S3Target(f"{self.s3_path_out}.length").open("wb")
         f.write(str(size).encode("utf-8"))
         f.close()
 
@@ -278,8 +357,11 @@ class AutoMLTask(luigi.WrapperTask):
         super().__init__(*args, **kwargs)
         AutoMLTask.task_parameters = {}  # Container for keeping track of children
 
-    def get_chain_parameters(self, env_keys=["batchable", "env_files"]):
-        """Parse the chain parameters into a dictionary, and expand
+    def generate_seed_search_tasks(self, env_keys=["batchable", "env_files"]):
+        """Generate task parameters, which could be fixed, grid or random.
+        Note random not yet implemented.
+        
+        Parse the chain parameters into a dictionary, and expand
         filepaths if specified.
 
         Args:
@@ -289,161 +371,64 @@ class AutoMLTask(luigi.WrapperTask):
                              for more information.
         """
         with open(self.task_chain_filepath) as f:
-            chain_parameters = json.load(f)
+            _chain_parameters = json.load(f)
 
-        #
-        job_names = []
-
-        # Expand hyperparameters if specified
-        _key = 'hyperparameters'
-        _chain_parameters = []
+        # Expand filepaths, children and hyperparameters
+        chain_parameters = []
         child = None
-        for row in chain_parameters:
-            job_name = row['job_name']
-            if job_name not in job_names:
-                job_names.append(job_name)
-
+        for row in _chain_parameters:
+            # Register a child if not specified
+            if 'child' not in row:
+                row['child'] = child
+            # Expand filepaths
+            for key in env_keys:
+                if key in row:
+                    row[key] = expand_pathstub(row[key])
+            # Expand hyperparameters if any are specified
             try:
-                child = row['child']
+                _rows = expand_hyperparameters(row)
             except KeyError:
-                pass
+                chain_parameters.append(row)
+            else:
+                chain_parameters += _rows
+            # This task is the proceeding task's child, by default
+            child = row['job_name']
 
-            if _key not in row:
-                _chain_parameters.append(row)
-                child = job_name
-                continue
-
-
-            expanded_hyps = {k: each_value(values)
-                             for k, values in row[_key].items()}
-            hyp_values = itertools.product(*expanded_hyps.values())
-            for values in hyp_values:
-                hyps = {k: v for k, v in zip(expanded_hyps.keys(), values)}
-                _row = deepcopy(row)
-                _row[_key] = hyps
-                _row['child'] = child
-                _chain_parameters.append(_row)
-            child = job_name
-        chain_parameters = _chain_parameters
-
-        # Expand filepaths if specified
-        for row in chain_parameters:
-            for k, v in row.items():
-                if k not in env_keys:
-                    continue
-                # Expand from a list...
-                if type(v) is list:
-                    row[k] = [find_filepath_from_pathstub(_v) for _v in v]
-                # ...or from a string (assumed)
-                else:
-                    row[k] = find_filepath_from_pathstub(v)
-
-        # Group by job name
-        chain_parameters = {job_name: [row for row in chain_parameters
-                                       if row['job_name'] == job_name]
-                            for job_name in job_names}
+        # Group parameters by job name
+        chain_parameters = ordered_groupby(collection=chain_parameters,
+                                           column='job_name')
+        # Impute missing parent information from the child
+        chain_parameters = cascade_child_parameters(chain_parameters)
+        # Done processing
         return chain_parameters
 
-
-    @staticmethod
-    def append_hypers(params, output_name):
-        """Append hyperparameters to the output string, useful for
-        identifying the task chain which led to producing this output.
-
-        Args:
-            params (dict): Input job parameters.
-            output_name (str): Output file prefix (so far).
-        Returns:
-            output_name (str): Output file prefix (extended).
-        """
-        job_name = params["job_name"].upper()
-        #print(output_name, job_name, output_name.split("/")[-1].split("."))
-        if job_name in output_name.split("/")[-1].split("."):
-            return output_name
-        output_name += job_name
-        if "hyperparameters" in params:
-            for k, v in params["hyperparameters"].items():
-                output_name += f".{k}_{v}"
-        output_name += "."
-        return output_name
-
-    @staticmethod
-    def join_child_parameters(params, output_name=""):
-        """Generate the output file prefix for this job by concatenating
-        all child task job parameters. Useful for allowing users to
-        identify the task chain which led to producing this output. Note that
-        the function is recursive.
-
-        Args:
-            params (dict): Input job parameters.
-            output_name (str): Output file prefix (so far).
-        Returns:
-            output_name (str): Output file prefix (extended).
-        """
-        output_name = AutoMLTask.append_hypers(params, output_name)
-        if params["child"] != {}:
-            return AutoMLTask.join_child_parameters(params["child"], output_name)
-        return output_name
-
-    def prepare_chain_parameters(self, chain_parameters):
-        """Convert chain parameters into a form ready for MLTask.
-
-        Args:
-            chain_parameters (json): Parsed chain parameters.
-        Returns:
-            all_task_params (list): List of all MLTask parameters.
-        """
-        parameters = {}
-        child_params = {}  # First task is childless by default
-        all_task_params = {}
-        s3_path_in = self.s3_path_in
-        for task_params in chain_parameters:
-            name = task_params["job_name"]
-
-            # If task has a child, look up the child by name (MUST exist)
-            if "child" in task_params:
-                child_name = task_params.pop("child")
-                child_params = all_task_params[child_name]
-
-            # Generate the output path, starting with the parameters of this task...
-            s3_path_out = AutoMLTask.append_hypers(task_params, 
-                                                   f"{self.s3_path_prefix}/{name}/")
-            # ... then append child parameters to the path...
-            if child_params != {}:
-                s3_path_in = child_params["s3_path_out"]
-                s3_path_out += AutoMLTask.join_child_parameters(child_params)
-            # ... and record whether this is a test or not
-            s3_path_out += f"test_{self.test}.json"
-            s3_path_out = s3_path_out.replace("//","/").replace("s3:/", "s3://")
-
-            # Generate the parameters
-            parameters = dict(s3_path_out=s3_path_out,
-                              s3_path_in=s3_path_in,
-                              child=child_params,
-                              name=name,
-                              test=self.test,
-                              **task_params)
-
-            # "Inherit" any missing parameters from the child
-            for k in child_params:
-                if k not in parameters:
-                    parameters[k] = child_params[k]
-
-            # Record the task parameters
-            all_task_params[name] = parameters
-            child_params = parameters  # The next task is assumed to be 
-                                       # this task's parent,
-                                       # unless specified otherwise.
-        return all_task_params
+    def launch(self, chain_parameters):
+        """Launch jobs from the parameters"""
+        # Generate all kwargs for tasks
+        test = f".TEST_{self.test}"
+        kwargs_dict = {}
+        for job_name, all_parameters in chain_parameters.items():
+            AutoMLTask.task_parameters[job_name] = all_parameters
+            for pars in all_parameters:
+                s3_path_out = os.path.join(self.s3_path_prefix,pars.pop('uid'))+test
+                s3_path_in = (self.s3_path_in if pars['child'] is None
+                              else os.path.join(self.s3_path_prefix,pars['child'])+test)
+                kwargs_dict[s3_path_out] = dict(s3_path_out=s3_path_out,
+                                                s3_path_in=s3_path_in,
+                                                test=self.test,
+                                                **pars)
+        # Launch the tasks
+        for uid, kwargs in kwargs_dict.items():            
+            child_uid = kwargs['s3_path_in']
+            if kwargs['child'] is not None:
+                kwargs['child'] = kwargs_dict[child_uid]
+            yield kwargs
 
     def requires(self):
         """Generate task parameters and yield MLTasks"""
         # Generate the parameters
-        chain_parameters = self.get_chain_parameters()
-        upfill_child_parameters(chain_parameters)
-        
-        # Launch jobs from the parameters
-        for job_name, all_parameters in chain_parameters.items():
-            AutoMLTask.task_parameters[job_name] = all_parameters
-            for parameters in all_parameters:
-                yield MLTask(**parameters)
+        chain_parameters = self.generate_seed_search_tasks()
+        # chain_parameters += self.generate_optimization_tasks() ## <-- blank optimisation tasks
+        ## <-- Note those will need to be full chains
+        for kwargs in self.launch(chain_parameters):
+            yield MLTask(**kwargs)
