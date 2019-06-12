@@ -2,6 +2,7 @@ import luigi
 import os
 import datetime
 import json
+import logging
 
 from sqlalchemy import or_
 from nesta.production.luigihacks import s3
@@ -68,14 +69,15 @@ class TopicRootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.datetime.today())
 
     def requires(self):
+        logging.getLogger().setLevel(logging.INFO)
+
         # Launch the dependencies
         raw_data_path = (f"{self.s3_path_prefix}/"
                          f"{self.raw_data_path}/{self.date}")
         test = not self.production
         yield PrepareArxivS3Data(s3_path_out=raw_data_path,
                                  test=test)
-        yield AutoMLTask(s3_path_in=(f"{raw_data_path}/"
-                                     f"data.{test}.length"),
+        yield AutoMLTask(s3_path_in=f"{raw_data_path}/data.{test}.length",
                          s3_path_prefix=f"{self.s3_path_prefix}/automl/",
                          task_chain_filepath=CHAIN_PARAMETER_PATH,
                          test=test)
