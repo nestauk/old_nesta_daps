@@ -23,6 +23,7 @@ import itertools
 from copy import deepcopy
 import re
 from collections import defaultdict
+import boto3
 
 FLOAT = '([-+]?\d*\.\d+|\d+)'
 NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
@@ -129,7 +130,7 @@ def generate_uid(job_name, row):
     finally:
         return uid
 
-def get_subbucket(s3_path):
+def deep_split(s3_path):
     """Return subbucket path: <s3:pathto/subbucket_name>/keys
 
     Args:
@@ -139,7 +140,7 @@ def get_subbucket(s3_path):
     """
     s3_bucket, s3_key = s3.parse_s3_path(s3_path)
     subbucket, _ = os.path.split(s3_key)
-    return os.path.join(s3_bucket, subbucket)
+    return s3_bucket, subbucket, s3_key
 
 
 def arange(expression):
@@ -184,7 +185,7 @@ class DummyInputTask(luigi.ExternalTask):
 
     def output(self):
         '''Points to the S3 Target'''
-        return s3.S3Target(self.s3_path_in)
+        yield s3.S3Target(self.s3_path_in)
 
 
 class MLTask(autobatch.AutoBatchTask):
@@ -265,25 +266,30 @@ class MLTask(autobatch.AutoBatchTask):
         s3_key = self.s3_path_out
         # Mode 1: each batch is one of the intermediate inputs
         if self.use_intermediate_inputs:
-            first_key = 0
-            last_key = -1
-            S3 = boto3.resource('s3')
-            subbucket_path = get_subbucket(self.s3_path_in)
-            in_keys = S3.Bucket(subbucket_path).objects
+            first_index = 0
+            last_index = -1
+            s3_resource = boto3.resource('s3')
+            bucket, subbucket, _ = deep_split(self.s3_path_in)
+            in_keys = s3_resource.Bucket(bucket).objects
             i = 0
-            for in_key in in_keys.all():
+            for _in_key in in_keys.all():
+                in_key = _in_key.key
                 if not in_key.endswith(".json"):
                     continue
-                out_key = self.s3_path_out.replace(".json", f"-{i}.json")
-                yield first_index, last_index, in_key, out_key
+                if not in_key.startswith(subbucket):
+                    continue                    
+                out_key = f"{s3_key}-{i}.json"
+                yield first_index, last_index, f"s3://{in_key}", out_key
                 i += 1
         # Mode 2: each batch is a subset of the single input
         else:
             total = self.set_batch_parameters()
             for i in range(0, self.n_batches):
                 first_index, last_index = self.calculate_batch_indices(i, total)
-                out_key = self.s3_path_out.replace(".json", (f"-{first_index}-"
-                                                             f"{last_index}.json"))
+                #out_key = self.s3_path_out.replace(".json", 
+                #                                   (f"-{first_index}-"
+                #                                    f"{last_index}.json"))
+                out_key = f"{s3_key}-{first_index}_{last_index}.json"
                 yield first_index, last_index, self.s3_path_in, out_key
 
     def prepare(self):
