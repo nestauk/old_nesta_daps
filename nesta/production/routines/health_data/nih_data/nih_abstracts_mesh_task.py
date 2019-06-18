@@ -128,7 +128,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'
-        key_prefix = 'nih_abstracts_processed/mti'
+        key_prefix = 'nih_abstracts_processed/08-11-18/mti'
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         logging.info(f"Found keys: {keys}")
 
@@ -136,7 +136,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         for key in keys:
             params = {'s3_key': key,
                       's3_bucket': bucket,
-                      'dupe_file': "nih_abstracts/duplicate_mapping/duplicate_mapping.json",
+                      'dupe_file': "nih_abstracts/24-05-19/duplicate_mapping.json",
                       'config': "mysqldb.config",
                       'db': db,
                       'outinfo': es_config,

@@ -140,11 +140,23 @@
                     },
                     "type": "text"
                 },
-                "terms_roles_organisation": {
-                    "type": "keyword"
+                "terms_roles_organisation": {		    
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "terms_subcategory_organisation": {
-                    "type": "keyword"
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "textBody_descriptive_organisation": {
                     "type": "text"
