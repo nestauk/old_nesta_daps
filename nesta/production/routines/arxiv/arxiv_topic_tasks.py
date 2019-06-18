@@ -62,6 +62,14 @@ class PrepareArxivS3Data(luigi.Task):
         f.close()
 
 
+class ArxivTopicMLTask(AutoMLTask):
+    raw_data_path = luigi.Parameter()
+    def requires(self):
+        logging.getLogger().setLevel(logging.INFO)
+        yield PrepareArxivS3Data(s3_path_out=self.raw_data_path,
+                                 test=self.test)
+        yield super().requires()
+
 class TopicRootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
     s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
@@ -70,14 +78,13 @@ class TopicRootTask(luigi.WrapperTask):
 
     def requires(self):
         logging.getLogger().setLevel(logging.INFO)
-
-        # Launch the dependencies
         raw_data_path = (f"{self.s3_path_prefix}/"
                          f"{self.raw_data_path}/{self.date}")
         test = not self.production
-        yield PrepareArxivS3Data(s3_path_out=raw_data_path,
-                                 test=test)
-        yield AutoMLTask(s3_path_in=f"{raw_data_path}/data.{test}.length",
-                         s3_path_prefix=f"{self.s3_path_prefix}/automl/",
-                         task_chain_filepath=CHAIN_PARAMETER_PATH,
-                         test=test)
+        yield ArxivTopicMLTask(raw_data_path=raw_data_path,
+                               s3_path_in=(f"{raw_data_path}/"
+                                           f"data.{test}.length"),
+                               s3_path_prefix=(f"{self.s3_path_prefix}/"
+                                               "automl/"),
+                               task_chain_filepath=CHAIN_PARAMETER_PATH,
+                               test=test)
