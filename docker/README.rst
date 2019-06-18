@@ -14,8 +14,11 @@ From the root of the repository:
 where :code:`name` is the name of the created image and :code:`tag` is the chosen tag.
 eg :code:`arxlive:dev`. This just makes the run step easier rather than using the generated id
 
-Rebuilds due to code changed should just change the second image but if a full rebuild is required then append:
+Rebuilds due to code changes should just build from the second image but if a full rebuild is required then include:
 :code:`--no-cache`
+
+Python version defaults to 3.6 but can be set during build by including the flag:
+:code: `--build-arg python-version=3.7`
 
 Run
 ---
