@@ -2,7 +2,7 @@ from fuzzywuzzy import fuzz
 import luigi
 import logging
 
-from arxiv_mag_sparql_task import MagSparqlTask
+from nesta.production.routines.arxiv.arxiv_mag_sparql_task import MagSparqlTask
 from nesta.packages.arxiv.collect_arxiv import add_article_institutes, create_article_institute_links
 from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup
 from nesta.packages.misc_utils.batches import BatchWriter

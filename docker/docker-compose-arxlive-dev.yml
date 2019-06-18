@@ -1,0 +1,6 @@
+version: '3'
+services:
+  luigi:
+    image: arxlive:dev
+    volumes: 
+      - ~/.aws:/root/.aws:ro

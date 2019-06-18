@@ -32,4 +32,5 @@ Code and scripts
     nesta.production.luigihacks
     nesta.production.scripts
     nesta.production.elasticsearch
+    nesta.production.containers
     nesta.production.troubleshooting
