@@ -1,56 +1,60 @@
 import pandas as pd
-import re                                                   
+from nesta.packages.misc_utils.guess_sql_type import guess_sql_type
+from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
 from itertools.chain import from_iterable as chain_iter
-                                
+
 TOP_URL = 'http://cordis.europa.eu/data/cordis-h2020{}.csv'
 
-def camel_to_snake(name):                                   
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)         
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+def fetch_and_clean(entity_name):
+    '''Fetch Cordis CSV data by entity name, and remove null columns
+    and tidy column names
+    
+    Args:
+        entity_name (str): Cordis entity name.
+    Returns:
+        df (pd.DataFrame): Pandas DataFrame of the CSV data.    
+    '''
+    # Fetch data and clean
+    df = pd.read_csv(TOP_URL.format(entity_name),
+                     decimal=',', sep=';',
+                     error_bad_lines=False,
+                     warn_bad_lines=True)
+    df = df.dropna(axis=1, how='all')
+    df.columns = [camel_to_snake(col) for col in df.columns]
+    return df
 
-def guess_type(df_col, text_len=30, lookup = {int:'INTEGER',
-                                              float:'FLOAT',
-                                              bool:'BOOL'}):
-    _type = [type(row) for row in df[col]
-             if not pd.isnull(row)][0]
-    if _type is str:
-        _len = max(len(row) for row in df_col
-                   if type(row) is str)
-        if _len > text_len:
-            _type = 'TEXT'
-        else:
-            _type = f'VARCHAR({_len})'
-    else:
-        _type = f'{lookup[_type]}'
-    return _type
+def pop_and_split_programmes(df, old_name='programme', 
+                             new_name='programmes',
+                             bonus_static_field='framework_programme'):
+    '''Pop and split out programmes from the 'projects' DataFrame.
+    This modifies the original DataFrame.
 
+    Args:
+        df (pd.DataFrame): 'projects' DataFrame, which will be modified.
+        old_name (str): The name of incoming programme field
+        new_name (str): Name of the new programme field, after splitting
+        bonus_static_field (str): A field assumed to be constant which will also
+                                  be popped out.
+    Returns:
+       _df (pd.DataFrame): New DataFrame containing all programmes.
+    '''
+    fp = df.pop(bonus_static_field)[0]
+    df[new_name] = [progs.split(";") for progs in df.pop(old_name)]
+    unique_items = set(chain_iter(df[new_name]))
+    return pd.DataFrame([{'id':prog, bonus_static_field:fp}
+                         for item in unique_items])
 
 if __name__ == "__main__":
     entities = ['organizations', 'projectPublications',
-                'projects', 'reports',                 
-                'projectDeliverables']                 
-    
-    for entity_name in entities:                               
-        class_name = entity_name[0].upper() + entity_name[1:]  
-        table_name = f'cordisH2020_{camel_to_snake(class_name)}'
-        
-        df = pd.read_csv(TOP_URL.format(entity_name),           
-                         decimal=',', sep=';',                  
-                         error_bad_lines=False,                 
-                         warn_bad_lines=True)                   
-        
-        df = df.dropna(axis=1, how='all')                       
-        df.columns = [camel_to_snake(col) for col in df.columns]
-
+                'projects', 'reports', 'projectDeliverables']
+    data = {}
+    for entity_name in entities:
+        df = fetch_and_clean(entity_name)
         if entity_name == 'projects':
-            fp = df.pop('framework_programme')[0]        
-            df['programmes'] = [progs.split(";") for progs in df.pop('programme')]
-            unique_progs = set(chain_iter(df['programmes']))
-            data['programmes'] = pd.DataFrame([{'id':prog, 
-                                                'framework_programme':fp}
-                                               for prog in unique_progs])
-
-        data[entity_name] = df                                  
-        # _class = get_class_by_tablename(table_name)           
-        # for row in df: _row = _class(**row); insert_row(engine, _row);
+            data['programmes'] = pop_and_split_programmes(df)
+        data[entity_name] = df
         
+        # class_name = entity_name[0].upper() + entity_name[1:]
+        # table_name = f'cordisH2020_{camel_to_snake(class_name)}'
+        # _class = get_class_by_tablename(table_name)
+        # for row in df: _row = _class(**row); insert_row(engine, _row);
