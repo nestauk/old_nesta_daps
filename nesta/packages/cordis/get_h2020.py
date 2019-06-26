@@ -1,9 +1,12 @@
 import pandas as pd
 from nesta.packages.misc_utils.guess_sql_type import guess_sql_type
 from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
-from itertools.chain import from_iterable as chain_iter
+from itertools import chain
 
 TOP_URL = 'http://cordis.europa.eu/data/cordis-h2020{}.csv'
+ENTITIES = ['organizations', 'projectPublications',
+            'projects', 'reports', 'projectDeliverables']
+
 
 def fetch_and_clean(entity_name):
     '''Fetch Cordis CSV data by entity name, and remove null columns
@@ -40,15 +43,13 @@ def pop_and_split_programmes(df, old_name='programme',
     '''
     fp = df.pop(bonus_static_field)[0]
     df[new_name] = [progs.split(";") for progs in df.pop(old_name)]
-    unique_items = set(chain_iter(df[new_name]))
+    unique_items = set(chain.from_iterable(df[new_name]))
     return pd.DataFrame([{'id':prog, bonus_static_field:fp}
                          for item in unique_items])
 
 if __name__ == "__main__":
-    entities = ['organizations', 'projectPublications',
-                'projects', 'reports', 'projectDeliverables']
     data = {}
-    for entity_name in entities:
+    for entity_name in ENTITIES:
         df = fetch_and_clean(entity_name)
         if entity_name == 'projects':
             data['programmes'] = pop_and_split_programmes(df)
