@@ -32,8 +32,9 @@ class Project(Base):
     id = Column(INTEGER)
     acronym = Column(VARCHAR(40))
     status = Column(VARCHAR(3))
-    programme_code = Column(VARCHAR(40), ForeignKey('cordis_fp7_programmes.code'))
-    programme = relationship("Programme")  # links to Programme m-o
+    programme = Column(VARCHAR(40), ForeignKey('cordis_fp7_programmes.code'))
+    _programme = relationship("Programme")  # links to Programme m-o
+    programme_title = association_proxy('_programme', 'title')
     topics = Column(VARCHAR(100))  # lookup table unknown
     framework_programme = Column(VARCHAR(3))
     title = Column(TEXT)
@@ -44,15 +45,16 @@ class Project(Base):
     total_cost = Column(FLOAT)
     ec_max_contribution = Column(FLOAT)
     call = Column(VARCHAR(50))
-    funding_scheme_code = Column(VARCHAR(20), ForeignKey('cordis_funding_schemes.code'))
+    funding_scheme = Column(VARCHAR(20), ForeignKey('cordis_funding_schemes.code'))
     _funding_scheme = relationship("FundingScheme")  # links to FundingScheme m-o
-    funding_schemes = association_proxy('_funding_scheme', 'title')
+    funding_scheme_title = association_proxy('_funding_scheme', 'title')
     # coordinator = Column(TEXT, collation='utf8_bin')
+    # coordinator_country
     # participants = Column(TEXT, collation='utf8_bin')
+    # participant_countries
     subjects = relationship("Subject", secondary=project_subjects)  # links to subjects m-m
     organisations = relationship("Organization")
-    reports = relationship("ReportSummary", uselist=False,
-                           back_populates='project')
+    reports = relationship("ReportSummary", uselist=False, back_populates='project')
 
 
 class Programme(Base):
