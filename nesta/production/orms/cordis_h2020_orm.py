@@ -54,7 +54,7 @@ class Organizations(Base):
 
 class ProjectPublications(Base):
     __tablename__ = 'cordisH2020_project_publications'
-    rcn = Column(INTEGER, index=True)
+    rcn = Column(INTEGER, primary_key=True)
     title = Column(TEXT(collation='utf8_bin'))
     #project_id = Column(INTEGER)
     #project_acronym = Column(TEXT(collation='utf8_bin'))
@@ -63,12 +63,12 @@ class ProjectPublications(Base):
     authors = Column(TEXT(collation='utf8_bin'))
     journal_title = Column(TEXT(collation='utf8_bin'))
     journal_number = Column(TEXT(collation='utf8_bin'))
-    published_year = Column(INTEGER)
+    published_year = Column(INTEGER, primary_key=True)
     published_pages = Column(TEXT(collation='utf8_bin'))
-    issn = Column(VARCHAR(9), primary_key=True)
+    issn = Column(VARCHAR(9))
     doi = Column(TEXT(collation='utf8_bin'))
     is_published_as  = Column(VARCHAR(26))
-    last_update_date = Column(DATETIME)
+    last_update_date = Column(DATETIME, primary_key=True)
 
 class Projects(Base):
     __tablename__ = 'cordisH2020_projects'

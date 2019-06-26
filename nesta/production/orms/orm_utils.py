@@ -169,7 +169,7 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
             logging.warning(f"{row} does not contain any of "
-                            "{[pkey.name in row for pkey in pkey_cols]}")
+                            f"{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
 
