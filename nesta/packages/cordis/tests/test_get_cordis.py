@@ -2,9 +2,9 @@ from unittest import mock
 import pytest
 import pandas as pd
 
-from nesta.packages.cordis.get_h2020 import TOP_URL
-from nesta.packages.cordis.get_h2020 import ENTITIES
-from nesta.packages.cordis.get_h2020 import fetch_and_clean
+from nesta.packages.cordis.get_cordis import TOP_URL
+from nesta.packages.cordis.get_cordis import ENTITIES
+from nesta.packages.cordis.get_cordis import fetch_and_clean
 
 @pytest.fixture
 def data():
@@ -14,14 +14,15 @@ def data():
 
 def test_url():
     import requests
-    for entity in ENTITIES:
-        r = requests.head(TOP_URL.format('organizations'))
-        r.raise_for_status()
+    for fp, entities in ENTITIES.items():
+        for entity_name in entities:
+            r = requests.head(TOP_URL.format(fp, entity_name))
+            r.raise_for_status()
 
-@mock.patch('nesta.packages.cordis.get_h2020.pd.read_csv')
+@mock.patch('nesta.packages.cordis.get_cordis.pd.read_csv')
 def test_fetch_and_clean(mocked_read_csv, data):
     mocked_read_csv.return_value = data
-    df = fetch_and_clean('something')
+    df = fetch_and_clean('fpXX', 'something')
     assert len(df) == len(data)
     assert len(df.columns) == len(data.dropna(axis=1, how='all').columns)
     assert all(col.lower() == col for col in df.columns)

@@ -2,12 +2,14 @@ import pandas as pd
 from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
 from itertools import chain
 
-TOP_URL = 'http://cordis.europa.eu/data/cordis-h2020{}.csv'
-ENTITIES = ['projects', 'organizations', 'projectPublications',
-            'reports', 'projectDeliverables']
+TOP_URL = 'http://cordis.europa.eu/data/cordis-{}{}.csv'
+ENTITIES = {'h2020' : ['projects', 'organizations', 
+                       'projectPublications',
+                       'reports', 'projectDeliverables'],
+            'fp7': ['projects', 'organizations', 'reports']}
 
 
-def fetch_and_clean(entity_name, nrows=None):
+def fetch_and_clean(fp, entity_name, nrows=None):
     '''Fetch Cordis CSV data by entity name, and remove null columns
     and tidy column names
     
@@ -17,7 +19,7 @@ def fetch_and_clean(entity_name, nrows=None):
         df (pd.DataFrame): Pandas DataFrame of the CSV data.    
     '''
     # Fetch data and clean
-    df = pd.read_csv(TOP_URL.format(entity_name),
+    df = pd.read_csv(TOP_URL.format(fp, entity_name),
                      nrows=nrows,
                      engine='c',
                      decimal=',', sep=';',
@@ -49,14 +51,15 @@ def pop_and_split_programmes(df, old_name='programme',
                          for item in unique_items])
 
 if __name__ == "__main__":
-    data = {}
-    for entity_name in ENTITIES:
-        df = fetch_and_clean(entity_name)
-        if entity_name == 'projects':
-            data['programmes'] = pop_and_split_programmes(df)
-        data[entity_name] = df
+    for fp, entities in ENTITIES.items():
+        data = {}
+        for entity_name in entities:
+            df = fetch_and_clean(entity_name)
+            if entity_name == 'projects':
+                data['programmes'] = pop_and_split_programmes(df)
+            data[entity_name] = df
         
-        # class_name = entity_name[0].upper() + entity_name[1:]
-        # table_name = f'cordisH2020_{camel_to_snake(class_name)}'
+        class_name = entity_name[0].upper() + entity_name[1:]
+        table_name = f'cordis{fp}_{camel_to_snake(class_name)}'
         # _class = get_class_by_tablename(table_name)
         # for row in df: _row = _class(**row); insert_row(engine, _row);

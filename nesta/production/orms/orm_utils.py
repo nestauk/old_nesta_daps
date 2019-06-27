@@ -158,7 +158,8 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     objs = []
     existing_objs = []
     failed_objs = []
-    pkey_cols = _class.__table__.primary_key.columns
+    pkey_cols = [p.name for p in _class.__table__.primary_key.columns 
+                 if not p.autoincrement]
 
     # Read all pks if in low_memory mode
     if low_memory:
@@ -168,7 +169,7 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not all(pkey.name in row for pkey in pkey_cols):
-            logging.warning(f"{row} does not contain any of "
+            logging.warning(f"{row} does not contain any of {pkey_cols}"
                             f"{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
