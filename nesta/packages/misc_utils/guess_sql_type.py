@@ -15,10 +15,10 @@ def guess_sql_type(df_col, text_len=30, lookup = {int:'INTEGER',
     _types = [type(row) for row in df_col
              if not pd.isnull(row)]
     # Assign type by str --> float --> int --> bool hierarchy
-    _type = (str if str in _types 
-             else (float if float in _types 
-                   else (int if int in _types
-                         else (bool if bool in _types else None))))
+    for _type in [str, float, int, bool, None]:
+        if _type in _types:            
+            break
+    
     if _type is str:
         _len = max(len(str(row)) for row in df_col if not pd.isnull(row))
         _type = 'TEXT' if _len > text_len else f'VARCHAR({_len})'
