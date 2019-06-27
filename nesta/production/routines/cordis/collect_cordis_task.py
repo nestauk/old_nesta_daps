@@ -19,7 +19,7 @@ from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
 from nesta.production.orms.cordis_h2020_orm import Base as Base_h2020
-from nesta.production.orms.cordis_fp7_orm import Base as Base_fp7
+#from nesta.production.orms.cordis_fp7_orm import Base as Base_fp7
 from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.orm_utils import insert_data
 from nesta.production.orms.orm_utils import get_mysql_engine
@@ -44,7 +44,7 @@ class CordisTask(luigi.Task):
             for entity_name in entities:
                 logging.info(f'Collecting {fp} {entity_name}')
                 # Fetch and clean the data
-                df = fetch_and_clean(entity_name, nrows=1000 if self.test else None)
+                df = fetch_and_clean(fp, entity_name, nrows=1000 if self.test else None)
                 if fp == 'h2020' and entity_name == 'projects':
                     data[fp]['programmes'] = pop_and_split_programmes(df)
                     data[fp]['project_programmes'] = pd.DataFrame([{'programme_code': code,
@@ -56,13 +56,15 @@ class CordisTask(luigi.Task):
         # Write
         db = 'dev' if self.test else 'production'
         engine = get_mysql_engine("MYSQLDBCONF", 'mysqldb', db)
+        #base_map = {'fp7': Base_fp7, 'h2020': Base_h2020, }
+        base_map = {'h2020': Base_h2020}
         for fp, _data in data.items():
             for entity_name, df in _data.items():
                 logging.info(f'Inserting {fp} {entity_name}')
                 # Generate the class and table name, then retrieve
                 class_name = entity_name[0].upper() + entity_name[1:]
                 table_name = f'cordis_{fp}_{camel_to_snake(class_name)}'
-                _class = get_class_by_tablename(Base, table_name)
+                _class = get_class_by_tablename(base_map[fp], table_name)
 
                 # Drop columns which aren't in the schema
                 _columns = [col.name for col in _class.__table__.columns]
@@ -74,7 +76,7 @@ class CordisTask(luigi.Task):
                           if not pd.isnull(v)}
                          for row in df.to_dict(orient='records')]
                 insert_data("MYSQLDBCONF", 'mysqldb', db,
-                            Base, _class, _data, low_memory=True)
+                            base_map[fp], _class, _data)
 
         # Touch the output
         self.output().touch()
