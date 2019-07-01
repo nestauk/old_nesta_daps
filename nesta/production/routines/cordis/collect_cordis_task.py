@@ -39,19 +39,23 @@ class CordisTask(luigi.Task):
     def run(self):
         # Collect
         data = {}
+        ENTITIES.pop('fp7')
         for i, (fp, entities) in enumerate(ENTITIES.items()):
             data[fp] = {}
             for entity_name in entities:
                 logging.info(f'Collecting {fp} {entity_name}')
                 # Fetch and clean the data
                 df = fetch_and_clean(fp, entity_name, nrows=1000 if self.test else None)
+                extras = {}
                 if fp == 'h2020' and entity_name == 'projects':
-                    data[fp]['programmes'] = pop_and_split_programmes(df)
-                    data[fp]['project_programmes'] = pd.DataFrame([{'programme_code': code,
-                                                                    'project_rcn': row['rcn']}
-                                                                   for _, row in df.iterrows()
-                                                                   for code in row['programmes']])
+                    extras['programmes'] = pop_and_split_programmes(df)                    
+                    extras['project_programmes'] = pd.DataFrame([{'programme_code': code,
+                                                                  'project_rcn': row['rcn']}
+                                                                 for _, row in df.iterrows()
+                                                                 for code in row['programmes']])                    
                 data[fp][entity_name] = df
+                for name, _df in extras.items():
+                    data[fp][name] = _df
 
         # Write
         db = 'dev' if self.test else 'production'
