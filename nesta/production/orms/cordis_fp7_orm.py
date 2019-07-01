@@ -12,19 +12,19 @@ from sqlalchemy.types import DATE, INTEGER, FLOAT, BOOLEAN, DATETIME
 
 Base = declarative_base()
 
-"""Association table for Projects and Subjects."""
-project_subjects = Table('cordis_fp7_project_subjects', Base.metadata,
-                         Column('project_rcn',
-                                INTEGER,
-                                ForeignKey('cordis_fp7_projects.rcn'),
-                                primary_key=True),
-                         Column('subject_code',
-                                VARCHAR(3),
-                                ForeignKey('cordis_subjects.code'),
-                                primary_key=True))
+# """Association table for Projects and Subjects."""
+# project_subjects = Table('cordis_fp7_project_subjects', Base.metadata,
+#                          Column('project_rcn',
+#                                 INTEGER,
+#                                 ForeignKey('cordis_fp7_projects.rcn'),
+#                                 primary_key=True),
+#                          Column('subject_code',
+#                                 VARCHAR(3),
+#                                 ForeignKey('cordis_subjects.code'),
+#                                 primary_key=True))
 
 
-class Project(Base):
+class Projects(Base):
     """FP7 projects."""
     __tablename__ = 'cordis_fp7_projects'
 
@@ -32,9 +32,9 @@ class Project(Base):
     id = Column(INTEGER)
     acronym = Column(VARCHAR(40))
     status = Column(VARCHAR(3))
-    programme = Column(VARCHAR(40), ForeignKey('cordis_fp7_programmes.code'))
-    _programme = relationship("Programme")  # links to Programme m-o
-    programme_title = association_proxy('_programme', 'title')
+    programme = Column(VARCHAR(40)) #, ForeignKey('cordis_fp7_programmes.code'))
+    #_programme = relationship("Programmes")  # links to Programme m-o
+    #programme_title = association_proxy('_programme', 'title')
     topics = Column(VARCHAR(100))  # lookup table unknown
     framework_programme = Column(VARCHAR(3))
     title = Column(TEXT)
@@ -45,50 +45,18 @@ class Project(Base):
     total_cost = Column(FLOAT)
     ec_max_contribution = Column(FLOAT)
     call = Column(VARCHAR(50))
-    funding_scheme = Column(VARCHAR(20), ForeignKey('cordis_funding_schemes.code'))
-    _funding_scheme = relationship("FundingScheme")  # links to FundingScheme m-o
-    funding_scheme_title = association_proxy('_funding_scheme', 'title')
+    #funding_scheme = Column(VARCHAR(20), ForeignKey('cordis_funding_schemes.code'))
+    #_funding_scheme = relationship("FundingScheme")  # links to FundingScheme m-o
+    #funding_scheme_title = association_proxy('_funding_scheme', 'title')
     # coordinator = Column(TEXT, collation='utf8_bin')
     # coordinator_country
     # participants = Column(TEXT, collation='utf8_bin')
     # participant_countries
-    subjects = relationship("Subject", secondary=project_subjects)  # links to subjects m-m
-    organisations = relationship("Organization")
-    reports = relationship("ReportSummary", uselist=False, back_populates='project')
+    #subjects = relationship("Subject", secondary=project_subjects)  # links to subjects m-m
+    #organisations = relationship("Organizations")
+    #reports = relationship("ReportSummaries", uselist=False, back_populates='project')
 
-
-class Programme(Base):
-    """FP7 programmes."""
-    __tablename__ = 'cordis_fp7_programmes'
-
-    rcn = Column(INTEGER)
-    code = Column(VARCHAR(40), primary_key=True, autoincrement=False)
-    title = Column(VARCHAR(300, collation='utf8_bin'))
-    short_title = Column(VARCHAR(100, collation='utf8_bin'))
-    language = Column(VARCHAR(2), primary_key=True, autoincrement=False)
-
-
-class FundingScheme(Base):
-    """Cordis funding schemes."""
-    __tablename__ = 'cordis_funding_schemes'
-
-    code = Column(VARCHAR(20), primary_key=True, autoincrement=False)
-    title = Column(VARCHAR(150))
-    # description is all empty
-    # language is always en
-
-
-class Subject(Base):
-    """Cordis subjects."""
-    __tablename__ = 'cordis_subjects'
-
-    code = Column(VARCHAR(3), primary_key=True, autoincrement=False)
-    title = Column(VARCHAR(100, collation='utf8_bin'))
-    description = Column(VARCHAR(300, collation='utf8_bin'))
-    language = Column(VARCHAR(2), primary_key=True, autoincrement=False)
-
-
-class ReportSummary(Base):
+class ReportSummaries(Base):
     __tablename__ = 'cordis_fp7_report_summaries'
 
     rcn = Column(INTEGER, ForeignKey('cordis_fp7_projects.rcn'), primary_key=True)
@@ -110,7 +78,7 @@ class ReportSummary(Base):
     article = Column(TEXT)
 
 
-class Organization(Base):
+class Organizations(Base):
     __tablename__ = 'cordis_fp7_organizations'
 
     project_rcn = Column(INTEGER, ForeignKey('cordis_fp7_projects.rcn'), index=True)
@@ -137,3 +105,34 @@ class Organization(Base):
     # contact_function
     contact_telephone_number = Column(VARCHAR(17))
     contact_fax_number = Column(VARCHAR(17))
+
+
+# class Programmes(Base):
+#     """FP7 programmes."""
+#     __tablename__ = 'cordis_fp7_programmes'
+
+#     rcn = Column(INTEGER)
+#     code = Column(VARCHAR(40), primary_key=True, autoincrement=False)
+#     title = Column(VARCHAR(300, collation='utf8_bin'))
+#     short_title = Column(VARCHAR(100, collation='utf8_bin'))
+#     language = Column(VARCHAR(2), primary_key=True, autoincrement=False)
+
+
+# class FundingSchemes(Base):
+#     """Cordis funding schemes."""
+#     __tablename__ = 'cordis_funding_schemes'
+
+#     code = Column(VARCHAR(20), primary_key=True, autoincrement=False)
+#     title = Column(VARCHAR(150))
+#     # description is all empty
+#     # language is always en
+
+
+# class Subjects(Base):
+#     """Cordis subjects."""
+#     __tablename__ = 'cordis_subjects'
+
+#     code = Column(VARCHAR(3), primary_key=True, autoincrement=False)
+#     title = Column(VARCHAR(100, collation='utf8_bin'))
+#     description = Column(VARCHAR(300, collation='utf8_bin'))
+#     language = Column(VARCHAR(2), primary_key=True, autoincrement=False)

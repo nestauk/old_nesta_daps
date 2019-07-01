@@ -159,33 +159,35 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
+    is_auto_pkey = all(p.autoincrement for p in pkey_cols)
 
     # Read all pks if in low_memory mode
-    if low_memory:
+    if low_memory and not is_auto_pkey:
         fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
-        if not all(pkey.name in row for pkey in pkey_cols):
-            logging.warning(f"{row} does not contain any of "
-                            "{[pkey.name in row for pkey in pkey_cols]}")
+        if not is_auto_pkey and not all(pkey.name in row for pkey in pkey_cols):
+            logging.warning(f"{row} does not contain any of {pkey_cols}"
+                            f"{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
 
         # Generate the pkey for this row
-        pk = tuple([row[pkey.name]                       # Cast to str if required, since
-                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
-                    else str(row[pkey.name])             # the type as int
-                    for pkey in pkey_cols])
+        if not is_auto_pkey:
+            pk = tuple([row[pkey.name]                       # Cast to str if required, since
+                        if pkey.type.python_type is not str  # pandas may have wrongly guessed
+                        else str(row[pkey.name])             # the type as int
+                        for pkey in pkey_cols])
 
-        # The row mustn't aleady exist in the input data
-        if pk in all_pks:
-            existing_objs.append(row)
-            continue
-        all_pks.add(pk)
+            # The row mustn't aleady exist in the input data
+            if pk in all_pks and not is_auto_pkey:
+                existing_objs.append(row)
+                continue
+            all_pks.add(pk)
         # Nor should the row exist in the DB
-        if not low_memory and session.query(exists(_class, **row)).scalar():
+        if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
         objs.append(_class(**row))
