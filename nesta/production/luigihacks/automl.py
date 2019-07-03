@@ -12,6 +12,7 @@ if required.
 
 import luigi
 from nesta.production.luigihacks import autobatch
+from nesta.production.luigihacks.parameter import DictParameterPlus
 from nesta.production.luigihacks import s3
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 import os
@@ -27,6 +28,10 @@ import boto3
 
 FLOAT = '([-+]?\d*\.\d+|\d+)'
 NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
+
+def _MLTask(**kwargs):    
+    _type = type(kwargs['job_name'].title(), (MLTask,), {})
+    return _type(**kwargs)
 
 def expand_pathstub(pathstub):
     """Expand the pathstub.
@@ -117,7 +122,6 @@ def cascade_child_parameters(chain_parameters):
                 _chain_parameters[job_name].append(_row)
     return _chain_parameters
 
-
 def generate_uid(job_name, row):
     """Generate the UID from the job name and children"""
     uid = job_name.upper()
@@ -170,7 +174,8 @@ def expand_value_range(value_range_expression):
             value_range_expression = arange(value_range_expression)
         # Random search
         elif value_range.startswith('np.random'):
-            raise NotImplementedError('Random search space not implemented yet')
+            raise NotImplementedError('Random search space '
+                                      'not implemented yet')
     # If not an iterable, make it an iterable
     try:
         iter(value_range_expression)
@@ -179,22 +184,13 @@ def expand_value_range(value_range_expression):
     return value_range_expression
 
 
-class DummyInputTask(luigi.ExternalTask):
-    '''Dummy task acting as the single input data source'''
-    s3_path_in = luigi.Parameter()
-
-    def output(self):
-        '''Points to the S3 Target'''
-        yield s3.S3Target(self.s3_path_in)
-
-
 class MLTask(autobatch.AutoBatchTask):
     """A task which automatically spawns children if they exist.
     Note that other args are intended for autobatch.AutoBatchTask.
 
     Args:
         job_name (str): Name of the task instance, for book-keeping.
-        s3_path_in (str): Path to the input data.
+        #s3_path_in (str): Path to the input data.
         s3_path_out (str): Path to the output data.
         batch_size (int): Size of batch chunks.
         n_batches (int): The number of batches to submit (alternative to :obj:`batch_size`)
@@ -202,28 +198,43 @@ class MLTask(autobatch.AutoBatchTask):
         hyper (dict): Extra environmental variables to pass to the batchable.
     """
     job_name = luigi.Parameter()
-    s3_path_in = luigi.Parameter()
+    #s3_path_in = luigi.Parameter()
     s3_path_out = luigi.Parameter()
+    input_task = luigi.TaskParameter(default=luigi.Task(),
+                                     significant=False)
+    input_task_kwargs = luigi.DictParameter(default={})
     batch_size = luigi.IntParameter(default=None)
     n_batches = luigi.IntParameter(default=None)
-    child = luigi.DictParameter(default=None)
+    child = DictParameterPlus(default=None)
     use_intermediate_inputs = luigi.BoolParameter(default=False)
     combine_outputs = luigi.BoolParameter(default=False)
     hyperparameters = luigi.DictParameter(default={})
 
     def requires(self):
-        """Spawns a child if one exists, otherwise points to a static input."""
-        if self.child is None:
-            logging.debug(f"{self.job_name}: Spawning DummyInput from {self.s3_path_in}")
-            return DummyInputTask(s3_path_in=self.s3_path_in)
-        logging.debug(f"{self.job_name}: Spawning MLTask with child = {self.child['job_name']}")
-        return MLTask(**self.child)
+        """Spawns a child if one exists, otherwise points 
+        to a static input."""
+        if self.child is not None:
+            msg = f"MLTask with child = {self.child['job_name']}"
+            task = _MLTask(**self.child)
+        else:
+            msg = f"{str(self.input_task)} with {self.input_task_kwargs}"
+            task = self.input_task(**self.input_task_kwargs)
+        #else:
+        #    msg = f"DummyInput from {self.s3_path_in}"
+        #    task = DummyInputTask(s3_path_in=self.s3_path_in)
+        logging.debug(f"{self.job_name}: Spawning {msg}")
+        return task
 
     def output(self):
         """Points to the output"""
         if self.combine_outputs:
             return s3.S3Target(self.s3_path_out)
         return s3.S3Target(f"{self.s3_path_out}.length")
+
+    @property
+    def s3_path_in(self):
+        target = self.input()
+        return f's3://{target.s3_bucket}/{target.s3_key}'
 
     def get_input_length(self):
         """Retrieve the length of the input, which is stored as the value
@@ -266,8 +277,8 @@ class MLTask(autobatch.AutoBatchTask):
         s3_key = self.s3_path_out
         # Mode 1: each batch is one of the intermediate inputs
         if self.use_intermediate_inputs:
-            first_index = 0
-            last_index = -1
+            first_idx = 0
+            last_idx = -1
             s3_resource = boto3.resource('s3')
             bucket, subbucket, _ = deep_split(self.s3_path_in)
             in_keys = s3_resource.Bucket(bucket).objects
@@ -279,18 +290,17 @@ class MLTask(autobatch.AutoBatchTask):
                 if not in_key.startswith(subbucket):
                     continue                    
                 out_key = f"{s3_key}-{i}.json"
-                yield first_index, last_index, f"s3://{in_key}", out_key
+                _in_key = f"s3://{bucket}/{in_key}"
+                yield first_idx, last_idx, _in_key, out_key
                 i += 1
         # Mode 2: each batch is a subset of the single input
         else:
             total = self.set_batch_parameters()
             for i in range(0, self.n_batches):
-                first_index, last_index = self.calculate_batch_indices(i, total)
-                #out_key = self.s3_path_out.replace(".json", 
-                #                                   (f"-{first_index}-"
-                #                                    f"{last_index}.json"))
-                out_key = f"{s3_key}-{first_index}_{last_index}.json"
-                yield first_index, last_index, self.s3_path_in, out_key
+                first_idx, last_idx = self.calculate_batch_indices(i, total)
+                out_key = (f"{s3_key}-{first_index}_"
+                           f"{last_index}.json")
+                yield first_idx, last_idx, self.s3_path_in, out_key
 
     def prepare(self):
         """Prepare the batch task parameters"""
@@ -298,12 +308,12 @@ class MLTask(autobatch.AutoBatchTask):
         s3fs = s3.S3FS()
         job_params = []
         n_done = 0
-        for first_index, last_index, in_key, out_key in self.yield_batch():
+        for first_idx, last_idx, in_key, out_key in self.yield_batch():
             # Fill the default params
             done = s3fs.exists(out_key)
             params = {"s3_path_in": in_key,
-                      "first_index": first_index,
-                      "last_index": last_index,
+                      "first_index": first_idx,
+                      "last_index": last_idx,
                       "outinfo": out_key,
                       "done": done}
             # Add in any bonus paramters
@@ -322,6 +332,7 @@ class MLTask(autobatch.AutoBatchTask):
         """Combine output by concatenating results."""
         # Download and join
         logging.debug(f"{self.job_name}: Combining {len(job_params)}...")
+        size = 0
         outdata = []
         for params in job_params:
             _body = s3.S3Target(params["outinfo"]).open("rb")
@@ -354,7 +365,9 @@ class AutoMLTask(luigi.WrapperTask):
         task_chain_filepath (str): File path of the task chain configuration file.
         test (bool): Whether or not to run batch tasks in test mode.
     """
-    s3_path_in = luigi.Parameter()
+    #s3_path_in = luigi.Parameter()
+    input_task = luigi.TaskParameter()
+    input_task_kwargs = luigi.DictParameter()
     s3_path_prefix = luigi.Parameter()
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
@@ -413,22 +426,33 @@ class AutoMLTask(luigi.WrapperTask):
         # Generate all kwargs for tasks
         test = f".TEST_{self.test}"
         kwargs_dict = {}
+        all_children = set()
         for job_name, all_parameters in chain_parameters.items():
             AutoMLTask.task_parameters[job_name] = all_parameters
             for pars in all_parameters:
-                s3_path_out = os.path.join(self.s3_path_prefix,pars.pop('uid'))+test
-                s3_path_in = (self.s3_path_in if pars['child'] is None
-                              else os.path.join(self.s3_path_prefix,pars['child'])+test)
+                s3_path_out = os.path.join(self.s3_path_prefix, 
+                                           pars.pop('uid'))+test
+                s3_path_in = (None if pars['child'] is None
+                              else os.path.join(self.s3_path_prefix, pars['child'])+test)
+                all_children.add(s3_path_in)                
                 kwargs_dict[s3_path_out] = dict(s3_path_out=s3_path_out,
                                                 s3_path_in=s3_path_in,
-                                                test=self.test,
-                                                **pars)
+                                                test=self.test,         
+                                                **pars)                 
+                if s3_path_in is None:
+                    _kwargs = self.input_task_kwargs
+                    kwargs_dict[s3_path_out]['input_task'] = self.input_task
+                    kwargs_dict[s3_path_out]['input_task_kwargs'] = _kwargs
+                
+
         # Launch the tasks
         for uid, kwargs in kwargs_dict.items():            
-            child_uid = kwargs['s3_path_in']
-            if kwargs['child'] is not None:
+            child_uid = kwargs.pop('s3_path_in')
+            if child_uid is not None:
                 kwargs['child'] = kwargs_dict[child_uid]
-            yield kwargs
+            # Only yield "pure" parents (those with no parents)
+            if uid not in all_children:
+                yield kwargs
 
     def requires(self):
         """Generate task parameters and yield MLTasks"""
@@ -436,5 +460,5 @@ class AutoMLTask(luigi.WrapperTask):
         chain_parameters = self.generate_seed_search_tasks()
         # chain_parameters += self.generate_optimization_tasks() ## <-- blank optimisation tasks
         ## <-- Note those will need to be full chains
-        for kwargs in self.launch(chain_parameters):
-            yield MLTask(**kwargs)
+        for kwargs in self.launch(chain_parameters):           
+            yield _MLTask(**kwargs)
