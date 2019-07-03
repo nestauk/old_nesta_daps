@@ -16,8 +16,7 @@
 	"memory": 16000,
         "hyperparameters": {
             "binary": true,
-	    "min_df": 0.001,
-	    "ngram_range" : [1, 2]
+	    "min_df": 0.001
         }	
     },    
     {
