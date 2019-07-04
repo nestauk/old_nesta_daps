@@ -1,5 +1,5 @@
 #!/bin/bash
-TOP_DIR=/var/tmp/batch/$(date +%s)   #${PWD}
+TOP_DIR=/var/tmp/batch/$(date +%s)${BASHPID}
 mkdir ${TOP_DIR}
 cd ${TOP_DIR}
 
