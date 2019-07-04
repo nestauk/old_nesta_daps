@@ -40,8 +40,12 @@ def run():
                       index=index)
     
     # Write the dataframe as JSON
-    body = json.dumps([{'id':index, **row.dropna().to_dict()} 
-                       for index,row in df.iterrows()])
+    if binary:
+        body = json.dumps([{'id':index, **row.loc[row==1].to_dict()}
+                           for index,row in df.iterrows()])
+    else:
+        body = json.dumps([{'id':index, **row.dropna().to_dict()} 
+                           for index,row in df.iterrows()])
 
 
     # Mark the task as done and save the data             
