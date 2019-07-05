@@ -5,10 +5,11 @@ from corextopic import corextopic as ct
 from nesta.production.luigihacks.s3 import parse_s3_path
 import os
 import boto3
+from ast import literal_eval
 
 def run():
     s3_path_in = os.environ['BATCHPAR_s3_path_in']
-    n_hidden = int(os.environ['BATCHPAR_n_hidden'])
+    n_hidden = int(literal_eval(os.environ['BATCHPAR_n_hidden']))
 
     # Load and shape the data
     s3 = boto3.resource('s3')
@@ -47,7 +48,7 @@ def run():
         s3_path_out = os.environ["BATCHPAR_outinfo"]
         s3 = boto3.resource('s3')
         s3_obj = s3.Object(*parse_s3_path(s3_path_out))
-        s3_obj.put(Body=output)
+        s3_obj.put(Body=json.dumps(output))
 
 if __name__ == "__main__":
     if "BATCHPAR_outinfo" not in os.environ:
