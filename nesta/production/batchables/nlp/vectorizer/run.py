@@ -1,10 +1,20 @@
+from gensim.corpora import Dictionary
+from collections import Counter
+import itertools  
+import numpy as np
+
 import os
 import boto3
-from sklearn.feature_extraction.text import CountVectorizer
+#from sklearn.feature_extraction.text import CountVectorizer
 import pandas as pd
 import json
 from nesta.production.luigihacks.s3 import parse_s3_path
 from ast import literal_eval
+
+def term_counts(dct, row, binary=False):
+    return {dct[idx]: (count if not binary else 1)
+            for idx, count in Counter(dct.doc2idx(row)).items()
+            if idx != -1}        
 
 def optional(name, default):
     var = f'BATCHPAR_{name}'
@@ -22,32 +32,41 @@ def run():
     s3_obj_in = s3.Object(*parse_s3_path(s3_path_in))
     data = json.load(s3_obj_in.get()['Body'])
 
-    # Prepare data and vectorizer
-    _data = [' '.join(' '.join(para) for para in row['body'])
+    # # Prepare data and vectorizer
+    # _data = [' '.join(' '.join(para) for para in row['body'])
+    #          for row in data]
+    # vtzr = CountVectorizer(binary=binary, 
+    #                        min_df=min_df, 
+    #                        max_df=max_df)                 
+
+    # # Generate inputs for pandas
+    # index = [row['id'] for row in data]
+    # data = [list(row.toarray()[0]) 
+    #         for row in vtzr.fit_transform(_data)]
+    # columns = vtzr.get_feature_names()
+    
+    # # Generate dataframe
+    # df = pd.DataFrame(data=data, columns=columns, 
+    #                   index=index)
+
+    # Extract what you need from the data
+    _data = [list(itertools.chain.from_iterable(row['body']))
              for row in data]
-    vtzr = CountVectorizer(binary=binary, 
-                           min_df=min_df, 
-                           max_df=max_df)                 
-
-    # Generate inputs for pandas
     index = [row['id'] for row in data]
-    data = [list(row.toarray()[0]) 
-            for row in vtzr.fit_transform(_data)]
-    columns = vtzr.get_feature_names()
-    
-    # Generate dataframe
-    df = pd.DataFrame(data=data, columns=columns, 
-                      index=index)
-    
-    # Write the dataframe as JSON
-    if binary:
-        body = json.dumps([{'id':index, **row.loc[row==1].to_dict()}
-                           for index,row in df.iterrows()])
-    else:
-        body = json.dumps([{'id':index, **row.dropna().to_dict()} 
-                           for index,row in df.iterrows()])
+    del data
 
+    # Build the corpus
+    dct = Dictionary(_data)
+    dct.filter_extremes(no_below=np.ceil(min_df*len(_data)), 
+                        no_above=max_df)
 
+    # Write the data as JSON
+    body = json.dumps([dict(id=idx, **term_counts(dct, row, binary))
+                       for idx, row in zip(index, _data)])
+    del _data
+    del index
+    del dct
+    
     # Mark the task as done and save the data             
     if "BATCHPAR_outinfo" in os.environ:
         s3_path_out = os.environ["BATCHPAR_outinfo"]
