@@ -24,6 +24,7 @@ import itertools
 from copy import deepcopy
 import re
 from collections import defaultdict
+from collections import Counter
 import boto3
 
 FLOAT = '([-+]?\d*\.\d+|\d+)'
@@ -364,7 +365,7 @@ class MLTask(autobatch.AutoBatchTask):
         f.close()
 
 
-class AutoMLTask(luigi.WrapperTask):
+class AutoMLTask(luigi.Task):
     """Parse and launch the MLTask chain based on an input
     configuration file.
 
@@ -381,6 +382,8 @@ class AutoMLTask(luigi.WrapperTask):
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     autobatch_kwargs = luigi.DictParameter(default={})
+    maximize_loss = luigi.BoolParameter(default=False)
+    gp_optimizer_kwargs = luigi.DictParameter(default={})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -476,6 +479,41 @@ class AutoMLTask(luigi.WrapperTask):
         # Generate the parameters
         chain_parameters = self.generate_seed_search_tasks()
         # chain_parameters += self.generate_optimization_tasks() ## <-- blank optimisation tasks
-        ## <-- Note those will need to be full chains
         for kwargs in self.launch(chain_parameters):
             yield _MLTask(**kwargs, **self.autobatch_kwargs)
+
+    def output(self):
+        return s3.S3Target(f"{self.s3_path_prefix}.best")
+
+    def run(self):
+        # Get the UIDs for the final tasks
+        final_task = list(AutoMLTask.task_parameters.keys())[-1]
+        hypers = [generate_uid(final_task, row)
+                  for row in AutoMLTask.task_parameters[final_task]]
+
+        # Prepare AWS resources
+        bucket_name, _, _ = deep_split(self.s3_path_prefix)
+        bucket = boto3.resource('s3').Bucket(bucket_name)
+
+        # 1 - 2*[1 OR 0] = [-1 OR 1]
+        loss_sign = 1 - 2*int(self.maximize_loss)
+
+        # Find the losse
+        losses = {}
+        for obj in bucket.objects.all():
+            key = obj.key.split('/')[-1]
+            if not key.endswith('json'):
+                continue
+            if not any(key.startswith(uid) for uid in hypers):
+                continue
+            js = json.load(obj.get()['Body'])
+            losses[obj.key] = loss_sign * js['loss']
+
+        # Least common = minimum loss
+        best_key = Counter(losses).most_common()[-1][0]
+        f = self.output().open("wb")
+        f.write(best_key.encode('utf-8'))
+        f.close()
+
+        if len(self.gp_optimizer_kwargs) > 0:
+            raise NotImplementedError('Gaussian Processes not implemented')
