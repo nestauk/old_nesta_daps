@@ -13,6 +13,7 @@
     {
 	"job_name": "vectorizer", 
 	"batchable": "batchables/nlp/vectorizer",
+	"timeout": 72000,
 	"memory": 16000,
         "hyperparameters": {
             "binary": true,
