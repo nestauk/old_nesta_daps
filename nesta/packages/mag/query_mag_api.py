@@ -24,6 +24,8 @@ def prepare_title(title):
         (str): cleaned title
     """
     detector = AlphabetDetector()
+    if title is None:
+        return ""
     result = "".join([x if len(detector.detect_alphabet(x)) > 0 or x.isnumeric()
                       else " " for x in title.lower()])
     # Recursively remove spaces
