@@ -27,10 +27,20 @@ from collections import defaultdict
 from collections import Counter
 import boto3
 
-FLOAT = '([-+]?\d*\.\d+|\d+)'
-NP_ARANGE = f'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
+FLOAT = r'([-+]?\d*\.\d+|\d+)'
+NP_ARANGE = fr'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
 
 def _MLTask(**kwargs):
+    '''
+    Factory function for dynamically creating py:class`MLTask`
+    tasks with a specific class name. This helps to differentiate 
+    py:class`MLTask` tasks from one another in the luigi scheduler.
+    
+    Args:
+        kwargs (dict): All keyword arguments to construct an MLTask.
+    Returns:
+        MLTask object.
+    '''
     _type = type(kwargs['job_name'].title(), (MLTask,), {})
     return _type(**kwargs)
 
@@ -157,9 +167,7 @@ def arange(expression):
         Result of :obj:`np.arange` function call.
     """
     args = re.findall(NP_ARANGE, expression.replace(' ',''))[0]
-    for i in  np.arange(*[float(arg) for arg in args]):
-        yield i
-
+    return list(np.arange(*[float(arg) for arg in args]))
 
 def expand_value_range(value_range_expression):
     """Expand the value range expression.
@@ -174,7 +182,7 @@ def expand_value_range(value_range_expression):
         if value_range_expression.startswith('np.arange'):
             value_range_expression = arange(value_range_expression)
         # Random search
-        elif value_range.startswith('np.random'):
+        elif value_range_expression.startswith('np.random'):
             raise NotImplementedError('Random search space '
                                       'not implemented yet')
     # If not an iterable, make it an iterable
@@ -199,7 +207,6 @@ class MLTask(autobatch.AutoBatchTask):
         hyper (dict): Extra environmental variables to pass to the batchable.
     """
     job_name = luigi.Parameter()
-    #s3_path_in = luigi.Parameter()
     s3_path_out = luigi.Parameter()
     input_task = luigi.TaskParameter(default=luigi.Task(),
                                      significant=False)

@@ -106,7 +106,7 @@ class Category(Base):
 class CorExTopic(Base):
     """CorEx topics derived from arXiv data"""
     __tablename__ = 'arxiv_corex_topics'
-    id = Column(INTEGER, primary_key=True)
+    id = Column(INTEGER, primary_key=True, autoincrement=False)
     terms = Column(JSON)
 
 class ArticleTopic(Base):
@@ -117,5 +117,6 @@ class ArticleTopic(Base):
                         primary_key=True)
     topic_id = Column(INTEGER, 
                       ForeignKey(CorExTopic.id), 
-                      primary_key=True)
+                      primary_key=True,
+                      autoincrement=False)
     topic_weight = Column(FLOAT)
