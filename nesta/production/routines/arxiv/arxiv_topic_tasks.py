@@ -30,7 +30,7 @@ class PrepareArxivS3Data(luigi.Task):
     """
     s3_path_out = luigi.Parameter()
     db_conf_env = luigi.Parameter(default="MYSQLDB")
-    chunksize = luigi.IntParameter(default=10000)
+    chunksize = luigi.IntParameter(default=100000)
     test = luigi.BoolParameter(default=True)
 
     def output(self):
@@ -76,12 +76,14 @@ class WriteTopicTask(luigi.Task):
     db_config_path = luigi.Parameter('mysqldb.config')
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     test = luigi.BoolParameter()
+    insert_batch_size = luigi.IntParameter(default=10000)
 
     def output(self):
         '''Points to the output database engine'''
-        db_config = misctools.get_config(self.db_config_path, "mysqldb")
+        db_config = misctools.get_config(self.db_config_path,
+                                         "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "arXlive <dummy>"  # Note, not a real table
+        db_config["table"] = "arXlive topics <dummy>"  # Note, not a real table
         update_id = "ArxivTopicTask_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -94,7 +96,7 @@ class WriteTopicTask(luigi.Task):
                           input_task_kwargs={'s3_path_out':self.data_path,
                                              'test':self.test})
 
-        
+
     def run(self):
         # Load the input data (note the input contains the path
         # to the output)
@@ -103,18 +105,21 @@ class WriteTopicTask(luigi.Task):
         _filename = _body.read().decode('utf-8')
         obj = s3.S3Target(f"{self.raw_s3_path_prefix}/"
                           f"{_filename}").open('rb')
-        data = json.load(obj)        
+        data = json.load(obj)
 
         # Get DB connections and settings
         database = 'dev' if self.test else 'production'
-        engine = get_mysql_engine(self.db_conf_env, 'mysqldb', database)
+        engine = get_mysql_engine(self.db_conf_env, 'mysqldb',
+                                  database)
 
         # Insert the topic names data
-        topics = [{'id':int(topic_name.split('_')[-1]), 'terms':terms}
+        topics = [{'id':int(topic_name.split('_')[-1])+1, 
+                   'terms':terms}
                   for topic_name, terms in
                   data['data']['topic_names'].items()]
-        insert_data(self.db_conf_env, 'mysqldb', database, 
+        insert_data(self.db_conf_env, 'mysqldb', database,
                     Base, CorExTopic, topics, low_memory=True)
+        logging.info(f'inserted {len(topics)}')
 
         # Insert article topic weight data
         topic_articles = []
@@ -124,15 +129,25 @@ class WriteTopicTask(luigi.Task):
             if article_id in done_ids:
                 continue
             done_ids.add(article_id)
-            topic_articles += [{'topic_id': int(topic_name.split('_')[-1]),
+            topic_articles += [{'topic_id': int(topic_name.split('_')[-1])+1,
                                 'topic_weight': weight, 'article_id': article_id}
                                for topic_name, weight in row.items()]
-        insert_data(self.db_conf_env, 'mysqldb', database,
-                    Base, ArticleTopic, topic_articles,
-                    low_memory=False)
+            # Flush
+            if len(topic_articles) > self.insert_batch_size:
+                logging.info('Flushing')
+                insert_data(self.db_conf_env, 'mysqldb', database,
+                            Base, ArticleTopic, topic_articles,
+                            low_memory=True)
+                topic_articles = []
+
+        # Final flush
+        if len(topic_articles) > 0:
+            insert_data(self.db_conf_env, 'mysqldb', database,
+                        Base, ArticleTopic, topic_articles,
+                        low_memory=True)
 
         # Touch the output
-        self.output.touch()
+        self.output().touch()
 
 
 class TopicRootTask(luigi.WrapperTask):
