@@ -117,12 +117,17 @@ class WriteTopicTask(luigi.Task):
                     Base, CorExTopic, topics, low_memory=True)
 
         # Insert article topic weight data
+        topic_articles = []
+        done_ids = set()
         for row in data['data']['rows']:
             article_id = row.pop('id')
+            if article_id in done_ids:
+                continue
+            done_ids.add(article_id)
             topic_articles += [{'topic_id': int(topic_name.split('_')[-1]),
-                                'weight': weight, 'article_id': article_id}
+                                'topic_weight': weight, 'article_id': article_id}
                                for topic_name, weight in row.items()]
-        insert_data(self.db_config_env, 'mysqldb', database,
+        insert_data(self.db_conf_env, 'mysqldb', database,
                     Base, ArticleTopic, topic_articles,
                     low_memory=False)
 
