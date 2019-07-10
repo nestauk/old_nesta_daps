@@ -59,6 +59,40 @@ def expand_pathstub(pathstub):
     else:
         return find_filepath_from_pathstub(pathstub)
 
+def arange(expression):
+    """Expand and string representation of np.arange into a function call.
+
+    Args:
+        expression (str): String representation of :obj:`np.arange` function call.
+    Yields:
+        Result of :obj:`np.arange` function call.
+    """
+    args = re.findall(NP_ARANGE, expression.replace(' ',''))[0]
+    return list(np.arange(*[float(arg) for arg in args]))
+
+def expand_value_range(value_range_expression):
+    """Expand the value range expression.
+
+    Args:
+        value_range_expression: Value range or expression to expand.
+    Return:
+        iterable.
+    """
+    if type(value_range_expression) is str:
+        # Grid search
+        if value_range_expression.startswith('np.arange'):
+            value_range_expression = arange(value_range_expression)
+        # Random search
+        elif value_range_expression.startswith('np.random'):
+            raise NotImplementedError('Random search space '
+                                      'not implemented yet')
+    # If not an iterable, make it an iterable
+    try:
+        iter(value_range_expression)
+    except TypeError:
+        value_range_expression = [value_range_expression]
+    return value_range_expression
+
 def expand_hyperparameters(row):
     """Generate all hyperparameter combinations for this task.
 
@@ -133,6 +167,7 @@ def cascade_child_parameters(chain_parameters):
                 _chain_parameters[job_name].append(_row)
     return _chain_parameters
 
+
 def generate_uid(job_name, row):
     """Generate the UID from the job name and children"""
     uid = job_name.upper()
@@ -146,6 +181,7 @@ def generate_uid(job_name, row):
     finally:
         return uid
 
+
 def deep_split(s3_path):
     """Return subbucket path: <s3:pathto/subbucket_name>/keys
 
@@ -157,41 +193,6 @@ def deep_split(s3_path):
     s3_bucket, s3_key = s3.parse_s3_path(s3_path)
     subbucket, _ = os.path.split(s3_key)
     return s3_bucket, subbucket, s3_key
-
-
-def arange(expression):
-    """Expand and string representation of np.arange into a function call.
-
-    Args:
-        expression (str): String representation of :obj:`np.arange` function call.
-    Yields:
-        Result of :obj:`np.arange` function call.
-    """
-    args = re.findall(NP_ARANGE, expression.replace(' ',''))[0]
-    return list(np.arange(*[float(arg) for arg in args]))
-
-def expand_value_range(value_range_expression):
-    """Expand the value range expression.
-
-    Args:
-        value_range_expression: Value range or expression to expand.
-    Return:
-        iterable.
-    """
-    if type(value_range_expression) is str:
-        # Grid search
-        if value_range_expression.startswith('np.arange'):
-            value_range_expression = arange(value_range_expression)
-        # Random search
-        elif value_range_expression.startswith('np.random'):
-            raise NotImplementedError('Random search space '
-                                      'not implemented yet')
-    # If not an iterable, make it an iterable
-    try:
-        iter(value_range_expression)
-    except TypeError:
-        value_range_expression = [value_range_expression]
-    return value_range_expression
 
 
 class MLTask(autobatch.AutoBatchTask):
@@ -209,7 +210,7 @@ class MLTask(autobatch.AutoBatchTask):
     """
     job_name = luigi.Parameter()
     s3_path_out = luigi.Parameter()
-    input_task = luigi.TaskParameter(default=luigi.Task(),
+    input_task = luigi.TaskParameter(default=luigi.Task,
                                      significant=False)
     input_task_kwargs = luigi.DictParameter(default={})
     batch_size = luigi.IntParameter(default=None)
@@ -225,6 +226,9 @@ class MLTask(autobatch.AutoBatchTask):
         if self.child is not None:
             msg = f"MLTask with child = {self.child['job_name']}"
             task = _MLTask(**self.child)
+        elif self.input_task is luigi.Task:
+            raise ValueError('input_task cannot be empty if no child '
+                             'has been specified')
         else:
             msg = f"{str(self.input_task)} with {self.input_task_kwargs}"
             task = self.input_task(**self.input_task_kwargs)
@@ -245,16 +249,30 @@ class MLTask(autobatch.AutoBatchTask):
         target = self.input()
         return f's3://{target.s3_bucket}/{target.s3_key}'
 
-    def get_input_length(self):
-        """Retrieve the length of the input, which is stored as the value
-        of the output.length file."""
+    def derive_file_length_path(self):
+        """Determine the s3 path to the file which contains the
+        the number of lines in the main (json) file.        
+        """
         fname = self.s3_path_in
-        if fname.endswith('.json'):
+        ext = fname.split('.')[-1]
+        if ext not in ('json', 'length'):
+            raise ValueError('Input file must either be json'
+                             f'or length file. Got {ext} from {fname}')
+        elif ext == 'json':
             fname = fname.replace('.json','')
         if not fname.endswith('.length'):
             fname = f"{fname}.length"
+        return fname
+
+    def get_input_length(self):
+        """Retrieve the length of the input, which is stored as the value
+        of the output.length file."""
+        fname = self.derive_file_length_path()
         f = s3.S3Target(fname).open('rb')
         total = json.load(f)
+        if type(total) is not int:
+            raise TypeError('Expected to find integer count in '
+                            f'{fname}. Instead found {type(total)}')
         f.close()
         return total
 
@@ -264,10 +282,14 @@ class MLTask(autobatch.AutoBatchTask):
             raise ValueError("Neither batch_size for n_batches set")
 
         # Calculate the batch size parameters
-        total = self.get_input_length()
+        total = self.get_input_length()        
         if self.n_batches is not None:
+            if self.n_batches > total:
+                self.n_batches = total
             self.batch_size = math.ceil(total/self.n_batches)
         else:
+            if self.batch_size > total:
+                self.batch_size = total
             n_full = math.floor(total/self.batch_size)
             n_unfull = int(total % self.batch_size > 0)
             self.n_batches = n_full + n_unfull
@@ -279,8 +301,14 @@ class MLTask(autobatch.AutoBatchTask):
 
     def calculate_batch_indices(self, i, total):
         """Calculate the indices of this batch"""
+        if (self.batch_size is None or self.n_batches is None
+            or self.batch_size > total or self.n_batches > total):
+            raise ValueError('set_batch_parameters not yet called')
         first_index = i*self.batch_size
         last_index = (i+1)*self.batch_size
+        if i >= self.n_batches:
+            raise ValueError('Exceeded maximum batch index '
+                             f'({self.n_batches}) with {i}')
         if i == self.n_batches-1:
             last_index = total
         return first_index, last_index
@@ -339,10 +367,7 @@ class MLTask(autobatch.AutoBatchTask):
                       "have already been done.")
         return job_params
 
-    def combine(self, job_params):
-        """Combine output by concatenating results."""
-        # Download and join
-        logging.debug(f"{self.job_name}: Combining {len(job_params)}...")
+    def combine_all_outputs(self, job_params):
         size = 0
         outdata = []
         for params in job_params:
@@ -358,7 +383,14 @@ class MLTask(autobatch.AutoBatchTask):
             if type(_outdata) is not list:
                 _outdata = _outdata['data']['rows']
             size += len(_outdata)
+        return size, outdata
 
+    def combine(self, job_params):
+        """Combine output by concatenating results."""
+        # Download and join
+        logging.debug(f"{self.job_name}: Combining "
+                      f"{len(job_params)}...")
+        size, outdata = self.combine_all_outputs(job_params)
         # Write the output
         logging.debug(f"{self.job_name}: Writing the output "
                       f"(length {len(outdata)})...")

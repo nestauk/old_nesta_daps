@@ -2,6 +2,7 @@ import mock
 import pytest
 import numpy as np
 from copy import deepcopy
+import luigi
 
 from nesta.production.luigihacks.automl import _MLTask
 from nesta.production.luigihacks.automl import expand_pathstub
@@ -11,18 +12,27 @@ from nesta.production.luigihacks.automl import expand_hyperparameters
 from nesta.production.luigihacks.automl import ordered_groupby
 from nesta.production.luigihacks.automl import cascade_child_parameters
 from nesta.production.luigihacks.automl import generate_uid
-
+from nesta.production.luigihacks.automl import deep_split
 from nesta.production.luigihacks.automl import MLTask
 
+PATH='nesta.production.luigihacks.automl.{}'
+MLPATH=PATH.format('MLTask.{}')
+
+class SomeTask(luigi.Task):
+    pass
 
 @pytest.fixture
 def mltask_kwargs():
     return dict(job_name='a name',
-                s3_path_out='',
+                s3_path_out='s3://path/to/somewhere',
                 batchable='',
                 job_def='',
                 job_queue='',
                 region_name='')
+
+@pytest.fixture
+def mltask(mltask_kwargs):
+    return MLTask(**mltask_kwargs)
 
 
 def test__MLTask_is_MLTask(mltask_kwargs):
@@ -48,7 +58,7 @@ def test_arange():
     assert type(the_range) is list
 
 
-@mock.patch('nesta.production.luigihacks.automl.arange',
+@mock.patch(PATH.format('arange'),
             return_value=[1,2,3])
 def test_expand_value_range(mocked_arange):
     assert expand_value_range([1,2,3]) == [1,2,3]
@@ -60,7 +70,7 @@ def test_expand_value_range_random():
     with pytest.raises(NotImplementedError):
         expand_value_range('np.random(...)')
 
-@mock.patch('nesta.production.luigihacks.automl.arange',
+@mock.patch(PATH.format('arange'),
             return_value=[1,2,3])
 def test_expand_hyperparameters(mocked_arange):
     row = {'hyperparameters': {'hyp1' : [1,2,3,4,5],
@@ -130,10 +140,266 @@ def test_cascade_child_parameters():
 
 
 def test_generate_uid():
-    row = {'hyperparameters': {'hyp1' : 'blah', 
+    row = {'hyperparameters': {'hyp1' : 'blah',
                                'hyp2' : 23,
                                'hyp3' : 12.3,
                                'hyp4' : None}}
     uid = generate_uid('joel', row)
     assert type(uid) is str
     assert len(uid.split('.')) == len(row['hyperparameters']) + 1
+
+
+def test_deep_split():
+    s3_path = 's3://nesta-arxlive/automl/2019-07-07/COREX_TOPIC_MODEL.n_hidden_32.0.VECTORIZER.binary_True.min_df_0.001.NGRAM.TEST_False.json'
+    s3_bucket, subbucket, s3_key = deep_split(s3_path)
+    print(s3_bucket, subbucket, s3_key)
+    assert '/' not in s3_bucket
+    assert s3_key in s3_path
+    assert subbucket in s3_key
+    assert subbucket in s3_path
+    assert s3_bucket in s3_path
+    assert len(s3_key) > 0
+    assert len(subbucket) > 0
+    assert len(s3_bucket) > 0
+
+def test_MLTask_requires_no_child_no_input(mltask):
+    with pytest.raises(ValueError):
+        mltask.requires()
+
+
+def test_MLTask_requires_no_child_yes_input(mltask_kwargs):
+    mltask = MLTask(input_task=SomeTask, **mltask_kwargs)
+    task = mltask.requires()
+    assert type(task) == SomeTask
+
+@mock.patch(PATH.format('_MLTask'))
+def test_MLTask_requires_child(mocked_task, mltask_kwargs):
+    mltask = MLTask(child={'job_name':'something'}, **mltask_kwargs)
+    task = mltask.requires()
+    assert mocked_task.call_count == 1
+    assert task == mocked_task._mock_return_value
+
+@mock.patch('nesta.production.luigihacks.s3.S3Target')
+def test_MLTask_combine_output(mocked_target, mltask_kwargs):
+    mltask = MLTask(combine_outputs=True, **mltask_kwargs)
+    mltask.output()
+    args, kwargs = mocked_target._mock_call_args
+    assert args[0].endswith('.json')
+
+@mock.patch('nesta.production.luigihacks.s3.S3Target')
+def test_MLTask_no_combine_output(mocked_target, mltask_kwargs):
+    mltask = MLTask(combine_outputs=False, **mltask_kwargs)
+    mltask.output()
+    args, kwargs = mocked_target._mock_call_args
+    assert args[0].endswith('.length')
+
+@mock.patch(MLPATH.format('input'))
+def test_MLTask_s3_path_in(_, mltask):
+    assert type(mltask.s3_path_in) is str
+    assert len(mltask.s3_path_in) > 0
+
+
+@mock.patch(MLPATH.format('s3_path_in'),
+            new_callable=mock.PropertyMock)
+def test_derive_file_length_path(mocked_path_in, mltask):
+    mocked_path_in.return_value = 's3://a/b.json'
+    assert mltask.derive_file_length_path() == 's3://a/b.length'
+
+
+@mock.patch(MLPATH.format('s3_path_in'),
+            new_callable=mock.PropertyMock)
+def test_derive_file_length_path(mocked_path_in, mltask):
+    path = 's3://a/b.length'
+    mocked_path_in.return_value = path
+    assert mltask.derive_file_length_path() == path
+
+
+@mock.patch(MLPATH.format('s3_path_in'),
+            new_callable=mock.PropertyMock)
+def test_derive_file_length_path(mocked_path_in, mltask):
+    path = 's3://a/b.something'
+    mocked_path_in.return_value = path
+    with pytest.raises(ValueError):
+        mltask.derive_file_length_path()
+
+
+@mock.patch(MLPATH.format('derive_file_length_path'))
+@mock.patch('nesta.production.luigihacks.s3.S3Target')
+@mock.patch('json.load', return_value=10)
+def test_MLTask_get_input_length(_a, _b, _c, mltask):
+    assert mltask.get_input_length() == 10
+
+
+@mock.patch(MLPATH.format('derive_file_length_path'))
+@mock.patch('nesta.production.luigihacks.s3.S3Target')
+@mock.patch('json.load', side_effect=[None, 'a', {}])
+def test_MLTask_get_input_length(_a, _b, _c, mltask):
+    for i in range(0, 3):
+        with pytest.raises(TypeError):
+            mltask.get_input_length()
+
+
+def test_MLTask_set_batch_parameters_bad_input(mltask):
+    with pytest.raises(ValueError):
+        mltask.set_batch_parameters()
+
+
+@mock.patch(MLPATH.format('get_input_length'), return_value=1000)
+def test_MLTask_set_batch_parameters_batch_size(_, mltask_kwargs):
+    mltask = MLTask(batch_size=100, **mltask_kwargs)
+    assert mltask.set_batch_parameters() == 1000
+    assert batch_size == 100
+    assert mltask.n_batches == 10
+
+    mltask = MLTask(batch_size=900, **mltask_kwargs)
+    mltask.set_batch_parameters()
+    assert batch_size == 900
+    assert mltask.n_batches == 2
+
+    mltask = MLTask(batch_size=1000, **mltask_kwargs)
+    mltask.set_batch_parameters()
+    assert batch_size == 1000
+    assert mltask.n_batches == 1
+
+    mltask = MLTask(batch_size=1001, **mltask_kwargs)
+    mltask.set_batch_parameters()
+    assert batch_size == 1000
+    assert mltask.n_batches == 1
+
+@mock.patch(MLPATH.format('get_input_length'), return_value=1000)
+def test_MLTask_set_batch_parameters_batch_size(_, mltask_kwargs):
+    mltask = MLTask(n_batches=100, **mltask_kwargs)
+    assert mltask.set_batch_parameters() == 1000
+    assert mltask.batch_size == 10
+    assert mltask.n_batches == 100
+
+    mltask = MLTask(n_batches=1000, **mltask_kwargs)
+    mltask.set_batch_parameters()
+    assert mltask.batch_size == 1
+    assert mltask.n_batches == 1000
+
+    mltask = MLTask(n_batches=10000, **mltask_kwargs)
+    mltask.set_batch_parameters()
+    assert mltask.batch_size == 1
+    assert mltask.n_batches == 1000
+
+
+@mock.patch(MLPATH.format('get_input_length'), return_value=1000)
+def test_MLTask_calculate_batch_indices(_, mltask_kwargs):
+    mltask = MLTask(n_batches=100, **mltask_kwargs)
+    with pytest.raises(ValueError):
+        mltask.calculate_batch_indices(1, 10)
+
+    total = mltask.set_batch_parameters()
+    first_idx, last_idx = mltask.calculate_batch_indices(3, total)
+    assert first_idx < last_idx
+    assert last_idx - first_idx == mltask.batch_size
+
+    first_idx, last_idx = mltask.calculate_batch_indices(99, total)
+    assert last_idx == total
+
+    with pytest.raises(ValueError):
+        first_idx, last_idx = mltask.calculate_batch_indices(100,
+                                                             total)
+
+
+@mock.patch(MLPATH.format('s3_path_in'),
+            new_callable=mock.PropertyMock)
+@mock.patch(PATH.format('boto3'))
+@mock.patch(PATH.format('deep_split'), 
+            return_value=(None, 'a', None)) # Mock subbucket = 'a'
+def test_MLTask_yield_batch_use_intermediate(mocked_ds,
+                                             mocked_boto3,
+                                             mocked_s3_path,
+                                             mltask_kwargs):
+    # Mock some keys to return 
+    class Key:
+        def __init__(self, k):
+            self.key = k
+    _keys = [Key(k) for k in ['a/first_key.json', # Good
+                              'b/second_key.json', # Not in subbucket
+                              'a/third_key.json', # Good
+                              'a/third_key.other']] # Not json
+
+    # Mock the full return iterable when iterating over objects
+    # in a bucket             
+    mocked_boto3.resource.return_value.Bucket.return_value.objects.all.return_value = _keys
+
+    # Test the yielding
+    mltask = MLTask(input_task=SomeTask,
+                    use_intermediate_inputs=True, **mltask_kwargs)
+    out_keys = []
+    for first_idx, last_idx, _in_key, out_key in mltask.yield_batch():
+        # Indexes are always dummies in use_intermediate_inputs
+        assert first_idx == 0
+        assert last_idx == -1
+        # Test keys look right
+        assert _in_key.endswith('.json')
+        assert out_key.endswith('.json')        
+        assert _in_key != mocked_s3_path
+        out_keys.append(out_key)
+    assert len(out_keys) == len(set(out_keys))
+    assert len(out_keys) == 2
+
+@mock.patch(MLPATH.format('s3_path_in'),
+            new_callable=mock.PropertyMock)
+@mock.patch(MLPATH.format('get_input_length'), return_value=1000)
+def test_MLTask_yield_batch_not_use_intermediate(mocked_len, 
+                                                 mocked_s3_path,
+                                                 mltask_kwargs):
+    mltask = MLTask(input_task=SomeTask, n_batches=100,
+                    use_intermediate_inputs=False, **mltask_kwargs)
+    out_keys = []
+    previous_first_idx = -1
+    previous_last_idx = -1
+    for first_idx, last_idx, _in_key, out_key in mltask.yield_batch():
+        assert first_idx < last_idx
+        assert first_idx > previous_first_idx
+        assert last_idx > previous_last_idx
+        assert _in_key == mocked_s3_path()
+        out_keys.append(out_key)
+        previous_first_idx = first_idx
+        previous_last_idx = last_idx
+    assert len(out_keys) == mltask.n_batches    
+
+@mock.patch(MLPATH.format('yield_batch'), 
+            return_value=[(None,None,None,None)]*126)
+@mock.patch(PATH.format('s3'))
+def test_MLTask_prepare(mocked_s3, mocked_yield_batch, mltask_kwargs):
+    mocked_s3.S3FS.return_value.exists.side_effect = [True,False,True]*int(126/3)
+    mltask = MLTask(hyperparameters={'a':20, 'b':30}, 
+                    **mltask_kwargs)
+    job_params = mltask.prepare()
+    
+    # Check that the numbers add up
+    assert len(job_params) == 126
+    assert sum(p['done'] for p in job_params) == int(126*2/3) ## 2/3 are True
+    # Check the hyperparameters are there
+    for p in job_params:
+        assert 'a' in p.keys()
+        assert 'b' in p.keys()
+
+@mock.patch(PATH.format('s3'))
+@mock.patch(PATH.format('json'))
+def test_MLTask_combine_outputs_many(mocked_json, mocked_s3, mltask):
+    param = mock.MagicMock()
+    param.__getitem__.side_effect = None
+    job_params = [param]*156
+    mocked_json.loads.return_value = [{'key': 'value'}]*124
+    size, outdata = mltask.combine_all_outputs(job_params)
+    assert len(outdata) == size
+    assert size == 156*124
+
+@mock.patch(PATH.format('s3'))
+@mock.patch(PATH.format('json'))
+def test_MLTask_combine_outputs_one(mocked_json, mocked_s3, mltask):
+    param = mock.MagicMock()
+    param.__getitem__.side_effect = None
+    job_params = [param]
+    mocked_json.loads.return_value = {'data':{'rows':list(range(0, 126))}}
+    size, outdata = mltask.combine_all_outputs(job_params)
+    assert len(outdata) == 1
+    assert size == 126
+    
+
+# test is serializable?
