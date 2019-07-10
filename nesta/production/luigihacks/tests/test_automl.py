@@ -5,12 +5,15 @@ from copy import deepcopy
 
 from nesta.production.luigihacks.automl import _MLTask
 from nesta.production.luigihacks.automl import expand_pathstub
-from nesta.production.luigihacks.automl import MLTask
 from nesta.production.luigihacks.automl import arange
 from nesta.production.luigihacks.automl import expand_value_range
 from nesta.production.luigihacks.automl import expand_hyperparameters
 from nesta.production.luigihacks.automl import ordered_groupby
 from nesta.production.luigihacks.automl import cascade_child_parameters
+from nesta.production.luigihacks.automl import generate_uid
+
+from nesta.production.luigihacks.automl import MLTask
+
 
 @pytest.fixture
 def mltask_kwargs():
@@ -125,3 +128,12 @@ def test_cascade_child_parameters():
                 row.pop('child')
         assert all(row in _rows for row in rows)
 
+
+def test_generate_uid():
+    row = {'hyperparameters': {'hyp1' : 'blah', 
+                               'hyp2' : 23,
+                               'hyp3' : 12.3,
+                               'hyp4' : None}}
+    uid = generate_uid('joel', row)
+    assert type(uid) is str
+    assert len(uid.split('.')) == len(row['hyperparameters']) + 1
