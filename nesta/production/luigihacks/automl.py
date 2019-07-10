@@ -141,7 +141,8 @@ def generate_uid(job_name, row):
     except KeyError:
         pass
     else:
-        uid += '.' + ".".join(f"{k}_{v}" for k, v in hyps.items())
+        uid += '.' + ".".join(f"{k}_{v}".replace('.','-') 
+                              for k, v in hyps.items())
     finally:
         return uid
 
