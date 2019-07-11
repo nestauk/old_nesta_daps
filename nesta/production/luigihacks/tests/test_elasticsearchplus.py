@@ -1,6 +1,7 @@
 import pytest
 from unittest import mock
 
+from nesta.production.luigihacks.elasticsearchplus import _clean_bad_unicode_conversion
 from nesta.production.luigihacks.elasticsearchplus import _null_empty_str
 from nesta.production.luigihacks.elasticsearchplus import _coordinates_as_floats
 from nesta.production.luigihacks.elasticsearchplus import _country_lookup
@@ -45,6 +46,7 @@ def row():
             "whitespace padded": "\ntoo much padding \r",
             "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
+            "bad_unicode": "?????? something ??? else?? done?",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -58,6 +60,14 @@ def row():
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
 
+def test_clean_bad_unicode_conversion(row):
+    _row = _clean_bad_unicode_conversion(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    for k, v in _row.items():
+        if type(v) is str:
+            assert "??" not in v
+
 def test_nullify_pairs(row):
     _row = _nullify_pairs(row, {"coordinate_of_none": "coordinate_of_abc"})
     assert len(_row) == len(row)
@@ -66,9 +76,7 @@ def test_nullify_pairs(row):
             assert v == row[k]
         else:
             assert v is None
-    
-    
-    
+
 def test_remove_padding(row):
     _row = _remove_padding(row)
     assert len(_row) == len(row)
@@ -84,7 +92,7 @@ def _test_caps_to_camel_case(a, b):
         assert a == b
     else:
         assert len(a) == len(b)
-        assert a != b  
+        assert a != b
 
 def test_caps_to_camel_case(row):
     _row = _caps_to_camel_case(row)
@@ -229,7 +237,7 @@ def test_chain_transforms(mocked_schema_transformer, row,
     es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
     assert len(_row) == len(row) + 1
-    
+
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
 def test_index(mocked_chain_transform, mocked_super_index, row):
