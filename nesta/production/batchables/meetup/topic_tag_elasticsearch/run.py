@@ -66,7 +66,8 @@ def run():
                            field_null_mapping=field_null_mapping,
                            null_empty_str=True,
                            coordinates_as_floats=True,
-                           country_detection=True)
+                           country_detection=True,
+                           autotranslate=True)
 
     # Generate the lookup for geographies
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
