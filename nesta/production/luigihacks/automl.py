@@ -33,9 +33,9 @@ NP_ARANGE = fr'np.arange\({FLOAT},{FLOAT},{FLOAT}\)'
 def _MLTask(**kwargs):
     '''
     Factory function for dynamically creating py:class`MLTask`
-    tasks with a specific class name. This helps to differentiate 
+    tasks with a specific class name. This helps to differentiate
     py:class`MLTask` tasks from one another in the luigi scheduler.
-    
+
     Args:
         kwargs (dict): All keyword arguments to construct an MLTask.
     Returns:
@@ -58,6 +58,20 @@ def expand_pathstub(pathstub):
     # ...or from a string (assumed)
     else:
         return find_filepath_from_pathstub(pathstub)
+
+def expand_envs(row, env_keys):
+    """Expand any pathstubs in row for matching keys.
+
+    Args:
+        row (dict): row of data to search for pathstubs.
+        env_keys (list): Keys to consider to pathsub expansion.
+    Returns:
+        row (dict): Input row modified with pathsub expansion.
+    """
+    for key in env_keys:
+        if key in row:
+            row[key] = expand_pathstub(row[key])
+    return row
 
 def arange(expression):
     """Expand and string representation of np.arange into a function call.
@@ -93,7 +107,7 @@ def expand_value_range(value_range_expression):
         value_range_expression = [value_range_expression]
     return value_range_expression
 
-def expand_hyperparameters(row):
+def expand_hyperparams(row):
     """Generate all hyperparameter combinations for this task.
 
     Args:
@@ -101,6 +115,8 @@ def expand_hyperparameters(row):
     Returns:
         rows (list): List of dict to every combination of hyperparameters
     """
+    if 'hyperparameters' not in row:
+        return [row]
     expanded_hyps = {name: expand_value_range(values)
                      for name, values
                      in row.pop('hyperparameters').items()}
@@ -134,27 +150,27 @@ def ordered_groupby(collection, column):
             for group in group_order}
 
 
-def cascade_child_parameters(chain_parameters):
+def cascade_child_params(chain_params):
     """Find upstream child parameters and cascade these
     to the parent.
 
     Args:
-        chain_parameters (list): List of task parameters
+        chain_params (list): List of task parameters
     Returns:
-        chain_parameters (list): List of task parameters, with children expanded.
+        chain_params (list): List of task parameters, with children expanded.
     """
-    _chain_parameters = defaultdict(list)
-    for job_name, rows in chain_parameters.items():
+    _chain_params = defaultdict(list)
+    for job_name, rows in chain_params.items():
         for row in rows:
             uid = generate_uid(job_name, row)
             # Only parents after this point
             if row["child"] is None:
                 row['uid'] = uid
-                _chain_parameters[job_name].append(deepcopy(row))
+                _chain_params[job_name].append(deepcopy(row))
                 continue
             # Cascade parameters to parents (including UID)
             child = row["child"]
-            child_rows = _chain_parameters[child]
+            child_rows = _chain_params[child]
             for child_row in child_rows:
                 _row = deepcopy(row)
                 _row["child"] = child_row["uid"]
@@ -164,8 +180,8 @@ def cascade_child_parameters(chain_parameters):
                         continue
                     if k not in _row:
                         _row[k] = v
-                _chain_parameters[job_name].append(_row)
-    return _chain_parameters
+                _chain_params[job_name].append(_row)
+    return _chain_params
 
 
 def generate_uid(job_name, row):
@@ -176,7 +192,7 @@ def generate_uid(job_name, row):
     except KeyError:
         pass
     else:
-        uid += '.' + ".".join(f"{k}_{v}".replace('.','-') 
+        uid += '.' + ".".join(f"{k}_{v}".replace('.','-')
                               for k, v in hyps.items())
     finally:
         return uid
@@ -193,6 +209,41 @@ def deep_split(s3_path):
     s3_bucket, s3_key = s3.parse_s3_path(s3_path)
     subbucket, _ = os.path.split(s3_key)
     return s3_bucket, subbucket, s3_key
+
+
+def subsample(rows):
+    """Extract 3 rows from rows for testing purposes.
+    The first, last and middlish value are extracted.
+
+    Args:
+        rows (list): Data to be subsetted.
+    Returns:
+        _rows (list): 3 points sampled from the input.
+    """
+    n = len(rows)
+    if n > 3:
+        rows = [rows[0], rows[-1], rows[int((n+1)/2)]]
+    return rows
+
+
+def bucket_filter(s3_path_prefix, uids):
+    """
+    Get all json objects in the bucket starting with a valid UID.
+    
+    Args:
+        uids (list): List of UIDs which the s3 keys must start with.
+    Yields:
+        key, json
+    """
+    bucket_name, _, _ = deep_split(s3_path_prefix)
+    bucket = boto3.resource('s3').Bucket(bucket_name)        
+    for obj in bucket.objects.all():
+        key = obj.key.split('/')[-1]
+        if not key.endswith('json'):
+            continue
+        elif not any(key.startswith(uid) for uid in uids):
+            continue
+        yield obj.key, json.load(obj.get()['Body'])
 
 
 class MLTask(autobatch.AutoBatchTask):
@@ -251,7 +302,7 @@ class MLTask(autobatch.AutoBatchTask):
 
     def derive_file_length_path(self):
         """Determine the s3 path to the file which contains the
-        the number of lines in the main (json) file.        
+        the number of lines in the main (json) file.
         """
         fname = self.s3_path_in
         ext = fname.split('.')[-1]
@@ -282,7 +333,7 @@ class MLTask(autobatch.AutoBatchTask):
             raise ValueError("Neither batch_size for n_batches set")
 
         # Calculate the batch size parameters
-        total = self.get_input_length()        
+        total = self.get_input_length()
         if self.n_batches is not None:
             if self.n_batches > total:
                 self.n_batches = total
@@ -410,14 +461,19 @@ class AutoMLTask(luigi.Task):
     configuration file.
 
     Args:
-        s3_path_in (str): Path to the input data.
+        input_task (luigi.Task): A task class to be the sole
+                                 pipeline requirement.
+        input_task_kwargs (dict): kwargs for input_task.__init__
         s3_path_prefix (str): Prefix of all paths to the output data.
-        task_chain_filepath (str): File path of the task chain configuration file.
+        task_chain_filepath (str): File path of the task chain
+                                   configuration file.
         test (bool): Whether or not to run batch tasks in test mode.
+        autobatch_kwargs (dict): Extra arguments to pass to autobatch.__init__ (Note that MLTask inherits from AutoBatchTask).
+        maximize_loss (bool): Maximise the loss function?
+        gp_optimizer_kwargs (kwargs): kwargs for the GP optimizer.
     """
-    #s3_path_in = luigi.Parameter()
     input_task = luigi.TaskParameter()
-    input_task_kwargs = luigi.DictParameter()
+    input_task_kwargs = luigi.DictParameter(default={})
     s3_path_prefix = luigi.Parameter()
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
@@ -427,83 +483,70 @@ class AutoMLTask(luigi.Task):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        AutoMLTask.task_parameters = {}  # Container for keeping track of children
+        AutoMLTask.task_parameters = {}  # To keep track of children
 
-    def generate_seed_search_tasks(self, env_keys=["batchable", "env_files"]):
-        """Generate task parameters, which could be fixed, grid or random.
-        Note random not yet implemented.
+    def generate_seed_search_tasks(self, env_keys=["batchable",
+                                                   "env_files"]):
+        """Generate task parameters, which could be fixed,
+        grid or random. Note: random not yet implemented.
 
         Parse the chain parameters into a dictionary, and expand
         filepaths if specified.
 
         Args:
             env_keys (list): List (or list of lists) of partial
-                             (note, not necessarily relative) filepaths to
-                             expand into absolute filepaths. See :obj:`find_filepath_from_pathstub`
+                             (note, not necessarily relative)
+                             filepaths to expand into absolute
+                             filepaths.
+                             See :obj:`find_filepath_from_pathstub`
                              for more information.
         """
         with open(self.task_chain_filepath) as f:
-            _chain_parameters = json.load(f)
-
+            _chain_params = json.load(f)
         # Expand filepaths, children and hyperparameters
-        chain_parameters = []
+        chain_params = []
         child = None
-        for row in _chain_parameters:
-            # Register a child if not specified
-            if 'child' not in row:
-                row['child'] = child
-            # Expand filepaths
-            for key in env_keys:
-                if key in row:
-                    row[key] = expand_pathstub(row[key])
-            # Expand hyperparameters if any are specified
-            try:
-                _rows = expand_hyperparameters(row)
-                # Sample ends and middle hyps if in test mode
-                if self.test:
-                    n_hyps = len(_rows)
-                    if n_hyps > 3:
-                        _rows = [_rows[0], _rows[-1],
-                                 _rows[int((n_hyps+1)/2)]]
-            except KeyError:
-                chain_parameters.append(row)
-            else:
-                chain_parameters += _rows
+        for row in _chain_params:
+            # The previous task is this child if child not specified
+            row['child'] = row['child'] if 'child' in row else child
+            row = expand_envs(row, env_keys)
+            rows = expand_hyperparams(row)
+            chain_params += subsample(rows) if self.test else rows
             # This task is the proceeding task's child, by default
             child = row['job_name']
-
         # Group parameters by job name
-        chain_parameters = ordered_groupby(collection=chain_parameters,
-                                           column='job_name')
-        # Impute missing parent information from the child
-        chain_parameters = cascade_child_parameters(chain_parameters)
-        # Done processing
-        return chain_parameters
+        chain_params = ordered_groupby(chain_params, 'job_name')
+        # Impute missing parent information from children
+        chain_params = cascade_child_params(chain_params)
+        return chain_params
 
-    def launch(self, chain_parameters):
+    def make_path(self, uid):
+        """Make the in/output path from the task uid"""
+        if uid is None:
+            return None
+        return os.path.join(self.s3_path_prefix,
+                            f'{uid}.TEST_{self.test}')
+
+    def launch(self, chain_params):
         """Launch jobs from the parameters"""
         # Generate all kwargs for tasks
-        test = f".TEST_{self.test}"
         kwargs_dict = {}
         all_children = set()
-        for job_name, all_parameters in chain_parameters.items():
+        for job_name, all_parameters in chain_params.items():
             AutoMLTask.task_parameters[job_name] = all_parameters
             for pars in all_parameters:
-                s3_path_out = os.path.join(self.s3_path_prefix,
-                                           pars.pop('uid'))+test
-                s3_path_in = (None if pars['child'] is None
-                              else os.path.join(self.s3_path_prefix,
-                                                pars['child'])+test)
-                all_children.add(s3_path_in)
-                kwargs_dict[s3_path_out] = dict(s3_path_out=s3_path_out,
-                                                s3_path_in=s3_path_in,
-                                                test=self.test,
-                                                **pars)
-                if s3_path_in is None:
+                path_in = self.make_path(pars['child'])
+                path_out = self.make_path(pars.pop('uid'))
+                kwargs_dict[path_out] = dict(s3_path_out=path_out,
+                                             s3_path_in=path_in,
+                                             test=self.test,
+                                             **pars)
+                all_children.add(path_in)
+                # Special case: if no input, set the input task
+                if path_in is None:
                     _kwargs = self.input_task_kwargs
-                    kwargs_dict[s3_path_out]['input_task'] = self.input_task
-                    kwargs_dict[s3_path_out]['input_task_kwargs'] = _kwargs
-
+                    kwargs_dict[path_out]['input_task'] = self.input_task
+                    kwargs_dict[path_out]['input_task_kwargs'] = _kwargs
 
         # Launch the tasks
         for uid, kwargs in kwargs_dict.items():
@@ -517,38 +560,30 @@ class AutoMLTask(luigi.Task):
     def requires(self):
         """Generate task parameters and yield MLTasks"""
         # Generate the parameters
-        chain_parameters = self.generate_seed_search_tasks()
-        # chain_parameters += self.generate_optimization_tasks() ## <-- blank optimisation tasks
-        for kwargs in self.launch(chain_parameters):
+        chain_params = self.generate_seed_search_tasks()
+        # chain_params += self.generate_optimization_tasks() ## <-- blank optimisation tasks
+        for kwargs in self.launch(chain_params):
             yield _MLTask(**kwargs, **self.autobatch_kwargs)
 
     def output(self):
         return s3.S3Target(f"{self.s3_path_prefix}.best")
 
+
+    def extract_losses(self, uids):
+        """Extract the loss values from each output json file"""
+        # 1 - 2*[1 OR 0] = [-1 OR 1]
+        loss_sign = 1 - 2*int(self.maximize_loss)
+        # Find the losses
+        return {key: loss_sign * js['loss']
+                for key, js in 
+                bucket_filter(self.s3_path_prefix, uids)}
+
     def run(self):
         # Get the UIDs for the final tasks
         final_task = list(AutoMLTask.task_parameters.keys())[-1]
-        hypers = [generate_uid(final_task, row)
-                  for row in AutoMLTask.task_parameters[final_task]]
-
-        # Prepare AWS resources
-        bucket_name, _, _ = deep_split(self.s3_path_prefix)
-        bucket = boto3.resource('s3').Bucket(bucket_name)
-
-        # 1 - 2*[1 OR 0] = [-1 OR 1]
-        loss_sign = 1 - 2*int(self.maximize_loss)
-
-        # Find the losse
-        losses = {}
-        for obj in bucket.objects.all():
-            key = obj.key.split('/')[-1]
-            if not key.endswith('json'):
-                continue
-            if not any(key.startswith(uid) for uid in hypers):
-                continue
-            js = json.load(obj.get()['Body'])
-            losses[obj.key] = loss_sign * js['loss']
-
+        uids = [generate_uid(final_task, row)
+                for row in AutoMLTask.task_parameters[final_task]]
+        losses = self.extract_losses(uids)
         # Least common = minimum loss
         best_key = Counter(losses).most_common()[-1][0]
         f = self.output().open("wb")
