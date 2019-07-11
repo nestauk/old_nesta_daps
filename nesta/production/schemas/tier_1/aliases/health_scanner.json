@@ -103,7 +103,8 @@
     },
     "terms": {
         "crunchbase": "terms_mesh_description",
-        "nih": "terms_mesh_abstract"
+        "nih": "terms_mesh_abstract",
+	"meetup": "terms_topics_group"
     },
     "title": {
         "nih": "title_of_project"
