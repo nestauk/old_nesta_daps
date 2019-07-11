@@ -19,6 +19,30 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+def _clean_bad_unicode_conversion(row):
+    """Removes sequences of ??? from strings, which normally 
+    occur due to bad unicode conversion. Note this is a hack:
+    the real solution is to deal with unicode gracefully, where
+    the option is available.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is not str:
+            continue
+        elif "??" not in v:
+            continue        
+        while "???" in v:
+            v = v.replace("???","")
+        while "??" in v:
+            v = v.replace("??","")
+        _row[k] = v
+    return _row
+
 def _nullify_pairs(row, null_pairs={}):
     """Nullify any value if it's 'parent' is also null.
     For example for null_pairs={'parent': 'child'} 
@@ -404,6 +428,7 @@ class ElasticsearchPlus(Elasticsearch):
             self.transforms.append(_caps_to_camel_case)
 
         # Clean up lists (dedup, remove None, empty lists are None)
+        self.transforms.append(_clean_bad_unicode_conversion)
         self.transforms.append(_clean_up_lists)
         self.transforms.append(_remove_padding)
         self.transforms.append(lambda row: _nullify_pairs(row, null_pairs))
