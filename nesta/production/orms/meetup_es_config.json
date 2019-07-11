@@ -29,6 +29,9 @@
                 "_terms_sdg_description": {
                     "type": "keyword"
                 },
+                "booleanFlag_autotranslate_entity": {
+                    "type": "boolean"
+                },
                 "coordinate_of_group": {
                     "type": "geo_point"
                 },

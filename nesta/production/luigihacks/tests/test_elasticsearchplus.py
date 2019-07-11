@@ -1,6 +1,9 @@
 import pytest
 from unittest import mock
+from nesta.production.luigihacks.elasticsearchplus import Translator
 
+from nesta.production.luigihacks.elasticsearchplus import _auto_translate
+from nesta.production.luigihacks.elasticsearchplus import _sanitize_html
 from nesta.production.luigihacks.elasticsearchplus import _clean_bad_unicode_conversion
 from nesta.production.luigihacks.elasticsearchplus import _null_empty_str
 from nesta.production.luigihacks.elasticsearchplus import _coordinates_as_floats
@@ -47,6 +50,7 @@ def row():
             "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
             "bad_unicode": "?????? something ??? else?? done?",
+            "frenchish": "Je mange quelquechose quelquefois",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -55,10 +59,43 @@ def row():
             "ugly_list" : ["UNKNOWN", "none", "None", None, "23", "23"],
             "empty_list" : [],
             "a negative number": -123,
+            "html_field" : "<p>The yoga style is Hatha which is basic and for all levels. As I may arrange the sequences if you have some requests, please feel free to put your comments.</p> \n<p>In addition, as I love to do something for fun and make new friends, I will also create new events which is not related to yoga.</p> \n<p>Let's join us if you are interested.</p>",
             "a description field": ("Chinese and British people "
                                     "both live in Greece and Chile"),
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
+
+def test_auto_translate_true_short(row):
+    translator = Translator()
+    _row = _auto_translate(row, translator)
+    assert not _row.pop('booleanFlag_autotranslate_entity')
+    assert row['frenchish'] == _row['frenchish']
+    assert row == _row
+
+def test_auto_translate_true_long(row):
+    translator = Translator()
+    _row = _auto_translate(row, translator, 10)
+    assert row.pop('frenchish') != _row['frenchish']
+    assert _row.pop('booleanFlag_autotranslate_entity')
+    assert _row.pop('frenchish') == 'I eat something sometimes'
+    assert row == _row
+
+def test_auto_translate_false(row):
+    translator = Translator()
+    row.pop('frenchish')
+    _row = _auto_translate(row, translator)
+    assert not _row.pop('booleanFlag_autotranslate_entity')
+    assert row == _row
+
+def test_sanitize_html(row):
+    _row = _sanitize_html(row)
+    assert len(_row) == len(row)
+    for k, v in _row.items():
+        if k == 'html_field':
+            print(v)
+            assert v == "The yoga style is Hatha which is basic and for all levels. As I may arrange the sequences if you have some requests, please feel free to put your comments. \nIn addition, as I love to do something for fun and make new friends, I will also create new events which is not related to yoga. \nLet's join us if you are interested."
+        else:
+            assert v == row[k]
 
 def test_clean_bad_unicode_conversion(row):
     _row = _clean_bad_unicode_conversion(row)

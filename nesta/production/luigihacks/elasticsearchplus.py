@@ -1,3 +1,5 @@
+from googletrans import Translator
+from html.parser import HTMLParser
 from collections import Counter
 from collections import defaultdict
 from collections import OrderedDict
@@ -19,8 +21,66 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+class MLStripper(HTMLParser):
+    """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html."""
+    def __init__(self):
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.fed = []
+        super().__init__()
+    def handle_data(self, d):
+        self.fed.append(d)
+    def get_data(self):
+        return ''.join(self.fed)
+
+def strip_tags(html):
+    """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html"""
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+def _auto_translate(row, translator, min_len=200):
+    """Translate any text fields longer than min_len characters
+    into English.
+                                                                 
+    Args:                                                        
+        row (dict): Row of data to evaluate.
+    Returns:                                                     
+        _row (dict): Modified row.                     
+    """
+    _row = deepcopy(row)
+    _row['booleanFlag_autotranslate_entity'] = False
+    for k, v in row.items():
+        if type(v) is not str:
+            continue
+        if len(v) <= min_len:
+            continue
+        result = translator.detect(v)
+        if result.lang == 'en':
+            continue
+        _row[k] = translator.translate(v).text
+        _row['booleanFlag_autotranslate_entity'] = True
+    return _row
+
+def _sanitize_html(row):
+    """Strips out any html encoding. Note: nothing clever is done
+    such as replacing breaks with newlines.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is not str:
+            continue        
+        _row[k] = strip_tags(v)
+    return _row
+
 def _clean_bad_unicode_conversion(row):
-    """Removes sequences of ??? from strings, which normally 
+    """Removes sequences of ??? from strings, which normally
     occur due to bad unicode conversion. Note this is a hack:
     the real solution is to deal with unicode gracefully, where
     the option is available.
@@ -35,7 +95,7 @@ def _clean_bad_unicode_conversion(row):
         if type(v) is not str:
             continue
         elif "??" not in v:
-            continue        
+            continue
         while "???" in v:
             v = v.replace("???","")
         while "??" in v:
@@ -45,13 +105,13 @@ def _clean_bad_unicode_conversion(row):
 
 def _nullify_pairs(row, null_pairs={}):
     """Nullify any value if it's 'parent' is also null.
-    For example for null_pairs={'parent': 'child'} 
+    For example for null_pairs={'parent': 'child'}
     the following will occur:
-    
+
     {'parent': None, 'child': 5} will become {'parent': None, 'child': None}
-    
+
     however
-    
+
     {'parent': 5, 'child': None} will remain unchanged.
 
     Args:
@@ -366,6 +426,7 @@ class ElasticsearchPlus(Elasticsearch):
         caps_to_camel_case (bool): Convert all upper case text fields (longer than 3 chars)
                                    to camel case?
         remove_padding (bool): Remove all whitespace padding?
+        auto_translate (bool): Convert large text fields to English?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
@@ -380,6 +441,7 @@ class ElasticsearchPlus(Elasticsearch):
                  terms_delimiters=None,
                  caps_to_camel_case=False,
                  null_pairs={},
+                 auto_translate=False,
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -427,7 +489,13 @@ class ElasticsearchPlus(Elasticsearch):
         if caps_to_camel_case:
             self.transforms.append(_caps_to_camel_case)
 
+        # Translate any text to english
+        if auto_translate:
+            translator = Translator()
+            self.transforms.append(lambda row: _auto_translate(row, translator))
+
         # Clean up lists (dedup, remove None, empty lists are None)
+        self.transforms.append(_sanitize_html)
         self.transforms.append(_clean_bad_unicode_conversion)
         self.transforms.append(_clean_up_lists)
         self.transforms.append(_remove_padding)
@@ -442,7 +510,7 @@ class ElasticsearchPlus(Elasticsearch):
         Returns:
             _row (dict): Modified row.
         """
-        return reduce(lambda _row, f: f(_row), self.transforms, row)        
+        return reduce(lambda _row, f: f(_row), self.transforms, row)
 
     def index(self, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the
