@@ -76,7 +76,7 @@ class RootTask(luigi.WrapperTask):
                                             aliases='health_scanner',
                                             dataset='meetup',
                                             id_field=Group.id,
-                                            entity_type='meetup group',
+                                            entity_type='meetup',
                                             core_categories=self.core_categories,
                                             members_perc=self.members_perc,
                                             topic_perc=self.topic_perc,
