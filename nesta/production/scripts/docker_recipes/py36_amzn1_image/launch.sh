@@ -21,6 +21,7 @@ cd run
 
 # Install dependencies from the requirements file
 sudo /usr/bin/pip-3.6 install -r requirements.txt
+sudo /usr/bin/pip-3.6 install lxml
 
 # Check the file exists and run it
 echo "Starting..."
