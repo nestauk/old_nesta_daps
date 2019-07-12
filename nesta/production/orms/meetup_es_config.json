@@ -38,7 +38,7 @@
                 "count_member_group": {
                     "type": "integer"
                 },
-                "datetime_start_group": {
+                "date_start_group": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },

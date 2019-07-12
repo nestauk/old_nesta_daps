@@ -40,14 +40,14 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
-def _auto_translate(row, translator, min_len=200):
+def _auto_translate(row, translator, min_len=150):
     """Translate any text fields longer than min_len characters
     into English.
-                                                                 
-    Args:                                                        
+
+    Args:
         row (dict): Row of data to evaluate.
-    Returns:                                                     
-        _row (dict): Modified row.                     
+    Returns:
+        _row (dict): Modified row.
     """
     _row = deepcopy(row)
     _row['booleanFlag_autotranslate_entity'] = False
@@ -75,7 +75,7 @@ def _sanitize_html(row):
     _row = deepcopy(row)
     for k, v in row.items():
         if type(v) is not str:
-            continue        
+            continue
         _row[k] = strip_tags(v)
     return _row
 

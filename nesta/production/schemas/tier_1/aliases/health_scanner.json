@@ -85,7 +85,7 @@
     },
     "start": {
         "crunchbase": "date_birth_organisation",
-        "meetup": "datetime_start_group",
+        "meetup": "date_start_group",
         "nih": "date_start_project"
     },
     "state": {
