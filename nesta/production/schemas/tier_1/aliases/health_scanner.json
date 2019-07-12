@@ -39,7 +39,7 @@
     },
     "country_id": {
         "crunchbase": "id_iso2_country",
-        "meetup": "id_iso2_group",
+        "meetup": "id_iso2_country",
         "nih": "id_iso2_country"
     },
     "currency": {
