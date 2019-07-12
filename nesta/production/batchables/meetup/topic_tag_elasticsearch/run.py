@@ -135,27 +135,28 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        environ = { 'batch_file': ('2019-06-06-community-environment'
+        environ = { 'batch_file': ('2019-07-11-community-environment'
                                    '--health-wellbeing'
-                                   '--fitness-10-99-True-15598283679714198.json'),
+                                   '--fitness'
+                                   '-10-99-False-15628617195251713.json'),
                     'config': ('/home/ec2-user/nesta/nesta/production/'
                                'config/mysqldb.config'),
-                    'db_name': 'production',
+                    'db_name': 'dev',
                     'bucket': 'nesta-production-intermediate',
                     'done': 'False',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),
                     'out_port': '443',
-                    'out_index': 'meetup_v0',
+                    'out_index': 'meetup_dev',
                     'out_type': '_doc',
                     'aws_auth_region': 'eu-west-2',
-                    'entity_type': 'meetup group',
+                    'entity_type': 'meetup',
                     'test': 'True',
                     'members_perc': '10',
-                    'routine_id': ('2019-06-06-community-environment'
-                                   '--health-wellbeing--fitness-10-99-True')}
-
+                    'routine_id': ('2019-07-11-community-environment'
+                                   '--health-wellbeing--fitness'
+                                   '-10-99-False')}
 
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v

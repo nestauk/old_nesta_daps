@@ -17,11 +17,11 @@ from nesta.production.routines.meetup.health_tagging.topic_discovery_task import
 
 class MeetupHealthElasticsearchTask(ElasticsearchTask):
     '''Task to pipe meetup data to ES. For other arguments, see :obj:`ElasticsearchTask`.
-    
-    Args:                                                                                   
+
+    Args:
         core_categories (list): A list of category_shortnames from which to identify topics.
-        members_perc (int): A percentile to evaluate the minimum number of members.         
-        topic_perc (int): A percentile to evaluate the most frequent topics.                
+        members_perc (int): A percentile to evaluate the minimum number of members.
+        topic_perc (int): A percentile to evaluate the most frequent topics.
     '''
     core_categories = luigi.ListParameter()
     members_perc = luigi.IntParameter()
@@ -44,7 +44,7 @@ class MeetupHealthElasticsearchTask(ElasticsearchTask):
                                poll_time=10,
                                memory=4096,
                                max_live_jobs=2)
-        
+
         yield TopicDiscoveryTask(routine_id=self.routine_id,
                                  core_categories=self.core_categories,
                                  members_perc=self.members_perc,
@@ -61,14 +61,14 @@ class RootTask(luigi.WrapperTask):
                                                    "fitness"])
     members_perc = luigi.IntParameter(default=10)
     topic_perc = luigi.IntParameter(default=99)
-    db_config_env = luigi.Parameter(default="MYSQLDB")    
+    db_config_env = luigi.Parameter(default="MYSQLDB")
     drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
         logging.getLogger().setLevel(logging.INFO)
         routine_id = (f"{self.date}-{'--'.join(self.core_categories)}"
                       f"-{self.members_perc}-{self.topic_perc}-{self.production}")
-        yield MeetupHealthElasticsearchTask(routine_id=routine_id,                                            
+        yield MeetupHealthElasticsearchTask(routine_id=routine_id,
                                             date=self.date,
                                             process_batch_size=10000,
                                             insert_batch_size=10000,
