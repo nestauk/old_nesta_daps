@@ -103,14 +103,14 @@
     },
     "terms": {
         "crunchbase": "terms_mesh_description",
-        "nih": "terms_mesh_abstract",
-	"meetup": "terms_topics_group"
+        "meetup": "terms_topics_group",
+        "nih": "terms_mesh_abstract"
     },
     "title": {
         "nih": "title_of_project"
     },
     "url": {
-	"crunchbase": "url_of_organisation",
-	"meetup": "url_of_group"
+        "crunchbase": "url_of_organisation",
+        "meetup": "url_of_group"
     }
 }

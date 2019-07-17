@@ -70,8 +70,7 @@ class RootTask(luigi.WrapperTask):
                       f"-{self.members_perc}-{self.topic_perc}-{self.production}")
         yield MeetupHealthElasticsearchTask(routine_id=routine_id,
                                             date=self.date,
-                                            process_batch_size=10000,
-                                            insert_batch_size=10000,
+                                            process_batch_size=1000,
                                             drop_and_recreate=self.drop_and_recreate,
                                             aliases='health_scanner',
                                             dataset='meetup',
@@ -90,9 +89,10 @@ class RootTask(luigi.WrapperTask):
                                                        f3p("config/elasticsearch.config")],
                                             job_def="py36_amzn1_image",
                                             job_name=f"MeetupHealthElasticsearchTask-{routine_id}",
-                                            job_queue="HighPriority",
+                                            job_queue="MinimalCpus",
                                             region_name="eu-west-2",
                                             poll_time=10,
                                             memory=2048,
+                                            vcpus=2,
                                             max_live_jobs=100,
                                             kwargs={"members_perc": self.members_perc})

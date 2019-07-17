@@ -1,4 +1,11 @@
 [
-      {"tier_0": "uuid", "tier_1": "id_of_organisation", "unique":true},
-      {"tier_0": "description", "tier_1": "textBody_descriptive_organisation"}
+    {
+        "tier_0": "uuid",
+        "tier_1": "id_of_organisation",
+        "unique": true
+    },
+    {
+        "tier_0": "description",
+        "tier_1": "textBody_descriptive_organisation"
+    }
 ]
