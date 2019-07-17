@@ -13,11 +13,12 @@ import pandas as pd
 
 from nesta.packages.arxiv import deepchange_analysis
 from nesta.production.luigihacks import misctools, mysqldb
-from nesta.production.orms.orm_utils import get_mysql_engine, db_session
+from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 
 
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
+YEAR_THRESHOLD = 2012
 
 
 class AnalysisTask(luigi.Task):
@@ -70,36 +71,27 @@ class AnalysisTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         # Base.metadata.create_all(self.engine)
 
-        # query topics table and determine deep_learning topic id, 2 options below
-        # with db_session(self.engine) as session:
-        #     dl_topic_id = (session
-        #                    .query(CorExTopic.id)
-        #                    .filter(CorExTopic.terms.like('%deep_learning%'))
-        #                    .scalar())
-
-        #     from sqlalchemy import func
-        #     dl_topic_id = (session
-        #                    .query(CorExTopic.id)
-        #                    .filter(func.json_contains(CorExTopic.terms,
-        #                                               '["deep_learning"]'))
-        #                    .scalar())
-
-        # collect articles, categories, institutes
+        # collect articles, categories, institutes.
+        # duplicate article ids exist due to authors from different institutes
+        # contributing to a paper and multinational institutes.
+        # There is one row per article / institiute / institute country
         with open(DEEPCHANGE_QUERY) as sql_query:
-            # TODO: consider adding param for threshold topic score
-            df = pd.read_sql(sql_query.read(), self.engine, params={})
+            df = pd.read_sql(sql_query.read(), self.engine)
+        logging.info(f"Retrieved {len(df)} articles from database")
 
-        # dummy value to be replaced with the topic modeling
-        import numpy as np
-        df['is_dl'] = np.random.choice([True, False], size=len(df), p=[0.7, 0.3])
-        logging.info(df.is_dl.head())
+        # collect topics, determine which represents deep_learning and apply flag
+        dl_topic_ids = deepchange_analysis.get_article_ids_by_term(self.engine,
+                                                                   term='deep_learning',
+                                                                   min_weight=0.2)
+        df['is_dl'] = df.article_id.apply(lambda i: i in dl_topic_ids)
+        logging.info(f"Flagged {df.is_dl.sum()} deep learning articles")
 
         df['date'] = df.apply(lambda row: row.article_updated or row.article_created,
                               axis=1)
         df['year'] = df.date.apply(lambda date: date.year)
         df = deepchange_analysis.add_before_date_flag(df,
                                                       date_column='date',
-                                                      before_year=2012)
+                                                      before_year=YEAR_THRESHOLD)
 
         # TODO: decide if we are applying de-duplication for each chart
         deduped = df.drop_duplicates('article_id')
@@ -139,12 +131,13 @@ class AnalysisTask(luigi.Task):
         deepchange_analysis.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
 
         # third plot - percentage of dl papers by year
+        # TODO: set reasonable limits on the y axis
         papers_by_year = pd.crosstab(df['year'], df['is_dl']).loc[2000:]
-        # TODO: Remove the False column
+        papers_by_year = (100 * papers_by_year.apply(lambda x: x / x.sum(), axis=1))
+        papers_by_year = papers_by_year.drop(False, axis=1)
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        # papers_by_year.plot.barh(ax=ax)
-        (100 * papers_by_year.apply(lambda x: x / x.sum(), axis=1)).plot(legend=None)
+        papers_by_year.plot(legend=None)
         ax.set_xlabel('Percentage of DL papers by year')
         ax.set_ylabel('%')
         deepchange_analysis.plot_to_s3('arxlive-charts', 'figure_3.png', plt)
