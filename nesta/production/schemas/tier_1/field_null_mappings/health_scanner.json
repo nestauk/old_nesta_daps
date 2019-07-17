@@ -1,8 +1,34 @@
-{  
-    "<ALL_FIELDS>" : ["None", "none", "unknown", "UNKNOWN", "NONE", "Unknown"],
-    "cost_total_project": ["<NEGATIVE>", 0],
-    "cost_of_funding": ["<NEGATIVE>", 0],
-    "_cost_usd2018_organisation": ["<NEGATIVE>", 0],
-    "_cost_usd2018_project": ["<NEGATIVE>", 0],
-    "location": [{"lat": null}, {"lon": null}]
+{
+    "<ALL_FIELDS>": [
+        "None",
+        "none",
+        "unknown",
+        "UNKNOWN",
+        "NONE",
+        "Unknown"
+    ],
+    "_cost_usd2018_organisation": [
+        "<NEGATIVE>",
+        0
+    ],
+    "_cost_usd2018_project": [
+        "<NEGATIVE>",
+        0
+    ],
+    "cost_of_funding": [
+        "<NEGATIVE>",
+        0
+    ],
+    "cost_total_project": [
+        "<NEGATIVE>",
+        0
+    ],
+    "location": [
+        {
+            "lat": null
+        },
+        {
+            "lon": null
+        }
+    ]
 }
