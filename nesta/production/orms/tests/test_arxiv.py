@@ -4,8 +4,8 @@ from nesta.production.orms.arxiv_orm import Base
 from nesta.production.orms.orm_utils import get_mysql_engine
 
 
-class TestCrunchbase(unittest.TestCase):
-    '''Check that the Crunchbase ORM works as expected'''
+class TestArxiv(unittest.TestCase):
+    '''Check that the arXiv ORM works as expected'''
     engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
     Session = sessionmaker(engine)
 

@@ -5,7 +5,6 @@ import numpy as np
 
 import os
 import boto3
-#from sklearn.feature_extraction.text import CountVectorizer
 import pandas as pd
 import json
 from nesta.production.luigihacks.s3 import parse_s3_path
@@ -31,23 +30,6 @@ def run():
     s3 = boto3.resource('s3')
     s3_obj_in = s3.Object(*parse_s3_path(s3_path_in))
     data = json.load(s3_obj_in.get()['Body'])
-
-    # # Prepare data and vectorizer
-    # _data = [' '.join(' '.join(para) for para in row['body'])
-    #          for row in data]
-    # vtzr = CountVectorizer(binary=binary, 
-    #                        min_df=min_df, 
-    #                        max_df=max_df)                 
-
-    # # Generate inputs for pandas
-    # index = [row['id'] for row in data]
-    # data = [list(row.toarray()[0]) 
-    #         for row in vtzr.fit_transform(_data)]
-    # columns = vtzr.get_feature_names()
-    
-    # # Generate dataframe
-    # df = pd.DataFrame(data=data, columns=columns, 
-    #                   index=index)
 
     # Extract what you need from the data
     _data = [list(itertools.chain.from_iterable(row['body']))
