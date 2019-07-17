@@ -2,6 +2,7 @@ import pytest
 from unittest import mock
 from nesta.production.luigihacks.elasticsearchplus import Translator
 
+from nesta.production.luigihacks.elasticsearchplus import sentence_chunks
 from nesta.production.luigihacks.elasticsearchplus import _auto_translate
 from nesta.production.luigihacks.elasticsearchplus import _sanitize_html
 from nesta.production.luigihacks.elasticsearchplus import _clean_bad_unicode_conversion
@@ -50,7 +51,7 @@ def row():
             "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
             "bad_unicode": "?????? something ??? else?? done?",
-            "frenchish": "Je mange quelquechose quelquefois",
+            "frenchish": "Je mange quelquechose. quelquefois",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -65,6 +66,12 @@ def row():
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
 
+def test_sentence_chunks():
+    text = '++this++++ is ++a sentence ++++++ with some +++ chunks +++'
+    for i in range(0, 200):
+        assert '+++'.join(sentence_chunks(text, delim='+++',
+                                          chunksize=i)) == text
+
 def test_auto_translate_true_short(row):
     translator = Translator()
     _row = _auto_translate(row, translator)
@@ -72,12 +79,18 @@ def test_auto_translate_true_short(row):
     assert row['frenchish'] == _row['frenchish']
     assert row == _row
 
+def test_auto_translate_true_short_small_chunks(row):
+    translator = Translator()
+    _row_1 = _auto_translate(row, translator, chunksize=1)
+    _row_2 = _auto_translate(row, translator, chunksize=10000)
+    assert _row_1 == _row_2
+
 def test_auto_translate_true_long(row):
     translator = Translator()
     _row = _auto_translate(row, translator, 10)
     assert row.pop('frenchish') != _row['frenchish']
     assert _row.pop('booleanFlag_autotranslate_entity')
-    assert _row.pop('frenchish') == 'I eat something sometimes'
+    assert _row.pop('frenchish') == 'I eat something. sometimes'
     assert row == _row
 
 def test_auto_translate_false(row):

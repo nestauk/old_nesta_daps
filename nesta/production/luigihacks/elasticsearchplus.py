@@ -23,6 +23,28 @@ COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
 COUNTRY_TAG="terms_of_countryTags"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+def sentence_chunks(text, chunksize=2000, delim='. '):
+    """Split a string into chunks, but breaking only on 
+    the specified delimiter.
+    
+    Args:
+        text (str): A string to split into chunks
+        chunksize (int): Minimum chunk size to yield
+        delim (str): Delimiter to split chunks
+    Yields:
+        chunk (str): The smallest possible chunks (minimum sise 
+                     :pyobject:`chunksize`) of text.
+    """
+    chunks = [] 
+    for _text in text.split(delim): 
+        chunks.append(_text) 
+        if sum(len(c) for c in chunks) > chunksize: 
+            yield delim.join(chunks) 
+            chunks = [] 
+    if len(chunks) > 0: 
+        yield delim.join(chunks) 
+
+
 class MLStripper(HTMLParser):
     """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html."""
     def __init__(self):
@@ -44,15 +66,17 @@ def strip_tags(html):
 
 @retry(wait_random_min=20, wait_random_max=30, 
        stop_max_attempt_number=10)
-def translate(text, translator):
-    result = translator.detect(text)
+def translate(text, translator, chunksize=2000):
+    is_long = len(text) > chunksize
+    result = translator.detect(text[:chunksize] 
+                               if is_long else text)
     if result.lang == 'en':
         return None
     time.sleep(0.4) # Rate limit
-    return translator.translate(text).text
+    return '. '.join(translator.translate(chunk).text
+                     for chunk in sentence_chunks(text))
 
-
-def _auto_translate(row, translator, min_len=150):
+def _auto_translate(row, translator, min_len=150, chunksize=2000):
     """Translate any text fields longer than min_len characters
     into English.
 
@@ -68,7 +92,7 @@ def _auto_translate(row, translator, min_len=150):
             continue
         if len(v) <= min_len:
             continue
-        result = translate(v, translator)
+        result = translate(v, translator, chunksize)
         if result is None:
             continue
         _row[k] = result
