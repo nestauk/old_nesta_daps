@@ -9,9 +9,11 @@ from nesta.production.luigihacks import batchclient
 from subprocess import check_output
 from subprocess import CalledProcessError
 import time
+#import random
 import luigi
 from nesta.production.luigihacks.misctools import get_config
 import logging
+import os
 
 # Define a global timeout, set to 95% of the timeout time
 # in order to give the Luigi worker some grace
@@ -29,7 +31,8 @@ def command_line(command, verbose=False):
     out_lines = out.decode("utf-8").split("\n")
     if verbose:
         for line in out_lines:
-            logging.info(">>>\t'{}'".format(line.replace("\r", ' ')))
+            logging.info(f"{os.getpid()}: "
+                         ">>>\t'{}'".format(line.replace("\r", ' ')))
     # The second last output is the actual final output
     # (ignoring the status code, which is the last output)
     return out_lines[-2]
@@ -105,7 +108,7 @@ class AutoBatchTask(luigi.Task, ABC):
         should implement :code:`prepare` and :code:`combine` methods in
         your class.
         '''
-        
+        pid = os.getpid()
         self.TIMEOUT = time.time() + int(_config["timeout"])
 
         # Generate the parameters for batches
@@ -113,18 +116,18 @@ class AutoBatchTask(luigi.Task, ABC):
         if self.test:
             if len(job_params) > 2:
                 job_params = job_params[0:2]
-                logging.info(f"Test mode: running {len(job_params)} jobs")
+                logging.info(f"Test mode ({pid}): running {len(job_params)} jobs")
 
         # Prepare the environment for batching
         env_files = " ".join(self.env_files)
         try:
             if self.test:
-                logging.info(f"Test mode: Preparing batch")
+                logging.info(f"Test mode ({pid}): Preparing batch")
             s3file_timestamp = command_line("nesta_prepare_batch "
                                             "{} {}".format(self.batchable,
                                                            env_files), self.test)
             if self.test:
-                logging.info(f"Test mode: Prepared batch")
+                logging.info(f"Test mode ({pid}): Prepared batch")
         except CalledProcessError:
             raise batchclient.BatchJobException("Invalid input "
                                                 "or environment files")
@@ -179,7 +182,7 @@ class AutoBatchTask(luigi.Task, ABC):
             s3file_timestamp (str): The timestamp of the batchable zip file
                              to be found on S3 by the AWS batch job.
         '''
-
+        pid = os.getpid()
         # Get AWS info to pass to the batch jobs
         aws_id = command_line("aws --profile default configure "
                               "get aws_access_key_id", self.test)
@@ -195,7 +198,7 @@ class AutoBatchTask(luigi.Task, ABC):
                          #{"name": "PYTHONIOENCODING", "value": "latin1"}]
 
         if self.test:
-            logging.info(f"Test mode: Got env variables")
+            logging.info(f"Test mode ({pid}): Got env variables")
 
         # Set up batch client, and check that we haven't 
         # already hit the time limit
@@ -203,7 +206,7 @@ class AutoBatchTask(luigi.Task, ABC):
                                                region_name=self.region_name)
         self._assert_timeout(batch_client, job_ids=[])
         if self.test:
-            logging.info(f"Test mode: Ready to batch")
+            logging.info(f"Test mode ({pid}): Ready to batch")
         
         all_job_kwargs = []
         for i, params in enumerate(job_params):
@@ -243,14 +246,16 @@ class AutoBatchTask(luigi.Task, ABC):
         all_job_ids = set()
         done_job_ids = set()
         submitted_job_idxs = set()
-        logging.info("{} jobs to run".format(len(all_job_kwargs)))
+        logging.info(f"{os.getpid()}: "
+                     "{} jobs to run".format(len(all_job_kwargs)))
         while len(all_job_kwargs) > len(all_job_ids):
             # Get the number of live jobs
             running_job_ids = all_job_ids - done_job_ids
             n_live = len(running_job_ids)
             n_done = len(done_job_ids)
             n_left = len(all_job_kwargs) - n_done - n_live
-            logging.info("{} jobs are live, "
+            logging.info(f"{os.getpid()}: "
+                         "{} jobs are live, "
                          "{} are finished, "
                          "and {} are yet to be submitted".format(n_live, n_done, n_left))
                                                  
@@ -269,7 +274,7 @@ class AutoBatchTask(luigi.Task, ABC):
                 submitted_job_idxs.add(ijob)
                 n_live += 1
             # Wait before continuing
-            logging.info("Not finished submitting...")
+            logging.info(f"{os.getpid()}: Not done submitting...")
             time.sleep(self.poll_time)
 
         # Wait until all finished
@@ -291,7 +296,8 @@ class AutoBatchTask(luigi.Task, ABC):
         for id_ in job_ids:
             status = batch_client.get_job_status(id_)
             if id_ not in done_jobs:
-                logging.debug("{} {}".format(id_, status))
+                logging.debug(f"{os.getpid()}: "
+                              "{} {}".format(id_, status))
             if status == "FAILED":
                 self.failed_jobs.add(id_)
             if status not in ("SUCCEEDED", "FAILED", "RUNNING"):
@@ -302,7 +308,8 @@ class AutoBatchTask(luigi.Task, ABC):
 
         # Ignore if jobs are simply stalling
         if len(stats) == 0:
-            logging.info("No jobs are currently running")
+            logging.info(f"{os.getpid()}: "
+                         "No jobs are currently running")
             return
 
         # Calculate the failure rate
@@ -317,9 +324,11 @@ class AutoBatchTask(luigi.Task, ABC):
 
     def _assert_timeout(self, batch_client, job_ids):
         '''Assert that timeout has not been breached.'''
-        logging.info("{} seconds left".format(self.TIMEOUT - time.time()))
+        logging.info(f"{os.getpid()}: "
+                     "{} seconds left".format(self.TIMEOUT - time.time()))
         if time.time() < self.TIMEOUT:
             return
-        reason = "Impending worker timeout, so killing live tasks"
+        reason = f"{os.getpid()}: "
+        reason += "Impending worker timeout, so killing live tasks"
         reason += "\nFailed jobs are: {}".format(self.failed_jobs)
         batch_client.hard_terminate(job_ids=job_ids, reason=reason)
