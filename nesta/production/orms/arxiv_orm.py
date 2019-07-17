@@ -78,6 +78,8 @@ class Article(Base):
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
     institutes = relationship('ArticleInstitute')
+    corex_topics = relationship('CorExTopic',
+                                secondary='arxiv_article_corex_topics')
 
 
 class Category(Base):
@@ -102,3 +104,21 @@ class Category(Base):
 
 #     id = Column(VARCHAR(40), ForeignKey('arxiv_article_msc.msc_id'), primary_key=True)
 #     description = Column(VARCHAR(100))
+
+class CorExTopic(Base):
+    """CorEx topics derived from arXiv data"""
+    __tablename__ = 'arxiv_corex_topics'
+    id = Column(INTEGER, primary_key=True, autoincrement=False)
+    terms = Column(JSON)
+
+class ArticleTopic(Base):
+    """Association table to CorEx topics."""
+    __tablename__ = 'arxiv_article_corex_topics'
+    article_id = Column(VARCHAR(20), 
+                        ForeignKey(Article.id), 
+                        primary_key=True)
+    topic_id = Column(INTEGER, 
+                      ForeignKey(CorExTopic.id), 
+                      primary_key=True,
+                      autoincrement=False)
+    topic_weight = Column(FLOAT)
