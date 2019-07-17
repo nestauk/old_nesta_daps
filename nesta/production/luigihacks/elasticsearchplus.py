@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections import OrderedDict
 from elasticsearch import Elasticsearch
 from elasticsearch import RequestsHttpConnection
+from retrying import retry
 from functools import reduce
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ import string
 from copy import deepcopy
 import boto3
 from requests_aws4auth import AWS4Auth
+import time
 
 from nesta.packages.decorators.schema_transform import schema_transformer
 
@@ -40,6 +42,16 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
+@retry(wait_random_min=20, wait_random_max=30, 
+       stop_max_attempt_number=10)
+def translate(text, translator):
+    result = translator.detect(text)
+    if result.lang == 'en':
+        return None
+    time.sleep(0.4) # Rate limit
+    return translator.translate(text).text
+
+
 def _auto_translate(row, translator, min_len=150):
     """Translate any text fields longer than min_len characters
     into English.
@@ -56,10 +68,10 @@ def _auto_translate(row, translator, min_len=150):
             continue
         if len(v) <= min_len:
             continue
-        result = translator.detect(v)
-        if result.lang == 'en':
+        result = translate(v, translator)
+        if result is None:
             continue
-        _row[k] = translator.translate(v).text
+        _row[k] = result
         _row['booleanFlag_autotranslate_entity'] = True
     return _row
 

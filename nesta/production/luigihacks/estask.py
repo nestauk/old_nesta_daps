@@ -28,7 +28,6 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
         intermediate_bucket (str): Name of the S3 bucket where to store the batch ids.
         db_config_env (str): The output database envariable.
         process_batch_size (int): Number of rows to process in a batch.
-        insert_batch_size (int): Number of rows to insert into the db in a batch.
         drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
         dataset (str): Name of the elasticsearch dataset.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
@@ -40,7 +39,6 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     intermediate_bucket = luigi.Parameter()
     db_config_env = luigi.Parameter()
     process_batch_size = luigi.IntParameter(default=10000)
-    insert_batch_size = luigi.IntParameter()
     drop_and_recreate = luigi.BoolParameter(default=False)
     aliases = luigi.Parameter()
     dataset = luigi.Parameter()
