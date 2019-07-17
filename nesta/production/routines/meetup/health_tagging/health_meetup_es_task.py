@@ -70,7 +70,7 @@ class RootTask(luigi.WrapperTask):
                       f"-{self.members_perc}-{self.topic_perc}-{self.production}")
         yield MeetupHealthElasticsearchTask(routine_id=routine_id,
                                             date=self.date,
-                                            process_batch_size=1000,
+                                            process_batch_size=10000,
                                             drop_and_recreate=self.drop_and_recreate,
                                             aliases='health_scanner',
                                             dataset='meetup',
