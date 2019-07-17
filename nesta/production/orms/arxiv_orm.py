@@ -78,6 +78,8 @@ class Article(Base):
     fields_of_study = relationship(FieldOfStudy,
                                    secondary=article_fields_of_study)
     institutes = relationship('ArticleInstitute')
+    corex_topics = relationship('CorExTopic',
+                                secondary='arxiv_article_corex_topics')
 
 
 class Category(Base):
