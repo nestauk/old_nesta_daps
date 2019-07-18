@@ -26,7 +26,6 @@ def run():
     s3_bucket = os.environ["BATCHPAR_bucket"]
     batch_file = os.environ["BATCHPAR_batch_file"]
     members_perc = int(os.environ["BATCHPAR_members_perc"])
-    test = literal_eval(os.environ["BATCHPAR_test"])
     db_name = os.environ["BATCHPAR_db_name"]
     es_host = os.environ['BATCHPAR_outinfo']
     es_port = int(os.environ['BATCHPAR_out_port'])
@@ -117,20 +116,14 @@ def run():
             row['isoNumeric'] = geo['country_numeric']
 
             # Insert to ES
-            #try:
             _row = es.index(index=es_index, doc_type=es_type,
                             id=row['id'], body=row)
-            #except:
-            #    print(_row)
-            #    raise
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
     logging.info("Batch job complete.")
 
-
-
-
+# For local debugging
 if __name__ == "__main__":
 
     log_stream_handler = logging.StreamHandler()
@@ -139,16 +132,15 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        environ = { 'batch_file': ('2019-07-17-community-environment'
-                                   '--health-wellbeing'
-                                   '--fitness'
-                                   '-10-99-True-'
-                                   '15633764681888585.json'),
+        environ = {'batch_file': ('2019-07-17-community-environment'
+                                  '--health-wellbeing'
+                                  '--fitness'
+                                  '-10-99-True-'
+                                  '15633764681888585.json'),
                     'config': ('/home/ec2-user/nesta/nesta/production/'
                                'config/mysqldb.config'),
                     'db_name': 'production',
                     'bucket': 'nesta-production-intermediate',
-                    'done': 'False',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),
@@ -157,7 +149,6 @@ if __name__ == "__main__":
                     'out_type': '_doc',
                     'aws_auth_region': 'eu-west-2',
                     'entity_type': 'meetup',
-                    'test': 'True',
                     'members_perc': '10',
                     'routine_id': ('2019-07-17-community-environment-'
                                    '-health-wellbeing--fitness-'

@@ -66,12 +66,25 @@ def strip_tags(html):
 
 @retry(wait_random_min=20, wait_random_max=30, 
        stop_max_attempt_number=10)
-def translate(text, translator, chunksize=2000):
-    time.sleep(0.4) # Rate limit
+def translate(text, translator, chunksize=2000, rate_limit=0.4):
+    """Translate texts of any length via the Google Translate API.
+    
+    Args:
+        text (str): text to translate to English.
+        translator: A Translator instance.
+        chunksize (int): Ideal chunk size of text. Note, text is
+                         chunked in sentences defined by '. '
+        rate_limit (float): Time in seconds to sleep in order to be
+                            kind to Google.
+    Returns:
+        {text, langs} ({str, set}): Translated text and set of 
+                                    detected languages.
+    """
+    time.sleep(rate_limit)
     chunks = list(sentence_chunks(text, chunksize=chunksize))
     texts, langs = [], set()
     for t in translator.translate(chunks):
-        texts.append(t.text.capitalize())
+        texts.append(t.text.capitalize())  # GT uncapitalizes chunks
         langs.add(t.src)
     return '. '.join(texts), langs
 
