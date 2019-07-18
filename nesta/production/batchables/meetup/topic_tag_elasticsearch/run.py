@@ -117,8 +117,12 @@ def run():
             row['isoNumeric'] = geo['country_numeric']
 
             # Insert to ES
+            #try:
             _row = es.index(index=es_index, doc_type=es_type,
                             id=row['id'], body=row)
+            #except:
+            #    print(_row)
+            #    raise
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
@@ -139,7 +143,7 @@ if __name__ == "__main__":
                                    '--health-wellbeing'
                                    '--fitness'
                                    '-10-99-True-'
-                                   '15633607534618618.json'),
+                                   '15633764681888585.json'),
                     'config': ('/home/ec2-user/nesta/nesta/production/'
                                'config/mysqldb.config'),
                     'db_name': 'production',

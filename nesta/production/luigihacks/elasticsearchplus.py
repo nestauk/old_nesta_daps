@@ -67,14 +67,14 @@ def strip_tags(html):
 @retry(wait_random_min=20, wait_random_max=30, 
        stop_max_attempt_number=10)
 def translate(text, translator, chunksize=2000):
-    is_long = len(text) > chunksize
-    result = translator.detect(text[:chunksize] 
-                               if is_long else text)
-    if result.lang == 'en':
-        return None
     time.sleep(0.4) # Rate limit
-    return '. '.join(translator.translate(chunk).text
-                     for chunk in sentence_chunks(text))
+    chunks = list(sentence_chunks(text, chunksize=chunksize))
+    texts, langs = [], set()
+    for t in translator.translate(chunks):
+        texts.append(t.text.capitalize())
+        langs.add(t.src)
+    return '. '.join(texts), langs
+
 
 def _auto_translate(row, translator, min_len=150, chunksize=2000):
     """Translate any text fields longer than min_len characters
@@ -92,8 +92,8 @@ def _auto_translate(row, translator, min_len=150, chunksize=2000):
             continue
         if len(v) <= min_len:
             continue
-        result = translate(v, translator, chunksize)
-        if result is None:
+        result, langs = translate(v, translator, chunksize)
+        if langs == {'en'}:
             continue
         _row[k] = result
         _row['booleanFlag_autotranslate_entity'] = True
@@ -527,7 +527,11 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Translate any text to english
         if auto_translate:
-            translator = Translator()
+            urls = list(f"translate.google.{x}"
+                        for x in ('com', 'co.uk', 'co.kr',
+                                  'at', 'ru', 'fr', 'de', 
+                                  'ch', 'es'))
+            translator = Translator(service_urls=urls)
             self.transforms.append(lambda row: _auto_translate(row, translator))
 
         # Clean up lists (dedup, remove None, empty lists are None)
