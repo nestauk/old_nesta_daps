@@ -1,5 +1,7 @@
 import pytest
 from unittest import mock
+from alphabet_detector import AlphabetDetector
+
 from nesta.production.luigihacks.elasticsearchplus import Translator
 
 from nesta.production.luigihacks.elasticsearchplus import sentence_chunks
@@ -51,7 +53,7 @@ def row():
             "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
             "bad_unicode": "?????? something ??? else?? done?",
-            "frenchish": "Je mange quelquechose. quelquefois",
+            "korean": "빠른 갈색 여우. 이상 점프. 게으른 개",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -76,7 +78,7 @@ def test_auto_translate_true_short(row):
     translator = Translator()
     _row = _auto_translate(row, translator)
     assert not _row.pop('booleanFlag_autotranslate_entity')
-    assert row['frenchish'] == _row['frenchish']
+    assert row['korean'] == _row['korean']
     assert row == _row
 
 def test_auto_translate_true_short_small_chunks(row):
@@ -88,14 +90,14 @@ def test_auto_translate_true_short_small_chunks(row):
 def test_auto_translate_true_long(row):
     translator = Translator()
     _row = _auto_translate(row, translator, 10)
-    assert row.pop('frenchish') != _row['frenchish']
+    assert row.pop('korean') != _row['korean']
     assert _row.pop('booleanFlag_autotranslate_entity')
-    assert _row.pop('frenchish') == 'I eat something. sometimes'
+    assert _row.pop('korean') == 'Fast brown fox. jump over. lazy dog'
     assert row == _row
 
 def test_auto_translate_false(row):
     translator = Translator()
-    row.pop('frenchish')
+    row.pop('korean')
     _row = _auto_translate(row, translator)
     assert not _row.pop('booleanFlag_autotranslate_entity')
     assert row == _row
@@ -136,10 +138,13 @@ def test_remove_padding(row):
 
 
 def _test_caps_to_camel_case(a, b):
+    ad = AlphabetDetector()
     if type(a) is not str:
         assert a == b
-    elif type(a) is str and len(a) < 4 or a.upper() != a:
+    elif type(a) is str and not ad.is_latin(a):
         assert a == b
+    elif type(a) is str and len(a) < 4 or a.upper() != a:
+        assert a == b    
     else:
         assert len(a) == len(b)
         assert a != b
