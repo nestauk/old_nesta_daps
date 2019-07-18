@@ -9,9 +9,10 @@ front end.
 import logging
 import luigi
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
-from nesta.packages.arxiv import deepchange_analysis
+from nesta.packages.arxiv import deepchange_analysis as dc
 from nesta.production.luigihacks import misctools, mysqldb
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
@@ -80,18 +81,18 @@ class AnalysisTask(luigi.Task):
         logging.info(f"Retrieved {len(df)} articles from database")
 
         # collect topics, determine which represents deep_learning and apply flag
-        dl_topic_ids = deepchange_analysis.get_article_ids_by_term(self.engine,
-                                                                   term='deep_learning',
-                                                                   min_weight=0.2)
+        dl_topic_ids = dc.get_article_ids_by_term(self.engine,
+                                                  term='deep_learning',
+                                                  min_weight=0.2)
         df['is_dl'] = df.article_id.apply(lambda i: i in dl_topic_ids)
         logging.info(f"Flagged {df.is_dl.sum()} deep learning articles")
 
         df['date'] = df.apply(lambda row: row.article_updated or row.article_created,
                               axis=1)
         df['year'] = df.date.apply(lambda date: date.year)
-        df = deepchange_analysis.add_before_date_flag(df,
-                                                      date_column='date',
-                                                      before_year=YEAR_THRESHOLD)
+        df = dc.add_before_date_flag(df,
+                                     date_column='date',
+                                     before_year=YEAR_THRESHOLD)
 
         # TODO: decide if we are applying de-duplication for each chart
         deduped = df.drop_duplicates('article_id')
@@ -111,7 +112,7 @@ class AnalysisTask(luigi.Task):
                          .plot.barh(ax=ax))
         ax.set_xlabel('Percentage of DL papers in country')
         ax.set_ylabel('%')
-        deepchange_analysis.plot_to_s3('arxlive-charts', 'figure_1.png', plt)
+        dc.plot_to_s3('arxlive-charts', 'figure_1.png', plt)
 
         # second plot - dl/non dl distribution by city (top 20)
         pivot_by_city = (pd.pivot_table(deduped.groupby(['institute_city', 'is_dl'])
@@ -128,7 +129,7 @@ class AnalysisTask(luigi.Task):
                       .plot.barh(ax=ax))
         ax.set_xlabel('Percentage of DL papers in city')
         ax.set_ylabel('%')
-        deepchange_analysis.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
+        dc.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
 
         # third plot - percentage of dl papers by year
         # TODO: set reasonable limits on the y axis
@@ -140,7 +141,57 @@ class AnalysisTask(luigi.Task):
         papers_by_year.plot(legend=None)
         ax.set_xlabel('Percentage of DL papers by year')
         ax.set_ylabel('%')
-        deepchange_analysis.plot_to_s3('arxlive-charts', 'figure_3.png', plt)
+        dc.plot_to_s3('arxlive-charts', 'figure_3.png', plt)
+
+        # fourth plot - share of DL activity by arxiv subject pre/post 2012
+        # TODO: rotate this chart
+        all_categories = list({cat for cats in df.arxiv_category_descs
+                               for cat in cats.split('|')})
+
+        # removed the code to limit the number of categories as they are almost all
+        # included anyway. (40/41)
+
+        cat_period_container = []
+
+        for cat in all_categories:
+            subset = df.loc[[cat in x for x in df['arxiv_category_descs']], :]
+            subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
+                                    subset.is_dl,
+                                    normalize=0)
+            subset_ct.index = [f'After {YEAR_THRESHOLD}', f'Before {YEAR_THRESHOLD}']
+
+            # this try /except may not be required when running on the full dataset
+            try:
+                cat_period_container.append(pd.Series(subset_ct[True], name=cat))
+            except KeyError:
+                pass
+
+        cat_thres_df = (pd.concat(cat_period_container, axis=1)
+                        .T
+                        .sort_values(f'After {YEAR_THRESHOLD}', ascending=True))
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+        (100 * cat_thres_df[f'Before {YEAR_THRESHOLD}']).plot(markeredgecolor='blue',
+                                                              marker='o',
+                                                              color='powderblue',
+                                                              ax=ax,
+                                                              markerfacecolor='blue')
+        (100 * cat_thres_df[f'After {YEAR_THRESHOLD}']).plot(markeredgecolor='orange',
+                                                             marker='o',
+                                                             color='bisque',
+                                                             ax=ax,
+                                                             markerfacecolor='orange')
+        ax.vlines(np.arange(len(cat_thres_df)),
+                  ymin=len(cat_thres_df) * [0],
+                  ymax=100 * cat_thres_df[f'After {YEAR_THRESHOLD}'],
+                  linestyle=':')
+
+        ax.set_xticks(np.arange(len(cat_thres_df)))
+        ax.set_xticklabels(cat_thres_df.index, rotation=90)
+
+        ax.set_ylabel('DL as % of all papers \n in each category', size=12)
+        ax.legend()
+        dc.plot_to_s3('arxlive-charts', 'figure_4.png', plt)
 
         '''
         charts:
