@@ -21,7 +21,6 @@ do
     TESTDIRS=$(find nesta/$TOPDIRNAME -name "test*" -type d)
     for TESTDIRNAME in $TESTDIRS;
     do
-	#python -m unittest discover $TESTDIRNAME
-	pytest $TESTDIRNAME
+	pytest --disable-pytest-warnings $TESTDIRNAME
     done
 done
