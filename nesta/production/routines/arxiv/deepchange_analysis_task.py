@@ -26,6 +26,17 @@ class AnalysisTask(luigi.Task):
     """Extract and analyse arXiv data to produce data and charts for the arXlive front
     end to consume.
 
+    Proposed charts:
+        1. distribution of dl/non dl papers by country (horizontal bar)
+        2. distribution of dl/non dl papers by city (horizontal bar)
+        3. % ML papers by year (line)
+        4. share of ML activity in arxiv subjects, pre/post 2012 (horizontal point / slope)
+        5. rca, pre/post 2012 by country (horizontal point / slope)
+        6. rca over time, citation > mean & top 50 countries (horizontal violin)
+
+    Proposed table data:
+        1. top countries by rca (moving window of last 12 months?)
+
     Args:
         date (datetime): Datetime used to label the outputs
         _routine_id (str): String used to label the AWS task
@@ -193,20 +204,67 @@ class AnalysisTask(luigi.Task):
         ax.legend()
         dc.plot_to_s3('arxlive-charts', 'figure_4.png', plt)
 
-        '''
-        charts:
-        1. distribution of dl/non dl papers by country (horizontal bar)
-        2. distribution of dl/non dl papers by city (horizontal bar)
-        3. % ML papers by year (line)
-        4. share of ML activity in arxiv subjects, pre/post 2012 (horizontal point / slope)
-        5. rca, pre/post 2012 by country (horizontal point / slope)
-        6. rca over time, citation > mean & top 50 countries (horizontal violin)
+        # fifth chart - changes in specialisation before / after 2012 (top 20 countries)
+        top_20_dl_countries = (df[['institute_country', 'is_dl']]
+                               .groupby('institute_country')
+                               .sum()
+                               .sort_values('is_dl', ascending=False)[:20]
+                               .index
+                               .to_list())
+        df_top_20 = df[df['institute_country'].isin(top_20_dl_countries)]
 
-        table data:
-        1. top countries by rca (moving window of last 12 months?)
-        '''
+        # calculate revealed comparative advantage
+        pre_threshold_rca = dc.calculate_rca_by_country(
+            df_top_20[df_top_20[f'before_{YEAR_THRESHOLD}']],
+            country_column='institute_country',
+            commodity_column='is_dl')
+
+        post_threshold_rca = dc.calculate_rca_by_country(
+            df_top_20[~df_top_20[f'before_{YEAR_THRESHOLD}']],
+            country_column='institute_country',
+            commodity_column='is_dl')
+
+        rca_combined = (pd.merge(pre_threshold_rca, post_threshold_rca,
+                                 left_index=True, right_index=True,
+                                 suffixes=('_before', '_after'))
+                        .rename(columns={'is_dl_before': f'rca_pre_{YEAR_THRESHOLD}',
+                                         'is_dl_after': f'rca_post_{YEAR_THRESHOLD}'})
+                        .sort_values(f'rca_post_{YEAR_THRESHOLD}', ascending=False))
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+        rca_combined[f'rca_pre_{YEAR_THRESHOLD}'].plot(markeredgecolor='blue',
+                                                       marker='o',
+                                                       color='white',
+                                                       ax=ax,
+                                                       markerfacecolor='blue')
+        rca_combined[f'rca_post_{YEAR_THRESHOLD}'].plot(markeredgecolor='orange',
+                                                        marker='o',
+                                                        color='white',
+                                                        ax=ax,
+                                                        markerfacecolor='orange')
+        col = ['orange' if x > y else 'blue'
+               for x, y in zip(rca_combined[f'rca_post_{YEAR_THRESHOLD}'],
+                               rca_combined[f'rca_pre_{YEAR_THRESHOLD}'])]
+        ax.vlines(np.arange(len(rca_combined)),
+                  ymin=rca_combined[f'rca_pre_{YEAR_THRESHOLD}'],
+                  ymax=rca_combined[f'rca_post_{YEAR_THRESHOLD}'],
+                  linestyle=':',
+                  color=col)
+        ax.hlines(y=1,
+                  xmin=0,
+                  xmax=len(rca_combined),
+                  color='darkgrey',
+                  linestyle='--')
+        ax.set_xticks(np.arange(len(rca_combined)))
+        ax.set_xticklabels(rca_combined.index, rotation=90)
+        ax.legend()
+        ax.set_ylabel('Revealed comparative advantage')
+        ax.set_xlabel('')
+        ax.set_title(f'Changes in specialisation before / after {YEAR_THRESHOLD}',
+                     size=14)
+
+        dc.plot_to_s3('arxlive-charts', 'figure_5.png', plt)
 
         # mark as done
         logging.warning("Task complete")
-        raise(NotImplementedError)  # stop the local scheduer from recording success while testing
         self.output().touch()
