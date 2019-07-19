@@ -13,6 +13,8 @@ from nesta.production.luigihacks.elasticsearchplus import _coordinates_as_floats
 from nesta.production.luigihacks.elasticsearchplus import _country_lookup
 from nesta.production.luigihacks.elasticsearchplus import _country_detection
 from nesta.production.luigihacks.elasticsearchplus import COUNTRY_TAG
+from nesta.production.luigihacks.elasticsearchplus import TRANS_TAG
+from nesta.production.luigihacks.elasticsearchplus import LANGS_TAG
 from nesta.production.luigihacks.elasticsearchplus import _guess_delimiter
 from nesta.production.luigihacks.elasticsearchplus import _listify_terms
 from nesta.production.luigihacks.elasticsearchplus import _null_mapping
@@ -54,6 +56,7 @@ def row():
             "non-empty str": "blah",
             "bad_unicode": "?????? something ??? else?? done?",
             "korean": "빠른 갈색 여우. 이상 점프. 게으른 개",
+            "mixed_lang": "빠른 갈색 여우. Something in English.",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -75,31 +78,45 @@ def test_sentence_chunks():
                                           chunksize=i)) == text
 
 def test_auto_translate_true_short(row):
+    """The translator shouldn't be applied for short pieces of text"""
     translator = Translator()
-    _row = _auto_translate(row, translator)
-    assert not _row.pop('booleanFlag_autotranslate_entity')
+    _row = _auto_translate(row, translator, 1000)
+    assert not _row.pop(TRANS_TAG)
+    assert len(_row.pop(LANGS_TAG)) == 0
     assert row['korean'] == _row['korean']
+    assert row['mixed_lang'] == _row['mixed_lang']
     assert row == _row
 
-def test_auto_translate_true_short_small_chunks(row):
+def test_auto_translate_true_long_small_chunks(row):
     translator = Translator()
-    _row_1 = _auto_translate(row, translator, chunksize=1)
-    _row_2 = _auto_translate(row, translator, chunksize=10000)
+    _row_1 = _auto_translate(row, translator, 10, chunksize=1)
+    _row_2 = _auto_translate(row, translator, 10, chunksize=10000)
+    assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
+    assert _row_1.pop('korean').upper() == _row_2.pop('korean').upper()
+    langs_1 = _row_1.pop(LANGS_TAG)
+    langs_2 = _row_2.pop(LANGS_TAG)
+    assert len(langs_1) == len(langs_2)
+    assert set(langs_1) == set(langs_2)
     assert _row_1 == _row_2
 
 def test_auto_translate_true_long(row):
     translator = Translator()
     _row = _auto_translate(row, translator, 10)
     assert row.pop('korean') != _row['korean']
-    assert _row.pop('booleanFlag_autotranslate_entity')
+    assert row.pop('mixed_lang') != _row['mixed_lang']
+    assert _row.pop(TRANS_TAG)
     assert _row.pop('korean') == 'Fast brown fox. jump over. lazy dog'
+    assert _row.pop('mixed_lang') == 'Fast brown fox. something in english.'    
+    assert set(_row.pop(LANGS_TAG)) == {'ko', 'en'}
     assert row == _row
 
 def test_auto_translate_false(row):
     translator = Translator()
     row.pop('korean')
+    row.pop('mixed_lang')
     _row = _auto_translate(row, translator)
-    assert not _row.pop('booleanFlag_autotranslate_entity')
+    assert not _row.pop(TRANS_TAG)
+    assert _row.pop(LANGS_TAG) == ['en']
     assert row == _row
 
 def test_sanitize_html(row):

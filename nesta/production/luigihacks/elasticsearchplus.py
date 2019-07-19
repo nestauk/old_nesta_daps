@@ -17,10 +17,13 @@ from requests_aws4auth import AWS4Auth
 import time
 
 from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.packages.decorators.ratelimit import ratelimit
 
 COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
                 "/nesta-open-data/country_lookup/Countries-List.csv")
 COUNTRY_TAG="terms_of_countryTags"
+TRANS_TAG="booleanFlag_autotranslated_entity"
+LANGS_TAG="terms_iso2lang_entity"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
 def sentence_chunks(text, chunksize=2000, delim='. '):
@@ -64,9 +67,10 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
+@ratelimit(max_per_second=2.5)
 @retry(wait_random_min=20, wait_random_max=30, 
        stop_max_attempt_number=10)
-def translate(text, translator, chunksize=2000, rate_limit=0.4):
+def translate(text, translator, chunksize=2000):
     """Translate texts of any length via the Google Translate API.
     
     Args:
@@ -74,16 +78,13 @@ def translate(text, translator, chunksize=2000, rate_limit=0.4):
         translator: A Translator instance.
         chunksize (int): Ideal chunk size of text. Note, text is
                          chunked in sentences defined by '. '
-        rate_limit (float): Time in seconds to sleep in order to be
-                            kind to Google.
     Returns:
         {text, langs} ({str, set}): Translated text and set of 
                                     detected languages.
     """
-    time.sleep(rate_limit)
     chunks = list(sentence_chunks(text, chunksize=chunksize))
     texts, langs = [], set()
-    for t in translator.translate(chunks):
+    for t in translator.translate(chunks, dest='en'):
         texts.append(t.text.capitalize())  # GT uncapitalizes chunks
         langs.add(t.src)
     return '. '.join(texts), langs
@@ -98,18 +99,21 @@ def _auto_translate(row, translator, min_len=150, chunksize=2000):
     Returns:
         _row (dict): Modified row.
     """
-    _row = deepcopy(row)
-    _row['booleanFlag_autotranslate_entity'] = False
+    _row = deepcopy(row)    
+    _row[TRANS_TAG] = False
+    _row[LANGS_TAG] = set()
     for k, v in row.items():
         if type(v) is not str:
             continue
         if len(v) <= min_len:
             continue
         result, langs = translate(v, translator, chunksize)
+        _row[LANGS_TAG] = _row[LANGS_TAG].union(langs)
         if langs == {'en'}:
-            continue
+            continue        
         _row[k] = result
-        _row['booleanFlag_autotranslate_entity'] = True
+        _row[TRANS_TAG] = True
+    _row[LANGS_TAG] = list(_row[LANGS_TAG])
     return _row
 
 def _sanitize_html(row):
@@ -540,10 +544,10 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Translate any text to english
         if auto_translate:
-            urls = list(f"translate.google.{x}"
-                        for x in ('com', 'co.uk', 'co.kr',
-                                  'at', 'ru', 'fr', 'de', 
-                                  'ch', 'es'))
+            # URLs to load balance Google Translate
+            urls = list(f"translate.google.{ext}"
+                        for ext in ('com', 'co.uk', 'co.kr', 'at', 
+                                    'ru', 'fr', 'de', 'ch', 'es'))
             translator = Translator(service_urls=urls)
             self.transforms.append(lambda row: _auto_translate(row, translator))
 
