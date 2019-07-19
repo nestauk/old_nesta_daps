@@ -39,7 +39,7 @@
     },
     "country_id": {
         "crunchbase": "id_iso2_country",
-        "meetup": "id_iso2_group",
+        "meetup": "id_iso2_country",
         "nih": "id_iso2_country"
     },
     "currency": {
@@ -59,6 +59,12 @@
     },
     "is_health_related": {
         "crunchbase": "booleanFlag_health_organisation"
+    },
+    "is_translated": {
+        "meetup": "booleanFlag_autotranslated_entity"
+    },
+    "langs": {
+        "meetup": "terms_iso2lang_entity"
     },
     "location": {
         "crunchbase": "coordinate_of_city",
@@ -85,7 +91,7 @@
     },
     "start": {
         "crunchbase": "date_birth_organisation",
-        "meetup": "datetime_start_group",
+        "meetup": "date_start_group",
         "nih": "date_start_project"
     },
     "state": {
@@ -103,6 +109,7 @@
     },
     "terms": {
         "crunchbase": "terms_mesh_description",
+        "meetup": "terms_topics_group",
         "nih": "terms_mesh_abstract"
     },
     "title": {

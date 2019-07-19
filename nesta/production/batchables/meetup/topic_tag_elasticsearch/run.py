@@ -26,7 +26,6 @@ def run():
     s3_bucket = os.environ["BATCHPAR_bucket"]
     batch_file = os.environ["BATCHPAR_batch_file"]
     members_perc = int(os.environ["BATCHPAR_members_perc"])
-    test = literal_eval(os.environ["BATCHPAR_test"])
     db_name = os.environ["BATCHPAR_db_name"]
     es_host = os.environ['BATCHPAR_outinfo']
     es_port = int(os.environ['BATCHPAR_out_port'])
@@ -66,7 +65,8 @@ def run():
                            field_null_mapping=field_null_mapping,
                            null_empty_str=True,
                            coordinates_as_floats=True,
-                           country_detection=True)
+                           country_detection=True,
+                           auto_translate=True)
 
     # Generate the lookup for geographies
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -123,9 +123,7 @@ def run():
 
     logging.info("Batch job complete.")
 
-
-
-
+# For local debugging
 if __name__ == "__main__":
 
     log_stream_handler = logging.StreamHandler()
@@ -134,27 +132,27 @@ if __name__ == "__main__":
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
     if 'BATCHPAR_outinfo' not in os.environ:
-        environ = { 'batch_file': ('2019-06-06-community-environment'
-                                   '--health-wellbeing'
-                                   '--fitness-10-99-True-15598283679714198.json'),
+        environ = {'batch_file': ('2019-07-17-community-environment'
+                                  '--health-wellbeing'
+                                  '--fitness'
+                                  '-10-99-True-'
+                                  '15633764681888585.json'),
                     'config': ('/home/ec2-user/nesta/nesta/production/'
                                'config/mysqldb.config'),
                     'db_name': 'production',
                     'bucket': 'nesta-production-intermediate',
-                    'done': 'False',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),
                     'out_port': '443',
-                    'out_index': 'meetup_v0',
+                    'out_index': 'meetup_v2',
                     'out_type': '_doc',
                     'aws_auth_region': 'eu-west-2',
-                    'entity_type': 'meetup group',
-                    'test': 'True',
+                    'entity_type': 'meetup',
                     'members_perc': '10',
-                    'routine_id': ('2019-06-06-community-environment'
-                                   '--health-wellbeing--fitness-10-99-True')}
-
+                    'routine_id': ('2019-07-17-community-environment-'
+                                   '-health-wellbeing--fitness-'
+                                   '10-99-True')}
 
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v

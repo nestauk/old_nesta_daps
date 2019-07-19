@@ -1,11 +1,20 @@
 import pytest
 from unittest import mock
+from alphabet_detector import AlphabetDetector
 
+from nesta.production.luigihacks.elasticsearchplus import Translator
+
+from nesta.production.luigihacks.elasticsearchplus import sentence_chunks
+from nesta.production.luigihacks.elasticsearchplus import _auto_translate
+from nesta.production.luigihacks.elasticsearchplus import _sanitize_html
+from nesta.production.luigihacks.elasticsearchplus import _clean_bad_unicode_conversion
 from nesta.production.luigihacks.elasticsearchplus import _null_empty_str
 from nesta.production.luigihacks.elasticsearchplus import _coordinates_as_floats
 from nesta.production.luigihacks.elasticsearchplus import _country_lookup
 from nesta.production.luigihacks.elasticsearchplus import _country_detection
 from nesta.production.luigihacks.elasticsearchplus import COUNTRY_TAG
+from nesta.production.luigihacks.elasticsearchplus import TRANS_TAG
+from nesta.production.luigihacks.elasticsearchplus import LANGS_TAG
 from nesta.production.luigihacks.elasticsearchplus import _guess_delimiter
 from nesta.production.luigihacks.elasticsearchplus import _listify_terms
 from nesta.production.luigihacks.elasticsearchplus import _null_mapping
@@ -45,6 +54,9 @@ def row():
             "whitespace padded": "\ntoo much padding \r",
             "whitespace padded list": ["\ntoo much padding \r"],
             "non-empty str": "blah",
+            "bad_unicode": "?????? something ??? else?? done?",
+            "korean": "빠른 갈색 여우. 이상 점프. 게으른 개",
+            "mixed_lang": "빠른 갈색 여우. Something in English.",
             "coordinate_of_xyz": {"lat": "123",
                                   "lon": "234"},
             "coordinate_of_abc": {"lat": 123,
@@ -53,10 +65,77 @@ def row():
             "ugly_list" : ["UNKNOWN", "none", "None", None, "23", "23"],
             "empty_list" : [],
             "a negative number": -123,
+            "html_field" : "<p>The yoga style is Hatha which is basic and for all levels. As I may arrange the sequences if you have some requests, please feel free to put your comments.</p> \n<p>In addition, as I love to do something for fun and make new friends, I will also create new events which is not related to yoga.</p> \n<p>Let's join us if you are interested.</p>",
             "a description field": ("Chinese and British people "
                                     "both live in Greece and Chile"),
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
+
+def test_sentence_chunks():
+    text = '++this++++ is ++a sentence ++++++ with some +++ chunks +++'
+    for i in range(0, 200):
+        assert '+++'.join(sentence_chunks(text, delim='+++',
+                                          chunksize=i)) == text
+
+def test_auto_translate_true_short(row):
+    """The translator shouldn't be applied for short pieces of text"""
+    translator = Translator()
+    _row = _auto_translate(row, translator, 1000)
+    assert not _row.pop(TRANS_TAG)
+    assert len(_row.pop(LANGS_TAG)) == 0
+    assert row['korean'] == _row['korean']
+    assert row['mixed_lang'] == _row['mixed_lang']
+    assert row == _row
+
+def test_auto_translate_true_long_small_chunks(row):
+    translator = Translator()
+    _row_1 = _auto_translate(row, translator, 10, chunksize=1)
+    _row_2 = _auto_translate(row, translator, 10, chunksize=10000)
+    assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
+    assert _row_1.pop('korean').upper() == _row_2.pop('korean').upper()
+    langs_1 = _row_1.pop(LANGS_TAG)
+    langs_2 = _row_2.pop(LANGS_TAG)
+    assert len(langs_1) == len(langs_2)
+    assert set(langs_1) == set(langs_2)
+    assert _row_1 == _row_2
+
+def test_auto_translate_true_long(row):
+    translator = Translator()
+    _row = _auto_translate(row, translator, 10)
+    assert row.pop('korean') != _row['korean']
+    assert row.pop('mixed_lang') != _row['mixed_lang']
+    assert _row.pop(TRANS_TAG)
+    assert _row.pop('korean') == 'Fast brown fox. jump over. lazy dog'
+    assert _row.pop('mixed_lang') == 'Fast brown fox. something in english.'    
+    assert set(_row.pop(LANGS_TAG)) == {'ko', 'en'}
+    assert row == _row
+
+def test_auto_translate_false(row):
+    translator = Translator()
+    row.pop('korean')
+    row.pop('mixed_lang')
+    _row = _auto_translate(row, translator)
+    assert not _row.pop(TRANS_TAG)
+    assert _row.pop(LANGS_TAG) == ['en']
+    assert row == _row
+
+def test_sanitize_html(row):
+    _row = _sanitize_html(row)
+    assert len(_row) == len(row)
+    for k, v in _row.items():
+        if k == 'html_field':
+            print(v)
+            assert v == "The yoga style is Hatha which is basic and for all levels. As I may arrange the sequences if you have some requests, please feel free to put your comments. \nIn addition, as I love to do something for fun and make new friends, I will also create new events which is not related to yoga. \nLet's join us if you are interested."
+        else:
+            assert v == row[k]
+
+def test_clean_bad_unicode_conversion(row):
+    _row = _clean_bad_unicode_conversion(row)
+    assert len(_row) == len(row)
+    assert _row != row
+    for k, v in _row.items():
+        if type(v) is str:
+            assert "??" not in v
 
 def test_nullify_pairs(row):
     _row = _nullify_pairs(row, {"coordinate_of_none": "coordinate_of_abc"})
@@ -66,9 +145,7 @@ def test_nullify_pairs(row):
             assert v == row[k]
         else:
             assert v is None
-    
-    
-    
+
 def test_remove_padding(row):
     _row = _remove_padding(row)
     assert len(_row) == len(row)
@@ -78,13 +155,16 @@ def test_remove_padding(row):
 
 
 def _test_caps_to_camel_case(a, b):
+    ad = AlphabetDetector()
     if type(a) is not str:
         assert a == b
-    elif type(a) is str and len(a) < 4 or a.upper() != a:
+    elif type(a) is str and not ad.is_latin(a):
         assert a == b
+    elif type(a) is str and len(a) < 4 or a.upper() != a:
+        assert a == b    
     else:
         assert len(a) == len(b)
-        assert a != b  
+        assert a != b
 
 def test_caps_to_camel_case(row):
     _row = _caps_to_camel_case(row)
@@ -229,7 +309,7 @@ def test_chain_transforms(mocked_schema_transformer, row,
     es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
     assert len(_row) == len(row) + 1
-    
+
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
 def test_index(mocked_chain_transform, mocked_super_index, row):
