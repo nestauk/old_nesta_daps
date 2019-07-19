@@ -18,15 +18,15 @@
     },
     {
         "tier_0": "country",
-        "tier_1": "id_iso2_group"
+        "tier_1": "id_iso2_country"
     },
     {
         "tier_0": "iso3",
-        "tier_1": "id_iso3_group"
+        "tier_1": "id_iso3_country"
     },
     {
         "tier_0": "isoNumeric",
-        "tier_1": "id_isoNumeric_group"
+        "tier_1": "id_isoNumeric_country"
     },
     {
         "tier_0": "country_name",
@@ -42,7 +42,7 @@
     },
     {
         "tier_0": "created",
-        "tier_1": "datetime_start_group"
+        "tier_1": "date_start_group"
     },
     {
         "tier_0": "description",
