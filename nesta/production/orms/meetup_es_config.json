@@ -29,7 +29,7 @@
                 "_terms_sdg_description": {
                     "type": "keyword"
                 },
-                "booleanFlag_autotranslate_entity": {
+                "booleanFlag_autotranslated_entity": {
                     "type": "boolean"
                 },
                 "coordinate_of_group": {
@@ -99,6 +99,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_iso2lang_entity": {
+                    "type": "keyword"
                 },
                 "terms_of_countryTags": {
                     "type": "keyword"

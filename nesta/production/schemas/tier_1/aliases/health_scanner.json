@@ -60,6 +60,12 @@
     "is_health_related": {
         "crunchbase": "booleanFlag_health_organisation"
     },
+    "is_translated": {
+        "meetup": "booleanFlag_autotranslated_entity"
+    },
+    "langs": {
+        "meetup": "terms_iso2lang_entity"
+    },
     "location": {
         "crunchbase": "coordinate_of_city",
         "meetup": "coordinate_of_group",
