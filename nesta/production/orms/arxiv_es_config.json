@@ -13,6 +13,9 @@
                 "doi_of_article": {
                     "type": "text"
                 },
+		"novelty_of_article": {
+                    "type": "float"
+                },
                 "terms_authors_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
