@@ -1,0 +1,103 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "count_citations_article": {
+                    "type": "integer"
+                },
+                "datetime_created_article": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "doi_of_article": {
+                    "type": "text"
+                },
+                "terms_authors_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
+                },
+                "terms_categories_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+			"raw": { 
+			    "type": "keyword",
+                            "index": false
+			},
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
+                },
+                "terms_countries_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+			"raw": { 
+			    "type": "keyword",
+                            "index": false
+			},
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
+                },
+                "terms_fos_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+			"raw": { 
+			    "type": "keyword",
+			    "index": false
+			},
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
+                },
+                "terms_institutes_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+			"raw": { 
+			    "type": "keyword",
+			    "index": false
+			},
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    }
+                },
+                "textBody_abstract_article": {
+                    "type": "text"
+                },
+                "title_of_article": {
+                    "type": "text"
+                },
+                "url_of_article": {
+                    "type": "text"
+                }
+            }
+        }
+    },
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "terms_analyzer": {
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                    ],
+                    "tokenizer": "standard",
+                    "type": "custom"
+                }
+            }
+        },
+        "index": {
+            "number_of_replicas": "1",
+            "number_of_shards": "5"
+        }
+    }
+}
