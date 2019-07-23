@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
+from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
 from nesta.production.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
@@ -245,7 +245,7 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
             start_cursor = int(resumption_token.split("|")[1])
         for row in batch:
             yield row
-                     
+
 
 def retrieve_all_arxiv_rows(**kwargs):
     """Iterate through batches and yield single rows through the whole dataset.
@@ -430,6 +430,22 @@ def create_article_institute_links(article, institute_ids, score):
              'matching_score': float(score)}
             for institute_id in institute_ids]
 
+
+def all_article_ids(engine, limit=None):
+    """Retrieve the id of every article from MYSQL.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.Base.Engine`): db connectable.
+        limit (int): row limit to apply to query (for testing)
+
+    Returns:
+        (set): all article ids
+    """
+    with db_session(engine) as session:
+        arts = session.query(Article.id)
+        if limit is not None:
+            arts = arts.limit(limit)
+        return {arts.id for art in arts}
 
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()
