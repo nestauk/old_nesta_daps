@@ -29,13 +29,16 @@
                 "_terms_sdg_description": {
                     "type": "keyword"
                 },
+                "booleanFlag_autotranslated_entity": {
+                    "type": "boolean"
+                },
                 "coordinate_of_group": {
                     "type": "geo_point"
                 },
                 "count_member_group": {
                     "type": "integer"
                 },
-                "datetime_start_group": {
+                "date_start_group": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
@@ -45,13 +48,13 @@
                 "id_country_group": {
                     "type": "keyword"
                 },
-                "id_iso2_group": {
+                "id_iso2_country": {
                     "type": "keyword"
                 },
-                "id_iso3_group": {
+                "id_iso3_country": {
                     "type": "keyword"
                 },
-                "id_isoNumeric_group": {
+                "id_isoNumeric_country": {
                     "type": "integer"
                 },
                 "id_of_group": {
@@ -96,6 +99,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_iso2lang_entity": {
+                    "type": "keyword"
                 },
                 "terms_of_countryTags": {
                     "type": "keyword"

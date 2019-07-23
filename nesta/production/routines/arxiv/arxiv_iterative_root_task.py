@@ -8,7 +8,7 @@ import datetime
 import logging
 import luigi
 
-from arxiv_grid_task import GridTask
+from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 
 
 class RootTask(luigi.WrapperTask):

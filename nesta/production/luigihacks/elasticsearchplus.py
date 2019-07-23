@@ -1,8 +1,11 @@
+from googletrans import Translator
+from html.parser import HTMLParser
 from collections import Counter
 from collections import defaultdict
 from collections import OrderedDict
 from elasticsearch import Elasticsearch
 from elasticsearch import RequestsHttpConnection
+from retrying import retry
 from functools import reduce
 import numpy as np
 import pandas as pd
@@ -11,23 +14,157 @@ import string
 from copy import deepcopy
 import boto3
 from requests_aws4auth import AWS4Auth
+import time
 
 from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.packages.decorators.ratelimit import ratelimit
 
 COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
                 "/nesta-open-data/country_lookup/Countries-List.csv")
 COUNTRY_TAG="terms_of_countryTags"
+TRANS_TAG="booleanFlag_autotranslated_entity"
+LANGS_TAG="terms_iso2lang_entity"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
+
+def sentence_chunks(text, chunksize=2000, delim='. '):
+    """Split a string into chunks, but breaking only on 
+    the specified delimiter.
+    
+    Args:
+        text (str): A string to split into chunks
+        chunksize (int): Minimum chunk size to yield
+        delim (str): Delimiter to split chunks
+    Yields:
+        chunk (str): The smallest possible chunks (minimum sise 
+                     :pyobject:`chunksize`) of text.
+    """
+    chunks = [] 
+    for _text in text.split(delim): 
+        chunks.append(_text) 
+        if sum(len(c) for c in chunks) > chunksize: 
+            yield delim.join(chunks) 
+            chunks = [] 
+    if len(chunks) > 0: 
+        yield delim.join(chunks) 
+
+
+class MLStripper(HTMLParser):
+    """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html."""
+    def __init__(self):
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.fed = []
+        super().__init__()
+    def handle_data(self, d):
+        self.fed.append(d)
+    def get_data(self):
+        return ''.join(self.fed)
+
+def strip_tags(html):
+    """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html"""
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+@ratelimit(max_per_second=2.5)
+@retry(wait_random_min=20, wait_random_max=30, 
+       stop_max_attempt_number=10)
+def translate(text, translator, chunksize=2000):
+    """Translate texts of any length via the Google Translate API.
+    
+    Args:
+        text (str): text to translate to English.
+        translator: A Translator instance.
+        chunksize (int): Ideal chunk size of text. Note, text is
+                         chunked in sentences defined by '. '
+    Returns:
+        {text, langs} ({str, set}): Translated text and set of 
+                                    detected languages.
+    """
+    chunks = list(sentence_chunks(text, chunksize=chunksize))
+    texts, langs = [], set()
+    for t in translator.translate(chunks, dest='en'):
+        texts.append(t.text.capitalize())  # GT uncapitalizes chunks
+        langs.add(t.src)
+    return '. '.join(texts), langs
+
+
+def _auto_translate(row, translator, min_len=150, chunksize=2000):
+    """Translate any text fields longer than min_len characters
+    into English.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)    
+    _row[TRANS_TAG] = False
+    _row[LANGS_TAG] = set()
+    for k, v in row.items():
+        if type(v) is not str:
+            continue
+        if len(v) <= min_len:
+            continue
+        result, langs = translate(v, translator, chunksize)
+        _row[LANGS_TAG] = _row[LANGS_TAG].union(langs)
+        if langs == {'en'}:
+            continue        
+        _row[k] = result
+        _row[TRANS_TAG] = True
+    _row[LANGS_TAG] = list(_row[LANGS_TAG])
+    return _row
+
+def _sanitize_html(row):
+    """Strips out any html encoding. Note: nothing clever is done
+    such as replacing breaks with newlines.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is not str:
+            continue
+        _row[k] = strip_tags(v)
+    return _row
+
+def _clean_bad_unicode_conversion(row):
+    """Removes sequences of ??? from strings, which normally
+    occur due to bad unicode conversion. Note this is a hack:
+    the real solution is to deal with unicode gracefully, where
+    the option is available.
+
+    Args:
+        row (dict): Row of data to evaluate.
+    Returns:
+        _row (dict): Modified row.
+    """
+    _row = deepcopy(row)
+    for k, v in row.items():
+        if type(v) is not str:
+            continue
+        elif "??" not in v:
+            continue
+        while "???" in v:
+            v = v.replace("???","")
+        while "??" in v:
+            v = v.replace("??","")
+        _row[k] = v
+    return _row
 
 def _nullify_pairs(row, null_pairs={}):
     """Nullify any value if it's 'parent' is also null.
-    For example for null_pairs={'parent': 'child'} 
+    For example for null_pairs={'parent': 'child'}
     the following will occur:
-    
+
     {'parent': None, 'child': 5} will become {'parent': None, 'child': None}
-    
+
     however
-    
+
     {'parent': 5, 'child': None} will remain unchanged.
 
     Args:
@@ -342,6 +479,7 @@ class ElasticsearchPlus(Elasticsearch):
         caps_to_camel_case (bool): Convert all upper case text fields (longer than 3 chars)
                                    to camel case?
         remove_padding (bool): Remove all whitespace padding?
+        auto_translate (bool): Convert large text fields to English?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
@@ -356,6 +494,7 @@ class ElasticsearchPlus(Elasticsearch):
                  terms_delimiters=None,
                  caps_to_camel_case=False,
                  null_pairs={},
+                 auto_translate=False,
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -403,7 +542,18 @@ class ElasticsearchPlus(Elasticsearch):
         if caps_to_camel_case:
             self.transforms.append(_caps_to_camel_case)
 
+        # Translate any text to english
+        if auto_translate:
+            # URLs to load balance Google Translate
+            urls = list(f"translate.google.{ext}"
+                        for ext in ('com', 'co.uk', 'co.kr', 'at', 
+                                    'ru', 'fr', 'de', 'ch', 'es'))
+            translator = Translator(service_urls=urls)
+            self.transforms.append(lambda row: _auto_translate(row, translator))
+
         # Clean up lists (dedup, remove None, empty lists are None)
+        self.transforms.append(_sanitize_html)
+        self.transforms.append(_clean_bad_unicode_conversion)
         self.transforms.append(_clean_up_lists)
         self.transforms.append(_remove_padding)
         self.transforms.append(lambda row: _nullify_pairs(row, null_pairs))
@@ -417,7 +567,7 @@ class ElasticsearchPlus(Elasticsearch):
         Returns:
             _row (dict): Modified row.
         """
-        return reduce(lambda _row, f: f(_row), self.transforms, row)        
+        return reduce(lambda _row, f: f(_row), self.transforms, row)
 
     def index(self, **kwargs):
         """Same as the core :obj:`Elasticsearch` API, except applies the

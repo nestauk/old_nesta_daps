@@ -1,5 +1,4 @@
 from nesta.packages.nlp_utils.preprocess import tokenize_document
-#from nesta.packages.nlp_utils.preprocess import build_ngrams
 from nesta.packages.nlp_utils.preprocess import filter_by_idf
 import nltk
 from nltk.corpus import gutenberg
@@ -23,13 +22,6 @@ class PreprocessTest(unittest.TestCase):
             f = gutenberg.open(fid)
             self.docs.append(f.read())
             f.close()
-
-    # def test_ngrams(self):
-    #     docs = [tokenize_document(d) for d in self.docs]
-    #     docs = build_ngrams(docs, n=3)
-    #     n = sum("poor_miss_taylor" in sent
-    #             for sent in docs[0])
-    #     self.assertGreater(n, 0)
 
     def test_tfidf(self):
         docs = [tokenize_document(d) for d in self.docs]
