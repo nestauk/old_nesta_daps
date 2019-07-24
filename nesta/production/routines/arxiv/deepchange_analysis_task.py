@@ -20,6 +20,9 @@ from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
 YEAR_THRESHOLD = 2012
+N_TOP = 20  # number of countries / cities to show in the fig 1 & 2
+RED = '#992b15'
+PEACH = '#d18270'
 
 
 class AnalysisTask(luigi.Task):
@@ -108,7 +111,7 @@ class AnalysisTask(luigi.Task):
         # TODO: decide if we are applying de-duplication for each chart
         deduped = df.drop_duplicates('article_id')
 
-        # first plot - dl/non dl distribution by country (top 20)
+        # first plot - dl/non dl distribution by country (top n)
         pivot_by_country = (pd.pivot_table(deduped.groupby(['institute_country', 'is_dl'])
                                            .size()
                                            .reset_index(drop=False),
@@ -118,14 +121,14 @@ class AnalysisTask(luigi.Task):
                             .apply(lambda x: 100 * (x / x.sum())))
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        (pivot_by_country.sort_values(True, ascending=False)[:20]
+        (pivot_by_country.sort_values(True, ascending=False)[:N_TOP]
                          .sort_values(True)
-                         .plot.barh(ax=ax))
+                         .plot.barh(ax=ax, color=[PEACH, RED], width=0.8))
         ax.set_xlabel('Percentage of DL papers in country')
-        ax.set_ylabel('%')
+        ax.set_ylabel('Country')
         dc.plot_to_s3('arxlive-charts', 'figure_1.png', plt)
 
-        # second plot - dl/non dl distribution by city (top 20)
+        # second plot - dl/non dl distribution by city (top n)
         pivot_by_city = (pd.pivot_table(deduped.groupby(['institute_city', 'is_dl'])
                                         .size()
                                         .reset_index(drop=False),
@@ -135,32 +138,37 @@ class AnalysisTask(luigi.Task):
                          .apply(lambda x: 100 * (x / x.sum())))
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        (pivot_by_city.sort_values(True, ascending=False)[:20]
+        (pivot_by_city.sort_values(True, ascending=False)[:N_TOP]
                       .sort_values(True)
-                      .plot.barh(ax=ax))
+                      .plot.barh(ax=ax, color=[PEACH, RED], width=0.8))
         ax.set_xlabel('Percentage of DL papers in city')
-        ax.set_ylabel('%')
+        ax.set_ylabel('City')
         dc.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
 
         # third plot - percentage of dl papers by year
-        # TODO: set reasonable limits on the y axis
         papers_by_year = pd.crosstab(df['year'], df['is_dl']).loc[2000:]
         papers_by_year = (100 * papers_by_year.apply(lambda x: x / x.sum(), axis=1))
-        papers_by_year = papers_by_year.drop(False, axis=1)
+        papers_by_year = papers_by_year.drop(False, axis=1)  # drop non-dl column
+
+        ymax = round(papers_by_year[True].max() + 10, -1)
+        ylim = ymax if ymax < 100 else 100
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        papers_by_year.plot(legend=None)
-        ax.set_xlabel('Percentage of DL papers by year')
-        ax.set_ylabel('%')
+        papers_by_year.plot(ax=ax, legend=None, color=RED)
+        plt.xlabel('Year')
+        plt.xticks(np.arange(min(papers_by_year.index), max(papers_by_year.index) + 1, 1))
+        plt.ylabel('%')
+        plt.ylim(0, ylim)
         dc.plot_to_s3('arxlive-charts', 'figure_3.png', plt)
 
-        # fourth plot - share of DL activity by arxiv subject pre/post 2012
+        # fourth plot - share of DL activity by arxiv subject pre/post threshold
         # TODO: rotate this chart
         all_categories = list({cat for cats in df.arxiv_category_descs
                                for cat in cats.split('|')})
 
+        # TODO:read and delete this note
         # removed the code to limit the number of categories as they are almost all
-        # included anyway. (40/41)
+        # included anyway (40/41).
 
         cat_period_container = []
 
@@ -182,16 +190,16 @@ class AnalysisTask(luigi.Task):
                         .sort_values(f'After {YEAR_THRESHOLD}', ascending=True))
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        (100 * cat_thres_df[f'Before {YEAR_THRESHOLD}']).plot(markeredgecolor='blue',
+        (100 * cat_thres_df[f'Before {YEAR_THRESHOLD}']).plot(markeredgecolor=PEACH,
                                                               marker='o',
-                                                              color='powderblue',
+                                                              color=PEACH,
                                                               ax=ax,
-                                                              markerfacecolor='blue')
-        (100 * cat_thres_df[f'After {YEAR_THRESHOLD}']).plot(markeredgecolor='orange',
+                                                              markerfacecolor=PEACH)
+        (100 * cat_thres_df[f'After {YEAR_THRESHOLD}']).plot(markeredgecolor=RED,
                                                              marker='o',
-                                                             color='bisque',
+                                                             color=RED,
                                                              ax=ax,
-                                                             markerfacecolor='orange')
+                                                             markerfacecolor=RED)
         ax.vlines(np.arange(len(cat_thres_df)),
                   ymin=len(cat_thres_df) * [0],
                   ymax=100 * cat_thres_df[f'After {YEAR_THRESHOLD}'],
@@ -200,27 +208,28 @@ class AnalysisTask(luigi.Task):
         ax.set_xticks(np.arange(len(cat_thres_df)))
         ax.set_xticklabels(cat_thres_df.index, rotation=90)
 
-        ax.set_ylabel('DL as % of all papers \n in each category', size=12)
+        ax.set_ylabel('DL as % of all papers \n in each category')
+        ax.set_xlabel('arXiv category')
         ax.legend()
         dc.plot_to_s3('arxlive-charts', 'figure_4.png', plt)
 
-        # fifth chart - changes in specialisation before / after 2012 (top 20 countries)
-        top_20_dl_countries = (df[['institute_country', 'is_dl']]
-                               .groupby('institute_country')
-                               .sum()
-                               .sort_values('is_dl', ascending=False)[:20]
-                               .index
-                               .to_list())
-        df_top_20 = df[df['institute_country'].isin(top_20_dl_countries)]
+        # fifth chart - changes in specialisation before / after threshold (top n countries)
+        top_dl_countries = (df[['institute_country', 'is_dl']]
+                            .groupby('institute_country')
+                            .sum()
+                            .sort_values('is_dl', ascending=False)[:N_TOP]
+                            .index
+                            .to_list())
+        df_top = df[df['institute_country'].isin(top_dl_countries)]
 
         # calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
-            df_top_20[df_top_20[f'before_{YEAR_THRESHOLD}']],
+            df_top[df_top[f'before_{YEAR_THRESHOLD}']],
             country_column='institute_country',
             commodity_column='is_dl')
 
         post_threshold_rca = dc.calculate_rca_by_country(
-            df_top_20[~df_top_20[f'before_{YEAR_THRESHOLD}']],
+            df_top[~df_top[f'before_{YEAR_THRESHOLD}']],
             country_column='institute_country',
             commodity_column='is_dl')
 
@@ -232,17 +241,17 @@ class AnalysisTask(luigi.Task):
                         .sort_values(f'rca_post_{YEAR_THRESHOLD}', ascending=False))
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        rca_combined[f'rca_pre_{YEAR_THRESHOLD}'].plot(markeredgecolor='blue',
+        rca_combined[f'rca_pre_{YEAR_THRESHOLD}'].plot(markeredgecolor=PEACH,
                                                        marker='o',
                                                        color='white',
                                                        ax=ax,
-                                                       markerfacecolor='blue')
-        rca_combined[f'rca_post_{YEAR_THRESHOLD}'].plot(markeredgecolor='orange',
+                                                       markerfacecolor=PEACH)
+        rca_combined[f'rca_post_{YEAR_THRESHOLD}'].plot(markeredgecolor=RED,
                                                         marker='o',
                                                         color='white',
                                                         ax=ax,
-                                                        markerfacecolor='orange')
-        col = ['orange' if x > y else 'blue'
+                                                        markerfacecolor=RED)
+        col = [RED if x > y else '#d18270'
                for x, y in zip(rca_combined[f'rca_post_{YEAR_THRESHOLD}'],
                                rca_combined[f'rca_pre_{YEAR_THRESHOLD}'])]
         ax.vlines(np.arange(len(rca_combined)),
@@ -259,9 +268,7 @@ class AnalysisTask(luigi.Task):
         ax.set_xticklabels(rca_combined.index, rotation=90)
         ax.legend()
         ax.set_ylabel('Revealed comparative advantage')
-        ax.set_xlabel('')
-        ax.set_title(f'Changes in specialisation before / after {YEAR_THRESHOLD}',
-                     size=14)
+        ax.set_xlabel('Country')
 
         dc.plot_to_s3('arxlive-charts', 'figure_5.png', plt)
 
