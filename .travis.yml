@@ -1,3 +1,4 @@
+dist: xenial
 language: python
 python:
   - '3.6'
@@ -31,10 +32,3 @@ branches:
     - dev
 services:
   - mysql
-addons:
-  apt:
-    sources:
-      - mysql-5.7-trusty
-    packages:
-      - mysql-server
-      - mysql-client
