@@ -133,7 +133,7 @@ def query_fields_of_study(subscription_key,
                      'FP': 'parent_ids',
                      'FC': 'child_ids'}
     fields_to_drop = ['logprob', 'prob']
-    fields_to_compact = ['FC', 'FP']
+    fields_to_compact = ['parent_ids', 'child_ids']
 
     for expr in build_expr(*expr_args):
         logging.info(expr)
@@ -164,6 +164,7 @@ def query_fields_of_study(subscription_key,
                         # no parents and/or children
                         pass
 
+                logging.info(f'new fos: {row}')
                 yield row
 
             offset += len(fos_data['entities'])
@@ -202,6 +203,7 @@ def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
     fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
     if fos_not_found:
         raise ValueError(f"Fields of study present in articles but could not be found in MAG Fields of Study database. New links cannot be created until this is resolved: {fos_not_found}")
+
     session.add_all(new_fos_to_import)
     session.commit()
     logging.info("Added new fields of study to database")
