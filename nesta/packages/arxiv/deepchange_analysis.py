@@ -46,7 +46,7 @@ def calculate_rca_by_country(data, country_column, commodity_column):
     return rca
 
 
-def plot_to_s3(bucket, filename, plot, image_format='png'):
+def plot_to_s3(bucket, filename, plot, image_format='png', pad_x=False):
     """Takes a matplotlib plot, exports it as an image and sends it to an S3 bucket.
 
     Args:
@@ -54,12 +54,16 @@ def plot_to_s3(bucket, filename, plot, image_format='png'):
         plot (:code:`matplotlib.pyplot`): plot to export
         filename (str): name of the generated file on S3
         image_format (str): format of the generated image
+        pad_x (bool): pad the x axis by half a tick on each side
 
     Returns:
         (dict): response from boto3
     """
     stream = BytesIO()
 
+    if pad_x:
+        x0, x1 = plot.xlim()
+        plot.xlim(x0 - 0.5, x1 + 0.5)
     plot.savefig(stream, format=image_format, bbox_inches="tight")
     stream.seek(0)
     logging.info(f"Exporting {filename} to {bucket}")
