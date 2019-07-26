@@ -129,8 +129,10 @@ def get_es_mapping(dataset, aliases):
     # Get the mapping and lookup
     mapping = load_json_from_pathstub("production/orms/",
                                       f"{dataset}_es_config.json")
-    alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                           f"{aliases}.json")
+    alias_lookup = {}
+    if aliases is not None:
+        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
+                                               f"{aliases}.json")
     # Get a list of valid fields for verification
     fields = mapping["mappings"]["_doc"]["properties"].keys()
     # Add any aliases to the mapping
