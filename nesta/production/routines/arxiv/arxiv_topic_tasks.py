@@ -84,7 +84,7 @@ class WriteTopicTask(luigi.Task):
                                          "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "arXlive topics <dummy>"  # Note, not a real table
-        update_id = "ArxivTopicTask_{}".format(self.date)
+        update_id = "ArxivTopicTask_{}_{}".format(self.date, self.test)
         return MySqlTarget(update_id=update_id, **db_config)
 
 
@@ -111,6 +111,8 @@ class WriteTopicTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         engine = get_mysql_engine(self.db_conf_env, 'mysqldb',
                                   database)
+        ArticleTopic.__table__.drop(engine)
+        CorExTopic.__table__.drop(engine)
 
         # Insert the topic names data
         topics = [{'id':int(topic_name.split('_')[-1])+1, 
@@ -123,7 +125,7 @@ class WriteTopicTask(luigi.Task):
 
         # Insert article topic weight data
         topic_articles = []
-        done_ids = set()
+        done_ids = set()        
         for row in data['data']['rows']:
             article_id = row.pop('id')
             if article_id in done_ids:
