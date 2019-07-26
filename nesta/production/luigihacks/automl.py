@@ -563,7 +563,6 @@ class AutoMLTask(luigi.Task):
         chain_params = self.generate_seed_search_tasks()
         # chain_params += self.generate_optimization_tasks() ## <-- blank optimisation tasks
         for kwargs in self.launch(chain_params):
-            print("====> Yielding", self.autobatch_kwargs)
             yield _MLTask(**kwargs, **self.autobatch_kwargs)
 
     def output(self):
