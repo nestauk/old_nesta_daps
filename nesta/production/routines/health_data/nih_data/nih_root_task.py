@@ -11,7 +11,7 @@ processing and indexing the data to ElasticSearch.
 import luigi
 import datetime
 import logging
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 from nih_abstracts_mesh_task import AbstractsMeshTask
 
@@ -44,11 +44,11 @@ class RootTask(luigi.WrapperTask):
                                 _routine_id=_routine_id,
                                 db_config_path=self.db_config_path,
                                 test=(not self.production),
-                                batchable=find_filepath_from_pathstub("batchables/health_data/nih_abstract_mesh_data"),
-                                env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                           find_filepath_from_pathstub("config/mysqldb.config"),
-                                           find_filepath_from_pathstub("config/elasticsearch.config"),
-                                           find_filepath_from_pathstub("nih.json")],
+                                batchable=f3p("batchables/health_data/nih_abstract_mesh_data"),
+                                env_files=[f3p("nesta/"),
+                                           f3p("config/mysqldb.config"),
+                                           f3p("config/elasticsearch.config"),
+                                           f3p("nih.json")],
                                 job_def="py36_amzn1_image",
                                 job_name="AbstractsMeshTask-%s" % _routine_id,
                                 job_queue="HighPriority",

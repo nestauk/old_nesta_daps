@@ -46,7 +46,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
                           batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
+                          env_files=[find_filepath_from_pathstub("nesta/"),
                                      find_filepath_from_pathstub("config/mysqldb.config"),
                                      find_filepath_from_pathstub("config/elasticsearch.config"),
                                      find_filepath_from_pathstub("nih.json")],
@@ -99,10 +99,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         Returns:
             (bool): True if both are already existing, otherwise False
         '''
-        pattern = r'(\d+)-(\d+)\.txt$'
+        pattern = r'(\d+)-(\d+)\.out.txt$'
         match = re.search(pattern, key)
-        if match.groups() is None:
-            raise ValueError("Could not extract start and end doc_ids from meshed file")
+        if match is None or match.groups() is None:
+            raise ValueError(f"Could not extract start and end doc_ids from {key}")
 
         for idx in match.groups():
             try:
@@ -128,7 +128,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'
-        key_prefix = 'nih_abstracts_processed/08-11-18/mti'
+        key_prefix = 'nih_abstracts_processed/22-07-2019/nih_'
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         logging.info(f"Found keys: {keys}")
 

@@ -36,7 +36,7 @@ class ProcessTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         yield CollectTask(batchable=find_filepath_from_pathstub("batchables/health_data/nih_collect_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta"),
+                          env_files=[find_filepath_from_pathstub("nesta"),
                                      find_filepath_from_pathstub("/production/config/mysqldb.config")],
                           job_def="py36_amzn1_image",
                           job_name="CollectTask-%s" % _routine_id,
