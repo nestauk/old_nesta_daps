@@ -6,14 +6,17 @@
                 "count_citations_article": {
                     "type": "integer"
                 },
-                "datetime_created_article": {
+		"booleanFlag_multinational_article": {
+		    "type": "boolean"
+		},
+                "date_created_article": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
-                "doi_of_article": {
+                "id_digitalObjectIdentifier_article": {
                     "type": "text"
                 },
-		"novelty_of_article": {
+                "metric_novelty_article": {
                     "type": "float"
                 },
                 "terms_authors_article": {
@@ -22,55 +25,62 @@
                         "keyword": {
                             "type": "keyword"
                         }
-                    }
+                    },
+                    "type": "text"
                 },
-                "terms_categories_article": {
+                "terms_categories0_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
-			"raw": { 
-			    "type": "keyword",
-                            "index": false
-			},
                         "keyword": {
                             "type": "keyword"
                         }
-                    }
+                    },
+                    "type": "text"
                 },
-                "terms_countries_article": {
+                "terms_categories1_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
-			"raw": { 
-			    "type": "keyword",
-                            "index": false
-			},
                         "keyword": {
                             "type": "keyword"
                         }
-                    }
+                    },
+                    "type": "text"
                 },
-                "terms_fos_article": {
+                "terms_fieldsOfStudy0_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
-			"raw": { 
-			    "type": "keyword",
-			    "index": false
-			},
                         "keyword": {
                             "type": "keyword"
                         }
-                    }
+                    },
+                    "type": "text"
+                },
+                "terms_fieldsOfStudy1_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_country_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
-			"raw": { 
-			    "type": "keyword",
-			    "index": false
-			},
                         "keyword": {
                             "type": "keyword"
                         }
-                    }
+                    },
+                    "type": "text"
                 },
                 "textBody_abstract_article": {
                     "type": "text"
@@ -78,6 +88,9 @@
                 "title_of_article": {
                     "type": "text"
                 },
+		"type_of_entity": {
+		    "type": "text"
+		},
                 "url_of_article": {
                     "type": "text"
                 }

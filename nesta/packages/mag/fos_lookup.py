@@ -14,6 +14,6 @@ def build_fos_lookup(engine):
                                     .all())]
     fos_children = {f['id']: split_ids(f['child_ids']) for f in fos}
     fos_names = {f['id']: f['name'] for f in fos}
-    return = {(pid, cid): [fos_names[pid], fos_names[cid]]
-              for pid, children in fos_children.items()
-              for cid in children if cid in fos_children}
+    return {(pid, cid): [fos_names[pid], fos_names[cid]]
+            for pid, children in fos_children.items()
+            for cid in children if cid in fos_children}

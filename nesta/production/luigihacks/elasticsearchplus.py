@@ -489,7 +489,7 @@ class ElasticsearchPlus(Elasticsearch):
                  field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
-                 country_detection=True,
+                 country_detection=False,
                  listify_terms=True,
                  terms_delimiters=None,
                  caps_to_camel_case=False,

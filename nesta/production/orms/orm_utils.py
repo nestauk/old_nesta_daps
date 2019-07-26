@@ -5,10 +5,12 @@ from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import class_mapper
 from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
+from datetime import datetime
 
 import pymysql
 import os

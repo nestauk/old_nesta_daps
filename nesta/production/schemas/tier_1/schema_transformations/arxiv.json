@@ -5,24 +5,12 @@
         "unique": true
     },
     {
-        "tier_0": "datestamp",
-        "tier_1": "date_datestamp_article"
-    },
-    {
         "tier_0": "created",
         "tier_1": "date_created_article"
     },
     {
-        "tier_0": "updated",
-        "tier_1": "date_updated_article"
-    },
-    {
         "tier_0": "title",
         "tier_1": "title_of_article"
-    },
-    {
-        "tier_0": "journal_ref",
-        "tier_1": "id_journalReference_article"
     },
     {
         "tier_0": "doi",
@@ -34,14 +22,42 @@
     },
     {
         "tier_0": "authors",
-        "tier_1": "personName_of_author"
+        "tier_1": "terms_authors_article"
     },
     {
-        "tier_0": "msc_class",
-        "tier_1": "id_mathSubjectClassification_article"
+        "tier_0": "citation_count",
+        "tier_1": "count_citations_article"
     },
     {
-        "tier_0": "categories",
-        "tier_1": "id_arxivSubjectCategory_article"
+        "tier_0": "fos_level_0",
+        "tier_1": "terms_fieldsOfStudy0_article"
+    },
+    {
+        "tier_0": "fos_level_1",
+        "tier_1": "terms_fieldsOfStudy1_article"
+    },
+    {
+        "tier_0": "categories_level_0",
+        "tier_1": "terms_categories0_article"
+    },
+    {
+        "tier_0": "categories_level_1",
+        "tier_1": "terms_categories1_article"
+    },
+    {
+        "tier_0": "countries",
+        "tier_1": "terms_country_article"
+    },
+    {
+        "tier_0": "has_multinational",
+        "tier_1": "booleanFlag_multinational_article"
+    },
+    {
+	"tier_0": "institutes",
+	"tier_1": "terms_institutes_article"
+    },
+    {
+        "tier_0": "novelty_of_article",
+        "tier_1": "metric_novelty_article"
     }
 ]
