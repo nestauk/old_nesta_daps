@@ -92,6 +92,8 @@ def get_article_ids_by_term(engine, term, min_weight):
                     .filter(sqlalchemy.func.json_contains(CorExTopic.terms,
                                                           f'["{term}"]'))
                     .scalar())
+        if topic_id is None:
+            raise ValueError(f'{term} not found in any topics')
         logging.info(f"Identified {term} topic with id {topic_id}")
 
         articles = (session
@@ -101,7 +103,7 @@ def get_article_ids_by_term(engine, term, min_weight):
                     .all())
 
     article_ids = {a.article_id for a in articles}
-    logging.info(f"Identified {len(article_ids)} deep learning articles")
+    logging.info(f"Identified {len(article_ids)} deep learning articles in database")
 
     return article_ids
 
