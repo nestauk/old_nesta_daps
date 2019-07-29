@@ -35,10 +35,10 @@ class AnalysisTask(luigi.Task):
         3. % ML papers by year (line)
         4. share of ML activity in arxiv subjects, pre/post 2012 (horizontal point / slope)
         5. rca, pre/post 2012 by country (horizontal point / slope)
-        6. rca over time, citation > mean & top 50 countries (horizontal violin)
+        6. rca over time, citation > mean & top 50 countries (horizontal violin) [NOT DONE]
 
     Proposed table data:
-        1. top countries by rca (moving window of last 12 months?)
+        1. top countries by rca (moving window of last 12 months?) [NOT DONE]
 
     Args:
         date (datetime): Datetime used to label the outputs
@@ -91,14 +91,14 @@ class AnalysisTask(luigi.Task):
         # There is one row per article / institiute / institute country
         with open(DEEPCHANGE_QUERY) as sql_query:
             df = pd.read_sql(sql_query.read(), self.engine)
-        logging.info(f"Retrieved {len(df)} articles from database")
+        logging.info(f"Dataset contains {len(df)} articles")
 
         # collect topics, determine which represents deep_learning and apply flag
         dl_topic_ids = dc.get_article_ids_by_term(self.engine,
                                                   term='deep_learning',
                                                   min_weight=0.2)
         df['is_dl'] = df.article_id.apply(lambda i: i in dl_topic_ids)
-        logging.info(f"Flagged {df.is_dl.sum()} deep learning articles")
+        logging.info(f"Flagged {df.is_dl.sum()} deep learning articles in dataset")
 
         df['date'] = df.apply(lambda row: row.article_updated or row.article_created,
                               axis=1)
@@ -107,11 +107,9 @@ class AnalysisTask(luigi.Task):
                                      date_column='date',
                                      before_year=YEAR_THRESHOLD)
 
-        # TODO: decide if we are applying de-duplication for each chart
-        deduped = df.drop_duplicates('article_id')
 
         # first plot - dl/non dl distribution by country (top n)
-        pivot_by_country = (pd.pivot_table(deduped.groupby(['institute_country', 'is_dl'])
+        pivot_by_country = (pd.pivot_table(df.groupby(['institute_country', 'is_dl'])
                                            .size()
                                            .reset_index(drop=False),
                             index='institute_country',
@@ -133,7 +131,7 @@ class AnalysisTask(luigi.Task):
         dc.plot_to_s3('arxlive-charts', 'figure_1.png', plt)
 
         # second plot - dl/non dl distribution by city (top n)
-        pivot_by_city = (pd.pivot_table(deduped.groupby(['institute_city', 'is_dl'])
+        pivot_by_city = (pd.pivot_table(df.groupby(['institute_city', 'is_dl'])
                                         .size()
                                         .reset_index(drop=False),
                          index='institute_city',
@@ -155,6 +153,8 @@ class AnalysisTask(luigi.Task):
         dc.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
 
         # third plot - percentage of dl papers by year
+        deduped = df.drop_duplicates('article_id')
+
         start_year = 2000
         papers_by_year = pd.crosstab(deduped['year'], deduped['is_dl']).loc[start_year:]
         papers_by_year = (100 * papers_by_year.apply(lambda x: x / x.sum(), axis=1))
@@ -162,8 +162,10 @@ class AnalysisTask(luigi.Task):
 
         fig, ax = plt.subplots(figsize=(7, 4))
         papers_by_year.plot(ax=ax, legend=None, color=COLOR_A)
-        plt.xlabel('')
+        plt.xlabel('Year')
         plt.xticks(np.arange(min(papers_by_year.index), max(papers_by_year.index) + 1, 1))
+        ax.set_xticklabels(['' if i % 2 else y
+                           for i, y in enumerate(papers_by_year.index)])
 
         plt.ylabel('Percentage of papers')
         dc.plot_to_s3('arxlive-charts', 'figure_3.png', plt, pad_x=True)
@@ -190,7 +192,7 @@ class AnalysisTask(luigi.Task):
         cat_thres_df = (pd.concat(cat_period_container, axis=1)
                         .T
                         .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
-        other = cat_thres_df[N_TOP:].sum().rename('Other')
+        other = cat_thres_df[N_TOP:].mean().rename('Other')
         cat_thres_df = cat_thres_df[:N_TOP].append(other)
 
         fig, ax = plt.subplots(figsize=(7, 4))
