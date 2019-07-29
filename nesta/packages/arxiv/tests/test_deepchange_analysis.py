@@ -15,6 +15,7 @@ from nesta.packages.arxiv.deepchange_analysis import add_before_date_flag
 from nesta.packages.arxiv.deepchange_analysis import calculate_rca_by_country
 from nesta.packages.arxiv.deepchange_analysis import get_article_ids_by_term
 from nesta.packages.arxiv.deepchange_analysis import plot_to_s3
+from nesta.packages.arxiv.deepchange_analysis import highly_cited
 
 
 def test_add_before_date_flag_correctly_adds_flags():
@@ -93,3 +94,15 @@ def test_get_article_ids_by_term(mocked_db_session):
 
     assert (ExpressionMatcher(mocked_session.query().filter.mock_calls[2])
             == mock.call((ArticleTopic.topic_id == 1) & (ArticleTopic.topic_weight >= 0.1)))
+
+def test_highly_cited():
+    lookup = pd.DataFrame({'citation_count': [2, 8, 7]}, index=[2000, 2001, 2002])
+
+    row = pd.Series({'id': 1, 'citation_count': 5, 'year': 2000})
+    assert highly_cited(row, lookup).bool() is True
+
+    row = pd.Series({'id': 2, 'citation_count': 6, 'year': 2001})
+    assert highly_cited(row, lookup).bool() is False
+
+    row = pd.Series({'id': 3, 'citation_count': 7, 'year': 2002})
+    assert highly_cited(row, lookup).bool() is True
