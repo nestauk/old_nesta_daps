@@ -12,6 +12,7 @@ import luigi
 import datetime
 import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
+import os
 
 from nih_abstracts_mesh_task import AbstractsMeshTask
 
@@ -44,7 +45,8 @@ class RootTask(luigi.WrapperTask):
                                 _routine_id=_routine_id,
                                 db_config_path=self.db_config_path,
                                 test=(not self.production),
-                                batchable=f3p("batchables/health_data/nih_abstract_mesh_data"),
+                                batchable=f3p("batchables/health_data/"
+                                              "nih_abstract_mesh_data"),
                                 env_files=[f3p("nesta/"),
                                            f3p("config/mysqldb.config"),
                                            f3p("config/elasticsearch.config"),

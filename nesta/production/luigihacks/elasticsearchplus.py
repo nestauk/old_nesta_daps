@@ -483,7 +483,7 @@ class ElasticsearchPlus(Elasticsearch):
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
-                 aws_auth_region=None,
+                 aws_auth_region,
                  no_commit=False,
                  strans_kwargs={},
                  field_null_mapping={},
@@ -500,15 +500,14 @@ class ElasticsearchPlus(Elasticsearch):
         self.no_commit = no_commit
         # If aws auth is required, fill up the kwargs with more
         # arguments to pass to the core API.
-        if aws_auth_region is not None:
-            credentials = boto3.Session().get_credentials()
-            http_auth = AWS4Auth(credentials.access_key,
-                                 credentials.secret_key,
-                                 aws_auth_region, 'es')
-            kwargs["http_auth"] = http_auth
-            kwargs["use_ssl"] = True
-            kwargs["verify_certs"] = True
-            kwargs["connection_class"] = RequestsHttpConnection
+        credentials = boto3.Session().get_credentials()
+        http_auth = AWS4Auth(credentials.access_key,
+                             credentials.secret_key,
+                             aws_auth_region, 'es')
+        kwargs["http_auth"] = http_auth
+        kwargs["use_ssl"] = True
+        kwargs["verify_certs"] = True
+        kwargs["connection_class"] = RequestsHttpConnection
 
         # Apply the schema mapping
         self.transforms = [lambda row: schema_transformer(row,

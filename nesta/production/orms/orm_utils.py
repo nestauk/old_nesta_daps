@@ -323,7 +323,7 @@ def get_mysql_engine(db_env, section, database="production_tests"):
         url = URL(drivername='mysql+pymysql',
                   username="travis",
                   database=database)
-    else:
+    else:        
         if not os.path.exists(conf_path):
             raise FileNotFoundError(conf_path)
         cp = ConfigParser()

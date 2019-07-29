@@ -77,7 +77,8 @@ def run():
                      'abstract_text': clean_abstract_text
                      })
         duped_docs = dupes.get(doc_id, [])
-        logging.info(f'Found {len(duped_docs)} duplicates')
+        if len(duped_docs) > 0:
+            logging.info(f'Found {len(duped_docs)} duplicates')
         for duped_doc in duped_docs:
             docs.append({'doc_id': duped_doc,
                          'mesh_terms': terms,
@@ -95,6 +96,7 @@ def run():
                    'ignore':['doc_id']}
     es = ElasticsearchPlus(hosts=es_config['host'],
                            port=es_config['port'],
+                           aws_auth_region=es_config['region'],
                            use_ssl=True,
                            entity_type=entity_type,
                            strans_kwargs=strans_kwargs,
@@ -130,7 +132,7 @@ def run():
 
 if __name__ == '__main__':
     log_level = logging.INFO
-    if "outinfo" not in os.environ:
+    if "BATCHPAR_outinfo" not in os.environ:
         logging.getLogger('boto3').setLevel(logging.CRITICAL)
         logging.getLogger('botocore').setLevel(logging.CRITICAL)
         logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
