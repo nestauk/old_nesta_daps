@@ -20,6 +20,7 @@ from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
 YEAR_THRESHOLD = 2012
+MIN_RCA_YEAR = 2007  # minimum year when calculating rca pre 2012
 N_TOP = 20  # number of countries / cities / categories to show
 COLOR_A = '#992b15'
 COLOR_B = '#d18270'
@@ -221,13 +222,22 @@ class AnalysisTask(luigi.Task):
         dc.plot_to_s3('arxlive-charts', 'figure_4.png', plt, pad_x=True)
 
         # fifth chart - changes in specialisation before / after threshold (top n countries)
+
+        # flag papers with citations above the yearly median
+        avg_citation_counts = df[['year', 'citation_count']].groupby('year').quantile(.5)
+        df['highly_cited'] = df.apply(dc.highly_cited, args=(avg_citation_counts,),
+                                      axis=1)
+
         top_dl_countries = (df[['institute_country', 'is_dl']]
                             .groupby('institute_country')
                             .sum()
                             .sort_values('is_dl', ascending=False)[:N_TOP]
                             .index
                             .to_list())
-        df_top = df[df['institute_country'].isin(top_dl_countries)]
+        df_top = df[(df['institute_country'].isin(top_dl_countries))
+                    & (df['highly_cited'])]
+        # limit the lowest year
+        df_top = df_top[df_top['year'] >= MIN_RCA_YEAR]
 
         # calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
