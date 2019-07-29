@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import requests
 from collections import defaultdict
+import numpy as np
 
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
 from nesta.production.orms.orm_utils import load_json_from_pathstub
@@ -48,7 +49,8 @@ def run():
                            strans_kwargs=strans_kwargs,
                            null_empty_str=True,
                            coordinates_as_floats=True,
-                           listify_terms=True)
+                           listify_terms=True,
+                           do_sort=False)
 
     # collect file
     nrows = 20 if test else None
@@ -56,14 +58,17 @@ def run():
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     art_ids = json.loads(obj.get()['Body']._raw_stream.read())
-    logging.info(f"{len(art_ids)} articles retrieved from s3")
+    logging.info(f"{len(art_ids)} article IDs "
+                 "retrieved from s3")
 
     # Get all grid countries
     with db_session(engine) as session:
         grid_countries = {obj.id: obj.country
                           for obj in session.query(Institute).all()
                           if obj.country is not None}
-
+        grid_institutes = {obj.id: obj.name
+                           for obj in session.query(Institute).all()
+                           if obj.country is not None}
     #
     with db_session(engine) as session:
         for count, obj in enumerate((session.query(Article)
@@ -84,14 +89,40 @@ def run():
                         for cid in split_ids(f['child_ids'])
                         if cid in fos_ids]
             # Format as expected by searchkit
-            row['fos_level_0'] = [f[0] for f in fos]
-            row['fos_level_1'] = [f[1] for f in fos]
+            all_levels = set()
+            row['fos'] = []
+            novelty0, novelty1 = 0, 0
+            for ancestor, value in fos:
+                if ancestor not in all_levels:
+                    row['fos'].append({'ancestors':[],
+                                       'value': ancestor,
+                                       'level': 1})
+                    all_levels.add(ancestor)
+                    novelty0 += 1
+                if (value, ancestor) not in all_levels:
+                    row['fos'].append({'ancestors':[ancestor],
+                                       'value': value,
+                                       'level': 2})
+                    all_levels.add((value, ancestor))
+                    novelty1 += 1
 
             # Format categories as expected by searchkit
             cats = row.pop('categories')
-            row['categories_level_0'] = [c['id'].split('.')[0]
-                                         for c in cats]
-            row['categories_level_1'] = [c['description'] for c in cats]
+            all_levels = set()
+            row['categories'] = []
+            for c in cats:
+                ancestor = c['id'].split('.')[0]
+                value = c['description']
+                if ancestor not in all_levels:
+                    row['categories'].append({'ancestors':[],
+                                              'value': ancestor,
+                                              'level': 1})
+                    all_levels.add(ancestor)
+                if (value, ancestor) not in all_levels:
+                    row['categories'].append({'ancestors':[ancestor],
+                                              'value': value,
+                                              'level': 2})
+                    all_levels.add((value, ancestor))
 
             # Pull out international institute info
             institutes = row.pop('institutes')
@@ -105,30 +136,28 @@ def run():
             if mag_authors is None:
                 row['authors'] = None
                 row['institutes'] = None
-                row['novelty_of_article'] = None
+                row['novelty_of_article'] = 0
             else:
                 if all('author_order' in a for a in mag_authors):
                     mag_authors = sorted(mag_authors,
                                          key=lambda a: a['author_order'])
 
-                row['authors'] = [author['author_name'].title() 
+                row['authors'] = [author['author_name'].title()
                                   for author in mag_authors]
-                row['institutes'] = [author['author_affiliation'].title()
-                                     for author in mag_authors
-                                     if 'author_affiliation' in author]
-                row['novelty_of_article'] = len(set(row['fos_level_0']))
+                if len(row['authors']) > 10:
+                    row['authors'] = [row['authors'][0], 'et al']
 
-            # for k, v in row.items():
-            #     print(k)
-            #     print("\n")
-            #     print(v)
-            #     print("\n=======================\n")
-            # print()
+                gids = [author['affiliation_grid_id']
+                        for author in mag_authors
+                        if 'affiliation_grid_id' in author]
+                row['institutes'] = [grid_institutes[g].title()
+                                     for g in gids
+                                     if g in grid_institutes]
+                row['novelty_of_article'] = novelty0*np.log(novelty1+1)
 
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)
-
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
@@ -143,8 +172,8 @@ if __name__ == "__main__":
 
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.production.orms.orm_utils import setup_es
-        #es, es_config = setup_es('dev', True, True,
-        #                         dataset='arxiv')
+        es, es_config = setup_es('dev', True, True,
+                                 dataset='arxiv')
         environ = {'batch_file': ('2019-07-26-False-'
                                   '15641348619563951.json'),
                    'config': ('/home/ec2-user/nesta/nesta/'

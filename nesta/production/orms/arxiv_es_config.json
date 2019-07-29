@@ -28,42 +28,24 @@
                     },
                     "type": "text"
                 },
-                "terms_categories0_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_categories1_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_fieldsOfStudy0_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_fieldsOfStudy1_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
+		"nested_category_article":{
+		    "type":"nested",
+		    "properties":{
+			"level":{"type":"integer"},
+			"ancestors":{"type":"keyword"},
+			"value":{"type":"keyword"},
+			"order":{"type":"integer"}    
+		    }
+		},
+		"nested_fieldOfStudy_article":{
+		    "type":"nested",
+		    "properties":{
+			"level":{"type":"integer"},
+			"ancestors":{"type":"keyword"},
+			"value":{"type":"keyword"},
+			"order":{"type":"integer"}    
+		    }
+		},
                 "terms_country_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {

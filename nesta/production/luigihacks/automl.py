@@ -580,7 +580,7 @@ class AutoMLTask(luigi.Task):
 
     def run(self):
         # Get the UIDs for the final tasks
-        final_task = list(AutoMLTask.task_parameters.keys())[-1]
+        final_task = list(AutoMLTask.task_parameters.keys())[-1]        
         uids = [generate_uid(final_task, row)
                 for row in AutoMLTask.task_parameters[final_task]]
         losses = self.extract_losses(uids)

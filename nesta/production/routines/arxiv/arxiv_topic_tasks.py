@@ -77,6 +77,7 @@ class WriteTopicTask(luigi.Task):
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     test = luigi.BoolParameter()
     insert_batch_size = luigi.IntParameter(default=10000)
+    cherry_picked = luigi.Parameter(default=None)
 
     def output(self):
         '''Points to the output database engine'''
@@ -100,9 +101,10 @@ class WriteTopicTask(luigi.Task):
     def run(self):
         # Load the input data (note the input contains the path
         # to the output)
-
-        _body = self.input().open("rb")
-        _filename = _body.read().decode('utf-8')
+        _filename = self.cherry_picked
+        if _filename is None:
+            _body = self.input().open("rb")
+            _filename = _body.read().decode('utf-8')
         obj = s3.S3Target(f"{self.raw_s3_path_prefix}/"
                           f"{_filename}").open('rb')
         data = json.load(obj)
@@ -121,7 +123,7 @@ class WriteTopicTask(luigi.Task):
                   data['data']['topic_names'].items()]
         insert_data(self.db_conf_env, 'mysqldb', database,
                     Base, CorExTopic, topics, low_memory=True)
-        logging.info(f'inserted {len(topics)}')
+        logging.info(f'Inserted {len(topics)} topics')
 
         # Insert article topic weight data
         topic_articles = []
@@ -136,7 +138,6 @@ class WriteTopicTask(luigi.Task):
                                for topic_name, weight in row.items()]
             # Flush
             if len(topic_articles) > self.insert_batch_size:
-                logging.info('Flushing')
                 insert_data(self.db_conf_env, 'mysqldb', database,
                             Base, ArticleTopic, topic_articles,
                             low_memory=True)
@@ -169,4 +170,7 @@ class TopicRootTask(luigi.WrapperTask):
                               s3_path_prefix=s3_path_prefix,
                               data_path=data_path,
                               date=self.date,
+                              cherry_picked=('automl/2019-07-26/COREX_TOPIC_MODEL'
+                                             '.n_hidden_27-0.VECTORIZER.binary_True'
+                                             '.min_df_0-001.NGRAM.TEST_False.json'),
                               test=test)
