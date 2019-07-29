@@ -95,6 +95,7 @@ def test_get_article_ids_by_term(mocked_db_session):
     assert (ExpressionMatcher(mocked_session.query().filter.mock_calls[2])
             == mock.call((ArticleTopic.topic_id == 1) & (ArticleTopic.topic_weight >= 0.1)))
 
+
 def test_highly_cited():
     lookup = pd.DataFrame({'citation_count': [2, 8, 7]}, index=[2000, 2001, 2002])
 
@@ -105,4 +106,4 @@ def test_highly_cited():
     assert highly_cited(row, lookup).bool() is False
 
     row = pd.Series({'id': 3, 'citation_count': 7, 'year': 2002})
-    assert highly_cited(row, lookup).bool() is True
+    assert highly_cited(row, lookup).bool() is False

@@ -109,13 +109,13 @@ def get_article_ids_by_term(engine, term, min_weight):
 
 
 def highly_cited(row, lookup):
-    """Determines if a paper has more citations than the yearly median.
+    """Determines if an article has more citations than the yearly median.
 
     Args:
         row(:code:`pandas.Series`): a single article
         lookup(:code:`pandas.DataFrame`): table of years and median citation counts
 
     Returns:
-        (bool): True if equal or greater than the yearly median
+        (bool): True if greater than the yearly median
     """
-    return row.citation_count >= lookup.loc[row.year]
+    return row.citation_count > lookup.loc[row.year]
