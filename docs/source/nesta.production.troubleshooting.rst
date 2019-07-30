@@ -36,7 +36,7 @@ How do I add a new user to the server?
 --------------------------------------
 
 - add the user with :code:`useradd --create-home username`
-- add sudo privileges [follow these instructions](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/2/html/Getting_Started_Guide/ch02s03.html)
+- add sudo privileges `following these instructions <https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/2/html/Getting_Started_Guide/ch02s03.html>`_
 - add to ec2 user group with :code:`sudo usermod -a -G ec2-user username`
 - set a temp password with :code:`passwd username`
 - their home directory will be :code:`/home/username/`
