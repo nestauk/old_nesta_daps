@@ -24,6 +24,7 @@ MIN_RCA_YEAR = 2007  # minimum year when calculating rca pre 2012
 N_TOP = 20  # number of countries / cities / categories to show
 COLOR_A = '#992b15'
 COLOR_B = '#d18270'
+STATIC_FILES_BUCKET = 'arxlive-static-files'
 
 
 class AnalysisTask(luigi.Task):
@@ -129,7 +130,7 @@ class AnalysisTask(luigi.Task):
         ax.legend(labels=[labels[1], labels[0]],
                   handles=[handles[1], handles[0]],
                   title='')
-        dc.plot_to_s3('arxlive-charts', 'figure_1.png', plt)
+        dc.plot_to_s3(STATIC_FILES_BUCKET, 'static/figure_1.png', plt)
 
         # second plot - dl/non dl distribution by city (top n)
         pivot_by_city = (pd.pivot_table(df.groupby(['institute_city', 'is_dl'])
@@ -151,7 +152,7 @@ class AnalysisTask(luigi.Task):
         ax.legend(labels=[labels[1], labels[0]],
                   handles=[handles[1], handles[0]],
                   title='')
-        dc.plot_to_s3('arxlive-charts', 'figure_2.png', plt)
+        dc.plot_to_s3(STATIC_FILES_BUCKET, 'static/figure_2.png', plt)
 
         # third plot - percentage of dl papers by year
         deduped = df.drop_duplicates('article_id')
@@ -169,7 +170,7 @@ class AnalysisTask(luigi.Task):
                            for i, y in enumerate(papers_by_year.index)])
 
         plt.ylabel('Percentage of papers')
-        dc.plot_to_s3('arxlive-charts', 'figure_3.png', plt, pad_x=True)
+        dc.plot_to_s3(STATIC_FILES_BUCKET, 'static/figure_3.png', plt, pad_x=True)
 
         # fourth plot - share of DL activity by arxiv subject pre/post threshold
         all_categories = list({cat for cats in df.arxiv_category_descs
@@ -219,7 +220,7 @@ class AnalysisTask(luigi.Task):
         ax.set_ylabel('DL as % of all papers \n in each category')
         ax.set_ylabel('Percentage of DL papers')
         ax.legend()
-        dc.plot_to_s3('arxlive-charts', 'figure_4.png', plt, pad_x=True)
+        dc.plot_to_s3(STATIC_FILES_BUCKET, 'static/figure_4.png', plt, pad_x=True)
 
         # fifth chart - changes in specialisation before / after threshold (top n countries)
 
@@ -287,7 +288,7 @@ class AnalysisTask(luigi.Task):
         ax.set_ylabel('RCA')
         ax.set_xlabel('')
 
-        dc.plot_to_s3('arxlive-charts', 'figure_5.png', plt, pad_x=True)
+        dc.plot_to_s3(STATIC_FILES_BUCKET, 'static/figure_5.png', plt, pad_x=True)
 
         # mark as done
         logging.warning("Task complete")
