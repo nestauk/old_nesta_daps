@@ -16,7 +16,7 @@ import boto3
 from requests_aws4auth import AWS4Auth
 import time
 
-from nesta.packages.decorators.schema_transform import schema_transformer
+from nesta.packages.decorators.schema_transform import schema_transformer as transformer
 from nesta.packages.decorators.ratelimit import ratelimit
 
 COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
@@ -233,6 +233,8 @@ def _clean_up_lists(row):
     _row = deepcopy(row)
     for k, v in row.items():
         if type(v) is not list:
+            continue
+        if len(v) > 0 and type(v[0]) is dict:
             continue
         # Remove empty strings
         to_remove = [item for item in v
@@ -485,7 +487,7 @@ class ElasticsearchPlus(Elasticsearch):
     def __init__(self, entity_type,
                  aws_auth_region,
                  no_commit=False,
-                 strans_kwargs={},
+                 strans_kwargs=None,
                  field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
@@ -510,10 +512,12 @@ class ElasticsearchPlus(Elasticsearch):
         kwargs["connection_class"] = RequestsHttpConnection
 
         # Apply the schema mapping
-        self.transforms = [lambda row: schema_transformer(row,
-                                                          **strans_kwargs),
-                           lambda row: _add_entity_type(row,
-                                                        entity_type)]
+        self.transforms = []
+        if strans_kwargs is not None:
+            self.transforms.append(lambda row: transformer(row,
+                                                           **strans_kwargs))
+        self.transforms.append(lambda row: _add_entity_type(row,
+                                                            entity_type))
 
         # Convert values to null as required
         if null_empty_str:

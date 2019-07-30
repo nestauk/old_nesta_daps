@@ -2,10 +2,9 @@
 ElasticsearchTask
 =================
 
-
+Task for piping data from MySQL to Elasticsearch
 '''
 
-from elasticsearch.helpers import scan
 import logging
 import luigi
 import os
@@ -17,6 +16,7 @@ from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.orm_utils import db_session
+from nesta.production.orms.orm_utils import get_es_ids
 
 
 class ElasticsearchTask(autobatch.AutoBatchTask):
@@ -68,15 +68,13 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
 
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
+        es, es_config = setup_es(es_mode, self.test, 
+                                 self.drop_and_recreate,
                                  dataset=self.dataset,
                                  aliases=self.aliases)
 
         # Get set of existing ids from elasticsearch via scroll
-        scanner = scan(es, query={"_source": False},
-                       index=es_config['index'],
-                       doc_type=es_config['type'])
-        existing_ids = {s['_id'] for s in scanner}
+        existing_ids = get_es_ids(es, es_config)
         logging.info(f"Collected {len(existing_ids)} existing in "
                      "Elasticsearch")
 

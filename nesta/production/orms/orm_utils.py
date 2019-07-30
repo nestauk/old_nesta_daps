@@ -9,7 +9,9 @@ from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import scan
 
+import re
 import pymysql
 import os
 import json
@@ -18,8 +20,8 @@ import time
 
 def assert_correct_config(test, config, key):
     """Assert that config key and 'index' value are consistent with the
-    running mode.    
-    
+    running mode.
+
     Args:
         test (bool): Are we running in test mode?
         config (dict): Elasticsearch config file data.
@@ -37,10 +39,11 @@ def assert_correct_config(test, config, key):
                          "must end with '_dev'")
 
 
-def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
-    """Retrieve the ES connection, ES config and setup the index 
+def setup_es(es_mode, test_mode, drop_and_recreate,
+             dataset, aliases=None, increment_version=False):
+    """Retrieve the ES connection, ES config and setup the index
     if required.
-    
+
     Args:
         es_mode (str): One of "prod" or "dev".
         test_mode (bool): Running in test mode?
@@ -58,25 +61,55 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
     key = f"{dataset}_{es_mode}"
     es_config = get_config('elasticsearch.config', key)
     assert_correct_config(test_mode, es_config, key)
+
+    # If required, create new index from the old one
+    if increment_version:
+        old_index = es_config['index']
+        tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
+        new_index = f'{tag}{int(version)+1}'
+        es_config['index'] = new_index
+        es_config['old_index'] = old_index
+        if any((new_index == old_index,
+                not old_index.startswith(tag),
+                not new_index.startswith(tag),
+                len(new_index) - len(old_index) > 1)):
+            raise ValueError('Could not create a new valid '
+                             f'index from {old_index}. Tried, '
+                             f'but got {new_index}.')
+
     # Make the ES connection
-    es = Elasticsearch(es_config['host'], port=es_config['port'], 
+    es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True)
-    # Drop the index if required (must be in test mode to do this)         
+    # Drop the index if required (must be in test mode to do this)
     _index = es_config['index']
-    if drop_and_recreate and test_mode:
+    exists = es.indices.exists(index=_index)
+    if drop_and_recreate and test_mode and exists:        
         es.indices.delete(index=_index)
     # Create the index if required
-    exists = es.indices.exists(index=_index)
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
         es.indices.create(index=_index, body=mapping)
     return es, es_config
 
+def get_es_ids(es, es_config, size=1000):
+    '''Get all existing ES document ids for a given config
+    
+    Args:
+        es: Elasticsearch connection.
+        es_config (dict): Elasticsearch configuration.
+    Returns:
+        existing_ids (set): All existing ids
+    '''
+    scanner = scan(es, query={"_source": False},
+                   index=es_config['index'],
+                   doc_type=es_config['type'],
+                   size=size)
+    return {s['_id'] for s in scanner}
 
 def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
     """Basic wrapper around :obj:`find_filepath_from_pathstub`
     which also opens the file (assumed to be json).
-    
+
     Args:
         pathstub (str): Stub of filepath where the file should be found.
         filename (str): The filename.
@@ -139,8 +172,8 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
         low_memory (bool): If the pkeys are few or small types (i.e. they won't
-                           occupy lots of memory) then set this to True. 
-                           This will speed things up significantly (like x 100), 
+                           occupy lots of memory) then set this to True.
+                           This will speed things up significantly (like x 100),
                            but will blow up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                     were in the supplied data but not imported (for checks)
@@ -323,7 +356,7 @@ def get_mysql_engine(db_env, section, database="production_tests"):
         url = URL(drivername='mysql+pymysql',
                   username="travis",
                   database=database)
-    else:        
+    else:
         if not os.path.exists(conf_path):
             raise FileNotFoundError(conf_path)
         cp = ConfigParser()

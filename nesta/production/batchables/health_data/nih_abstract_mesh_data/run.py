@@ -56,11 +56,11 @@ def run():
     dupes = retrieve_duplicate_map(bucket, dupe_file)
     dupes = format_duplicate_map(dupes)
     
-    # Get all dupe IDs
-    all_dupes = []
-    for _, dupe_ids in dupes.items():
-        all_dupes += dupe_ids
-    all_dupes = set(all_dupes)
+    # # Get all dupe IDs
+    # all_dupes = []
+    # for _, dupe_ids in dupes.items():
+    #     all_dupes += dupe_ids
+    # all_dupes = set(all_dupes)
 
     docs = []
     for doc_id, terms in mesh_terms.items():
@@ -108,14 +108,6 @@ def run():
 
     logging.warning(f'Writing {len(docs)} documents to elasticsearch')
     for doc in docs:
-        # Deduplicate records
-        uid = doc.pop("doc_id")
-        if uid in all_dupes:
-            logging.debug(f"Deleting: {uid}")
-            es.delete(es_config['index'],
-                      doc_type=es_config['type'],
-                      id=uid)
-            continue
         # Extract existing info
         try:
             existing = es.get(es_config['index'], 
