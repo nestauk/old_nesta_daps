@@ -46,7 +46,7 @@ def calculate_rca_by_country(data, country_column, commodity_column):
     return rca
 
 
-def plot_to_s3(bucket, filename, plot, image_format='png', pad_x=False):
+def plot_to_s3(bucket, filename, plot, image_format='png', pad_x=False, public=True):
     """Takes a matplotlib plot, exports it as an image and sends it to an S3 bucket.
 
     Args:
@@ -55,22 +55,27 @@ def plot_to_s3(bucket, filename, plot, image_format='png', pad_x=False):
         filename (str): name of the generated file on S3
         image_format (str): format of the generated image
         pad_x (bool): pad the x axis by half a tick on each side
+        public (bool): apply public read permissions to the images
 
     Returns:
         (dict): response from boto3
     """
     stream = BytesIO()
 
-    if pad_x:
+    if pad_x is True:
         x0, x1 = plot.xlim()
         plot.xlim(x0 - 0.5, x1 + 0.5)
     plot.savefig(stream, format=image_format, bbox_inches="tight")
     stream.seek(0)
     logging.info(f"Exporting {filename} to {bucket}")
 
+    permissions = {}
+    if public is True:
+        permissions = {'ACL': 'public-read'}
+
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, filename)
-    return obj.put(Body=stream)
+    return obj.put(Body=stream, **permissions)
 
 
 def get_article_ids_by_term(engine, term, min_weight):

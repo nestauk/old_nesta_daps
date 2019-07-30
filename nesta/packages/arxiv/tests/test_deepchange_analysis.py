@@ -70,6 +70,30 @@ def test_plot_to_s3_sends_chart_to_s3(mocked_boto3_resource):
     assert mocked_s3.Object.call_args == mock.call('test_bucket', 'my_file')
 
 
+@mock.patch.object(boto3, 'resource', autospec=True)
+def test_plot_to_s3_applies_public_permissions(mocked_boto3_resource):
+    mocked_obj = mock.Mock()
+    mocked_s3 = mock.Mock()
+    mocked_s3.Object.return_value = mocked_obj
+    mocked_boto3_resource.return_value = mocked_s3
+
+    empty_plot = plt.figure()
+
+    plot_to_s3(bucket='test_bucket',
+               filename='my_file',
+               plot=empty_plot,
+               public=True)
+
+    assert mocked_s3.Object().put.call_args[1]['ACL'] == 'public-read'
+
+    plot_to_s3(bucket='test_bucket',
+               filename='my_file',
+               plot=empty_plot,
+               public=False)
+
+    assert 'ACL' not in mocked_s3.Object().put.call_args[1].keys()
+
+
 @mock.patch("nesta.packages.arxiv.deepchange_analysis.db_session", autospec=True)
 def test_get_article_ids_by_term(mocked_db_session):
     mocked_session = mock.Mock(spec=sqlalchemy.orm.session)
