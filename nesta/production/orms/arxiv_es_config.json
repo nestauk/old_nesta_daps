@@ -46,6 +46,15 @@
 			"order":{"type":"integer"}    
 		    }
 		},
+		"nested_location_article":{
+		    "type":"nested",
+		    "properties":{
+			"level":{"type":"integer"},
+			"ancestors":{"type":"keyword"},
+			"value":{"type":"keyword"},
+			"order":{"type":"integer"}    
+		    }
+		},
                 "terms_country_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {

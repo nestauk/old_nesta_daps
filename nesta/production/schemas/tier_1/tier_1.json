@@ -71,6 +71,7 @@
             "latitude",
             "lifeExpAtBirth",
             "linkedIn",
+	    "location",
             "login",
             "longitude",
             "mathSubjectClassification",

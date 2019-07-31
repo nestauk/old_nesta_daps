@@ -1,10 +1,8 @@
-import os
+from pathlib import Path
 import json
 
-if __name__ == "__main__":
-    for fname in os.listdir("."):
-        if not fname.endswith(".json"):
-            continue
+if __name__ == "__main__":    
+    for fname in Path('src').glob('**/*.json'):
         with open(fname) as f:
             js = json.load(f)
         with open(fname, "w") as f:
