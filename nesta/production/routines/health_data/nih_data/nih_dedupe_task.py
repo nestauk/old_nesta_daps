@@ -37,7 +37,7 @@ class DedupeTask(autobatch.AutoBatchTask):
                                "mysqldb")
         db_config["database"] = ('dev' if self.test
                                  else 'production')
-        db_config["table"] = f"{self.routine_id} <dummy>"  # Note, not a real table
+        db_config["table"] = f"{self.routine_id} <dummy>"  # Fake table
         update_id = f"{self.routine_id}_{self.date}"
         return MySqlTarget(update_id=update_id, **db_config)
 

@@ -50,6 +50,7 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
         drop_and_recreate (bool): Drop and recreate ES index?
         dataset (str): Name of the dataset for the ES mapping.
         aliases (str): Name of the aliases for the ES mapping.
+        increment_version (bool): Move one version up?
     Returns:
         {es, es_config}: Elasticsearch connection and config dict.
     """
@@ -65,8 +66,11 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
     # If required, create new index from the old one
     if increment_version:
         old_index = es_config['index']
-        tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
-        new_index = f'{tag}{int(version)+1}'
+        if es_mode == 'prod':
+            tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
+            new_index = f'{tag}{int(version)+1}'
+        else:            
+            new_index = f'{old_index}_0'
         es_config['index'] = new_index
         es_config['old_index'] = old_index
         if any((new_index == old_index,
