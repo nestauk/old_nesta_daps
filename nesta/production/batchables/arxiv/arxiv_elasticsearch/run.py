@@ -15,8 +15,29 @@ from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.orm_utils import object_to_dict
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.orms.grid_orm import Institute
+from nesta.production.orms.geographic_orm import Geographic
 from nesta.packages.mag.fos_lookup import build_fos_lookup
 from nesta.packages.mag.fos_lookup import split_ids
+
+def build_hierarchy_data(row_data):
+    new_column = []
+    all_levels = set()
+    count1, count2 = 0, 0
+    for ancestor, value in row_data:
+        if ancestor not in all_levels:
+            new_column.append({'ancestors':[],
+                               'value': ancestor,
+                               'level': 1})
+            all_levels.add(ancestor)
+            count1 += 1
+        if (value, ancestor) not in all_levels:
+            new_column.append({'ancestors':[ancestor],
+                               'value': value,
+                               'level': 2})
+            all_levels.add((value, ancestor))
+            count2 += 1
+    return new_column, count1, count2
+
 
 def run():
 
@@ -62,8 +83,12 @@ def run():
                  "retrieved from s3")
 
     # Get all grid countries
+    # and country: continent lookup
     with db_session(engine) as session:
-        grid_countries = {obj.id: obj.country
+        country_lookup = {obj.country_alpha_3: (obj.country, obj.continent)
+                          for obj in session.query(Geographic).all()}
+
+        grid_countries = {obj.id: country_lookup[obj.country_code]
                           for obj in session.query(Institute).all()
                           if obj.country is not None}
         grid_institutes = {obj.id: obj.name
@@ -88,46 +113,18 @@ def run():
                 fos += [fos_lookup[(f['id'], cid)]
                         for cid in split_ids(f['child_ids'])
                         if cid in fos_ids]
-            # Format as expected by searchkit
-            all_levels = set()
-            row['fos'] = []
-            novelty0, novelty1 = 0, 0
-            for ancestor, value in fos:
-                if ancestor not in all_levels:
-                    row['fos'].append({'ancestors':[],
-                                       'value': ancestor,
-                                       'level': 1})
-                    all_levels.add(ancestor)
-                    novelty0 += 1
-                if (value, ancestor) not in all_levels:
-                    row['fos'].append({'ancestors':[ancestor],
-                                       'value': value,
-                                       'level': 2})
-                    all_levels.add((value, ancestor))
-                    novelty1 += 1
 
-            # Format categories as expected by searchkit
-            cats = row.pop('categories')
-            all_levels = set()
-            row['categories'] = []
-            for c in cats:
-                ancestor = c['id'].split('.')[0]
-                value = c['description']
-                if ancestor not in all_levels:
-                    row['categories'].append({'ancestors':[],
-                                              'value': ancestor,
-                                              'level': 1})
-                    all_levels.add(ancestor)
-                if (value, ancestor) not in all_levels:
-                    row['categories'].append({'ancestors':[ancestor],
-                                              'value': value,
-                                              'level': 2})
-                    all_levels.add((value, ancestor))
+            # Format hierarchical fields as expected by searchkit
+            cats = [(cat['description'], cat['id'].split('.')[0])
+                    for cat in row.pop('categories')]
+            institutes = row.pop('institutes')
+            countries = set(grid_countries[i['institute_id']]
+                            for i in institutes)
+            row['categories'], _, _ = hierarchy_field(cats)
+            row['fos'], novelty0, novelty1 = hierarchy_field(row['fos'])
+            row['countries'] = hierarchy_field(countries)
 
             # Pull out international institute info
-            institutes = row.pop('institutes')
-            row['countries'] = list(set(grid_countries[i['institute_id']]
-                                        for i in institutes))
             row['has_multinational'] = any(i['is_multinational']
                                            for i in institutes)
 

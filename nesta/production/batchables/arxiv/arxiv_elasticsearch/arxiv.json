@@ -51,5 +51,9 @@
     {
         "tier_0": "novelty_of_article",
         "tier_1": "metric_novelty_article"
+    },
+    {
+	"tier_0": "nested_location_article",
+	"tier_1": "nested_location_article"
     }
 ]
