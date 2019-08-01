@@ -20,7 +20,7 @@
 		    "type": "geo_point"
 		},
 		"cost_total_project": {
-		    "type": "integer"
+		    "type": "long"
 		},
 		"currency_total_cost": {
 		    "type": "keyword"

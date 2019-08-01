@@ -27,8 +27,7 @@ class DedupeTask(autobatch.AutoBatchTask):
     routine_id = luigi.Parameter()
     intermediate_bucket = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    process_batch_size = luigi.IntParameter(default=50000)
-    ignore_missing = luigi.BoolParameter(default=False)
+    process_batch_size = luigi.IntParameter(default=10000)
     drop_and_recreate = luigi.BoolParameter(default=False)
 
     def output(self):
@@ -43,7 +42,6 @@ class DedupeTask(autobatch.AutoBatchTask):
 
     def requires(self):
         yield AbstractsMeshTask(date=self.date,
-                                ignore_missing=self.ignore_missing,
                                 drop_and_recreate=self.drop_and_recreate,
                                 _routine_id=self.routine_id,
                                 db_config_path=self.db_config_path,
@@ -117,7 +115,6 @@ class DedupeTask(autobatch.AutoBatchTask):
 
         logging.info("Batch preparation completed, "
                      f"with {len(job_params)} batches")
-        assert False
         return job_params
 
 

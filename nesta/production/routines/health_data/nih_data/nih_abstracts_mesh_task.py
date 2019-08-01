@@ -17,11 +17,33 @@ import luigi
 import re
 
 from nesta.production.orms.orm_utils import setup_es
+from nesta.production.orms.orm_utils import get_es_ids
 from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 
+PATTERN = r'(\d+)-(\d+)\.out.txt$' # Match first & last idx  
+def split_mesh_file_key(key):
+    match = re.search(PATTERN, key)
+    if match is None or match.groups() is None:
+        raise ValueError("Could not extract start "
+                         f"and end doc_ids from {key}")
+    return match.groups()
+
+def subset_keys(es, es_config, keys):
+    all_idxs = get_es_ids(es, es_config)
+    _keys = set()
+    for key in keys:
+        if key in _keys:
+            continue
+        first_idx, last_idx = split_mesh_file_key(key)
+        for idx in all_idxs:
+            if (int(idx) >= int(first_idx) and 
+                int(idx) <= int(last_idx)):
+                _keys.add(key)
+                break
+    return _keys
 
 class AbstractsMeshTask(autobatch.AutoBatchTask):
     ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL 
@@ -36,7 +58,6 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
     _routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter()
     drop_and_recreate = luigi.BoolParameter(default=False)
-    ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
@@ -87,8 +108,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
     def done_check(self, es_client, index, doc_type, key):
         '''
-        Checks elasticsearch for mesh terms in the first and last documents in the
-        batch.
+        Checks elasticsearch for mesh terms in the
+        first and last documents in the batch.
 
         Args:
             es_client (object): instantiated elasticsearch client
@@ -97,19 +118,14 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
             key (str): filepath in s3
 
         Returns:
-            (bool): True if both are already existing, otherwise False
+            (bool): True if both existing, otherwise False
         '''
-        pattern = r'(\d+)-(\d+)\.out.txt$'
-        match = re.search(pattern, key)
-        if match is None or match.groups() is None:
-            raise ValueError(f"Could not extract start and end doc_ids from {key}")
-
-        for idx in match.groups():
+        for idx in split_mesh_file_key(key):
             try:
-                res = es_client.get(index=index, doc_type=doc_type, id=idx)
+                res = es_client.get(index=index, 
+                                    doc_type=doc_type,
+                                    id=idx)
             except NotFoundError:
-                if self.ignore_missing:
-                    return False
                 logging.warning(f"{idx} not found")
                 raise NotFoundError
             if res['_source'].get('terms_mesh_abstract') is None:
@@ -122,7 +138,8 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
+        es, es_config = setup_es(es_mode, self.test, 
+                                 drop_and_recreate=False,
                                  dataset='nih',
                                  aliases='health_scanner')
 
@@ -131,18 +148,26 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         key_prefix = 'nih_abstracts_processed/22-07-2019/nih_'
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         logging.info(f"Found keys: {keys}")
+        
+        # In test mode, manually filter keys for those which
+        # contain our data
+        if self.test:
+            keys = subset_keys(es, es_config, keys)
 
         job_params = []
         for key in keys:
+            done = (self.test or 
+                    self.done_check(es, index=es_config['index'],
+                                    doc_type=es_config['type'],
+                                    key=key))
             params = {'s3_key': key,
                       's3_bucket': bucket,
-                      'dupe_file': "nih_abstracts/24-05-19/duplicate_mapping.json",
+                      'dupe_file': ("nih_abstracts/24-05-19/"
+                                    "duplicate_mapping.json"),
                       'config': "mysqldb.config",
                       'db': db,
                       'outinfo': es_config,
-                      'done': self.done_check(es, index=es_config['index'],
-                                              doc_type=es_config['type'],
-                                              key=key),
+                      'done': done,
                       'entity_type': 'paper'
                       }
             logging.info(params)

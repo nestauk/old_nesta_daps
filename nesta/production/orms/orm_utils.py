@@ -69,8 +69,9 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
         if es_mode == 'prod':
             tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
             new_index = f'{tag}{int(version)+1}'
-        else:            
-            new_index = f'{old_index}_0'
+        else:
+            tag = old_index
+            new_index = f'{old_index}0'
         es_config['index'] = new_index
         es_config['old_index'] = old_index
         if any((new_index == old_index,

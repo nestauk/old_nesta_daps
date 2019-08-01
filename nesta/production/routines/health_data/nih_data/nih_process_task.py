@@ -80,7 +80,7 @@ class ProcessTask(autobatch.AutoBatchTask):
             first (int), last (int) application_ids
         '''
         if self.test:
-            batch_size = 20
+            batch_size = 1000
 
         batches = 0
         last = 0

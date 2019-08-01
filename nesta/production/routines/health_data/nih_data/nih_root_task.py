@@ -31,7 +31,6 @@ class RootTask(luigi.WrapperTask):
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
     drop_and_recreate = luigi.BoolParameter(default=False)
-    ignore_missing = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
@@ -40,7 +39,6 @@ class RootTask(luigi.WrapperTask):
 
         logging.getLogger().setLevel(logging.INFO)
         yield DedupeTask(date=self.date,
-                         ignore_missing=self.ignore_missing,
                          drop_and_recreate=self.drop_and_recreate,
                          routine_id=_routine_id,
                          db_config_path=self.db_config_path,

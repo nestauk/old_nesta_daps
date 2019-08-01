@@ -50,9 +50,9 @@ def run():
                  "min_term_freq": 1,
                  "max_query_terms": 25,
                  "include": True}
+
     processed_ids = set()
     for _id in art_ids:
-        print("==>", _id)
         if _id in processed_ids:
             continue
         # Make the query
@@ -90,7 +90,6 @@ def run():
                                   'start_date': start_date,
                                   'end_date': end_date}]
             dupe_ids[hit_id] = year
-        print("-->", dupe_ids)
 
         # Ignore if not the final year
         final_id = sorted(dupe_ids.keys())[-1]
@@ -113,9 +112,9 @@ def run():
                  doc_type=es_type,
                  id=final_id,
                  body=body)
-
     logging.info(f'Processed {len(processed_ids)} ids')
     logging.info("Batch job complete.")
+
 
 # For local debugging
 if __name__ == "__main__":
@@ -128,7 +127,7 @@ if __name__ == "__main__":
         logging.getLogger('urllib3').setLevel(logging.CRITICAL)
         log_level = logging.INFO
         pars = {'batch_file': ('2019-05-23-True-'
-                               '15645033095524037.json'),
+                               '1564652840333777.json'),
                 'config': 'mysqldb.config',
                 'bucket': 'nesta-production-intermediate',
                 'done': 'False',
