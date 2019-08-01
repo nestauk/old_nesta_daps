@@ -40,6 +40,7 @@ def year_distribution(dt):
     g.index.name = 'Year'
     g.rename(columns={0: 'Frequency'}, inplace=True)
     g.index = g.index.year
+    g = g.reset_index()
     return g
 
 def calendar_day_distribution(dt):
@@ -57,5 +58,7 @@ def calendar_day_distribution(dt):
     '''
     dt = pd.DatetimeIndex(dt)
     g = dt.to_frame().groupby(dt.day).count()
-    g.rename(columns={0: 'Calendar Day'}, inplace=True)
+    g.rename(columns={0: 'Frequency'}, inplace=True)
+    g.index.name = 'Calendar Day'
+    g = g.reset_index()
     return g

@@ -41,8 +41,7 @@ class TestDateTimeDataQuality():
         result = year_distribution(data)
 
         expected_data = pd.DataFrame(
-                index=[2011, 2012],
-                data={'Frequency': [11, 13]}
+                data={'Year': [2011, 2012], 'Frequency': [11, 13]}
                 )
 
         assert_frame_equal(result, expected_data, check_like=True)
@@ -51,11 +50,12 @@ class TestDateTimeDataQuality():
         result = calendar_day_distribution(data)
 
         expected_data = pd.DataFrame(
-                index=[
-                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 31],
                 data={
                     'Calendar Day': [
-                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 1]}
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 31],
+                    'Frequency': [
+                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 1],
+                    }
                 )
 
         assert_frame_equal(result, expected_data, check_like=True)
