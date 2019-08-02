@@ -2,10 +2,12 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 from numpy.testing import assert_array_equal
-from pandas.testing import assert_frame_equal
+
 import pytest
 
 # from nesta.packages.dq.text import (string_length, string_counter)
+import sys
+sys.path.insert(0, '/mnt/c/Users/aotubusen/Google Drive/Documents/DS Projects/nesta/nesta/packages/dq')
 from text import (string_length, string_counter)
 
 @pytest.fixture
@@ -13,11 +15,6 @@ def data_string():
     return ['a', 'b', 'c',
             'ab', 'bc', 'ac', 'de', 'de',
                 'abc', 'cde', 'efg']
-@pytest.fixture
-def data_string_array():
-    return [ []
-
-    ]
 
 class TestStringDataQuality():
 
