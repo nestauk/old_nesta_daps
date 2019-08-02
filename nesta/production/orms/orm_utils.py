@@ -88,8 +88,9 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
     # Drop the index if required (must be in test mode to do this)
     _index = es_config['index']
     exists = es.indices.exists(index=_index)
-    if drop_and_recreate and test_mode and exists:        
+    if drop_and_recreate and test_mode and exists:
         es.indices.delete(index=_index)
+        exists = False
     # Create the index if required
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)

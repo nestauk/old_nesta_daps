@@ -79,7 +79,7 @@
     "novelty": {
         "crunchbase": "cost_of_funding",
         "meetup": "count_member_group",
-        "nih": "cost_total_project"
+        "nih": "rank_rhodonite_abstract"
     },
     "region": {
         "crunchbase": "placeName_region_organisation"
@@ -87,7 +87,7 @@
     "sdg_labels": {
         "crunchbase": "_terms_sdg_summary",
         "meetup": "_terms_sdg_description",
-        "nih": "_terms_sdg_abstract"
+        "nih": "terms_sdg_abstract"
     },
     "start": {
         "crunchbase": "date_birth_organisation",

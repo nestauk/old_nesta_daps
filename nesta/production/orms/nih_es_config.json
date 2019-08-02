@@ -3,13 +3,10 @@
 	"_doc": {
 	    "dynamic": "strict",
 	    "properties": {
-		"_cost_usd2018_project": {
+		"rank_rhodonite_abstract": {
 		    "type": "float"
 		},
-		"_rank_rhodonite_abstract": {
-		    "type": "float"
-		},
-		"_terms_sdg_abstract": {
+		"terms_sdg_abstract": {
 		    "type": "keyword"
 		},
 		"booleanFlag_duplicate_abstract": {
