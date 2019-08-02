@@ -1,5 +1,4 @@
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
-
 from ast import literal_eval
 import boto3
 import json
@@ -15,15 +14,15 @@ from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.orm_utils import object_to_dict
 from nesta.production.orms.arxiv_orm import Article
 from nesta.production.orms.grid_orm import Institute
-from nesta.production.orms.geographic_orm import Geographic
 from nesta.packages.mag.fos_lookup import build_fos_lookup
 from nesta.packages.mag.fos_lookup import split_ids
+from nesta.packages.geo_utils.lookup import get_country_region_lookup
 
-def build_hierarchy_data(row_data):
+def hierarchy_field(row_data):
     new_column = []
     all_levels = set()
     count1, count2 = 0, 0
-    for ancestor, value in row_data:
+    for value, ancestor in row_data:
         if ancestor not in all_levels:
             new_column.append({'ancestors':[],
                                'value': ancestor,
@@ -40,7 +39,6 @@ def build_hierarchy_data(row_data):
 
 
 def run():
-
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
@@ -81,19 +79,16 @@ def run():
     art_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(art_ids)} article IDs "
                  "retrieved from s3")
-
+    
     # Get all grid countries
     # and country: continent lookup
+    country_lookup = get_country_region_lookup()                
     with db_session(engine) as session:
-        country_lookup = {obj.country_alpha_3: (obj.country, obj.continent)
-                          for obj in session.query(Geographic).all()}
-
         grid_countries = {obj.id: country_lookup[obj.country_code]
                           for obj in session.query(Institute).all()
-                          if obj.country is not None}
+                          if obj.country_code is not None}
         grid_institutes = {obj.id: obj.name
-                           for obj in session.query(Institute).all()
-                           if obj.country is not None}
+                           for obj in session.query(Institute).all()}
     #
     with db_session(engine) as session:
         for count, obj in enumerate((session.query(Article)
@@ -110,7 +105,7 @@ def run():
             for f in fos_objs:
                 if f['level'] > 0:
                     continue
-                fos += [fos_lookup[(f['id'], cid)]
+                fos += [reversed(fos_lookup[(f['id'], cid)])
                         for cid in split_ids(f['child_ids'])
                         if cid in fos_ids]
 
@@ -118,15 +113,19 @@ def run():
             cats = [(cat['description'], cat['id'].split('.')[0])
                     for cat in row.pop('categories')]
             institutes = row.pop('institutes')
-            countries = set(grid_countries[i['institute_id']]
-                            for i in institutes)
+            good_institutes = [i['institute_id'] for i in institutes
+                               if i['matching_score'] > 0.9]
+            countries = set(grid_countries[inst_id]
+                            for inst_id in good_institutes
+                            if inst_id in grid_countries)
             row['categories'], _, _ = hierarchy_field(cats)
-            row['fos'], novelty0, novelty1 = hierarchy_field(row['fos'])
-            row['countries'] = hierarchy_field(countries)
+            row['fos'], novelty0, novelty1 = hierarchy_field(fos)
+            row['countries'], _, _ = hierarchy_field(countries)
 
             # Pull out international institute info
             row['has_multinational'] = any(i['is_multinational']
-                                           for i in institutes)
+                                           for i in institutes
+                                           if i['institute_id'] in good_institutes)
 
             # Generate author & institute properties
             mag_authors = row.pop('mag_authors')
@@ -142,19 +141,24 @@ def run():
                 row['authors'] = [author['author_name'].title()
                                   for author in mag_authors]
                 if len(row['authors']) > 10:
-                    row['authors'] = [row['authors'][0], 'et al']
+                    row['authors'] = [f"{row['authors'][0]}, et al"]
 
                 gids = [author['affiliation_grid_id']
                         for author in mag_authors
                         if 'affiliation_grid_id' in author]
                 row['institutes'] = [grid_institutes[g].title()
                                      for g in gids
-                                     if g in grid_institutes]
-                row['novelty_of_article'] = novelty0*np.log(novelty1+1)
+                                     if g in grid_institutes
+                                     and g in good_institutes]
+                row['novelty_of_article'] = novelty0 + np.log(novelty1+1)
 
             uid = row.pop('id')
+            #try:
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)
+            #except:
+            #    print(row)
+            #    raise
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 

@@ -308,6 +308,7 @@ def test_chain_transforms(mocked_schema_transformer, row,
                           field_null_mapping):
     es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
+    assert all(k in _row for k in row.keys())
     assert len(_row) == len(row) + 1
 
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))

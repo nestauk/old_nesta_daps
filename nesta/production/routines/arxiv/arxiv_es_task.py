@@ -20,7 +20,8 @@ class EsRootTask(luigi.WrapperTask):
 
     def requires(self):
         logging.getLogger().setLevel(logging.INFO)
-        routine_id = f"{self.date}-{self.production}"
+        routine_id = ("ArxivElasticsearchTask-"
+                      f"{self.date}-{self.production}")
         yield ElasticsearchTask(routine_id=routine_id,
                                 date=self.date,
                                 process_batch_size=10000,
@@ -37,7 +38,7 @@ class EsRootTask(luigi.WrapperTask):
                                            f3p("schema_transformations/arxiv.json"),
                                            f3p("config/elasticsearch.config")],
                                 job_def="py36_amzn1_image",
-                                job_name=f"ArxivElasticsearchTask-{routine_id}",
+                                job_name=routine_id,
                                 job_queue="HighPriority",
                                 region_name="eu-west-2",
                                 poll_time=10,

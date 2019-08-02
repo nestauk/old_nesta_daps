@@ -254,8 +254,9 @@ def _clean_up_lists(row, do_sort=True):
     return _row
 
 def _add_entity_type(row, entity_type):
-    row['type_of_entity'] = entity_type
-    return row
+    _row = deepcopy(row)
+    _row['type_of_entity'] = entity_type
+    return _row
 
 def _null_empty_str(row):
     """Nullify values if they are empty strings.

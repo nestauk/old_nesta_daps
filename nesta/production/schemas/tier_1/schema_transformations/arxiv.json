@@ -30,11 +30,11 @@
     },
     {
         "tier_0": "fos",
-        "tier_1": "nested_fieldOfStudy_article"
+        "tier_1": "json_fieldOfStudy_article"
     },
     {
         "tier_0": "categories",
-        "tier_1": "nested_category_article"
+        "tier_1": "json_category_article"
     },
     {
         "tier_0": "has_multinational",
@@ -50,6 +50,6 @@
     },
     {
 	"tier_0": "countries",
-	"tier_1": "nested_location_article"
+	"tier_1": "json_location_article"
     }
 ]
