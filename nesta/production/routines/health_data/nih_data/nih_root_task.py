@@ -42,7 +42,7 @@ class RootTask(luigi.WrapperTask):
                          drop_and_recreate=self.drop_and_recreate,
                          routine_id=_routine_id,
                          db_config_path=self.db_config_path,
-                         process_batch_size=20000,
+                         process_batch_size=5000,
                          intermediate_bucket='nesta-production-intermediate',
                          test=(not self.production),
                          batchable=f3p("batchables/health_data/"
@@ -57,24 +57,4 @@ class RootTask(luigi.WrapperTask):
                          region_name="eu-west-2",
                          poll_time=10,
                          memory=1024,
-                         max_live_jobs=50)
-
-        # yield AbstractsMeshTask(date=self.date,
-        #                         ignore_missing=self.ignore_missing,
-        #                         drop_and_recreate=self.drop_and_recreate,
-        #                         _routine_id=_routine_id,
-        #                         db_config_path=self.db_config_path,
-        #                         test=(not self.production),
-        #                         batchable=f3p("batchables/health_data/"
-        #                                       "nih_abstract_mesh_data"),
-        #                         env_files=[f3p("nesta/"),
-        #                                    f3p("config/mysqldb.config"),
-        #                                    f3p("config/elasticsearch.config"),
-        #                                    f3p("nih.json")],
-        #                         job_def="py36_amzn1_image",
-        #                         job_name="AbstractsMeshTask-%s" % _routine_id,
-        #                         job_queue="HighPriority",
-        #                         region_name="eu-west-2",
-        #                         poll_time=10,
-        #                         memory=1024,
-        #                         max_live_jobs=50)
+                         max_live_jobs=100)

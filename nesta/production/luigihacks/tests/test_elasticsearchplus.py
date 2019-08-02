@@ -306,14 +306,15 @@ def test_null_mapping(row, field_null_mapping):
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
 def test_chain_transforms(mocked_schema_transformer, row,
                           field_null_mapping):
-    es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah',
+                           field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
     assert len(_row) == len(row) + 1
 
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
 def test_index(mocked_chain_transform, mocked_super_index, row):
-    es = ElasticsearchPlus('dummy')
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah')
     with pytest.raises(ValueError):
         es.index()
     es.index(body=row)

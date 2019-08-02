@@ -16,7 +16,7 @@ import boto3
 from requests_aws4auth import AWS4Auth
 import time
 
-from nesta.packages.decorators.schema_transform import schema_transformer as transformer
+from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.decorators.ratelimit import ratelimit
 
 COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
@@ -514,8 +514,8 @@ class ElasticsearchPlus(Elasticsearch):
         # Apply the schema mapping
         self.transforms = []
         if strans_kwargs is not None:
-            self.transforms.append(lambda row: transformer(row,
-                                                           **strans_kwargs))
+            self.transforms.append(lambda row: schema_transformer(row,
+                                                                  **strans_kwargs))
         self.transforms.append(lambda row: _add_entity_type(row,
                                                             entity_type))
 

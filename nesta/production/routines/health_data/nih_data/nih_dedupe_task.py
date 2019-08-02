@@ -27,7 +27,7 @@ class DedupeTask(autobatch.AutoBatchTask):
     routine_id = luigi.Parameter()
     intermediate_bucket = luigi.Parameter()
     db_config_path = luigi.Parameter()
-    process_batch_size = luigi.IntParameter(default=1000)
+    process_batch_size = luigi.IntParameter(default=5000)
     drop_and_recreate = luigi.BoolParameter(default=False)
 
     def output(self):
