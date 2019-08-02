@@ -93,6 +93,7 @@ class CollectNewTask(luigi.Task):
                         new_cat = Category(id=cat)
                         session.add(new_cat)
                         session.commit()
+                        all_categories_lookup.update({cat: ''})
 
                 # create new Article and append to batch
                 if row['id'] not in all_article_ids:
