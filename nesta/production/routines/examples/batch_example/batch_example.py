@@ -70,7 +70,7 @@ class SomeBatchTask(autobatch.AutoBatchTask):
             f.write(json.dumps(outdata).encode('utf-8'))
 
 
-class FinalTask(luigi.Task):
+class RootTask(luigi.Task):
     '''The root task, which adds the surname 'Muppet'
     to the names of the muppets.
 
@@ -82,7 +82,7 @@ class FinalTask(luigi.Task):
     def requires(self):
         '''Get the output from the batchtask'''
         return SomeBatchTask(date=self.date,
-                             batchable=("/home/ec2-user/nesta/nesta/production/"
+                             batchable=("~/nesta/nesta/production/"
                                         "batchables/examples/batch_example/"),
                              job_def="standard_image",
                              job_name="batch-example-%s" % self.date,
