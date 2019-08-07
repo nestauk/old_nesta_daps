@@ -416,7 +416,7 @@ def flatten_country_data(country_data, country_metadata,
     for iso3, _ in country_metadata.items():
         for variable, data in country_data[iso3].items():
             for row in data:
-                year = re.findall('(\d{4})', row["time"])[0]
+                year = re.findall(r'(\d{4})', row["time"])[0]
                 flatter_row = dict(country=iso3, variable=variable,
                                    year=year, **row)
                 fairly_flat_data.append(flatter_row)

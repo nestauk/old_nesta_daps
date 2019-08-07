@@ -14,16 +14,16 @@ stop_words = set(stopwords.words('english') +
                  list(string.punctuation) +
                  ['\\n'] + ['quot'])
 
-regex_str = ["http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|"
-             "[!*\(\),](?:%[0-9a-f][0-9a-f]))+",
-             "(?:\w+-\w+){2}",
-             "(?:\w+-\w+)",
-             "(?:\\\+n+)",
-             "(?:@[\w_]+)",
-             "<[^>]+>",
-             "(?:\w+'\w)",
-             "(?:[\w_]+)",
-             "(?:\S)"]
+regex_str = [r"http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|"
+             r"[!*\(\),](?:%[0-9a-f][0-9a-f]))+",
+             r"(?:\w+-\w+){2}",
+             r"(?:\w+-\w+)",
+             r"(?:\\\+n+)",
+             r"(?:@[\w_]+)",
+             r"<[^>]+>",
+             r"(?:\w+'\w)",
+             r"(?:[\w_]+)",
+             r"(?:\S)"]
 
 # Create the tokenizer which will be case insensitive and will ignore space.
 tokens_re = re.compile(r'('+'|'.join(regex_str)+')',
