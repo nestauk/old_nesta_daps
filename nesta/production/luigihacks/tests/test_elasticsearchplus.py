@@ -32,6 +32,8 @@ GUESS_DELIMITER=f"{PATH}._guess_delimiter"
 SCHEMA_TRANS=f"{PATH}.schema_transformer"
 CHAIN_TRANS=f"{PATH}.ElasticsearchPlus.chain_transforms"
 SUPER_INDEX=f"{PATH}.Elasticsearch.index"
+BOTO=f"{PATH}.boto3"
+AWS4AUTH=f"{PATH}.AWS4Auth"
 
 @pytest.fixture
 def lookup():
@@ -319,18 +321,24 @@ def test_null_mapping(row, field_null_mapping):
         else:
             assert v == row[k]
 
-
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
-def test_chain_transforms(mocked_schema_transformer, row,
-                          field_null_mapping):
+def test_chain_transforms(mocked_schema_transformer, mocked_boto3, mocked_auth, 
+                          row, field_null_mapping):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
     es = ElasticsearchPlus('dummy', aws_auth_region='blah',
                            field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
     assert len(_row) == len(row) + 1
 
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
-def test_index(mocked_chain_transform, mocked_super_index, row):
+def test_index(mocked_chain_transform, mocked_super_index, 
+               mocked_boto3, mocked_auth, row):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
     es = ElasticsearchPlus('dummy', aws_auth_region='blah')
     with pytest.raises(ValueError):
         es.index()
