@@ -1,5 +1,6 @@
+import pandas as pd
 ##arrays
-def array_length(input, column, type_):
+def array_length(input):
     '''array_length
     Args:
         input (:obj:`iter` of :obj:`list`): A sequence of list objects.
@@ -11,7 +12,7 @@ def array_length(input, column, type_):
     '''
     series = pd.Series(input)
     # array_length = dataframe[column].apply(lambda x: len(x) if type(x) == type_ else None).values
-    array_length = series.apply(lambda x: len(x) if type(x) == type_ else None)
+    array_length = series.apply(lambda x: len(x) if type(x) == list else None)
 
     return array_length
 
