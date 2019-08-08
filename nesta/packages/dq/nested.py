@@ -1,4 +1,6 @@
 import pandas as pd
+import itertools
+from collections import Counter
 ##arrays
 def array_length(input):
     '''array_length
@@ -43,9 +45,12 @@ def word_array_calc(input, calculation_type):
     '''
 
     if calculation_type == 'word_length':
-        output1 = [len(j) for j in itertools.chain(*input)]
+        list_input = [i for i in input if type(i) == list]
+        print(list_input)
+        output1 = [len(j) for j in itertools.chain(*list_input)]
         return output1
 
     elif calculation_type == 'count':
-        output2 = Counter(itertools.chain(*input))
+        list_input = [i for i in input if type(i) == list]
+        output2 = Counter(itertools.chain(*list_input))
         return output2

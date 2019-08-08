@@ -37,13 +37,22 @@ class TestNestedDataQuality():
 
     def test_word_array_calc(self, data_list):
         result_1 = word_array_calc(data_list, 'word_length')
-        result_2 = word_array_calc(data_list, 'count')
+        result_2 = dict(word_array_calc(data_list, 'count'))
 
         expected_data_1 = np.array([1,1,1,2,2,2,2,2,3,3,3])
-        expected_data_2 = Counter({
-        'a': 1, 'b': 1, 'c': 1, 'ab': 1,
-        'bc': 1, 'ac': 1, 'de': 2, 'abc': 1, 'cde': 1, 'efg': 1
-        })
+        expected_data_2 = Counter({'a': 1,
+         'b': 1,
+         'c': 1,
+         'ab': 1,
+         'bc': 1,
+         'ac': 1,
+         'de': 2,
+         'abc': 1,
+         'cde': 1,
+         'efg': 1})
+        assert_array_equal(result_1, expected_data_1)
+
+        assert all(v == result_2[k] for k,v in expected_data_2.items())
 
 
 
