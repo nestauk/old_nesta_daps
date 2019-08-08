@@ -51,7 +51,11 @@ class RootTask(luigi.WrapperTask):
 
         cherry_picked=(f'automl/{self.date}/COREX_TOPIC_MODEL'
                        '.n_hidden_27-0.VECTORIZER.binary_True'
-                       f'.min_df_0-001.NGRAM.TEST_{not self.production}.json')
+                       f'.min_df_0-001.NGRAM.TEST_False.json')
+        if not self.production:
+            cherry_picked=(f'automl/{self.date}/COREX_TOPIC_MODEL'
+                           '.n_hidden_36-0.VECTORIZER.binary_True'
+                           '.min_df_0-001.NGRAM.TEST_True.json')
 
         logging.getLogger().setLevel(logging.INFO)
         yield ArxivESTask(routine_id=_routine_id,

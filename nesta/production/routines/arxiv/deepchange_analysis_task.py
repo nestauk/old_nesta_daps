@@ -91,6 +91,9 @@ class AnalysisTask(luigi.Task):
     def run(self):
         # database setup
         database = 'dev' if self.test else 'production'
+        if self.test:
+            YEAR_THRESHOLD = 2008
+
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
@@ -185,21 +188,30 @@ class AnalysisTask(luigi.Task):
         cat_period_container = []
 
         for cat in all_categories:
-            subset = df.loc[[cat in x for x in df['arxiv_category_descs']], :]
+            subset = df.loc[[cat in x 
+                             for x in df['arxiv_category_descs']], :]
             subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
                                     subset.is_dl,
                                     normalize=0)
-            subset_ct.index = [f'After {YEAR_THRESHOLD}', f'Before {YEAR_THRESHOLD}']
-
-            # this try /except may not be required when running on the full dataset
+            # This is true for some categories in dev mode
+            # due to a smaller dataset
+            if list(subset_ct.index) != [False, True]:
+                continue
+            subset_ct.index = [f'After {YEAR_THRESHOLD}', 
+                               f'Before {YEAR_THRESHOLD}']
+            
+            # this try /except may not be required when 
+            # running on the full dataset
             try:
-                cat_period_container.append(pd.Series(subset_ct[True], name=cat))
+                cat_period_container.append(pd.Series(subset_ct[True],
+                                                      name=cat))
             except KeyError:
                 pass
 
         cat_thres_df = (pd.concat(cat_period_container, axis=1)
                         .T
-                        .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
+                        .sort_values(f'After {YEAR_THRESHOLD}', 
+                                     ascending=False))
         other = cat_thres_df[N_TOP:].mean().rename('Other')
         cat_thres_df = cat_thres_df[:N_TOP].append(other)
 
@@ -237,8 +249,7 @@ class AnalysisTask(luigi.Task):
 
         # apply filters before calculating rca
         # TODO: remove the bottom 10% of countries here
-        highly_cited = df[(df.highly_cited) & (df.year >= MIN_RCA_YEAR)]
-
+        highly_cited = df[(df.highly_cited) & (df.year >= MIN_RCA_YEAR)]        
         # calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
             highly_cited[highly_cited[f'before_{YEAR_THRESHOLD}']],
@@ -258,12 +269,11 @@ class AnalysisTask(luigi.Task):
                         .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
 
         # limit to top countries by dl activity
-        top_dl_countries = (df[['institute_country', 'is_dl']]
-                            .groupby('institute_country')
-                            .sum()
-                            .sort_values('is_dl', ascending=False)[:N_TOP]
-                            .index
-                            .to_list())
+        top_dl_countries = list(df[['institute_country', 'is_dl']]
+                                .groupby('institute_country')
+                                .sum()
+                                .sort_values('is_dl', ascending=False)[:N_TOP]
+                                .index)
         rca_combined_top = rca_combined[rca_combined.index.isin(top_dl_countries)]
 
         fig, ax = plt.subplots(figsize=(7, 4))
