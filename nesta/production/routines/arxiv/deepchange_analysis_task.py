@@ -15,8 +15,8 @@ import pandas as pd
 from nesta.packages.arxiv import deepchange_analysis as dc
 from nesta.production.luigihacks import misctools, mysqldb
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
-
+from nesta.production.routines.arxiv.arxiv_topic_tasks import WriteTopicTask
+from nesta.production.luigihacks.parameter import DictParameterPlus
 
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
 YEAR_THRESHOLD = 2012
@@ -62,6 +62,10 @@ class AnalysisTask(luigi.Task):
     mag_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
     articles_from_date = luigi.Parameter()
+    s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
+    raw_data_path = luigi.Parameter(default="raw-inputs")
+    grid_task_kwargs = DictParameterPlus()
+    cherry_picked = luigi.Parameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -72,14 +76,17 @@ class AnalysisTask(luigi.Task):
         return mysqldb.MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
-        yield GridTask(date=self.date,
-                       _routine_id=self._routine_id,
-                       db_config_path=self.db_config_path,
-                       db_config_env='MYSQLDB',
-                       mag_config_path='mag.config',
-                       test=self.test,
-                       insert_batch_size=self.insert_batch_size,
-                       articles_from_date=self.articles_from_date)
+        s3_path_prefix=(f"{self.s3_path_prefix}/"
+                        f"automl/{self.date}")
+        data_path = (f"{self.s3_path_prefix}/"
+                     f"{self.raw_data_path}/{self.date}")
+        yield WriteTopicTask(raw_s3_path_prefix=self.s3_path_prefix,
+                             s3_path_prefix=s3_path_prefix,
+                             data_path=data_path,
+                             date=self.date,
+                             cherry_picked=self.cherry_picked,
+                             test=self.test,
+                             grid_task_kwargs=self.grid_task_kwargs)
 
     def run(self):
         # database setup

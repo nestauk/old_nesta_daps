@@ -17,12 +17,12 @@ from nesta.production.orms.orm_utils import insert_data
 
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-
+from nesta.production.luigihacks.parameter import DictParameterPlus
+from arxiv_grid_task import GridTask
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,
                                     "topic_process_task_chain.json")
-
 
 class PrepareArxivS3Data(luigi.Task):
     """Task that pipes SQL text fields to a number of S3 JSON files.
@@ -32,6 +32,10 @@ class PrepareArxivS3Data(luigi.Task):
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     chunksize = luigi.IntParameter(default=100000)
     test = luigi.BoolParameter(default=True)
+    grid_task_kwargs = DictParameterPlus()
+    
+    def requires(self):
+        return GridTask(**self.grid_task_kwargs)
 
     def output(self):
         return s3.S3Target(f"{self.s3_path_out}/"
@@ -78,6 +82,7 @@ class WriteTopicTask(luigi.Task):
     test = luigi.BoolParameter()
     insert_batch_size = luigi.IntParameter(default=10000)
     cherry_picked = luigi.Parameter(default=None)
+    grid_task_kwargs = DictParameterPlus()
 
     def output(self):
         '''Points to the output database engine'''
@@ -95,7 +100,8 @@ class WriteTopicTask(luigi.Task):
                           test=self.test,
                           input_task=PrepareArxivS3Data,
                           input_task_kwargs={'s3_path_out':self.data_path,
-                                             'test':self.test})
+                                             'test':self.test,
+                                             'grid_task_kwargs':self.grid_task_kwargs})
 
 
     def run(self):
@@ -151,26 +157,3 @@ class WriteTopicTask(luigi.Task):
 
         # Touch the output
         self.output().touch()
-
-
-class TopicRootTask(luigi.WrapperTask):
-    production = luigi.BoolParameter(default=False)
-    s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
-    raw_data_path = luigi.Parameter(default="raw-inputs")
-    date = luigi.DateParameter(default=datetime.datetime.today())
-
-    def requires(self):
-        logging.getLogger().setLevel(logging.INFO)
-        test = not self.production
-        s3_path_prefix=(f"{self.s3_path_prefix}/"
-                        f"automl/{self.date}")
-        data_path = (f"{self.s3_path_prefix}/"
-                     f"{self.raw_data_path}/{self.date}")
-        return WriteTopicTask(raw_s3_path_prefix=self.s3_path_prefix,
-                              s3_path_prefix=s3_path_prefix,
-                              data_path=data_path,
-                              date=self.date,
-                              cherry_picked=('automl/2019-07-26/COREX_TOPIC_MODEL'
-                                             '.n_hidden_27-0.VECTORIZER.binary_True'
-                                             '.min_df_0-001.NGRAM.TEST_False.json'),
-                              test=test)

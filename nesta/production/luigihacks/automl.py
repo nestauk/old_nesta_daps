@@ -263,13 +263,13 @@ class MLTask(autobatch.AutoBatchTask):
     s3_path_out = luigi.Parameter()
     input_task = luigi.TaskParameter(default=luigi.Task,
                                      significant=False)
-    input_task_kwargs = luigi.DictParameter(default={})
+    input_task_kwargs = DictParameterPlus(default={})
     batch_size = luigi.IntParameter(default=None)
     n_batches = luigi.IntParameter(default=None)
     child = DictParameterPlus(default=None)
     use_intermediate_inputs = luigi.BoolParameter(default=False)
     combine_outputs = luigi.BoolParameter(default=True)
-    hyperparameters = luigi.DictParameter(default={})
+    hyperparameters = DictParameterPlus(default={})
 
     def requires(self):
         """Spawns a child if one exists, otherwise points
@@ -473,11 +473,11 @@ class AutoMLTask(luigi.Task):
         gp_optimizer_kwargs (kwargs): kwargs for the GP optimizer.
     """
     input_task = luigi.TaskParameter()
-    input_task_kwargs = luigi.DictParameter(default={})
+    input_task_kwargs = DictParameterPlus(default={})
     s3_path_prefix = luigi.Parameter()
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
-    autobatch_kwargs = luigi.DictParameter(default={})
+    autobatch_kwargs = DictParameterPlus(default={})
     maximize_loss = luigi.BoolParameter(default=False)
     gp_optimizer_kwargs = luigi.DictParameter(default={})
 
