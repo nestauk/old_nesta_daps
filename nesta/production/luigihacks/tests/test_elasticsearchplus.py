@@ -1,6 +1,7 @@
 import pytest
 from unittest import mock
 from alphabet_detector import AlphabetDetector
+from collections import Counter
 
 from nesta.production.luigihacks.elasticsearchplus import Translator
 
@@ -31,6 +32,8 @@ GUESS_DELIMITER=f"{PATH}._guess_delimiter"
 SCHEMA_TRANS=f"{PATH}.schema_transformer"
 CHAIN_TRANS=f"{PATH}.ElasticsearchPlus.chain_transforms"
 SUPER_INDEX=f"{PATH}.Elasticsearch.index"
+BOTO=f"{PATH}.boto3"
+AWS4AUTH=f"{PATH}.AWS4Auth"
 
 @pytest.fixture
 def lookup():
@@ -71,6 +74,16 @@ def row():
             "terms_of_xyz": "split;me;up!;by-the-semi-colon;character;please!"
     }
 
+@pytest.fixture
+def good_doc():
+    return {'_score': 100,
+            'something_else': 'blah'}
+
+@pytest.fixture
+def bad_doc():
+    return {'_score': 50,
+            'something_else': 'blah'}
+
 def test_sentence_chunks():
     text = '++this++++ is ++a sentence ++++++ with some +++ chunks +++'
     for i in range(0, 200):
@@ -92,11 +105,27 @@ def test_auto_translate_true_long_small_chunks(row):
     _row_1 = _auto_translate(row, translator, 10, chunksize=1)
     _row_2 = _auto_translate(row, translator, 10, chunksize=10000)
     assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
-    assert _row_1.pop('korean').upper() == _row_2.pop('korean').upper()
+    
+    # Test the translation itself
+    # Constraints rather than fixed assertions since 
+    # translate algorithm may change over time
+    # so the two chunk sizes aren't guaranteed to give the same results
+    k1 = _row_1.pop('korean').upper()
+    k2 = _row_2.pop('korean').upper()
+    assert len(k1) > 10
+    assert len(k2) > 10
+    assert (len(k1) - len(k2))/len(k1) < 0.95
+    assert (len(set(k1)) - len(set(k2)))/len(set(k1)) < 0.95
+    assert sum((Counter(k1) - Counter(k2)).values())/len(k1+k2) < 0.95
+    assert sum((Counter(k2) - Counter(k1)).values())/len(k1+k2) < 0.95
+
+    # Confirm that the languages are the same
     langs_1 = _row_1.pop(LANGS_TAG)
     langs_2 = _row_2.pop(LANGS_TAG)
     assert len(langs_1) == len(langs_2)
     assert set(langs_1) == set(langs_2)
+
+    # Confirm that nothing else has changed
     assert _row_1 == _row_2
 
 def test_auto_translate_true_long(row):
@@ -302,19 +331,25 @@ def test_null_mapping(row, field_null_mapping):
         else:
             assert v == row[k]
 
-
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
 @mock.patch(SCHEMA_TRANS, side_effect=(lambda row: row))
-def test_chain_transforms(mocked_schema_transformer, row,
-                          field_null_mapping):
-    es = ElasticsearchPlus('dummy', field_null_mapping=field_null_mapping)
+def test_chain_transforms(mocked_schema_transformer, mocked_boto3, mocked_auth, 
+                          row, field_null_mapping):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah',
+                           field_null_mapping=field_null_mapping)
     _row = es.chain_transforms(row)
-    assert all(k in _row for k in row.keys())
     assert len(_row) == len(row) + 1
 
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
 @mock.patch(SUPER_INDEX, side_effect=(lambda body, **kwargs: body))
 @mock.patch(CHAIN_TRANS, side_effect=(lambda row: row))
-def test_index(mocked_chain_transform, mocked_super_index, row):
-    es = ElasticsearchPlus('dummy')
+def test_index(mocked_chain_transform, mocked_super_index, 
+               mocked_boto3, mocked_auth, row):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah')
     with pytest.raises(ValueError):
         es.index()
     es.index(body=row)
