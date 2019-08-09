@@ -14,13 +14,12 @@ from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
 from nesta.production.orms.orm_utils import insert_data
-
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.orm_utils import get_es_mapping
 from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.orm_utils import Elasticsearch
 from nesta.production.orms.orm_utils import merge_metadata
-
+from nesta.production.orms.orm_utils import get_es_ids
 
 @pytest.fixture
 def alias_lookup():
@@ -62,7 +61,6 @@ class DummyModel(Base):
 
 class DummyFunctionWrapper:
     i = 0
-
     def __init__(self, exc, *args):
         self.exc = exc(*args)
 
@@ -283,3 +281,10 @@ def test_merge_metadata_with_three_bases(primary_base, secondary_base, tertiary_
                                                          'other_table',
                                                          'second_table',
                                                          'third_table']
+
+@mock.patch("nesta.production.orms.orm_utils.scan", 
+            return_value=[{'_id':1},{'_id':1},
+                          {'_id':22.3},{'_id':3.3}]*134)
+def test_get_es_ids(mocked_scan):
+    ids = get_es_ids(mock.MagicMock(), mock.MagicMock())
+    assert ids == {1, 22.3, 3.3}
