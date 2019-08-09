@@ -172,6 +172,9 @@ def arxiv_batch(resumption_token=None, **kwargs):
     records = root.find(OAI+'ListRecords')
     output = []
 
+    if records is None:
+        raise ValueError('No new records to collect from arXiv')
+
     for record in records.findall(OAI+"record"):
         header = record.find(OAI+'header')
         header_id = header.find(OAI+'identifier').text
@@ -258,7 +261,13 @@ def retrieve_all_arxiv_rows(**kwargs):
     """
     resumption_token = None
     while True:
-        batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        try:
+            batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        except ValueError as e:
+            logging.info(e)
+            # no records to collect
+            break
+
         for row in batch:
             yield row
         if resumption_token is None:
@@ -348,15 +357,17 @@ def add_new_articles(article_batch, session):
     session.commit()
 
 
-def update_existing_articles(article_batch, session):
+def update_existing_articles(article_batch, engine):
     """Updates existing articles from a list of dictionaries. Bulk method is used for
     non relationship fields, with the relationship fields updated using the core orm
     method.
 
     Args:
         article_batch (:obj:`list` of `dict`): articles to add to database
-        session (:obj:`sqlalchemy.orm.session`): active session to use
+        engine (:obj:`sqlalchemy.engine`): connection engine to use
     """
+    Session = sessionmaker(engine)
+    session = Session()
     logging.info(f"Updating a batch of {len(article_batch)} existing articles")
 
     # look for any institutes in provided article_batch
@@ -401,6 +412,7 @@ def update_existing_articles(article_batch, session):
                         article_fields_of_study)
 
     session.commit()
+    session.close()
 
 
 def add_article_institutes(article_institutes, engine):

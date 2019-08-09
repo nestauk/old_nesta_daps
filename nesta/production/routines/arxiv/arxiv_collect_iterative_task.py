@@ -54,6 +54,7 @@ class CollectNewTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+
         with db_session(self.engine) as session:
             # create lookup for categories (less than 200) and set of article ids
             all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
@@ -73,7 +74,7 @@ class CollectNewTask(luigi.Task):
                                              session)
             existing_articles_batch = BatchWriter(self.insert_batch_size,
                                                   update_existing_articles,
-                                                  session)
+                                                  self.engine)
 
             # retrieve and process, while inserting any missing categories
             for row in retrieve_all_arxiv_rows(**{'from': self.articles_from_date}):
