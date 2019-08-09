@@ -57,20 +57,10 @@ def run():
     dupes = retrieve_duplicate_map(bucket, dupe_file)
     dupes = format_duplicate_map(dupes)
     
-    # # Get all dupe IDs
-    # all_dupes = []
-    # for _, dupe_ids in dupes.items():
-    #     all_dupes += dupe_ids
-    # all_dupes = set(all_dupes)
-
     # Set up elastic search connection
     field_null_mapping = load_json_from_pathstub("tier_1/"
                                                  "field_null_mappings/",
                                                  "health_scanner.json")
-    #strans_kwargs={'filename':'nih.json',
-    #               'from_key':'tier_0',
-    #               'to_key':'tier_1',
-    #               'ignore':['doc_id']}
     es = ElasticsearchPlus(hosts=es_config['host'],
                            port=es_config['port'],
                            aws_auth_region=es_config['region'],
@@ -115,17 +105,13 @@ def run():
     for doc in docs:
         uid = doc.pop("doc_id")
         # Extract existing info
-        try:
-            existing = es.get(es_config['index'], 
-                              doc_type=es_config['type'], 
-                              id=uid)['_source']
-        except NotFoundError:
-            logging.warning(f"Missing project for abstract: {uid}")
-        else:
-            # Merge existing info into new doc
-            doc = {**existing, **doc}
-            es.index(index=es_config['index'], 
-                     doc_type=es_config['type'], id=uid, body=doc)
+        existing = es.get(es_config['index'], 
+                          doc_type=es_config['type'], 
+                          id=uid)['_source']
+        # Merge existing info into new doc
+        doc = {**existing, **doc}
+        es.index(index=es_config['index'], 
+                 doc_type=es_config['type'], id=uid, body=doc)
     
 
 if __name__ == '__main__':
