@@ -381,10 +381,10 @@ def update_existing_articles(article_batch, session):
     if article_categories:
         # remove and re-create links
         article_cats_table = Base.metadata.tables['arxiv_article_categories']
-        all_article_ids = {a['id'] for a in article_batch}
+        art_ids = {a['id'] for a in article_batch}
         logging.debug("core orm delete on categories")
         session.execute(article_cats_table.delete()
-                        .where(article_cats_table.columns['article_id'].in_(all_article_ids)))
+                        .where(article_cats_table.columns['article_id'].in_(art_ids)))
         logging.debug("core orm insert on categories")
         session.execute(article_cats_table.insert(),
                         article_categories)
@@ -392,10 +392,10 @@ def update_existing_articles(article_batch, session):
     if article_fields_of_study:
         # remove and re-create links
         article_fos_table = Base.metadata.tables['arxiv_article_fields_of_study']
-        all_article_ids = {a['id'] for a in article_batch}
+        art_ids = {a['id'] for a in article_batch}
         logging.debug("core orm delete on fields of study")
         session.execute(article_fos_table.delete()
-                        .where(article_fos_table.columns['article_id'].in_(all_article_ids)))
+                        .where(article_fos_table.columns['article_id'].in_(art_ids)))
         logging.debug("core orm insert on fields of study")
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
@@ -436,16 +436,14 @@ def all_article_ids(engine, limit=None):
 
     Args:
         engine (:obj:`sqlalchemy.engine.Base.Engine`): db connectable.
-        limit (int): row limit to apply to query (for testing)
+        limit (int): row limit to apply to query (e.g. for testing)
 
     Returns:
         (set): all article ids
     """
     with db_session(engine) as session:
-        arts = session.query(Article.id)
-        if limit is not None:
-            arts = arts.limit(limit)
-        return {arts.id for art in arts}
+        arts = session.query(Article.id).limit(limit)
+        return {art.id for art in arts}
 
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()

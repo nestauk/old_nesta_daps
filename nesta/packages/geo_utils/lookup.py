@@ -3,7 +3,8 @@ import pandas as pd
 
 def get_continent_lookup():
     url = ("https://nesta-open-data.s3.eu-west"
-           "-2.amazonaws.com/rwjf-viz/continent_codes_names.json")
+           "-2.amazonaws.com/rwjf-viz/"
+           "continent_codes_names.json")
     continent_lookup = {row["Code"]: row["Name"]
                         for row in requests.get(url).json()}
     continent_lookup[None] = None
@@ -18,7 +19,8 @@ def get_country_region_lookup():
     data = {row['ISO3166-1-Alpha-2']: (row['official_name_en'], 
                                        row['Sub-region Name']) 
             for _, row in df.iterrows() 
-            if not pd.isnull(row['official_name_en'])}
+            if not pd.isnull(row['official_name_en'])
+            and not pd.isnull(row['ISO3166-1-Alpha-2'])}
     data['XK'] = ('Kosovo', 'Southern Europe')    
     data['TW'] = ('Kosovo', 'Eastern Asia')
     return data
