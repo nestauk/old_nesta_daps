@@ -593,3 +593,50 @@ class ElasticsearchPlus(Elasticsearch):
         if not self.no_commit:
             super().index(body=body, **kwargs)
         return body
+
+    def near_duplicates(self, index, doc_id, 
+                        fields,
+                        doc_type,
+                        threshold=0.98, 
+                        min_term_freq=1,
+                        max_query_terms=25):
+        """Yield near duplicate documents, compared to the input
+        document id.
+        
+        Args:
+            index (str): Index in which to scan for documents.
+            doc_id (str): Document id for which to find duplicates.
+            fields (list): List of fields to query for duplicates.
+            doc_type (str): Document type to supply to ES.
+            threshold (float): Minimum document similarity (0 to 1).
+            min_term_freq (int): See Elasticsearch MoreLikeThis docs.
+            max_query_terms (int): See Elasticsearch MoreLikeThis docs.
+        """
+        # Make the query
+        mlt_query = {"fields": fields,
+                     "min_term_freq": min_term_freq,
+                     "max_query_terms": max_query_terms,
+                     "include": True,
+                     "like": [{'_index': index, '_id': doc_id}]}
+        body = {"query": {"more_like_this": mlt_query}}
+        results = self.search(index=index, body=body)
+
+        # Mock a result if there are no results                
+        if results['hits']['total'] == 0:
+            _doc = self.get(index=index,
+                            doc_type=doc_type,
+                            id=doc_id)
+            _doc['_score'] = 1
+            results['hits']['max_score'] = 1
+            results['hits']['hits'] = [_doc]
+        
+        # Yield duplicates
+        max_score = results['hits']['max_score']
+        hits = []
+        for hit in results['hits']['hits']:
+            score = hit['_score']
+            # Break when the score is too different              
+            # (note: the results are sorted by score)            
+            if score/max_score < threshold:
+                break
+            yield hit

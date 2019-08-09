@@ -10,10 +10,25 @@ import numpy as np
 import time
 
 def get_value(obj, key):
+    """Retrieve a value by key if exists, else return None."""
     try:
         return obj[key]
     except KeyError:
         return
+
+def extract_yearly_funds(src):
+    """Extract yearly funds"""
+    year = get_value(src, 'year_fiscal_funding')
+    amount = get_value(src, 'cost_total_project')
+    start_date = get_value(src, 'date_start_project')
+    end_date = get_value(src, 'date_end_project')
+    yearly_funds = []
+    if year is not None:
+        yearly_funds = [{'year':year, 'amount': amount,
+                         'start_date': start_date,
+                         'end_date': end_date}]
+    return yearly_funds
+
 
 def run():
 
@@ -33,8 +48,9 @@ def run():
     ids_obj = s3.Object(s3_bucket, batch_file)
     art_ids = json.loads(ids_obj.get()['Body']._raw_stream.read())
     logging.info(f'Processing {len(art_ids)} article ids')
-
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
+    
+    field_null_mapping = load_json_from_pathstub(("tier_1/"
+                                                  "field_null_mappings/"),
                                                  "health_scanner.json")
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
@@ -44,59 +60,39 @@ def run():
                            field_null_mapping=field_null_mapping,
                            send_get_body_as='POST')
 
-    mlt_query = {"fields": ["textBody_descriptive_project",
-                            "title_of_project",
-                            "textBody_abstract_project"],
-                 "min_term_freq": 1,
-                 "max_query_terms": 25,
-                 "include": True}
-
+    # Iterate over article IDs
     processed_ids = set()
     for _id in art_ids:
-        if _id in processed_ids:
+        if _id in processed_ids:  # To avoid duplicated effort
             continue
-        # Make the query
-        mlt_query['like'] = [{'_index': es_old_index, '_id':_id}]
-        body = {"query": {"more_like_this": mlt_query}}
-        results = es.search(index=es_old_index, body=body)
 
-        # Mock the result if there are no results
-        if results['hits']['total'] == 0:
-            _doc = es.get(index=es_old_index,
-                          doc_type=es_type,
-                          id=_id)
-            _doc['_score'] = 1
-            results['hits']['max_score'] = 1
-            results['hits']['hits'] = [_doc]
-        #
-        max_score = results['hits']['max_score']
-        dupe_ids = {}
-        yearly_funds = []
-        for hit in results['hits']['hits']:
-            src = hit['_source']
+        # Collect all duplicated data together
+        dupe_ids = {}  # For identifying the most recent dupe
+        yearly_funds = []  # The new deduped collection of annual funds
+        hits = {}
+        for hit in es.near_duplicates(index=es_old_index,
+                                      doc_id=_id,
+                                      doc_type=es_type,
+                                      fields=["textBody_descriptive_project",
+                                              "title_of_project",
+                                              "textBody_abstract_project"]):
+            # Extract key values
+            src = hit['_source']            
             hit_id = hit['_id']
-            score = hit['_score']
-            # Break when the score is too different
-            # (note: the results are sorted by score)
-            if np.fabs((score - max_score))/max_score > 0.02:
-                break
-            #
+            # Record this hit
+            processed_ids.add(hit_id)
+            hits[hit_id] = src
+            # Extract year and funding info
+            yearly_funds += extract_yearly_funds(src)
             year = get_value(src, 'year_fiscal_funding')
-            amount = get_value(src, 'cost_total_project')
-            start_date = get_value(src, 'date_start_project')
-            end_date = get_value(src, 'date_end_project')
             if year is not None:
-                yearly_funds += [{'year':year, 'amount': amount,
-                                  'start_date': start_date,
-                                  'end_date': end_date}]
-            dupe_ids[hit_id] = year
+                dupe_ids[hit_id] = year
 
-        # Ignore if not the final year
-        final_id = sorted(dupe_ids.keys())[-1]
-        if set(dupe_ids.values()) != {None}:            
+        # Get the most recent instance of the duplicates
+        final_id = sorted(hits.keys())[-1]  # default if years are all null
+        if len(dupe_ids) > 0:  # implies years are not all null
             final_id, year = Counter(dupe_ids).most_common()[0]
-        body = [hit for hit in results['hits']['hits']
-                if hit['_id'] == final_id][0]['_source']
+        body = hits[final_id]
         processed_ids = processed_ids.union(set(dupe_ids))
 
         # Sort and sum the funding
@@ -105,13 +101,14 @@ def run():
         sum_funding = sum(row['amount'] for row in yearly_funds
                           if row['amount'] is not None)
 
-        # Add funding info and recommit
+        # Add funding info and commit to the new index
         body['json_funding_project'] = yearly_funds
         body['cost_total_project'] = sum_funding
         es.index(index=es_new_index,
                  doc_type=es_type,
                  id=final_id,
                  body=body)
+
     logging.info(f'Processed {len(processed_ids)} ids')
     logging.info("Batch job complete.")
 
