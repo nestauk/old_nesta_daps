@@ -3,17 +3,68 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
+                "booleanFlag_multinational_article": {
+                    "type": "boolean"
+                },
                 "count_citations_article": {
                     "type": "integer"
                 },
-		"booleanFlag_multinational_article": {
-		    "type": "boolean"
-		},
                 "date_created_article": {
                     "type": "date"
                 },
                 "id_digitalObjectIdentifier_article": {
                     "type": "text"
+                },
+                "json_category_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
+                },
+                "json_fieldOfStudy_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
+                },
+                "json_location_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
                 },
                 "metric_novelty_article": {
                     "type": "float"
@@ -27,33 +78,6 @@
                     },
                     "type": "text"
                 },
-		"json_category_article":{
-		    "type":"nested",
-		    "properties":{
-			"level":{"type":"integer"},
-			"ancestors":{"type":"keyword"},
-			"value":{"type":"keyword"},
-			"order":{"type":"integer"}    
-		    }
-		},
-		"json_fieldOfStudy_article":{
-		    "type":"nested",
-		    "properties":{
-			"level":{"type":"integer"},
-			"ancestors":{"type":"keyword"},
-			"value":{"type":"keyword"},
-			"order":{"type":"integer"}    
-		    }
-		},
-		"json_location_article":{
-		    "type":"nested",
-		    "properties":{
-			"level":{"type":"integer"},
-			"ancestors":{"type":"keyword"},
-			"value":{"type":"keyword"},
-			"order":{"type":"integer"}    
-		    }
-		},
                 "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
@@ -69,9 +93,9 @@
                 "title_of_article": {
                     "type": "text"
                 },
-		"type_of_entity": {
-		    "type": "text"
-		},
+                "type_of_entity": {
+                    "type": "text"
+                },
                 "url_of_article": {
                     "type": "text"
                 }

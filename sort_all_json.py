@@ -2,7 +2,9 @@ from pathlib import Path
 import json
 
 if __name__ == "__main__":    
-    for fname in Path('src').glob('**/*.json'):
+    for fname in Path('nesta').glob('**/*.json'):
+        if 'task_chain' in str(fname):
+            continue
         with open(fname) as f:
             js = json.load(f)
         with open(fname, "w") as f:

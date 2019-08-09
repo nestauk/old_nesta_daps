@@ -28,7 +28,7 @@ from nesta.production.orms.arxiv_orm import Article
 
 @pytest.fixture(scope='session')
 def mock_response():
-    test_file = find_filepath_from_pathstub('mocked_arxiv_response.json')
+    test_file = find_filepath_from_pathstub('mocked_arxiv_response.xml')
     with open(test_file, mode='rb') as f:
         return f.read()
 

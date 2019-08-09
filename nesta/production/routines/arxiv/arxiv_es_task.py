@@ -1,8 +1,8 @@
 '''
-Meetup data to elasticsearch
+Arxiv data to elasticsearch
 ================================
 
-Luigi routine to load the Meetup Group data from MYSQL into Elasticsearch.
+Luigi routine to load the Arxiv data from MYSQL into Elasticsearch.
 '''
 
 import logging

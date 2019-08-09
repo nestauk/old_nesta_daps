@@ -41,15 +41,15 @@
         "tier_1": "booleanFlag_multinational_article"
     },
     {
-	"tier_0": "institutes",
-	"tier_1": "terms_institutes_article"
+        "tier_0": "institutes",
+        "tier_1": "terms_institutes_article"
     },
     {
         "tier_0": "novelty_of_article",
         "tier_1": "metric_novelty_article"
     },
     {
-	"tier_0": "countries",
-	"tier_1": "json_location_article"
+        "tier_0": "countries",
+        "tier_1": "json_location_article"
     }
 ]
