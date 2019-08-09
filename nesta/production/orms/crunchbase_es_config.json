@@ -140,7 +140,7 @@
                     },
                     "type": "text"
                 },
-                "terms_roles_organisation": {		    
+                "terms_roles_organisation": {
                     "analyzer": "mesh_terms_analyzer",
                     "fields": {
                         "keyword": {
