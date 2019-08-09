@@ -385,6 +385,12 @@ def update_existing_articles(article_batch, engine):
                                for article in article_batch
                                for fos_id in article.pop('fields_of_study', [])]
 
+    # if not using this function to update match attempted flags, reset the flag to
+    # False so another attempt to match is made using this updated data
+    for row in article_batch:
+        if 'institute_match_attempted' not in row.keys():
+            row.update({'institute_match_attempted': False})
+
     # update unlinked article data in bulk
     logging.debug("bulk update mapping on articles")
     session.bulk_update_mappings(Article, article_batch)
@@ -423,20 +429,20 @@ def add_article_institutes(article_institutes, engine):
                    article_institutes)
 
 
-def create_article_institute_links(article, institute_ids, score):
+def create_article_institute_links(article_id, institute_ids, score):
     """Creates data for the article/institutes association table.
     There will be multiple links if the institute is multinational, one for each country
     entity.
 
     Args:
-        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        article_id (str): arxiv id of the article
         institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
         score (numpy.float64): score for the match
 
     Returns:
         (:obj:`list` of :obj:`dict`): article institute links ready to load to database
     """
-    return [{'article_id': article.id,
+    return [{'article_id': article_id,
              'institute_id': institute_id,
              'is_multinational': len(institute_ids) > 1,
              'matching_score': float(score)}

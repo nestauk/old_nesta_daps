@@ -483,9 +483,9 @@ def test_batched_titles_calls_split_batches_correctly(mocked_split_batches,
 class TestArticleInstituteLinks:
     def test_data_is_returned_in_correct_format(self):
         score = np.float64(1.11111)
-        article = Article(id=1)
+        article_id = 1
 
-        links = create_article_institute_links(article, ['a'], score)
+        links = create_article_institute_links(article_id, ['a'], score)
         expected_result = [{'article_id': 1,
                             'institute_id': 'a',
                             'is_multinational': False,
@@ -494,26 +494,26 @@ class TestArticleInstituteLinks:
 
     def test_create_article_institute_links_converts_score_to_float(self):
         score = np.float64(1.11111)
-        article = Article(id=1)
+        article_id = 1
 
-        links = create_article_institute_links(article, ['a'], score)
+        links = create_article_institute_links(article_id, ['a'], score)
         assert type(links[0]['matching_score']) == float
 
     def test_multinational_flag_is_set_correctly(self):
         score = np.float64(1.21111)
-        article = Article(id=2)
+        article_id = 2
 
-        links = create_article_institute_links(article, ['a'], score)
+        links = create_article_institute_links(article_id, ['a'], score)
         assert links[0]['is_multinational'] is False
 
-        links = create_article_institute_links(article, ['a', 'b', 'c'], score)
+        links = create_article_institute_links(article_id, ['a', 'b', 'c'], score)
         assert links[0]['is_multinational'] is True
 
     def test_multiple_results_are_returned_for_multinationals(self):
         score = np.float64(1.31111)
-        article = Article(id=3)
+        article_id = 2
 
-        links = create_article_institute_links(article, ['a', 'b', 'c'], score)
+        links = create_article_institute_links(article_id, ['a', 'b', 'c'], score)
         assert len(links) == 3
 
 
