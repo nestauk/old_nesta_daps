@@ -62,7 +62,6 @@ class DedupeTask(autobatch.AutoBatchTask):
 
 
     def prepare(self):
-        assert False
         if self.test:
             self.process_batch_size = 1000
             logging.warning("Batch size restricted to "
