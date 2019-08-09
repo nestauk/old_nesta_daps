@@ -12,6 +12,7 @@ from nesta.packages.health_data.process_mesh import retrieve_duplicate_map
 from nesta.packages.health_data.process_mesh import format_duplicate_map
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import load_json_from_pathstub
+from nesta.production.orms.orm_utils import get_es_ids
 
 from nesta.production.orms.nih_orm import Abstracts
 
@@ -62,8 +63,31 @@ def run():
     #     all_dupes += dupe_ids
     # all_dupes = set(all_dupes)
 
+    # Set up elastic search connection
+    field_null_mapping = load_json_from_pathstub("tier_1/"
+                                                 "field_null_mappings/",
+                                                 "health_scanner.json")
+    #strans_kwargs={'filename':'nih.json',
+    #               'from_key':'tier_0',
+    #               'to_key':'tier_1',
+    #               'ignore':['doc_id']}
+    es = ElasticsearchPlus(hosts=es_config['host'],
+                           port=es_config['port'],
+                           aws_auth_region=es_config['region'],
+                           use_ssl=True,
+                           entity_type=entity_type,
+                           strans_kwargs=None,
+                           field_null_mapping=field_null_mapping,
+                           null_empty_str=True,
+                           coordinates_as_floats=True,
+                           country_detection=True,
+                           listify_terms=True)
+    all_es_ids = get_es_ids(es, es_config)
+
     docs = []
     for doc_id, terms in mesh_terms.items():
+        if doc_id not in all_es_ids:
+            continue
         try:
             _filter = Abstracts.application_id == doc_id
             abstract = (session.query(Abstracts)
@@ -73,41 +97,23 @@ def run():
             raise NoResultFound(doc_id)
         clean_abstract_text = clean_abstract(abstract.abstract_text)
         docs.append({'doc_id': doc_id,
-                     'mesh_terms': terms,
-                     'abstract_text': clean_abstract_text
+                     'terms_mesh_abstract': terms,
+                     'textBody_abstract_project': clean_abstract_text
                      })
         duped_docs = dupes.get(doc_id, [])
         if len(duped_docs) > 0:
             logging.info(f'Found {len(duped_docs)} duplicates')
         for duped_doc in duped_docs:
             docs.append({'doc_id': duped_doc,
-                         'mesh_terms': terms,
-                         'abstract_text': clean_abstract_text,
-                         'duplicate_abstract': True
+                         'terms_mesh_abstract': terms,
+                         'textBody_abstract_project': clean_abstract_text,
+                         'booleanFlag_duplicate_abstract': True
                          })
-
+            
     # output to elasticsearch
-    field_null_mapping = load_json_from_pathstub("tier_1/"
-                                                 "field_null_mappings/",
-                                                 "health_scanner.json")
-    strans_kwargs={'filename':'nih.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['doc_id']}
-    es = ElasticsearchPlus(hosts=es_config['host'],
-                           port=es_config['port'],
-                           aws_auth_region=es_config['region'],
-                           use_ssl=True,
-                           entity_type=entity_type,
-                           strans_kwargs=strans_kwargs,
-                           field_null_mapping=field_null_mapping,
-                           null_empty_str=True,
-                           coordinates_as_floats=True,
-                           country_detection=True,
-                           listify_terms=True)
-
     logging.warning(f'Writing {len(docs)} documents to elasticsearch')
     for doc in docs:
+        uid = doc.pop("doc_id")
         # Extract existing info
         try:
             existing = es.get(es_config['index'], 
@@ -120,7 +126,7 @@ def run():
             doc = {**existing, **doc}
             es.index(index=es_config['index'], 
                      doc_type=es_config['type'], id=uid, body=doc)
-
+    
 
 if __name__ == '__main__':
     log_level = logging.INFO
@@ -131,15 +137,15 @@ if __name__ == '__main__':
         logging.getLogger('urllib3').setLevel(logging.CRITICAL)
         log_level = logging.DEBUG
         pars = {"s3_key":("nih_abstracts_processed/22-07-2019/"
-                          "nih_abstracts_9638504-9926622.out.txt"),
+                          "nih_abstracts_100065-2683329.out.txt"),
                 "outinfo":("{'host': 'https://search-health-scanner"
                            "-5cs7g52446h7qscocqmiky5dn4.eu-west"
                            "-2.es.amazonaws.com', 'port': '443',"
-                           "'index': 'nih_v4', 'type': '_doc', "
+                           "'index': 'nih_dev', 'type': '_doc', "
                            "'region': 'eu-west-2'}"),
                 "dupe_file":("nih_abstracts/24-05-19/"
                              "duplicate_mapping.json"),
-                "db":"production",
+                "db":"dev",
                 "config":(f"{os.environ['HOME']}"
                           "/nesta/nesta/production"
                           "/config/mysqldb.config"),

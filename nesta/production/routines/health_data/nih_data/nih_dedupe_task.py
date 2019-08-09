@@ -37,7 +37,7 @@ class DedupeTask(autobatch.AutoBatchTask):
         db_config["database"] = ('dev' if self.test
                                  else 'production')
         db_config["table"] = f"{self.routine_id} <dummy>"  # Fake table
-        update_id = f"{self.routine_id}_{self.date}"
+        update_id = f"NiHDedupeTask-{self.routine_id}_{self.date}"
         return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
@@ -62,6 +62,7 @@ class DedupeTask(autobatch.AutoBatchTask):
 
 
     def prepare(self):
+        assert False
         if self.test:
             self.process_batch_size = 1000
             logging.warning("Batch size restricted to "
