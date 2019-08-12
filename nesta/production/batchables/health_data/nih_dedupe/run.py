@@ -104,6 +104,7 @@ def run():
         # Add funding info and commit to the new index
         body['json_funding_project'] = yearly_funds
         body['cost_total_project'] = sum_funding
+        body['date_start_project'] = yearly_funds[0]['start_date']  # just in case
         es.index(index=es_new_index,
                  doc_type=es_type,
                  id=final_id,
