@@ -10,7 +10,7 @@ t include :py:class:`luigi.Task`.
 import luigi
 from luigi.parameter import _DictParamEncoder
 import json
-
+from datetime import datetime, date
 
 class _DictParamEncoderPlus(_DictParamEncoder):
     """
@@ -20,9 +20,10 @@ class _DictParamEncoderPlus(_DictParamEncoder):
         try:
             return super().default(obj)
         except TypeError:
-            pass
-        if isinstance(obj, luigi.Task):
-            return obj.get_task_family()
+            if isinstance(obj, luigi.Task):
+                return obj.get_task_family()
+            elif isinstance(obj, (datetime, date)):
+                return obj.isoformat()
 
 class DictParameterPlus(luigi.DictParameter):
     """

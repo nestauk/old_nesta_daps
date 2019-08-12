@@ -17,12 +17,12 @@ from nesta.production.orms.orm_utils import insert_data
 
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-
+from nesta.production.luigihacks.parameter import DictParameterPlus
+from arxiv_grid_task import GridTask
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,
                                     "topic_process_task_chain.json")
-
 
 class PrepareArxivS3Data(luigi.Task):
     """Task that pipes SQL text fields to a number of S3 JSON files.
@@ -32,6 +32,10 @@ class PrepareArxivS3Data(luigi.Task):
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     chunksize = luigi.IntParameter(default=100000)
     test = luigi.BoolParameter(default=True)
+    grid_task_kwargs = DictParameterPlus()
+    
+    def requires(self):
+        return GridTask(**self.grid_task_kwargs)
 
     def output(self):
         return s3.S3Target(f"{self.s3_path_out}/"
@@ -77,6 +81,8 @@ class WriteTopicTask(luigi.Task):
     db_conf_env = luigi.Parameter(default="MYSQLDB")
     test = luigi.BoolParameter()
     insert_batch_size = luigi.IntParameter(default=10000)
+    cherry_picked = luigi.Parameter(default=None)
+    grid_task_kwargs = DictParameterPlus()
 
     def output(self):
         '''Points to the output database engine'''
@@ -84,7 +90,7 @@ class WriteTopicTask(luigi.Task):
                                          "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = "arXlive topics <dummy>"  # Note, not a real table
-        update_id = "ArxivTopicTask_{}".format(self.date)
+        update_id = "ArxivTopicTask_{}_{}".format(self.date, self.test)
         return MySqlTarget(update_id=update_id, **db_config)
 
 
@@ -94,15 +100,17 @@ class WriteTopicTask(luigi.Task):
                           test=self.test,
                           input_task=PrepareArxivS3Data,
                           input_task_kwargs={'s3_path_out':self.data_path,
-                                             'test':self.test})
+                                             'test':self.test,
+                                             'grid_task_kwargs':self.grid_task_kwargs})
 
 
     def run(self):
         # Load the input data (note the input contains the path
         # to the output)
-
-        _body = self.input().open("rb")
-        _filename = _body.read().decode('utf-8')
+        _filename = self.cherry_picked
+        if _filename is None:
+            _body = self.input().open("rb")
+            _filename = _body.read().decode('utf-8')
         obj = s3.S3Target(f"{self.raw_s3_path_prefix}/"
                           f"{_filename}").open('rb')
         data = json.load(obj)
@@ -111,6 +119,8 @@ class WriteTopicTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         engine = get_mysql_engine(self.db_conf_env, 'mysqldb',
                                   database)
+        ArticleTopic.__table__.drop(engine)
+        CorExTopic.__table__.drop(engine)
 
         # Insert the topic names data
         topics = [{'id':int(topic_name.split('_')[-1])+1, 
@@ -119,11 +129,11 @@ class WriteTopicTask(luigi.Task):
                   data['data']['topic_names'].items()]
         insert_data(self.db_conf_env, 'mysqldb', database,
                     Base, CorExTopic, topics, low_memory=True)
-        logging.info(f'inserted {len(topics)}')
+        logging.info(f'Inserted {len(topics)} topics')
 
         # Insert article topic weight data
         topic_articles = []
-        done_ids = set()
+        done_ids = set()        
         for row in data['data']['rows']:
             article_id = row.pop('id')
             if article_id in done_ids:
@@ -134,7 +144,6 @@ class WriteTopicTask(luigi.Task):
                                for topic_name, weight in row.items()]
             # Flush
             if len(topic_articles) > self.insert_batch_size:
-                logging.info('Flushing')
                 insert_data(self.db_conf_env, 'mysqldb', database,
                             Base, ArticleTopic, topic_articles,
                             low_memory=True)
@@ -148,23 +157,3 @@ class WriteTopicTask(luigi.Task):
 
         # Touch the output
         self.output().touch()
-
-
-class TopicRootTask(luigi.WrapperTask):
-    production = luigi.BoolParameter(default=False)
-    s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
-    raw_data_path = luigi.Parameter(default="raw-inputs")
-    date = luigi.DateParameter(default=datetime.datetime.today())
-
-    def requires(self):
-        logging.getLogger().setLevel(logging.INFO)
-        test = not self.production
-        s3_path_prefix=(f"{self.s3_path_prefix}/"
-                        f"automl/{self.date}")
-        data_path = (f"{self.s3_path_prefix}/"
-                     f"{self.raw_data_path}/{self.date}")
-        return WriteTopicTask(raw_s3_path_prefix=self.s3_path_prefix,
-                              s3_path_prefix=s3_path_prefix,
-                              data_path=data_path,
-                              date=self.date,
-                              test=test)

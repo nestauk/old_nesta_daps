@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import datetime
 import numpy as np
 import pandas as pd
@@ -8,6 +8,7 @@ import time
 from unittest import mock
 import xml.etree.ElementTree as ET
 
+from nesta.packages.arxiv.collect_arxiv import all_article_ids
 from nesta.packages.arxiv.collect_arxiv import _arxiv_request
 from nesta.packages.arxiv.collect_arxiv import request_token
 from nesta.packages.arxiv.collect_arxiv import total_articles
@@ -27,7 +28,7 @@ from nesta.production.orms.arxiv_orm import Article
 
 @pytest.fixture(scope='session')
 def mock_response():
-    test_file = find_filepath_from_pathstub('mocked_arxiv_response.json')
+    test_file = find_filepath_from_pathstub('mocked_arxiv_response.xml')
     with open(test_file, mode='rb') as f:
         return f.read()
 
@@ -514,3 +515,11 @@ class TestArticleInstituteLinks:
 
         links = create_article_institute_links(article, ['a', 'b', 'c'], score)
         assert len(links) == 3
+
+
+@mock.patch('nesta.packages.arxiv.collect_arxiv.db_session')
+def test_all_article_ids(mocked_session):
+    Tmp = namedtuple('Tmp',['id'])
+    mocked_session().__enter__().query().limit.return_value = [Tmp(i) for i in range(0, 131)]*83
+    ids = all_article_ids(None)
+    assert len(ids) == 131

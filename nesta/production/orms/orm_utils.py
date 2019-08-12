@@ -5,10 +5,12 @@ from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import class_mapper
 from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
+from datetime import datetime
 
 import pymysql
 import os
@@ -16,10 +18,32 @@ import json
 import logging
 import time
 
+def object_to_dict(obj, found=None):
+    if found is None:
+        found = set()
+    mapper = class_mapper(obj.__class__)
+    columns = [column.key for column in mapper.columns]
+    get_key_value = (lambda c: (c, getattr(obj, c).isoformat())
+                     if isinstance(getattr(obj, c), datetime)
+                     else (c, getattr(obj, c)))
+    out = dict(map(get_key_value, columns))
+    for name, relation in mapper.relationships.items():
+        if relation not in found:
+            found.add(relation)
+            related_obj = getattr(obj, name)
+            if related_obj is not None:
+                if relation.uselist:
+                    out[name] = [object_to_dict(child, found)
+                                 for child in related_obj]
+                else:
+                    out[name] = object_to_dict(related_obj, found)
+    return out
+
+
 def assert_correct_config(test, config, key):
     """Assert that config key and 'index' value are consistent with the
-    running mode.    
-    
+    running mode.
+
     Args:
         test (bool): Are we running in test mode?
         config (dict): Elasticsearch config file data.
@@ -38,9 +62,9 @@ def assert_correct_config(test, config, key):
 
 
 def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
-    """Retrieve the ES connection, ES config and setup the index 
+    """Retrieve the ES connection, ES config and setup the index
     if required.
-    
+
     Args:
         es_mode (str): One of "prod" or "dev".
         test_mode (bool): Running in test mode?
@@ -59,9 +83,9 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
     es_config = get_config('elasticsearch.config', key)
     assert_correct_config(test_mode, es_config, key)
     # Make the ES connection
-    es = Elasticsearch(es_config['host'], port=es_config['port'], 
+    es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True)
-    # Drop the index if required (must be in test mode to do this)         
+    # Drop the index if required (must be in test mode to do this)
     _index = es_config['index']
     if drop_and_recreate and test_mode:
         es.indices.delete(index=_index)
@@ -76,7 +100,7 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
 def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
     """Basic wrapper around :obj:`find_filepath_from_pathstub`
     which also opens the file (assumed to be json).
-    
+
     Args:
         pathstub (str): Stub of filepath where the file should be found.
         filename (str): The filename.
@@ -107,8 +131,10 @@ def get_es_mapping(dataset, aliases):
     # Get the mapping and lookup
     mapping = load_json_from_pathstub("production/orms/",
                                       f"{dataset}_es_config.json")
-    alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                           f"{aliases}.json")
+    alias_lookup = {}
+    if aliases is not None:
+        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
+                                               f"{aliases}.json")
     # Get a list of valid fields for verification
     fields = mapping["mappings"]["_doc"]["properties"].keys()
     # Add any aliases to the mapping
@@ -139,8 +165,8 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
         _class (:obj:`sqlalchemy.Base`): The ORM for this data.
         data (:obj:`list` of :obj:`dict`): Rows of data to insert
         low_memory (bool): If the pkeys are few or small types (i.e. they won't
-                           occupy lots of memory) then set this to True. 
-                           This will speed things up significantly (like x 100), 
+                           occupy lots of memory) then set this to True.
+                           This will speed things up significantly (like x 100),
                            but will blow up for heavy pkeys or large tables.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                     were in the supplied data but not imported (for checks)
