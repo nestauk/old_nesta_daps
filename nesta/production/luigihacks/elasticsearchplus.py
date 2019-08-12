@@ -222,7 +222,7 @@ def _caps_to_camel_case(row):
     return _row
 
 
-def _clean_up_lists(row):
+def _clean_up_lists(row, do_sort=True):
     """Deduplicate, remove None and nullify empties in any list fields.
 
     Args:
@@ -248,14 +248,15 @@ def _clean_up_lists(row):
         # Nullify empty lists
         if len(v) == 0:
             v = None
-        else:
+        elif do_sort:
             v = sorted(v)
         _row[k] = v
     return _row
 
 def _add_entity_type(row, entity_type):
-    row['type_of_entity'] = entity_type
-    return row
+    _row = deepcopy(row)
+    _row['type_of_entity'] = entity_type
+    return _row
 
 def _null_empty_str(row):
     """Nullify values if they are empty strings.
@@ -482,6 +483,7 @@ class ElasticsearchPlus(Elasticsearch):
                                    to camel case?
         remove_padding (bool): Remove all whitespace padding?
         auto_translate (bool): Convert large text fields to English?
+        do_sort (bool): Sort all lists?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
@@ -491,12 +493,13 @@ class ElasticsearchPlus(Elasticsearch):
                  field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
-                 country_detection=True,
+                 country_detection=False,
                  listify_terms=True,
                  terms_delimiters=None,
                  caps_to_camel_case=False,
                  null_pairs={},
                  auto_translate=False,
+                 do_sort=True,
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -557,7 +560,7 @@ class ElasticsearchPlus(Elasticsearch):
         # Clean up lists (dedup, remove None, empty lists are None)
         self.transforms.append(_sanitize_html)
         self.transforms.append(_clean_bad_unicode_conversion)
-        self.transforms.append(_clean_up_lists)
+        self.transforms.append(lambda row: _clean_up_lists(row, do_sort))
         self.transforms.append(_remove_padding)
         self.transforms.append(lambda row: _nullify_pairs(row, null_pairs))
         super().__init__(*args, **kwargs)

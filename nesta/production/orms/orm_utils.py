@@ -5,11 +5,13 @@ from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import class_mapper
 from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
+from datetime import datetime
 
 import re
 import pymysql
@@ -17,6 +19,28 @@ import os
 import json
 import logging
 import time
+
+def object_to_dict(obj, found=None):
+    if found is None:
+        found = set()
+    mapper = class_mapper(obj.__class__)
+    columns = [column.key for column in mapper.columns]
+    get_key_value = (lambda c: (c, getattr(obj, c).isoformat())
+                     if isinstance(getattr(obj, c), datetime)
+                     else (c, getattr(obj, c)))
+    out = dict(map(get_key_value, columns))
+    for name, relation in mapper.relationships.items():
+        if relation not in found:
+            found.add(relation)
+            related_obj = getattr(obj, name)
+            if related_obj is not None:
+                if relation.uselist:
+                    out[name] = [object_to_dict(child, found)
+                                 for child in related_obj]
+                else:
+                    out[name] = object_to_dict(related_obj, found)
+    return out
+
 
 def assert_correct_config(test, config, key):
     """Assert that config key and 'index' value are consistent with the
@@ -146,8 +170,10 @@ def get_es_mapping(dataset, aliases):
     # Get the mapping and lookup
     mapping = load_json_from_pathstub("production/orms/",
                                       f"{dataset}_es_config.json")
-    alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                           f"{aliases}.json")
+    alias_lookup = {}
+    if aliases is not None:
+        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
+                                               f"{aliases}.json")
     # Get a list of valid fields for verification
     fields = mapping["mappings"]["_doc"]["properties"].keys()
     # Add any aliases to the mapping

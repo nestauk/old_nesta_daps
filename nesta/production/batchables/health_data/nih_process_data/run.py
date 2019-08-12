@@ -9,6 +9,7 @@ from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 
 from nesta.packages.health_data.process_nih import _extract_date
 from nesta.packages.geo_utils.geocode import geocode_dataframe
+from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.nih_orm import Projects
@@ -35,10 +36,7 @@ def run():
     states_lookup[''] = None
 
     # Get continent lookup
-    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
-    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
-    continent_lookup[None] = None
-    continent_lookup[''] = None
+    continent_lookup = get_continent_lookup()
 
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db)
     Session = sessionmaker(bind=engine)

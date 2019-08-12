@@ -40,7 +40,7 @@ class ElasticsearchTask(autobatch.AutoBatchTask):
     db_config_env = luigi.Parameter()
     process_batch_size = luigi.IntParameter(default=10000)
     drop_and_recreate = luigi.BoolParameter(default=False)
-    aliases = luigi.Parameter()
+    aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
     id_field = luigi.Parameter()
     entity_type = luigi.Parameter()
