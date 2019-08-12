@@ -153,12 +153,8 @@ def run():
                 row['novelty_of_article'] = novelty0 + np.log(novelty1+1)
 
             uid = row.pop('id')
-            #try:
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)
-            #except:
-            #    print(row)
-            #    raise
             if not count % 1000:
                 logging.info(f"{count} rows loaded to elasticsearch")
 
