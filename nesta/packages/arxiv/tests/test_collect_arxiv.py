@@ -520,6 +520,6 @@ class TestArticleInstituteLinks:
 @mock.patch('nesta.packages.arxiv.collect_arxiv.db_session')
 def test_all_article_ids(mocked_session):
     Tmp = namedtuple('Tmp',['id'])
-    mocked_session.return_value.__enter__.return_value.query.return_value.limit.return_value = [Tmp(i) for i in range(0, 131)]*83
+    mocked_session().__enter__().query().limit.return_value = [Tmp(i) for i in range(0, 131)]*83
     ids = all_article_ids(None)
     assert len(ids) == 131
