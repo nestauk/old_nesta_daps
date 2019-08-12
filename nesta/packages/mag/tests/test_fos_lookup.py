@@ -19,7 +19,7 @@ def test_build_fos_lookup(mocked_session):
                                        for x in range(i+1,i+3)))
                        for i in range(0,5)]
 
-    mocked_session.return_value.__enter__.return_value.query.return_value.filter.return_value.all.return_value = fields_of_study
+    mocked_session().__enter__().query().filter().all.return_value = fields_of_study
 
     fos_lookup = build_fos_lookup(None)
     for (pid, cid), (pname, cname) in fos_lookup.items():
