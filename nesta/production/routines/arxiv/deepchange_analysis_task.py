@@ -15,8 +15,8 @@ import pandas as pd
 from nesta.packages.arxiv import deepchange_analysis as dc
 from nesta.production.luigihacks import misctools, mysqldb
 from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
-
+from nesta.production.routines.arxiv.arxiv_topic_tasks import WriteTopicTask
+from nesta.production.luigihacks.parameter import DictParameterPlus
 
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
 YEAR_THRESHOLD = 2012
@@ -62,6 +62,10 @@ class AnalysisTask(luigi.Task):
     mag_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
     articles_from_date = luigi.Parameter()
+    s3_path_prefix = luigi.Parameter(default="s3://nesta-arxlive")
+    raw_data_path = luigi.Parameter(default="raw-inputs")
+    grid_task_kwargs = DictParameterPlus()
+    cherry_picked = luigi.Parameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -72,18 +76,24 @@ class AnalysisTask(luigi.Task):
         return mysqldb.MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
-        yield GridTask(date=self.date,
-                       _routine_id=self._routine_id,
-                       db_config_path=self.db_config_path,
-                       db_config_env='MYSQLDB',
-                       mag_config_path='mag.config',
-                       test=self.test,
-                       insert_batch_size=self.insert_batch_size,
-                       articles_from_date=self.articles_from_date)
+        s3_path_prefix=(f"{self.s3_path_prefix}/"
+                        f"automl/{self.date}")
+        data_path = (f"{self.s3_path_prefix}/"
+                     f"{self.raw_data_path}/{self.date}")
+        yield WriteTopicTask(raw_s3_path_prefix=self.s3_path_prefix,
+                             s3_path_prefix=s3_path_prefix,
+                             data_path=data_path,
+                             date=self.date,
+                             cherry_picked=self.cherry_picked,
+                             test=self.test,
+                             grid_task_kwargs=self.grid_task_kwargs)
 
     def run(self):
         # database setup
         database = 'dev' if self.test else 'production'
+        if self.test:
+            YEAR_THRESHOLD = 2008
+
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
@@ -178,21 +188,30 @@ class AnalysisTask(luigi.Task):
         cat_period_container = []
 
         for cat in all_categories:
-            subset = df.loc[[cat in x for x in df['arxiv_category_descs']], :]
+            subset = df.loc[[cat in x 
+                             for x in df['arxiv_category_descs']], :]
             subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
                                     subset.is_dl,
                                     normalize=0)
-            subset_ct.index = [f'After {YEAR_THRESHOLD}', f'Before {YEAR_THRESHOLD}']
-
-            # this try /except may not be required when running on the full dataset
+            # This is true for some categories in dev mode
+            # due to a smaller dataset
+            if list(subset_ct.index) != [False, True]:
+                continue
+            subset_ct.index = [f'After {YEAR_THRESHOLD}', 
+                               f'Before {YEAR_THRESHOLD}']
+            
+            # this try /except may not be required when 
+            # running on the full dataset
             try:
-                cat_period_container.append(pd.Series(subset_ct[True], name=cat))
+                cat_period_container.append(pd.Series(subset_ct[True],
+                                                      name=cat))
             except KeyError:
                 pass
 
         cat_thres_df = (pd.concat(cat_period_container, axis=1)
                         .T
-                        .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
+                        .sort_values(f'After {YEAR_THRESHOLD}', 
+                                     ascending=False))
         other = cat_thres_df[N_TOP:].mean().rename('Other')
         cat_thres_df = cat_thres_df[:N_TOP].append(other)
 
@@ -230,8 +249,7 @@ class AnalysisTask(luigi.Task):
 
         # apply filters before calculating rca
         # TODO: remove the bottom 10% of countries here
-        highly_cited = df[(df.highly_cited) & (df.year >= MIN_RCA_YEAR)]
-
+        highly_cited = df[(df.highly_cited) & (df.year >= MIN_RCA_YEAR)]        
         # calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
             highly_cited[highly_cited[f'before_{YEAR_THRESHOLD}']],
@@ -251,12 +269,11 @@ class AnalysisTask(luigi.Task):
                         .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
 
         # limit to top countries by dl activity
-        top_dl_countries = (df[['institute_country', 'is_dl']]
-                            .groupby('institute_country')
-                            .sum()
-                            .sort_values('is_dl', ascending=False)[:N_TOP]
-                            .index
-                            .to_list())
+        top_dl_countries = list(df[['institute_country', 'is_dl']]
+                                .groupby('institute_country')
+                                .sum()
+                                .sort_values('is_dl', ascending=False)[:N_TOP]
+                                .index)
         rca_combined_top = rca_combined[rca_combined.index.isin(top_dl_countries)]
 
         fig, ax = plt.subplots(figsize=(7, 4))

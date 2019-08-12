@@ -263,13 +263,13 @@ class MLTask(autobatch.AutoBatchTask):
     s3_path_out = luigi.Parameter()
     input_task = luigi.TaskParameter(default=luigi.Task,
                                      significant=False)
-    input_task_kwargs = luigi.DictParameter(default={})
+    input_task_kwargs = DictParameterPlus(default={})
     batch_size = luigi.IntParameter(default=None)
     n_batches = luigi.IntParameter(default=None)
     child = DictParameterPlus(default=None)
     use_intermediate_inputs = luigi.BoolParameter(default=False)
     combine_outputs = luigi.BoolParameter(default=True)
-    hyperparameters = luigi.DictParameter(default={})
+    hyperparameters = DictParameterPlus(default={})
 
     def requires(self):
         """Spawns a child if one exists, otherwise points
@@ -473,11 +473,11 @@ class AutoMLTask(luigi.Task):
         gp_optimizer_kwargs (kwargs): kwargs for the GP optimizer.
     """
     input_task = luigi.TaskParameter()
-    input_task_kwargs = luigi.DictParameter(default={})
+    input_task_kwargs = DictParameterPlus(default={})
     s3_path_prefix = luigi.Parameter()
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
-    autobatch_kwargs = luigi.DictParameter(default={})
+    autobatch_kwargs = DictParameterPlus(default={})
     maximize_loss = luigi.BoolParameter(default=False)
     gp_optimizer_kwargs = luigi.DictParameter(default={})
 
@@ -566,7 +566,7 @@ class AutoMLTask(luigi.Task):
             yield _MLTask(**kwargs, **self.autobatch_kwargs)
 
     def output(self):
-        return s3.S3Target(f"{self.s3_path_prefix}.best")
+        return s3.S3Target(f"{self.s3_path_prefix}.{self.test}.best")
 
 
     def extract_losses(self, uids):
@@ -580,7 +580,7 @@ class AutoMLTask(luigi.Task):
 
     def run(self):
         # Get the UIDs for the final tasks
-        final_task = list(AutoMLTask.task_parameters.keys())[-1]
+        final_task = list(AutoMLTask.task_parameters.keys())[-1]        
         uids = [generate_uid(final_task, row)
                 for row in AutoMLTask.task_parameters[final_task]]
         losses = self.extract_losses(uids)
