@@ -156,7 +156,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         job_params = []
         for key in keys:
-            done = ((not self.test) or 
+            done = ((not self.test) and
                     self.done_check(es, index=es_config['index'],
                                     doc_type=es_config['type'],
                                     key=key))
