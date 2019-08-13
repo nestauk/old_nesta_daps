@@ -11,8 +11,8 @@ import logging
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.production.orms.arxiv_orm import Article
 
-from arxiv_es_task import ArxivESTask
-from deepchange_analysis_task import AnalysisTask
+from nesta.production.routines.arxiv.arxiv_es_task import ArxivESTask
+from nesta.production.routines.arxiv.deepchange_analysis_task import AnalysisTask
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
