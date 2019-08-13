@@ -11,10 +11,23 @@ World ExPORTER (which explains the unusual VARCHAR limits).
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.types import INTEGER
-from sqlalchemy import Column
+from sqlalchemy import Column, Table
 
+from nesta.production.orms.mesh_orm import MeshTerm 
 
 Base = declarative_base()
+
+"""Association table for NIH projects and their MeSH terms."""
+project_mesh_terms = Table('nih_mesh_terms', Base.metadata,
+        Column('project_id',
+            INTEGER,
+            ForeignKey('nih_projects.application_id')
+            primary_key=True)
+        Column('mesh_term_id',
+            INTEGER,
+            ForeignKey(MeshTerms.id),
+            primary_key=True)
+        )
 
 class Projects(Base):
     __tablename__ = 'nih_projects'
