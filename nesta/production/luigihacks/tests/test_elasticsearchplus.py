@@ -353,3 +353,31 @@ def test_index(mocked_chain_transform, mocked_super_index,
     with pytest.raises(ValueError):
         es.index()
     es.index(body=row)
+
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
+def test_near_duplicates_no_results(mocked_boto3, mocked_auth, good_doc):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah')
+    es.search = mock.MagicMock(return_value={'hits':{'total':0}})
+    es.get = mock.MagicMock(return_value=good_doc)
+    hits = list(es.near_duplicates(index=None, doc_id=None, 
+                                   doc_type=None, fields=None))
+    assert hits == [good_doc]
+
+@mock.patch(AWS4AUTH, return_value=None)
+@mock.patch(BOTO)
+def test_near_duplicates_some_results(mocked_boto3, mocked_auth, 
+                                      good_doc, bad_doc):
+    mocked_boto3.Session.return_value.get_credentials.return_value = mock.MagicMock()
+    es = ElasticsearchPlus('dummy', aws_auth_region='blah')
+    
+    hits = [good_doc]*6 + [bad_doc]*231
+    results = {'hits':{'total': len(hits), 
+                       'max_score':good_doc['_score'],
+                       'hits':hits}}
+    es.search = mock.MagicMock(return_value=results)
+    hits = list(es.near_duplicates(index=None, doc_id=None, 
+                                   doc_type=None, fields=None))
+    assert len(hits) == 6 # excludes bad_doc
+    
