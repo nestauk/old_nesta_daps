@@ -88,7 +88,7 @@ class MagSparqlTask(luigi.Task):
 
             all_articles_to_update = BatchWriter(self.insert_batch_size,
                                                  update_existing_articles,
-                                                 session)
+                                                 self.engine)
 
             for count, row in enumerate(query_articles_by_doi(articles_to_process),
                                         start=1):

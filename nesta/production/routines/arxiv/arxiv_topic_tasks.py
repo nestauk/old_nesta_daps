@@ -18,7 +18,7 @@ from nesta.production.orms.orm_utils import insert_data
 from nesta.production.luigihacks import misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.parameter import DictParameterPlus
-from arxiv_grid_task import GridTask
+from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,

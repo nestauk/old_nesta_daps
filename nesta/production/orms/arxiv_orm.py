@@ -73,6 +73,7 @@ class Article(Base):
     citation_count = Column(INTEGER)
     citation_count_updated = Column(DATE)
     msc_class = Column(VARCHAR(200))
+    institute_match_attempted = Column(BOOLEAN, default=False)
     categories = relationship('Category',
                               secondary=article_categories)
     fields_of_study = relationship(FieldOfStudy,
