@@ -1,25 +1,23 @@
 '''
-S3 Example
+Clio Task
 ==========
 
-An example of building a pipeline with S3 Targets
+Process/enrich data to be searchable with topics.
 '''
 
 import luigi
 from nesta.production.luigihacks import s3
-from nesta.production.routines.automl.automl import AutoMLTask
+from nesta.production.luigihacks import luigi_logging
+from nesta.production.luigihacks.automl import AutoMLTask
 from nesta.production.luigihacks.misctools import get_config
 import os
-import logging
 import json
-from requests_aws4auth import AWS4Auth
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-import boto3
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.production.luigihacks.s3task import S3Task
 
 
 S3INTER = ("s3://clio-data/{dataset}/")
-S3PREFIX = ("s3://clio-data/{dataset}/{phase}/"
-            "{dataset}_{phase}.json")
+S3PREFIX = S3INTER+"{phase}/{dataset}_{phase}.json"
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,
@@ -85,20 +83,12 @@ class ClioTask(luigi.Task):
 
     def requires(self):
         """Yield AutoML"""
-        # Set up test environment if required
         test = not self.production
-        if test or self.verbose:
-            logging.getLogger().setLevel(logging.DEBUG)
-            logging.getLogger("luigi-interface").setLevel(logging.DEBUG)
-        if not self.verbose:
-            logging.getLogger("urllib3").setLevel(logging.WARNING)
-            logging.getLogger("botocore").setLevel(logging.WARNING)
-            logging.getLogger("boto3").setLevel(logging.WARNING)
-            logging.getLogger("luigi-interface").setLevel(logging.WARNING)
-        # Launch the dependencies
-        yield AutoMLTask(s3_path_in=self.s3_path_in,
-                         s3_path_prefix=S3INTER.format(dataset=self.dataset),
+        luigi_logging.set_log_level(test, self.verbose)
+        yield AutoMLTask(s3_path_prefix=S3INTER.format(dataset=self.dataset),
                          task_chain_filepath=CHAIN_PARAMETER_PATH,
+                         input_task=S3Task,
+                         input_task_kwargs={'s3_path':self.s3_path_in},
                          test=test)
 
     def run(self):
@@ -133,33 +123,26 @@ class ClioTask(luigi.Task):
         prod_label = '' if self.production else '_dev'
         es_config = get_config('elasticsearch.config', 'clio')
         es_config['index'] = f"clio_{self.dataset}{prod_label}"
-        credentials = boto3.Session().get_credentials()
-        awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                           es_config['region'], 'es')
-
-        es = Elasticsearch(es_config['host'],
-                           port=int(es_config['port']),
-                           http_auth=awsauth,
-                           use_ssl=True,
-                           verify_certs=True,
-                           connection_class=RequestsHttpConnection)
-
+        es = ElasticsearchPlus(entity_type=self.dataset,
+                               aws_auth_region=es_config.pop('region'),
+                               country_detection=True,
+                               caps_to_camel_case=True,
+                               **es_config)
 
         # Dynamically generate the mapping based on a template
         with open("clio_mapping.json") as f:
             mapping = json.load(f)
-
         for f in fields:
-            _type = "keyword"
             kwargs = {}
-            if f.startswith("textBody"):
-                _type = "text"
-            elif f.startswith("terms"):
-                _type = "text"
-                kwargs = {"fields": {"keyword": {"type": "keyword"}},
+            _type = "text"
+            if f.startswith("terms"):
+                kwargs = {"fields": {"keyword": 
+                                     {"type": "keyword"}},
                           "analyzer": "terms_analyzer"}
-            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type, **kwargs)
-        print(mapping)
+            elif not f.startswith("textBody"):
+                _type = "keyword"
+            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type, 
+                                                                **kwargs)
 
         # Drop, create and send data
         es.indices.delete(index=es_config['index'])

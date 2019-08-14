@@ -21,7 +21,6 @@ BYTES_IN_MiB=1.049e+6
 
 S3_DIRECTORY_MARKER_SUFFIX = '/'
 
-
 def merge_dicts(*dicts):
     "Merge dicts together, with later entries overriding earlier ones."
     merged = {}
