@@ -20,7 +20,6 @@ import os
 import requests
 
 def run():
-    logging.getLogger().setLevel(logging.INFO)
 
     # Fetch the input parameters
     s3_bucket = os.environ["BATCHPAR_bucket"]
@@ -41,6 +40,7 @@ def run():
     continent_lookup[None] = None
 
     # Extract the core topics
+    logging.DEBUG('Getting topics')
     s3 = boto3.resource('s3')
     topics_key = f'meetup-topics-{routine_id}.json'
     topics_obj = s3.Object(s3_bucket, topics_key)
@@ -126,12 +126,9 @@ def run():
 # For local debugging
 if __name__ == "__main__":
 
-    log_stream_handler = logging.StreamHandler()
-    logging.basicConfig(handlers=[log_stream_handler, ],
-                        level=logging.INFO,
-                        format="%(asctime)s:%(levelname)s:%(message)s")
-
+    log_level = logging.INFO
     if 'BATCHPAR_outinfo' not in os.environ:
+        log_level = logging.VERBOSE
         environ = {'batch_file': ('2019-07-17-community-environment'
                                   '--health-wellbeing'
                                   '--fitness'
@@ -157,4 +154,9 @@ if __name__ == "__main__":
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v
         #os.environ["AWSBATCHTEST"] = ""
+
+    log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=log_level,
+                        format="%(asctime)s:%(levelname)s:%(message)s")
     run()

@@ -14,13 +14,12 @@ from nesta.production.orms.orm_utils import get_class_by_tablename
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import try_until_allowed
 from nesta.production.orms.orm_utils import insert_data
-
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.orms.orm_utils import get_es_mapping
 from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.orm_utils import Elasticsearch
 from nesta.production.orms.orm_utils import merge_metadata
-
+from nesta.production.orms.orm_utils import get_es_ids
 
 @pytest.fixture
 def alias_lookup():
@@ -62,7 +61,6 @@ class DummyModel(Base):
 
 class DummyFunctionWrapper:
     i = 0
-
     def __init__(self, exc, *args):
         self.exc = exc(*args)
 
@@ -165,10 +163,24 @@ def test_setup_es_true_test_delete_called(mock_get_es_mapping,
                                           mock_Elasticsearch, 
                                           mock_assert_correct_config, 
                                           mock_get_config):
-    mock_Elasticsearch.return_value.indices.exists.return_value = False
+    mock_Elasticsearch.return_value.indices.exists.return_value = True
     setup_es(es_mode="dev", test_mode=True, drop_and_recreate=True, 
              dataset=None, aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
+    assert mock_Elasticsearch.return_value.indices.create.call_count == 1
+
+@mock.patch("nesta.production.orms.orm_utils.get_config")
+@mock.patch("nesta.production.orms.orm_utils.assert_correct_config")
+@mock.patch("nesta.production.orms.orm_utils.Elasticsearch")
+@mock.patch("nesta.production.orms.orm_utils.get_es_mapping")
+def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping, 
+                                                         mock_Elasticsearch, 
+                                                         mock_assert_correct_config, 
+                                                         mock_get_config):
+    mock_Elasticsearch.return_value.indices.exists.return_value = False
+    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=True, 
+             dataset=None, aliases=None)
+    assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
 @mock.patch("nesta.production.orms.orm_utils.get_config")
@@ -269,3 +281,10 @@ def test_merge_metadata_with_three_bases(primary_base, secondary_base, tertiary_
                                                          'other_table',
                                                          'second_table',
                                                          'third_table']
+
+@mock.patch("nesta.production.orms.orm_utils.scan", 
+            return_value=[{'_id':1},{'_id':1},
+                          {'_id':22.3},{'_id':3.3}]*134)
+def test_get_es_ids(mocked_scan):
+    ids = get_es_ids(mock.MagicMock(), mock.MagicMock())
+    assert ids == {1, 22.3, 3.3}

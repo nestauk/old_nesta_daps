@@ -487,9 +487,9 @@ class ElasticsearchPlus(Elasticsearch):
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
     def __init__(self, entity_type,
-                 aws_auth_region=None,
+                 aws_auth_region,
                  no_commit=False,
-                 strans_kwargs={},
+                 strans_kwargs=None,
                  field_null_mapping={},
                  null_empty_str=True,
                  coordinates_as_floats=True,
@@ -505,21 +505,22 @@ class ElasticsearchPlus(Elasticsearch):
         self.no_commit = no_commit
         # If aws auth is required, fill up the kwargs with more
         # arguments to pass to the core API.
-        if aws_auth_region is not None:
-            credentials = boto3.Session().get_credentials()
-            http_auth = AWS4Auth(credentials.access_key,
-                                 credentials.secret_key,
-                                 aws_auth_region, 'es')
-            kwargs["http_auth"] = http_auth
-            kwargs["use_ssl"] = True
-            kwargs["verify_certs"] = True
-            kwargs["connection_class"] = RequestsHttpConnection
+        credentials = boto3.Session().get_credentials()
+        http_auth = AWS4Auth(credentials.access_key,
+                             credentials.secret_key,
+                             aws_auth_region, 'es')
+        kwargs["http_auth"] = http_auth
+        kwargs["use_ssl"] = True
+        kwargs["verify_certs"] = True
+        kwargs["connection_class"] = RequestsHttpConnection
 
         # Apply the schema mapping
-        self.transforms = [lambda row: schema_transformer(row,
-                                                          **strans_kwargs),
-                           lambda row: _add_entity_type(row,
-                                                        entity_type)]
+        self.transforms = []
+        if strans_kwargs is not None:
+            self.transforms.append(lambda row: schema_transformer(row,
+                                                                  **strans_kwargs))
+        self.transforms.append(lambda row: _add_entity_type(row,
+                                                            entity_type))
 
         # Convert values to null as required
         if null_empty_str:
@@ -595,3 +596,50 @@ class ElasticsearchPlus(Elasticsearch):
         if not self.no_commit:
             super().index(body=body, **kwargs)
         return body
+
+    def near_duplicates(self, index, doc_id, 
+                        fields,
+                        doc_type,
+                        threshold=0.98, 
+                        min_term_freq=1,
+                        max_query_terms=25):
+        """Yield near duplicate documents, compared to the input
+        document id.
+        
+        Args:
+            index (str): Index in which to scan for documents.
+            doc_id (str): Document id for which to find duplicates.
+            fields (list): List of fields to query for duplicates.
+            doc_type (str): Document type to supply to ES.
+            threshold (float): Minimum document similarity (0 to 1).
+            min_term_freq (int): See Elasticsearch MoreLikeThis docs.
+            max_query_terms (int): See Elasticsearch MoreLikeThis docs.
+        """
+        # Make the query
+        mlt_query = {"fields": fields,
+                     "min_term_freq": min_term_freq,
+                     "max_query_terms": max_query_terms,
+                     "include": True,
+                     "like": [{'_index': index, '_id': doc_id}]}
+        body = {"query": {"more_like_this": mlt_query}}
+        results = self.search(index=index, body=body)
+
+        # Mock a result if there are no results                
+        if results['hits']['total'] == 0:
+            _doc = self.get(index=index,
+                            doc_type=doc_type,
+                            id=doc_id)
+            _doc['_score'] = 1
+            results['hits']['max_score'] = 1
+            results['hits']['hits'] = [_doc]
+        
+        # Yield duplicates
+        max_score = results['hits']['max_score']
+        hits = []
+        for hit in results['hits']['hits']:
+            score = hit['_score']
+            # Break when the score is too different              
+            # (note: the results are sorted by score)            
+            if score/max_score < threshold:
+                break
+            yield hit
