@@ -12,6 +12,9 @@ aws s3 cp s3://nesta-batch/${BATCHPAR_S3FILE_TIMESTAMP} run.zip
 /usr/bin/unzip run.zip
 cd run
 
+# Print out the caller id
+aws sts get-caller-identity
+aws iam list-roles
 #export WORLD_BORDERS="meetup/data/TM_WORLD_BORDERS_SIMPL-0.3.shp"
 
 # You could install anything else here as you wish, 

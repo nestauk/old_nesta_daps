@@ -21,7 +21,7 @@ from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.orms.orm_utils import get_mysql_engine
 from nesta.production.orms.orm_utils import setup_es
 from nesta.production.orms.nih_orm import Projects
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 BATCH_SIZE = 50000
 MYSQLDB_ENV = 'MYSQLDB'
@@ -48,9 +48,9 @@ class ProcessTask(autobatch.AutoBatchTask):
         yield CollectTask(date=self.date,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_collect_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta"),
-                                     find_filepath_from_pathstub("/production/config/mysqldb.config")],
+                          batchable=f3p("batchables/health_data/nih_collect_data"),
+                          env_files=[f3p("nesta/"),
+                                     f3p("/production/config/mysqldb.config")],
                           job_def=self.job_def,
                           job_name="CollectTask-%s" % self._routine_id,
                           job_queue=self.job_queue,
@@ -80,7 +80,7 @@ class ProcessTask(autobatch.AutoBatchTask):
             first (int), last (int) application_ids
         '''
         if self.test:
-            batch_size = 20
+            batch_size = 1000
 
         batches = 0
         last = 0
@@ -127,7 +127,6 @@ class ProcessTask(autobatch.AutoBatchTask):
                       'aws_auth_region': es_config['region'],
                       'entity_type': 'paper'
                       }
-            print(params)
             job_params.append(params)
         return job_params
 
@@ -148,7 +147,7 @@ class ProcessRootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=datetime.date.today())
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
-    reindex = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Collects the database configurations
@@ -157,14 +156,14 @@ class ProcessRootTask(luigi.WrapperTask):
 
         logging.getLogger().setLevel(logging.INFO)
         yield ProcessTask(date=self.date,
-                          reindex=self.reindex,
+                          drop_and_recreate=self.drop_and_recreate,
                           _routine_id=_routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                     find_filepath_from_pathstub("config/mysqldb.config"),
-                                     find_filepath_from_pathstub("config/elasticsearch.config"),
-                                     find_filepath_from_pathstub("nih.json")],
+                          batchable=f3p("batchables/health_data/nih_process_data"),
+                          env_files=[f3p("nesta/"),
+                                     f3p("config/mysqldb.config"),
+                                     f3p("config/elasticsearch.config"),
+                                     f3p("nih.json")],
                           job_def="py36_amzn1_image",
                           job_name="ProcessTask-%s" % _routine_id,
                           job_queue="HighPriority",
