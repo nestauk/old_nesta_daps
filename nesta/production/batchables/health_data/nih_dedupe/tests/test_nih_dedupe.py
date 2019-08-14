@@ -19,7 +19,7 @@ def test_extract_yearly_funds_year_not_none():
     funds = extract_yearly_funds(src)[0]    
     assert type(funds) is dict
     assert funds['year'] == src['year_fiscal_funding']
-    assert funds['amount'] == src['cost_total_project']
+    assert funds['cost_ref'] == src['cost_total_project']
     assert funds['start_date'] == src['date_start_project']
     assert funds['end_date'] == src['date_end_project']
     
