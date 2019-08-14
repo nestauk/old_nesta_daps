@@ -81,20 +81,25 @@ class DedupeTask(autobatch.AutoBatchTask):
         logging.info(f"Collected article IDs...")
         _ids = get_es_ids(es, _old_config, size=10000)
         logging.info(f"Collected {len(_ids)} IDs")
+        done_ids = get_es_ids(es, es_config, size=10000)
 
         # Generate the job params
         job_params = []        
         batches = split_batches(_ids, self.process_batch_size)
         for count, batch in enumerate(batches, 1):
+            done = sum(_id in done_ids 
+                       for _id in batch) / len(batch) > 0.3
             # write batch of ids to s3
-            batch_file = put_s3_batch(batch, 
-                                      self.intermediate_bucket,
-                                      self.routine_id)
+            batch_file = ''
+            if not done:
+                batch_file = put_s3_batch(batch, 
+                                          self.intermediate_bucket,
+                                          self.routine_id)
             params = {
                 "batch_file": batch_file,
                 "config": 'mysqldb.config',
                 "bucket": self.intermediate_bucket,
-                "done": False,
+                "done": done,
                 'outinfo': es_config['host'],
                 'out_port': es_config['port'],
                 'out_index': es_config['index'],
@@ -104,15 +109,14 @@ class DedupeTask(autobatch.AutoBatchTask):
                 'entity_type': 'paper',
                 'test': self.test,
                 'routine_id': self.routine_id
-            }
-            logging.info(params)
+            }            
+            #logging.info(params)
             job_params.append(params)
             if self.test and count > 1:
                 logging.warning("Breaking after 2 batches "
                                 "while in test mode.")
                 logging.warning(job_params)
                 break
-
         logging.info("Batch preparation completed, "
                      f"with {len(job_params)} batches")
         return job_params

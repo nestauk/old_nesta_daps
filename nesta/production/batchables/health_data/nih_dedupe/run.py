@@ -19,12 +19,12 @@ def get_value(obj, key):
 def extract_yearly_funds(src):
     """Extract yearly funds"""
     year = get_value(src, 'year_fiscal_funding')
-    amount = get_value(src, 'cost_total_project')
+    cost_ref = get_value(src, 'cost_total_project')
     start_date = get_value(src, 'date_start_project')
     end_date = get_value(src, 'date_end_project')
     yearly_funds = []
     if year is not None:
-        yearly_funds = [{'year':year, 'amount': amount,
+        yearly_funds = [{'year':year, 'cost_ref': cost_ref,
                          'start_date': start_date,
                          'end_date': end_date}]
     return yearly_funds
@@ -98,8 +98,8 @@ def run():
         # Sort and sum the funding
         yearly_funds = sorted(yearly_funds,
                               key=lambda row: row['year'])
-        sum_funding = sum(row['amount'] for row in yearly_funds
-                          if row['amount'] is not None)
+        sum_funding = sum(row['cost_ref'] for row in yearly_funds
+                          if row['cost_ref'] is not None)
 
         # Add funding info and commit to the new index
         body['json_funding_project'] = yearly_funds

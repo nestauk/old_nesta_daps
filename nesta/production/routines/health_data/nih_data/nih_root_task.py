@@ -57,4 +57,4 @@ class RootTask(luigi.WrapperTask):
                          region_name="eu-west-2",
                          poll_time=10,
                          memory=1024,
-                         max_live_jobs=10)
+                         max_live_jobs=20)
