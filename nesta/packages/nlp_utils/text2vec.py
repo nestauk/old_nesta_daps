@@ -20,11 +20,12 @@ def filter_documents(data, text_column='abstractText'):
         (:obj:`list` of :obj:`str`): List of documents.
 
     """
-    data['text_len'] = data[text_column].apply(lambda x: len(x) if isinstance(x, str) else np.nan)
-    data.dropna(subset=['text_len'], inplace=True)
-    data.drop_duplicates(text_column, inplace=True)
+    # data['text_len'] = data[text_column].apply(lambda x: len(x) if isinstance(x, str) else np.nan)
+    # data.dropna(subset=['text_len'], inplace=True)
+    # data.drop_duplicates(text_column, inplace=True)
     # Remove documents with a number of characters up to the 20th percentile of their distribution.
-    short_docs_len = np.percentile(data.text_len, 20)
+    short_docs_len = np.percentile(data.text_len, 10)
+    # print(short_docs_len, data[data['text_len'] >= short_docs_len][['id', text_column]].shape)
     return data[data['text_len'] >= short_docs_len][['id', text_column]]
 
 
@@ -79,8 +80,8 @@ if __name__ == '__main__':
     df = filter_documents(df)
     print(f'TIME SPENT ON PROCESSING THE DATA: {time.time() - start}')
     # For now, use a random sample of 200 documents
-    df = df.sample(200)
-    start = time.time()
-    vectors = docs2vectors(list(df.abstractText))
-    print(f'TIME SPENT ON TEXT2VEC: {time.time() - start}')
-    print(f'SHAPE OF VECTORS: {vectors.shape}')
+    # df = df.sample(200)
+    # start = time.time()
+    # vectors = docs2vectors(list(df.abstractText))
+    # print(f'TIME SPENT ON TEXT2VEC: {time.time() - start}')
+    # print(f'SHAPE OF VECTORS: {vectors.shape}')
