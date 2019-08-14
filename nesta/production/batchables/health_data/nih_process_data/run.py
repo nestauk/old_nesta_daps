@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
+import requests
+import logging
 
 from nesta.production.orms.orm_utils import load_json_from_pathstub
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -124,4 +126,33 @@ def run():
 
 
 if __name__ == '__main__':
+    log_level = logging.INFO
+    if 'BATCHPAR_outinfo' not in os.environ:
+        logging.getLogger('boto3').setLevel(logging.CRITICAL)
+        logging.getLogger('botocore').setLevel(logging.CRITICAL)
+        logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
+        logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+        log_level = logging.INFO
+        pars = {'start_index': '2001360',
+                'end_index': '2003940',
+                'db': 'dev',
+                'config': (f'{os.environ["HOME"]}/nesta/nesta/'
+                           'production/config/mysqldb.config'),
+                'done': 'False',
+                'outinfo': ('https://search-health-scanner-'
+                            '5cs7g52446h7qscocqmiky5dn4.'
+                            'eu-west-2.es.amazonaws.com'),
+                'out_index': 'nih_dev',
+                'out_type': '_doc',
+                'out_port': '_doc',
+                'aws_auth_region': 'eu-west-2',
+                'entity_type': 'paper',
+                'test': 'False'}
+        for k, v in pars.items():
+            os.environ[f'BATCHPAR_{k}'] = v
+
+    log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=log_level,
+                        format="%(asctime)s:%(levelname)s:%(message)s")
     run()
