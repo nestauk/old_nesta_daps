@@ -21,6 +21,14 @@ import logging
 import time
 
 def object_to_dict(obj, found=None):
+    """Converts a nested SqlAlchemy object to a fully
+    unpacked json object.
+    
+    Args:
+        obj: A SqlAlchemy object (i.e. single 'row' of data)
+    Returns:
+        _obj (dict): An unpacked json-like dict object.
+    """
     if found is None:
         found = set()
     mapper = class_mapper(obj.__class__)
