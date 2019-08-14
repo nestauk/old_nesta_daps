@@ -4,13 +4,15 @@ from collections import Counter
 ##arrays
 def array_length(input):
     '''array_length
+    Calculates the lenth of arrays.
+
     Args:
         input (:obj:`iter` of :obj:`list`): A sequence of list objects.
         column (:obj:`list`): A list of column name strings.
         type_ (:obj:`str`): A string of the type of column in question.
 
     Returns:
-        array_length (:obj:`list`): An array of array lengths.
+        array_length (:obj:`pandas.core.series.Series`): An array of array lengths.
     '''
     series = pd.Series(input)
     # array_length = dataframe[column].apply(lambda x: len(x) if type(x) == type_ else None).values
@@ -20,6 +22,8 @@ def array_length(input):
 
 def word_arrays(input):
     '''array_length
+
+
     Args:
         input (:obj:`iter` of :obj:`list`): A sequence of list objects.
 
@@ -33,7 +37,9 @@ def word_arrays(input):
     return output
 
 def word_array_calc(input, calculation_type):
-    '''
+    '''word_array_calc
+    Multifunctional function which calculates either the lengths of the list's tokens or the frequency of the  tokens that appears in a list.
+
     Args:
         input (:obj:`list`):
         calculation_type (:obj:`str`): A string indicaing which type of calculation to perform.
@@ -46,11 +52,13 @@ def word_array_calc(input, calculation_type):
 
     if calculation_type == 'word_length':
         list_input = [i for i in input if type(i) == list]
-        print(list_input)
-        output1 = [len(j) for j in itertools.chain(*list_input)]
+        # print(list_input)
+        output = [len(j) for j in itertools.chain(*list_input)]
+        output1 = pd.Series(output)
         return output1
 
     elif calculation_type == 'count':
         list_input = [i for i in input if type(i) == list]
-        output2 = Counter(itertools.chain(*list_input))
+        output = Counter(itertools.chain(*list_input))
+        output2 = pd.Series(output)
         return output2
