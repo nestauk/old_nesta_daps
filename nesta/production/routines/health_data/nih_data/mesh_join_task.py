@@ -78,10 +78,11 @@ class MeshJoinTask(luigi.Task):
                             else:
                                 objs = insert_data(self.db_config_env, 
                                         'mysqldb', db, Base, MeshTerms, 
-                                        [{'term': term}])
+                                        [{'term': term}], low_memory=True)
                                 term_id = objs[0].id
+                                mesh_terms[term] = term_id
                             doc_terms.append(
                                     {'project_id': doc, 'mesh_term_id': term_id})
                         insert_data(self.db_config_env, 'mysqldb', db,
-                            Base, association_table, doc_terms)
+                            Base, association_table, doc_terms, low_memory=True)
 
