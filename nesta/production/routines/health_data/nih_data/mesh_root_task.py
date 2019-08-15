@@ -16,7 +16,7 @@ class RootTask(luigi.WrapperTask):
         
         logging.getLogger().setLevel(logging.INFO)
         yield MeshJoinTask(date=self.date,
-                _routine_id=routine_id,
+                _routine_id=_routine_id,
                 db_config_path=self.db_config_path,
                 test=(not self.production),
                 batchable=find_filepath_from_pathstub("batchables/health_data/nih_mesh_join"),
