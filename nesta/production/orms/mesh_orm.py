@@ -13,6 +13,12 @@ from nesta.production.orms.nih_orm import Projects
 
 Base = declarative_base()
 
+class MeshTerms(Base):
+    __tablename__ = 'mesh_terms'
+
+    id = Column(INTEGER, primary_key=True)
+    term = Column(VARCHAR(250), primary_key=True)
+
 class ProjectMeshTerms(Base):
     """Association table for NIH projects and their MeSH terms."""
     __tablename__ = 'nih_mesh_terms'
@@ -24,10 +30,3 @@ class ProjectMeshTerms(Base):
             INTEGER,
             ForeignKey(MeshTerms.id),
             primary_key=True)
-
-class MeshTerms(Base):
-    __tablename__ = 'mesh_terms'
-
-    id = Column(INTEGER, primary_key=True)
-    term = Column(VARCHAR(250), primary_key=True)
-
