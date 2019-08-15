@@ -90,7 +90,8 @@ class MeshJoinTask(luigi.Task):
             logging.info('Inserting associations')
             
             for key_count, key in enumerate(keys):
-                if self.test & (key_count > 2)
+                if self.test & (key_count > 2):
+                    continue
                 df_mesh = retrieve_mesh_terms(bucket, key)
                 doc_terms = self.format_mesh_terms(df_mesh)
                 data = []
