@@ -52,33 +52,36 @@ class MeshJoinTask(luigi.Task):
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
-        session = db_session(engine)
+        with session as db_session(engine):
         
-        association_table = Base.metadata.tables['nih_mesh_terms']
-        docs_done = {d.project_id for d in session.query(association_table).distinct()}
+            association_table = Base.metadata.tables['nih_mesh_terms']
+            docs_done = {d.project_id 
+                    for d in session.query(association_table).distinct()}
 
-        mesh_terms = session.query(MeshTerms.id, MeshTerms.term).all()
-        mesh_terms = {m.term: m.id for m in mesh_terms}
-        
-        for key in keys:
-            df_mesh = retrieve_mesh_terms(bucket, key)
-            doc_terms = format_mesh_terms(df_mesh)
-            data = []
-            for i, (doc, terms) in enumerate(doc_terms.items()):
-                doc_terms = []
-                if self.test & (i > 2):
-                    continue
-                if doc in docs_done:
-                    continue
-                else:
-                    for term in terms:
-                        if term in mesh_terms:
-                            term_id = mesh_terms[term]
-                        else:
-                            objs = insert_data(self.db_config_env, 'mysqldb', db,
-                                    Base, MeshTerms, [{'term': term}])
-                            term_id = objs[0].id
-                        doc_terms.append({'project_id': doc, 'mesh_term_id': term_id})
-                    insert_data(self.db_config_env, 'mysqldb', db,
-                        Base, association_table, doc_terms)
+            mesh_terms = session.query(MeshTerms.id, MeshTerms.term).all()
+            mesh_terms = {m.term: m.id for m in mesh_terms}
+            
+            for key in keys:
+                df_mesh = retrieve_mesh_terms(bucket, key)
+                doc_terms = format_mesh_terms(df_mesh)
+                data = []
+                for i, (doc, terms) in enumerate(doc_terms.items()):
+                    doc_terms = []
+                    if self.test & (i > 2):
+                        continue
+                    if doc in docs_done:
+                        continue
+                    else:
+                        for term in terms:
+                            if term in mesh_terms:
+                                term_id = mesh_terms[term]
+                            else:
+                                objs = insert_data(self.db_config_env, 
+                                        'mysqldb', db, Base, MeshTerms, 
+                                        [{'term': term}])
+                                term_id = objs[0].id
+                            doc_terms.append(
+                                    {'project_id': doc, 'mesh_term_id': term_id})
+                        insert_data(self.db_config_env, 'mysqldb', db,
+                            Base, association_table, doc_terms)
 
