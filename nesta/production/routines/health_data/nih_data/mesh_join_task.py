@@ -82,7 +82,7 @@ class MeshJoinTask(luigi.Task):
             docs_done = {d.project_id 
                     for d in session.query(association_table).distinct()}
 
-            mesh_term_ids = {m.id for m in session.query(MeshTerms.id).all()}
+            mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
             
             for key in keys:
                 df_mesh = retrieve_mesh_terms(bucket, key)
@@ -97,6 +97,7 @@ class MeshJoinTask(luigi.Task):
                         continue
                     else:
                         for term_id, term in zip(t['terms'], t['ids']):
+                            term_id = int(term_id)
                             if term_id not in mesh_term_ids:
                                 objs = insert_data(self.db_config_env, 
                                         'mysqldb', db, Base, MeshTerms, 
