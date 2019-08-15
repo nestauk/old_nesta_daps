@@ -52,7 +52,7 @@ class MeshJoinTask(luigi.Task):
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
-        with session as db_session(engine):
+        with db_session(engine) as session:
         
             association_table = Base.metadata.tables['nih_mesh_terms']
             docs_done = {d.project_id 
