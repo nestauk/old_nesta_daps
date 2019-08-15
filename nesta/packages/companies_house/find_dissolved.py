@@ -1,13 +1,14 @@
 """
 Query Companies House API with possibly valid company numbers to get the full population of company numbers.
 
-TODO Chunk candidates update
-TODO Stream chunks to file
+TODO Retries
+TODO Account for bad server responses
 """
 import asyncio
 import datetime
 import logging
 import os
+import time
 from collections import namedtuple
 
 import engarde.checks as edc
@@ -30,8 +31,8 @@ async def try_company_number(session, company_number, api_key):
     Returns:
         (`bool`, `dict`)
     """
+    logger.debug(f"submitted {company_number}")
     MockStatus = namedtuple("MockStatus", ["status", "reason"])
-
     try:
         url = f"https://api.companieshouse.gov.uk/company/{company_number}"
         r = await session.request(method="GET", url=url, auth=api_key)
@@ -67,27 +68,27 @@ async def try_company_number(session, company_number, api_key):
     )
 
 
-async def dispatcher(candidates, api_key):
+async def dispatcher(candidates, api_key, consume):
     """ Queries Companies House API for candidates
 
     Args:
         candidates (`list` of `str`): Company numbers to checks
         api_key (`str`): API key for Companies House
-
-    Returns:
-        `list` of `dict`
+        consumer (`object`, optional): A method that consumes the output of
+             `try_company_number`, e.g. `print` or a call to a database.
     """
     logger.info(f"{len(candidates)} candidate company numbers.")
     async with ClientSession() as session:
-        tasks = (
-            try_company_number(session, number, BasicAuth(api_key))
-            for number in candidates
-        )
-        out = await asyncio.gather(*tasks)
-        logger.info("Completed tasks")
-        n_found = np.sum([success for success, _ in out])
-        logger.info(f"FOUND {n_found} dissolved companies")
-    return out
+        sleep_time = 0
+        while len(candidates):
+            time.sleep(API_TIME)  # Wait until ratelim recovers
+
+            tasks = [
+                try_company_number(session, candidates.pop(), BasicAuth(api_key))
+                for _ in range(min(API_CALLS, len(candidates)))
+            ]
+            for task in asyncio.as_completed(tasks):
+                consume(await task)
 
 
 def generate_company_number_candidates(prefix: str):
@@ -105,11 +106,15 @@ def generate_company_number_candidates(prefix: str):
 
 
 if __name__ == "__main__":
+    API_CALLS, API_TIME = 3, 3
     api_key = os.environ["CH_API_KEY"]
-    print(api_key)
 
+    # Generate some test numbers
     candidates = ["01800000", "02800000"]
+    for c in candidates.copy():
+        for i in range(1, 5):
+            c = c[:-1] + str(i)
+            candidates.append(c)
 
     loop = asyncio.get_event_loop()
-    out = loop.run_until_complete(dispatcher(candidates, api_key))
-    print(out)
+    loop.run_until_complete(dispatcher(candidates, api_key, consume=print))
