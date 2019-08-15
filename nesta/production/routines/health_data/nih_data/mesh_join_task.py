@@ -52,7 +52,7 @@ class MeshJoinTask(luigi.Task):
 
         # pivot and remove unrequired columns
         doc_terms = {
-            doc_id: {'terms': list(grouped.term), 'ids': list(grouped.term_id)}
+            doc_id: {'terms': grouped.term.values, 'ids': grouped.term_id.values}
             for doc_id, grouped in df.groupby("doc_id")}
         return doc_terms
     
@@ -90,6 +90,7 @@ class MeshJoinTask(luigi.Task):
                 doc_terms = format_mesh_terms(df_mesh)
                 data = []
                 for i, (doc, t) in enumerate(doc_terms.items()):
+                    print(t)
                     doc_terms = []
                     if self.test & (i > 2):
                         continue
