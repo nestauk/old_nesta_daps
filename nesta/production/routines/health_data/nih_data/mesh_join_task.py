@@ -96,7 +96,7 @@ class MeshJoinTask(luigi.Task):
                     if doc in docs_done:
                         continue
                     else:
-                        for term_id, term in zip(t['terms'], t['ids']):
+                        for term, term_id in zip(t['terms'], t['ids']):
                             term_id = int(term_id)
                             if term_id not in mesh_term_ids:
                                 objs = insert_data(self.db_config_env, 
