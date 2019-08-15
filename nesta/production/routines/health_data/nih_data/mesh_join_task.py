@@ -23,12 +23,12 @@ class MeshJoinTask(luigi.Task):
     Args:
         date (str):
         _routine_id (str):
-        db_config_path (str):
+        db_config_env (str):
     '''
 
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
-    db_config_path = luigi.Parameter()
+    db_config_env = luigi.Parameter()
     test = luigi.BoolParameter()
     
     @staticmethod
@@ -38,8 +38,7 @@ class MeshJoinTask(luigi.Task):
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
     def output(self):
-        self.db_config_path = os.environ[self.db_config_env]
-        db_config = get_config(self.db_config_path, "mysqldb")
+        db_config = get_config(os.environ[self.db_config_env], "mysqldb")
         db_config['database'] = 'dev' if self.test else 'production'
         db_config['table'] = "MeshTerms <dummy>"
         update_id = "NihJoinMeshTerms_{}".format(self.date)
@@ -76,10 +75,10 @@ class MeshJoinTask(luigi.Task):
                         if term in mesh_terms:
                             term_id = mesh_terms[term]
                         else:
-                            objs = insert_data(self.db_config, 'mysqldb', db,
+                            objs = insert_data(self.db_config_env, 'mysqldb', db,
                                     Base, MeshTerms, [{'term': term}])
                             term_id = objs[0].id
                         doc_terms.append({'project_id': doc, 'mesh_term_id': term_id})
-                    insert_data(self.db_config, 'mysqldb', db,
+                    insert_data(self.db_config_env, 'mysqldb', db,
                         Base, association_table, doc_terms)
 
