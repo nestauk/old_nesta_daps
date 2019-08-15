@@ -5,6 +5,7 @@ from elasticsearch.exceptions import NotFoundError
 import logging
 import luigi
 import re
+import os
 
 from nesta.production.orms.orm_utils import (get_mysql_engine, db_session, 
         exists, insert_data, db_session)
