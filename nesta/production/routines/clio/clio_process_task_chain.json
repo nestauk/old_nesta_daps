@@ -17,7 +17,8 @@
         "memory": 16000,
         "hyperparameters": {
             "binary": true,
-            "min_df": 0.001
+            "min_df": 0.001,
+	    "text_field": ["abstractText"]
         },
         "use_intermediate_inputs": false,
         "n_batches": 1

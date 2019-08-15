@@ -43,12 +43,14 @@ def run():
 if __name__ == "__main__":
     # Local testing
     if "BATCHPAR_outinfo" not in os.environ:
+        
+
         os.environ["BATCHPAR_s3_path_in"] = "s3://nesta-arxlive/raw-inputs/2019-06-18/data.0-True.json"
         os.environ["BATCHPAR_last_index"] = "-1"
         os.environ["BATCHPAR_first_index"] = "0"
         os.environ["BATCHPAR_S3FILE_TIMESTAMP"] = "run-1560876797721923813.zip"
         
-        # os.environ['BATCHPAR_s3_path_in'] = "s3://clio-data/gtr/raw_data/gtr_raw_data.json"
+        os.environ['BATCHPAR_s3_path_in'] = "s3://clio-data/gtr/VECTORIZER.binary_True.min_df_0-001.NGRAM.TEST_True-0_2000.json"
         # os.environ['BATCHPAR_outinfo'] = "s3://clio-data/gtr/intermediate/gtr/raw_data_to_gtr/processed_data_ngram.0-10.json"
         # os.environ['BATCHPAR_first_index'] = '0'
         # os.environ["BATCHPAR_last_index"] = '10'
