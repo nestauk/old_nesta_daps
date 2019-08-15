@@ -63,8 +63,10 @@ class MeshJoinTask(luigi.Task):
             df_mesh = retrieve_mesh_terms(bucket, key)
             doc_terms = format_mesh_terms(df_mesh)
             data = []
-            for doc, terms in doc_terms.items():
+            for i, (doc, terms) in enumerate(doc_terms.items()):
                 doc_terms = []
+                if self.test & (i > 2):
+                    continue
                 if doc in docs_done:
                     continue
                 else:
@@ -78,5 +80,4 @@ class MeshJoinTask(luigi.Task):
                         doc_terms.append({'project_id': doc, 'mesh_term_id': term_id})
                     insert_data(self.db_config, 'mysqldb', db,
                         Base, association_table, doc_terms)
-
 
