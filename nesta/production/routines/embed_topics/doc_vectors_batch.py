@@ -44,7 +44,7 @@ class TextVectors(autobatch.AutoBatchTask):
         poll_time (int): Time between querying the AWS batch job status
     '''
     date = luigi.DateParameter(default=datetime.datetime.today())
-    process_batch_size = luigi.IntParameter(default=5000)
+    process_batch_size = luigi.IntParameter(default=1000)
     intermediate_bucket = luigi.Parameter()
     routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
