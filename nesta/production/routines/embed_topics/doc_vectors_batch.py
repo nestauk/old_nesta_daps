@@ -128,5 +128,5 @@ class RootTask(luigi.WrapperTask):
                                       f3p("config/mysqldb.config")],
                            routine_id=_routine_id,
                            poll_time=10,
-                           memory=2048,
-                           max_live_jobs=2)
+                           memory=4096,
+                           max_live_jobs=5)
