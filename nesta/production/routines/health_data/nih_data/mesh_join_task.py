@@ -112,4 +112,5 @@ class MeshJoinTask(luigi.Task):
                                 'mesh_term_id': term_id})
                         insert_data(self.db_config_env, 'mysqldb', db,
                             Base, ProjectMeshTerms, doc_terms, low_memory=True)
+        self.output().touch()
 
