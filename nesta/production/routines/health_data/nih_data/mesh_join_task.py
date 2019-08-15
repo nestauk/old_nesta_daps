@@ -50,7 +50,7 @@ class MeshJoinTask(luigi.Task):
         key_prefix = 'nih_abstracts_processed/mti'
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         
-        engine = get_mysql_engine(self.db_config_env, 'mysqldb' db)
+        engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
         session = db(engine)
         
         association_table = Base.metadata.tables['nih_mesh_terms']
