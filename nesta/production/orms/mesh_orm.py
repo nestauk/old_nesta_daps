@@ -13,17 +13,17 @@ from nesta.production.orms.nih_orm import Projects
 
 Base = declarative_base()
 
-"""Association table for NIH projects and their MeSH terms."""
-project_mesh_terms = Table('nih_mesh_terms', Base.metadata,
-        Column('project_id',
+class ProjectMeshTerms(Base):
+    """Association table for NIH projects and their MeSH terms."""
+    __tablename__ = 'nih_mesh_terms'
+    project_id = Column(
             INTEGER,
             ForeignKey(Projects.application_id),
             primary_key=True),
-        Column('mesh_term_id',
+    term_id = Column(
             INTEGER,
-            ForeignKey('mesh_terms.id'),
+            ForeignKey(MeshTerms.id),
             primary_key=True)
-        )
 
 class MeshTerms(Base):
     __tablename__ = 'mesh_terms'
