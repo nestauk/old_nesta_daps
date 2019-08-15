@@ -14,8 +14,7 @@ from nesta.production.orms.nih_orm import Projects
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.misctools import get_config
 
-from nesta.packages.health_data.process_mesh import (retrieve_mesh_terms, 
-        format_mesh_terms)
+from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
 
 class MeshJoinTask(luigi.Task):
     '''Joins MeSH labels stored in S3 to NIH projects in MySQL.
@@ -87,7 +86,7 @@ class MeshJoinTask(luigi.Task):
             
             for key in keys:
                 df_mesh = retrieve_mesh_terms(bucket, key)
-                doc_terms = format_mesh_terms(df_mesh)
+                doc_terms = self.format_mesh_terms(df_mesh)
                 data = []
                 for i, (doc, t) in enumerate(doc_terms.items()):
                     print(t)
