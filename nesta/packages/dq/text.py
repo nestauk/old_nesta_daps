@@ -4,37 +4,39 @@ from collections import Counter
 ##string length
 def string_length(input):#, column):
     '''string_length
-    Lengths of strings.
+    Calculates the character-length of strings.
 
     Args:
         input (:obj:`iter` of :obj:`str`): A sequence of string objects.
 
 
     Returns:
-        flat_length_list (:obj:`list`): A numpy array of string lengths.
-
+        flat_length_series (:obj:`pandas.core.series.Series`): A series onject of string lengths.
     '''
+
     series = pd.Series(input)
 
     flat_length_list = series[~pd.isnull(series)].str.len().values
+    flat_length_series = pd.Series(flat_length_list)
 
-    return flat_length_list
+    return flat_length_series
 
 
 def string_counter(input):
+    '''string_counter?
 
-    '''string_counter
 
     Args:
         input (:obj:`iter` of :obj:`list`): A sequence of string objects.
 
     Returns:
-        count (:obj:`Counter`): Counter object.
+        count_output (:obj:`pandas.core.series.Series`): A series object of strings and string freuqencies.
     '''
 
     series = pd.Series(input)
     count = Counter(series)
-    return count
+    count_output = pd.Series(count)
+    return count_output
 
 ##keyword
 # def delimiter_splitter(n, delimiter):
