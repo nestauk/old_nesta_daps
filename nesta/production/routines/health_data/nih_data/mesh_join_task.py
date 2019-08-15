@@ -79,7 +79,7 @@ class MeshJoinTask(luigi.Task):
         with db_session(engine) as session:
         
             docs_done = {d.project_id 
-                    for d in session.query(ProjectMeshTerms).distinct()}
+                for d in session.query(ProjectMeshTerms.project_id).distinct()}
 
             mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
             

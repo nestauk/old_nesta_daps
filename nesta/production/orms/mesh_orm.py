@@ -25,7 +25,7 @@ class ProjectMeshTerms(Base):
     project_id = Column(
             INTEGER,
             ForeignKey(Projects.application_id),
-            primary_key=True),
+            primary_key=True)
     term_id = Column(
             INTEGER,
             ForeignKey(MeshTerms.id),
