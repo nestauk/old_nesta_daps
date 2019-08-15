@@ -8,7 +8,7 @@ import re
 import os
 
 from nesta.production.orms.orm_utils import (get_mysql_engine, db_session, 
-        exists, insert_data, db_session)
+        exists, insert_data)
 from nesta.production.orms.mesh_orm import MeshTerms, Base
 from nesta.production.orms.nih_orm import Projects
 from nesta.production.luigihacks.mysqldb import MySqlTarget
@@ -52,7 +52,7 @@ class MeshJoinTask(luigi.Task):
         keys = self.get_abstract_file_keys(bucket, key_prefix)
         
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
-        session = db(engine)
+        session = db_session(engine)
         
         association_table = Base.metadata.tables['nih_mesh_terms']
         docs_done = {d.project_id for d in session.query(association_table).distinct()}
