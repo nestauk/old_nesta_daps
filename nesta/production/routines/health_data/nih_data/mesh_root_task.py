@@ -8,7 +8,7 @@ from nesta.production.routines.health_data.nih_data.mesh_join_task import MeshJo
 class RootTask(luigi.WrapperTask):
 
     date = luigi.DateParameter(default=datetime.date.today())
-    db_config_path = luigi.Parameter(default='mysqldb.config')
+    db_config_env = luigi.Parameter(default='MYSQLDB')
     production = luigi.BoolParameter(default=False)
     
     def requires(self):
@@ -17,6 +17,6 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         yield MeshJoinTask(date=self.date,
                 _routine_id=_routine_id,
-                db_config_path=self.db_config_path,
+                db_config_env=self.db_config_env,
                 test=(not self.production),
                 )
