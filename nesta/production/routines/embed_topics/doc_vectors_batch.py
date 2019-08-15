@@ -92,7 +92,6 @@ class TextVectors(autobatch.AutoBatchTask):
             }
             job_params.append(params)
             logging.info(params)
-        assert False
         return job_params
 
     def combine(self, job_params):
