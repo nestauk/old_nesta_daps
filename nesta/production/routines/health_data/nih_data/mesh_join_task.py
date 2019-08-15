@@ -36,7 +36,7 @@ class MeshJoinTask(luigi.Task):
         s3bucket = s3.Bucket(bucket)
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
-    def output():
+    def output(self):
         self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config['database'] = 'dev' if self.test else 'production'
@@ -44,7 +44,7 @@ class MeshJoinTask(luigi.Task):
         update_id = "NihJoinMeshTerms_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
-    def run():
+    def run(self):
         db = 'production' if not self.test else 'dev'
 
         bucket = 'innovation-mapping-general'
