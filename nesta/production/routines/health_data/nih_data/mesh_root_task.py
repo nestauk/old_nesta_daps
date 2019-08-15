@@ -19,13 +19,4 @@ class RootTask(luigi.WrapperTask):
                 _routine_id=_routine_id,
                 db_config_path=self.db_config_path,
                 test=(not self.production),
-                env_files=[f3p("nesta/nesta/"),
-                           f3p("config/mysqldb.config"),
-                           ],
-                job_def="py36_amzn1_image",
-                job_name="MeshJoinTask-%s" % _routine_id,
-                job_queue="HighPriority",
-                region_name="eu-west-2",
-                poll_time=10,
-                memory=1024,
-                max_live_jobs=50)
+                )
