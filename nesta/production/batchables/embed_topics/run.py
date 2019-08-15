@@ -43,7 +43,7 @@ def run():
     ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(ids)} article IDs retrieved from s3")
 
-    engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     with db_session(engine) as session:
         batch_records = (session
                          .query(Projects.abstractText)
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     # set environ to run it locally
     if 'BATCHPAR_outinfo' not in os.environ:
         environ = {'batch_file': ('test-ids.json'),
-                   # 'config': 'mysqldb.config',
+                   'config': 'mysqldb.config',
                    'db_name': 'dev',
                    'bucket': 'nesta-production-intermediate',
                    'done': "False",
