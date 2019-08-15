@@ -77,10 +77,14 @@ class MeshJoinTask(luigi.Task):
         
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
         with db_session(engine) as session:
-        
-            docs_done = {d.project_id 
-                for d in session.query(ProjectMeshTerms.project_id).distinct()}
+            
+            if self.test:
+                existing_projects = {int(p.application_id) for p in
+                        session.query(Projects.application_id).distinct()}
 
+            projects_done = {int(p.project_id) 
+                for p in session.query(ProjectMeshTerms.project_id).distinct()}
+            
             mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
             
             for key in keys:
@@ -91,7 +95,7 @@ class MeshJoinTask(luigi.Task):
                     doc_terms = []
                     if self.test & (i > 2):
                         continue
-                    if doc in docs_done:
+                    if (doc in projects_done) | (doc in existing_projects):
                         continue
                     else:
                         for term, term_id in zip(t['terms'], t['ids']):
