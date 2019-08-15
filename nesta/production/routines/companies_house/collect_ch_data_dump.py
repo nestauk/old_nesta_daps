@@ -59,14 +59,13 @@ class CHDataDump(luigi.Task):
         else:
             nrows = None
 
-        df = download_data_dump(self.date, cache=True, nrows=nrows).pipe(clean_ch)
+        df = download_data_dump(self.date, cache=False, nrows=nrows).pipe(clean_ch)
 
         # Write data to DB
         objs = insert_data(MYSQLDB_ENV, "mysqldb",
                            "production" if not self.test else "dev",
                            Base, Company, df.to_dict('records'), low_memory=True)
 
-        raise NotImplementedError()
         self.output().touch()
 
 

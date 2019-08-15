@@ -2,22 +2,24 @@ import datetime
 import json
 import os
 import time
+import logging
+from itertools import chain
 
+import numpy as np
 import boto3
 import luigi
 
 from nesta.production.luigihacks import autobatch, s3
+from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.packages.companies_house.find_dissolved import generate_company_number_candidates
 
 S3 = boto3.resource('s3')
-S3_PREFIX = "s3://nesta-dev/CH_batch_params"
-_BUCKET = S3.Bucket("s3://nesta-dev/production-intermediate")
+S3_PREFIX = "s3://nesta-production-intermediate/CH_batch_params"
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
-class SomeInitialTask(luigi.ExternalTask):
-    '''Dummy task acting as the single input data source'''
-    def output(self):
-        '''Points to the S3 Target'''        
-        return s3.S3Target(S3PREFIX+'input.json')
+MYSQLDB_ENV = "MYSQLDB"
 
 
 class CHBatchQuery(autobatch.AutoBatchTask):
@@ -48,13 +50,23 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         '''Prepare the batch job parameters'''
         db_name = 'dev' if self.test else 'production'
 
-        # TODO Generate candidate numbers - dummies for now
-        candidates = ["01800000", "02800000"]
-        for c in candidates.copy():
-            for i in range(1, 5):
-                c = c[:-1] + str(i)
-                candidates.append(c)
-        candidates = np.array_split(candidates, len(api_key_l))
+        with open(os.environ["CH_API"], 'r') as f:
+            api_key_l = f.read().split(',')
+            
+
+        prefixes = ['0', 'OC', 'LP', 'SC', 'SO', 'SL', 
+                'NI', 'R', 'NC', 'NL']
+        candidates = list(
+                map(list, np.array_split(
+                list(chain(*[generate_company_number_candidates(prefix) for prefix in prefixes])),
+                len(api_key_l)
+                ))
+                )
+        logging.info(f"candidates: {list(map(len, candidates))}")
+
+        if self.test:
+            candidates = candidates[:2]
+            api_key_l = api_key_l[:2]
 
         job_params = []
         for api_key, batch_candidates in zip(api_key_l, candidates):
@@ -66,11 +78,14 @@ class CHBatchQuery(autobatch.AutoBatchTask):
 
             params = {
                 "CH_API_KEY": api_key,
+                "db_name": "CompaniesHouse <dummy>",
                 "inputinfo": inputinfo,
                 "outinfo": f"{S3_PREFIX}_{key}",
                 "test": self.test,
-                "done": key in DONE_KEYS
+                "done": key in DONE_KEYS,
             }
+
+            logging.info(params)
             job_params.append(params)
         return job_params
 
@@ -89,24 +104,16 @@ class RootTask(luigi.Task):
         '''Get the output from the batchtask'''
         return CHBatchQuery(date=self.date,
                              batchable=("~/nesta/nesta/production/"
-                                        "batchables/companieshouse/"),
+                                        "batchables/companies_house/"),
                              job_def="standard_image",
-                             job_name="batch-example-%s" % self.date,
-                             job_queue="MinimalCPUs",
+                             job_name="ch-batch-api-%s" % self.date,
+                             env_files=[find_filepath_from_pathstub("nesta/nesta")],
+                             job_queue="MinimalCpus",
                              region_name="eu-west-2",
-                             poll_time=60)
+                             poll_time=5)
 
     def output(self):
         pass
 
     def run(self):
-        """ """
-
-        time.sleep(10)
-        instream = self.input().open('rb')
-        data = json.load(instream)
-        for row in data:
-            row["name"] += " Muppet"
-
-        with self.output().open('wb') as outstream:
-            outstream.write(json.dumps(data).encode('utf8'))
+        pass

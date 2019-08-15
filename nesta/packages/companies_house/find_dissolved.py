@@ -68,7 +68,7 @@ async def try_company_number(session, company_number, api_key):
     )
 
 
-async def dispatcher(candidates, api_key, consume):
+async def dispatcher(candidates, api_key, consume, ratelim):
     """ Queries Companies House API for candidates
 
     Args:
@@ -76,12 +76,15 @@ async def dispatcher(candidates, api_key, consume):
         api_key (`str`): API key for Companies House
         consumer (`object`, optional): A method that consumes the output of
              `try_company_number`, e.g. `print` or a call to a database.
+        ratelim (`tuple`): Max number of API calls (first element) in a given 
+            number of seconds (second element).
     """
+    API_CALLS, API_TIME = ratelim
     logger.info(f"{len(candidates)} candidate company numbers.")
     async with ClientSession() as session:
         sleep_time = 0
         while len(candidates):
-            time.sleep(API_TIME)  # Wait until ratelim recovers
+            time.sleep(sleep_time)  # Wait until ratelim recovers
 
             tasks = [
                 try_company_number(session, candidates.pop(), BasicAuth(api_key))
@@ -89,6 +92,7 @@ async def dispatcher(candidates, api_key, consume):
             ]
             for task in asyncio.as_completed(tasks):
                 consume(await task)
+            sleep_time = API_TIME
 
 
 def generate_company_number_candidates(prefix: str):
@@ -117,4 +121,4 @@ if __name__ == "__main__":
             candidates.append(c)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(dispatcher(candidates, api_key, consume=print))
+    loop.run_until_complete(dispatcher(candidates, api_key, consume=print, ratelim=(API_CALLS, API_TIME)))

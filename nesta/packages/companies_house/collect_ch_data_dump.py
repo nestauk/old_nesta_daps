@@ -44,9 +44,8 @@ def download_data_dump(date: datetime, cache: bool = True, nrows: int = None):
     else:
         r = requests.get(_data_dump_url(date), allow_redirects=True)
         r.raise_for_status()
-        if cache:
-            with open(cache_path, "wb") as f:
-                f.write(r.content)
+        with open(cache_path, "wb") as f:
+            f.write(r.content)
 
     return pd.read_csv(cache_path, compression="zip", nrows=nrows)
 
