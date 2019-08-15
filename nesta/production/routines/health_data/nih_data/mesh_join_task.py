@@ -86,6 +86,8 @@ class MeshJoinTask(luigi.Task):
                 for p in session.query(ProjectMeshTerms.project_id).distinct()}
             
             mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
+
+            logging.info('Inserting associations')
             
             for key in keys:
                 df_mesh = retrieve_mesh_terms(bucket, key)
@@ -95,7 +97,7 @@ class MeshJoinTask(luigi.Task):
                     doc_terms = []
                     if self.test & (i > 2):
                         continue
-                    if (doc in projects_done) | (doc in existing_projects):
+                    if (doc in projects_done) | (doc not in existing_projects):
                         continue
                     else:
                         for term, term_id in zip(t['terms'], t['ids']):
