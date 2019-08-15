@@ -6,7 +6,7 @@ import time
 import boto3
 import luigi
 
-from nesta.production.luigihacks import autobatch, parse_s3_path, s3
+from nesta.production.luigihacks import autobatch, s3
 
 S3 = boto3.resource('s3')
 S3_PREFIX = "s3://nesta-dev/CH_batch_params"
@@ -61,7 +61,7 @@ class CHBatchQuery(autobatch.AutoBatchTask):
             key = api_key
             # Save candidate numbers to S3 by api_key
             inputinfo = f"{S3_PREFIX}_{key}_input"
-            (S3.Object(*parse_s3_path(inputinfo))
+            (S3.Object(*s3.parse_s3_path(inputinfo))
              .put(Body=json.dumps(batch_candidates)))
 
             params = {

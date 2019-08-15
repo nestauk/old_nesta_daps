@@ -5,7 +5,7 @@ from ast import literal_eval
 import boto3
 
 from nesta.packages.companies_house.find_dissolved import dispatcher
-from nesta.production.luigihacks import parse_s3_path
+from nesta.production.luigihacks.s3 import parse_s3_path
 
 API_CALLS, API_TIME = 3, 3
 
