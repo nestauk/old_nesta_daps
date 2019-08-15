@@ -112,3 +112,7 @@ venv.bak/
 
 # osx
 *.DS_Store
+
+# vim
+*.swp
+*.swo
