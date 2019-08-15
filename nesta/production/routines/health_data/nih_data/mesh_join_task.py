@@ -88,7 +88,6 @@ class MeshJoinTask(luigi.Task):
                 doc_terms = self.format_mesh_terms(df_mesh)
                 data = []
                 for i, (doc, t) in enumerate(doc_terms.items()):
-                    print(t)
                     doc_terms = []
                     if self.test & (i > 2):
                         continue
@@ -104,7 +103,7 @@ class MeshJoinTask(luigi.Task):
                                         low_memory=True)
                                 mesh_term_ids.update({term_id})
                             doc_terms.append({'project_id': doc,
-                                'mesh_term_id': term_id})
+                                'term_id': term_id})
                         insert_data(self.db_config_env, 'mysqldb', db,
                             Base, ProjectMeshTerms, doc_terms, low_memory=True)
 
