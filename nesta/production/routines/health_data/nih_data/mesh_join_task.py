@@ -30,6 +30,31 @@ class MeshJoinTask(luigi.Task):
     _routine_id = luigi.Parameter()
     db_config_env = luigi.Parameter()
     test = luigi.BoolParameter()
+
+    @staticmethod
+    def format_mesh_terms(df):
+        """
+        Removes unrequired columns and pivots the mesh terms data into a dictionary.
+
+        Args:
+            df (dataframe): mesh terms as returned from retrieve_mesh_terms
+
+        Returns:
+            (dict): document_id: list of mesh terms
+        """
+        logging.info("Formatting mesh terms")
+        # remove PRC rows
+        df = df.drop(df[df.term == 'PRC'].index, axis=0)
+
+        # remove invalid error rows
+        df = df.drop(df[df.doc_id.astype(str).str.contains('ERROR.*ERROR', na=False)].index, axis=0)
+        df['term_id'] = df['term_id'].apply(lambda x: int(x[1:]))
+
+        # pivot and remove unrequired columns
+        doc_terms = {
+            doc_id: {'terms': list(grouped.term), 'ids': list(grouped.term_id)
+            for doc_id, grouped in df.groupby("doc_id")}
+        return doc_terms
     
     @staticmethod
     def get_abstract_file_keys(bucket, key_prefix):
@@ -58,31 +83,28 @@ class MeshJoinTask(luigi.Task):
             docs_done = {d.project_id 
                     for d in session.query(association_table).distinct()}
 
-            mesh_terms = session.query(MeshTerms.id, MeshTerms.term).all()
-            mesh_terms = {m.term: m.id for m in mesh_terms}
+            mesh_term_ids = {m.id for m in session.query(MeshTerms.id).all()}
             
             for key in keys:
                 df_mesh = retrieve_mesh_terms(bucket, key)
                 doc_terms = format_mesh_terms(df_mesh)
                 data = []
-                for i, (doc, terms) in enumerate(doc_terms.items()):
+                for i, (doc, t) in enumerate(doc_terms.items()):
                     doc_terms = []
                     if self.test & (i > 2):
                         continue
                     if doc in docs_done:
                         continue
                     else:
-                        for term in terms:
-                            if term in mesh_terms:
-                                term_id = mesh_terms[term]
-                            else:
+                        for term_id, term in zip(t['terms'], t['ids']):
+                            if term_id not in mesh_term_ids:
                                 objs = insert_data(self.db_config_env, 
                                         'mysqldb', db, Base, MeshTerms, 
-                                        [{'term': term}], low_memory=True)
-                                term_id = objs[0].id
-                                mesh_terms[term] = term_id
-                            doc_terms.append(
-                                    {'project_id': doc, 'mesh_term_id': term_id})
+                                        [{'id': term_id, 'term': term}],
+                                        low_memory=True)
+                                mesh_term_ids.update({term_id})
+                            doc_terms.append({'project_id': doc,
+                                'mesh_term_id': term_id})
                         insert_data(self.db_config_env, 'mysqldb', db,
                             Base, association_table, doc_terms, low_memory=True)
 
