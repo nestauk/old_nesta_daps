@@ -89,13 +89,14 @@ class MeshJoinTask(luigi.Task):
 
             logging.info('Inserting associations')
             
-            for key in keys:
+            for key_count, key in enumerate(keys):
+                if self.test & (key_count > 2)
                 df_mesh = retrieve_mesh_terms(bucket, key)
                 doc_terms = self.format_mesh_terms(df_mesh)
                 data = []
-                for i, (doc, t) in enumerate(doc_terms.items()):
+                for doc_count, (doc, t) in enumerate(doc_terms.items()):
                     doc_terms = []
-                    if self.test & (i > 2):
+                    if self.test & (doc_count > 2):
                         continue
                     if (doc in projects_done) | (doc not in existing_projects):
                         continue
