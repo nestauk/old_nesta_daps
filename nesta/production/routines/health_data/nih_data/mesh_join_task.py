@@ -27,7 +27,7 @@ class MeshJoinTask(luigi.Task):
 
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
-    db_config_env = luigi.Parameter()
+    db_config_path = luigi.Parameter()
     
     @staticmethod
     def get_abstract_file_keys(bucket, key_prefix):
