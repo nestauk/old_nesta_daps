@@ -21,7 +21,7 @@ from nesta.production.orms.orm_utils import get_es_ids
 from nesta.production.routines.health_data.nih_data.nih_process_task import ProcessTask
 from nesta.production.luigihacks import autobatch, misctools
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 PATTERN = r'(\d+)-(\d+)\.out.txt$' # Match first & last idx  
 def split_mesh_file_key(key):
@@ -66,11 +66,11 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                           drop_and_recreate=self.drop_and_recreate,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=find_filepath_from_pathstub("batchables/health_data/nih_process_data"),
-                          env_files=[find_filepath_from_pathstub("nesta/"),
-                                     find_filepath_from_pathstub("config/mysqldb.config"),
-                                     find_filepath_from_pathstub("config/elasticsearch.config"),
-                                     find_filepath_from_pathstub("nih.json")],
+                          batchable=f3p("batchables/health_data/nih_process_data"),
+                          env_files=[f3p("nesta/"),
+                                     f3p("config/mysqldb.config"),
+                                     f3p("config/elasticsearch.config"),
+                                     f3p("nih.json")],
                           job_def=self.job_def,
                           job_name="ProcessTask-%s" % self._routine_id,
                           job_queue=self.job_queue,

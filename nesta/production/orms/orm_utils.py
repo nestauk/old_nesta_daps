@@ -116,7 +116,7 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
 
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'],
-                       use_ssl=True)
+                       use_ssl=True, send_get_body_as='POST')
     # Drop the index if required (must be in test mode to do this)
     _index = es_config['index']
     exists = es.indices.exists(index=_index)
