@@ -91,11 +91,10 @@ class AnalysisTask(luigi.Task):
     def run(self):
         # database setup
         database = 'dev' if self.test else 'production'
-        if self.test:
-            YEAR_THRESHOLD = 2008
-
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+
+        year_threshold = 2008 if self.test else YEAR_THRESHOLD
 
         # collect articles, categories, institutes.
         # duplicate article ids exist due to authors from different institutes
@@ -117,7 +116,7 @@ class AnalysisTask(luigi.Task):
         df['year'] = df.date.apply(lambda date: date.year)
         df = dc.add_before_date_flag(df,
                                      date_column='date',
-                                     before_year=YEAR_THRESHOLD)
+                                     before_year=year_threshold)
 
         # first plot - dl/non dl distribution by country (top n)
         pivot_by_country = (pd.pivot_table(df.groupby(['institute_country', 'is_dl'])
@@ -190,15 +189,15 @@ class AnalysisTask(luigi.Task):
         for cat in all_categories:
             subset = df.loc[[cat in x 
                              for x in df['arxiv_category_descs']], :]
-            subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
+            subset_ct = pd.crosstab(subset[f'before_{year_threshold}'],
                                     subset.is_dl,
                                     normalize=0)
             # This is true for some categories in dev mode
             # due to a smaller dataset
             if list(subset_ct.index) != [False, True]:
                 continue
-            subset_ct.index = [f'After {YEAR_THRESHOLD}', 
-                               f'Before {YEAR_THRESHOLD}']
+            subset_ct.index = [f'After {year_threshold}', 
+                               f'Before {year_threshold}']
             
             # this try /except may not be required when 
             # running on the full dataset
@@ -210,25 +209,25 @@ class AnalysisTask(luigi.Task):
 
         cat_thres_df = (pd.concat(cat_period_container, axis=1)
                         .T
-                        .sort_values(f'After {YEAR_THRESHOLD}', 
+                        .sort_values(f'After {year_threshold}', 
                                      ascending=False))
         other = cat_thres_df[N_TOP:].mean().rename('Other')
         cat_thres_df = cat_thres_df[:N_TOP].append(other)
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        (100 * cat_thres_df[f'Before {YEAR_THRESHOLD}']).plot(markeredgecolor=COLOR_B,
+        (100 * cat_thres_df[f'Before {year_threshold}']).plot(markeredgecolor=COLOR_B,
                                                               marker='o',
                                                               color=COLOR_B,
                                                               ax=ax,
                                                               markerfacecolor=COLOR_B)
-        (100 * cat_thres_df[f'After {YEAR_THRESHOLD}']).plot(markeredgecolor=COLOR_A,
+        (100 * cat_thres_df[f'After {year_threshold}']).plot(markeredgecolor=COLOR_A,
                                                              marker='o',
                                                              color=COLOR_A,
                                                              ax=ax,
                                                              markerfacecolor=COLOR_A)
         ax.vlines(np.arange(len(cat_thres_df)),
                   ymin=len(cat_thres_df) * [0],
-                  ymax=100 * cat_thres_df[f'After {YEAR_THRESHOLD}'],
+                  ymax=100 * cat_thres_df[f'After {year_threshold}'],
                   linestyle=':')
 
         ax.set_xticks(np.arange(len(cat_thres_df)))
@@ -252,21 +251,21 @@ class AnalysisTask(luigi.Task):
         highly_cited = df[(df.highly_cited) & (df.year >= MIN_RCA_YEAR)]        
         # calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
-            highly_cited[highly_cited[f'before_{YEAR_THRESHOLD}']],
+            highly_cited[highly_cited[f'before_{year_threshold}']],
             country_column='institute_country',
             commodity_column='is_dl')
 
         post_threshold_rca = dc.calculate_rca_by_country(
-            highly_cited[~highly_cited[f'before_{YEAR_THRESHOLD}']],
+            highly_cited[~highly_cited[f'before_{year_threshold}']],
             country_column='institute_country',
             commodity_column='is_dl')
 
         rca_combined = (pd.merge(pre_threshold_rca, post_threshold_rca,
                                  left_index=True, right_index=True,
                                  suffixes=('_before', '_after'))
-                        .rename(columns={'is_dl_before': f'Before {YEAR_THRESHOLD}',
-                                         'is_dl_after': f'After {YEAR_THRESHOLD}'})
-                        .sort_values(f'After {YEAR_THRESHOLD}', ascending=False))
+                        .rename(columns={'is_dl_before': f'Before {year_threshold}',
+                                         'is_dl_after': f'After {year_threshold}'})
+                        .sort_values(f'After {year_threshold}', ascending=False))
 
         # limit to top countries by dl activity
         top_dl_countries = list(df[['institute_country', 'is_dl']]
@@ -277,22 +276,22 @@ class AnalysisTask(luigi.Task):
         rca_combined_top = rca_combined[rca_combined.index.isin(top_dl_countries)]
 
         fig, ax = plt.subplots(figsize=(7, 4))
-        rca_combined_top[f'Before {YEAR_THRESHOLD}'].plot(markeredgecolor=COLOR_B,
+        rca_combined_top[f'Before {year_threshold}'].plot(markeredgecolor=COLOR_B,
                                                           marker='o',
                                                           color='white',
                                                           ax=ax,
                                                           markerfacecolor=COLOR_B)
-        rca_combined_top[f'After {YEAR_THRESHOLD}'].plot(markeredgecolor=COLOR_A,
+        rca_combined_top[f'After {year_threshold}'].plot(markeredgecolor=COLOR_A,
                                                          marker='o',
                                                          color='white',
                                                          ax=ax,
                                                          markerfacecolor=COLOR_A)
         col = [COLOR_A if x > y else '#d18270'
-               for x, y in zip(rca_combined_top[f'After {YEAR_THRESHOLD}'],
-                               rca_combined_top[f'Before {YEAR_THRESHOLD}'])]
+               for x, y in zip(rca_combined_top[f'After {year_threshold}'],
+                               rca_combined_top[f'Before {year_threshold}'])]
         ax.vlines(np.arange(len(rca_combined_top)),
-                  ymin=rca_combined_top[f'Before {YEAR_THRESHOLD}'],
-                  ymax=rca_combined_top[f'After {YEAR_THRESHOLD}'],
+                  ymin=rca_combined_top[f'Before {year_threshold}'],
+                  ymax=rca_combined_top[f'After {year_threshold}'],
                   linestyle=':',
                   color=col)
         ax.hlines(y=1,
