@@ -107,7 +107,7 @@ class RootTask(luigi.WrapperTask):
     '''
     date = luigi.DateParameter(default=datetime.date.today())
     production = luigi.BoolParameter(default=False)
-    process_batch_size = luigi.IntParameter(default=5000)
+    process_batch_size = luigi.IntParameter(default=1000)
 
     def requires(self):
         '''Get the output from the batchtask'''
