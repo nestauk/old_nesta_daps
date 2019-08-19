@@ -34,8 +34,8 @@ Packages are only accepted if they satisfy our internal auditing procedure:
    - Does the process perform a logical task or fulfil a logical purpose?
 
 
-- If the code requires productionising, it satisfies one of the following conditions:
-   a) There is a non-trivial pipeline, which would benefit from formal productionising.
+- If the code requires core.sing, it satisfies one of the following conditions:
+   a) There is a non-trivial pipeline, which would benefit from formal core.sing.
    b) A procedure is foreseen to be reperformed for new contexts with atomic differences in run conditions.
    c) The output is a service which requires a pipeline.
    d) The process is a regular / longitudinal data collection.

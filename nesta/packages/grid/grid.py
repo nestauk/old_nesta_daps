@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import re
 
-from nesta.production.orms.grid_orm import Institute, Alias
-from nesta.production.orms.orm_utils import db_session
+from nesta.core.orms.grid_orm import Institute, Alias
+from nesta.core.orms.orm_utils import db_session
 
 
 def read_institutes(filepath):
@@ -172,7 +172,7 @@ def grid_name_lookup(engine):
 
 
 if __name__ == '__main__':
-    from nesta.production.orms.orm_utils import get_mysql_engine
+    from nesta.core.orms.orm_utils import get_mysql_engine
 
     database = 'dev'
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', database)

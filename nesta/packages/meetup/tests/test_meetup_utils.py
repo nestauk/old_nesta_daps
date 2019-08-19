@@ -5,9 +5,9 @@ from nesta.packages.meetup.meetup_utils import get_members_by_percentile
 from nesta.packages.meetup.meetup_utils import get_core_topics
 
 from sqlalchemy.orm import sessionmaker
-from nesta.production.orms.meetup_orm import Base
-from nesta.production.orms.meetup_orm import Group
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.meetup_orm import Base
+from nesta.core.orms.meetup_orm import Group
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 class TestMeetupGetters(unittest.TestCase):
     '''Check that the meetup ORM getters work as expected'''
