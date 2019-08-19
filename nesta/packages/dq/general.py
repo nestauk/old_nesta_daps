@@ -10,12 +10,16 @@ def missing_values(data):
         data (:obj:`iter` of :obj:`obj`): A sequence of objects.
 
     Returns:
-        missing_count_df (:obj:`pandas.core.series.Series`): A series with column names (index) and missing value frequency (column)
+        missing_count_df (:obj:`pandas.DataFrame`): A series with column names and missing value frequency (columns)
 
 
     """
     df = pd.DataFrame(data)
     missing_count_df = df.isnull().sum().sort_values(ascending=False)
+    missing_count_df = pd.DataFrame(missing_count_df)
+    missing_count_df.columns = ['frequency']
+    missing_count_df.index.name = 'field'
+    missing_count_df = missing_count_df.reset_index()
     return missing_count_df
 
 def missing_value_percentage_column_count(data):
@@ -30,15 +34,13 @@ def missing_value_percentage_column_count(data):
 
     """
 
-    df = pd.DataFrame(data)
+    pre_df = missing_values(data)
+    df = pd.Series(pre_df['frequency'].values, index = pre_df['field'])
     total_length = len(df)
 
-    missingvalue_df = missing_values(df)
     missing_bins = [i for i in range(100+1) if i%10 == 0]
-    out= pd.cut((pd.Series(missingvalue_df)/total_length).apply(lambda x: round(x*100,5)),
+    out= pd.cut((pd.Series(df)/total_length).apply(lambda x: round(x*100,5)),
                                                          bins=missing_bins, include_lowest=True)
-    # print(missingvalue_df)
-    # out = np.histogram(((pd.Series(missingvalue_df)/total_length)*100), bins=range(0, 101, 10))
     out_counts = out.value_counts(sort=False)
     out_counts_df = pd.DataFrame({'intervals': out_counts.index, 'frequency': out_counts.values})
 
@@ -46,12 +48,13 @@ def missing_value_percentage_column_count(data):
 
 def missing_value_count_pair_both(data):
     """missing_value_count_pair_both
+    Calculates if both entries of pairwise fields are missing.
 
     Args:
         data (:obj:`iter` of :obj:`obj`): A multi-dimensional nested sequence of objects.
 
     Returns:
-        both_null_dict (:obj:`pandas.DataFrame`): A symmetrical dataframe with column names (index and columns) and boolean counts if both entries of pairwise columns are missing (values)
+        both_null_dict (:obj:`pandas.DataFrame`): A symmetrical dataframe with column names (index and columns) and total boolean counts (values)
 
     """
     data_frame = pd.DataFrame(data)
@@ -81,12 +84,13 @@ def missing_value_count_pair_both(data):
 
 def missing_value_count_pair_either(data):
     """missing_value_count_pair_either
+    Calculates if either entries of pairwise fields are missing.
 
     Args:
         data (:obj:`iter` of :obj:`obj`): A multi-dimensional nested sequence of objects.
 
     Returns:
-        either_null_dict (:obj:`pandas.DataFrame`): A symmetrical dataframe with column names (index and columns) and boolean counts if either entries of pairwise columns are missing (values)
+        either_null_dict (:obj:`pandas.DataFrame`): A symmetrical dataframe with column names (index and columns) and total boolean counts (values)
 
     """
 
