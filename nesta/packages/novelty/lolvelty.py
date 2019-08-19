@@ -42,7 +42,7 @@ def lolvelty(es, index, doc_id, fields,
         total = r['count']
     # Build mlt query
     max_doc_freq = int(max_doc_frac*total)
-    minimum_should_match=str(int(minimum_should_match*100))
+    minimum_should_match=f"{int(minimum_should_match*100)}%"
     mlt_query = {
         "query": {
             "more_like_this": {
@@ -62,7 +62,7 @@ def lolvelty(es, index, doc_id, fields,
         "_source":["_score"]
     }
     # Make the search and normalise the scores
-    r = es.search(index=index, body=mlt_query) 
+    r = es.search(index=index, body=mlt_query)
     scores = [h['_score']/r['hits']['max_score'] 
               for h in r['hits']['hits']]
     if len(scores) <= 1:
