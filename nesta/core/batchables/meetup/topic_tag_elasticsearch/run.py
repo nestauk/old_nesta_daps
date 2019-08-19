@@ -134,10 +134,10 @@ if __name__ == "__main__":
                                   '--fitness'
                                   '-10-99-True-'
                                   '15633764681888585.json'),
-                    'config': ('/home/ec2-user/nesta/nesta.core/'
+                    'config': ('/home/ec2-user/nesta/nesta/core/'
                                'config/mysqldb.config'),
                     'db_name': 'production',
-                    'bucket': 'nesta.core-intermediate',
+                    'bucket': 'nesta-production-intermediate',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),

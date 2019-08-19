@@ -43,7 +43,7 @@ class RootTask(luigi.WrapperTask):
                          routine_id=_routine_id,
                          db_config_path=self.db_config_path,
                          process_batch_size=5000,
-                         intermediate_bucket='nesta.core-intermediate',
+                         intermediate_bucket='nesta-production-intermediate',
                          test=(not self.production),
                          batchable=f3p("batchables/health_data/"
                                        "nih_dedupe"),

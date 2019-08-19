@@ -127,7 +127,7 @@ if __name__ == "__main__":
         pars = {'batch_file': ('2019-05-23-True-'
                                '1564652840333777.json'),
                 'config': 'mysqldb.config',
-                'bucket': 'nesta.core-intermediate',
+                'bucket': 'nesta-production-intermediate',
                 'done': 'False',
                 'outinfo': ('https://search-health-scanner-'
                             '5cs7g52446h7qscocqmiky5dn4.'

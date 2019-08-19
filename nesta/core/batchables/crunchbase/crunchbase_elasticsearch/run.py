@@ -164,7 +164,7 @@ if __name__ == "__main__":
                    'BATCHPAR_config': ('/home/ec2-user/nesta/nesta/'
                                        'production/config/mysqldb.config'),
                    'BATCHPAR_db_name': 'production', 
-                   'BATCHPAR_bucket': 'nesta.core-intermediate', 
+                   'BATCHPAR_bucket': 'nesta-production-intermediate', 
                    'BATCHPAR_done': "False", 
                    'BATCHPAR_outinfo': ('https://search-health-scanner-'
                                '5cs7g52446h7qscocqmiky5dn4.'
@@ -180,8 +180,8 @@ if __name__ == "__main__":
         #            "BATCHPAR_outinfo": ("search-health-scanner-"
         #                                 "5cs7g52446h7qscocqmiky5dn4"
         #                                 ".eu-west-2.es.amazonaws.com"),
-        #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta.core/config/mysqldb.config",
-        #            "BATCHPAR_bucket":"nesta.core-intermediate",
+        #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta/core/config/mysqldb.config",
+        #            "BATCHPAR_bucket":"nesta-production-intermediate",
         #            "BATCHPAR_done":"False",
         #            "BATCHPAR_batch_file":"crunchbase_to_es-1559658702669423.json",
         #            "BATCHPAR_out_type": "_doc",

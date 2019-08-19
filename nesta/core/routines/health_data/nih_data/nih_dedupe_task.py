@@ -86,6 +86,8 @@ class DedupeTask(autobatch.AutoBatchTask):
         job_params = []        
         batches = split_batches(_ids, self.process_batch_size)
         for count, batch in enumerate(batches, 1):
+            # Magical '0.3' is the lower end of the deduplication
+            # fraction found by inspection
             done = sum(_id in done_ids 
                        for _id in batch) / len(batch) > 0.3
             # write batch of ids to s3
@@ -109,7 +111,7 @@ class DedupeTask(autobatch.AutoBatchTask):
                 'test': self.test,
                 'routine_id': self.routine_id
             }            
-            #logging.info(params)
+
             job_params.append(params)
             if self.test and count > 1:
                 logging.warning("Breaking after 2 batches "

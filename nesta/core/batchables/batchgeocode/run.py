@@ -52,8 +52,8 @@ if __name__ == '__main__':
     if False:
         environ = {"BATCHPAR_done": "False",
                    "BATCHPAR_batch_file" : "geocoding_batch_15597590150867765.json",
-                   "BATCHPAR_config": "/home/ec2-user/nesta/nesta.core/config/mysqldb.config",
-                   "BATCHPAR_bucket": "nesta.core-intermediate",
+                   "BATCHPAR_config": "/home/ec2-user/nesta/nesta/core/config/mysqldb.config",
+                   "BATCHPAR_bucket": "nesta-production-intermediate",
                    "BATCHPAR_test": "True",
                    "BATCHPAR_db_name": "dev"}
         for k, v in environ.items():

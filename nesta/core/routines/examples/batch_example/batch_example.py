@@ -53,7 +53,7 @@ class SomeBatchTask(autobatch.AutoBatchTask):
 
         # Add the mandatory `outinfo' and `done' fields
         for i, params in enumerate(job_params):
-            params["outinfo"] = ("s3://nesta.core-intermediate/"
+            params["outinfo"] = ("s3://nesta-production-intermediate/"
                                  "batch-example-{}-{}".format(self.date, i))            
             params["done"] = s3fs.exists(params["outinfo"])
         return job_params
@@ -82,7 +82,7 @@ class RootTask(luigi.Task):
     def requires(self):
         '''Get the output from the batchtask'''
         return SomeBatchTask(date=self.date,
-                             batchable=("~/nesta/nesta.core/"
+                             batchable=("~/nesta/nesta/core/"
                                         "batchables/examples/batch_example/"),
                              job_def="standard_image",
                              job_name="batch-example-%s" % self.date,

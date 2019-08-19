@@ -24,7 +24,7 @@ def command_line(command, verbose=False):
     '''Execute command line tasks and return the final output line.
     This is particularly useful for extracting the AWS access keys
     directly from the OS; as well as executing the environment
-    preparation script (:code:`production/scripts/nesta_prepare_batch.sh`).
+    preparation script (:code:`core/scripts/nesta_prepare_batch.sh`).
     '''
     # Execute the command and decode the output
     out = check_output([command], shell=True)
@@ -48,7 +48,7 @@ class AutoBatchTask(luigi.Task, ABC):
     and :code:`combine`, which are repectively documented. With these abstract
     methods specified, :code:`AutoBatchTask` will automatically prepare,
     submit, and combine one batch task (specified in
-    :code:`production.batchables`) per parameter set specified in the
+    :code:`core.batchables`) per parameter set specified in the
     :code:`prepare` method. The :code:`combine` method will subsequently
     combine the outputs from the batch task.
 
