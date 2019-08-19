@@ -80,8 +80,8 @@ if __name__ == '__main__':
     df = filter_documents(df)
     print(f'TIME SPENT ON PROCESSING THE DATA: {time.time() - start}')
     # For now, use a random sample of 200 documents
-    # df = df.sample(200)
-    # start = time.time()
-    # vectors = docs2vectors(list(df.abstractText))
-    # print(f'TIME SPENT ON TEXT2VEC: {time.time() - start}')
-    # print(f'SHAPE OF VECTORS: {vectors.shape}')
+    df = df.sample(200)
+    start = time.time()
+    vectors = docs2vectors(list(df.abstractText))
+    print(f'TIME SPENT ON TEXT2VEC: {time.time() - start}')
+    print(f'SHAPE OF VECTORS: {vectors.shape}')
