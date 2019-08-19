@@ -9,14 +9,14 @@ import logging
 import luigi
 import datetime
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
-from nesta.production.luigihacks.estask import ElasticsearchTask
+from nesta.production.luigihacks.sql2estask import Sql2EsTask
 from nesta.production.orms.meetup_orm import Group
 from nesta.production.luigihacks.batchgeocode import GeocodeBatchTask
 from nesta.production.routines.meetup.health_tagging.topic_discovery_task import TopicDiscoveryTask
 
 
-class MeetupHealthElasticsearchTask(ElasticsearchTask):
-    '''Task to pipe meetup data to ES. For other arguments, see :obj:`ElasticsearchTask`.
+class MeetupHealthSql2EsTask(Sql2EsTask):
+    '''Task to pipe meetup data to ES. For other arguments, see :obj:`Sql2EsTask`.
 
     Args:
         core_categories (list): A list of category_shortnames from which to identify topics.
@@ -68,7 +68,7 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
         routine_id = (f"{self.date}-{'--'.join(self.core_categories)}"
                       f"-{self.members_perc}-{self.topic_perc}-{self.production}")
-        yield MeetupHealthElasticsearchTask(routine_id=routine_id,
+        yield MeetupHealthSql2EsTask(routine_id=routine_id,
                                             date=self.date,
                                             process_batch_size=100,
                                             drop_and_recreate=self.drop_and_recreate,
@@ -88,7 +88,7 @@ class RootTask(luigi.WrapperTask):
                                                        f3p("schema_transformations/meetup.json"),
                                                        f3p("config/elasticsearch.config")],
                                             job_def="py36_amzn1_image",
-                                            job_name=f"MeetupHealthElasticsearchTask-{routine_id}",
+                                            job_name=f"MeetupHealthSql2EsTask-{routine_id}",
                                             job_queue="MinimalCpus",
                                             region_name="eu-west-2",
                                             poll_time=10,

@@ -11,7 +11,6 @@ import datetime
 
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
-from nesta.production.luigihacks.estask import ElasticsearchTask
 from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks import autobatch
 from nesta.production.orms.orm_utils import get_es_ids

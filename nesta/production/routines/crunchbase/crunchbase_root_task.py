@@ -9,8 +9,8 @@ import luigi
 import datetime
 import logging
 
-from crunchbase_elasticsearch_task import ElasticsearchTask
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from crunchbase_elasticsearch_task import CrunchbaseSql2EsTask
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 
 class RootTask(luigi.WrapperTask):
@@ -33,23 +33,23 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
 
         logging.getLogger().setLevel(logging.INFO)
-        yield ElasticsearchTask(date=self.date,
-                                _routine_id=_routine_id,
-                                test=not self.production,
-                                drop_and_recreate=self.drop_and_recreate,
-                                db_config_env="MYSQLDB",
-                                insert_batch_size=self.insert_batch_size,
-                                process_batch_size=50000,
-                                intermediate_bucket='nesta-production-intermediate',
-                                batchable=find_filepath_from_pathstub("batchables/crunchbase/crunchbase_elasticsearch"),
-                                env_files=[find_filepath_from_pathstub("nesta/nesta/"),
-                                           find_filepath_from_pathstub("config/mysqldb.config"),
-                                           find_filepath_from_pathstub("schema_transformations/crunchbase_organisation_members.json"),
-                                           find_filepath_from_pathstub("config/elasticsearch.config")],
-                                job_def="py36_amzn1_image",
-                                job_name=f"CrunchBaseElasticsearchTask-{_routine_id}",
-                                job_queue="HighPriority",
-                                region_name="eu-west-2",
-                                poll_time=10,
-                                memory=2048,
-                                max_live_jobs=100)
+        yield CrunchbaseSql2EsTask(date=self.date,
+                                   _routine_id=_routine_id,
+                                   test=not self.production,
+                                   drop_and_recreate=self.drop_and_recreate,
+                                   db_config_env="MYSQLDB",
+                                   insert_batch_size=self.insert_batch_size,
+                                   process_batch_size=50000,
+                                   intermediate_bucket='nesta-production-intermediate',
+                                   batchable=f3p("batchables/crunchbase/crunchbase_elasticsearch"),
+                                   env_files=[f3p("nesta/nesta/"),
+                                              f3p("config/mysqldb.config"),
+                                              f3p("schema_transformations/crunchbase_organisation_members.json"),
+                                              f3p("config/elasticsearch.config")],
+                                   job_def="py36_amzn1_image",
+                                   job_name=f"CrunchBaseElasticsearchTask-{_routine_id}",
+                                   job_queue="HighPriority",
+                                   region_name="eu-west-2",
+                                   poll_time=10,
+                                   memory=2048,
+                                   max_live_jobs=100)

@@ -28,7 +28,7 @@ S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
-class ElasticsearchTask(autobatch.AutoBatchTask):
+class CrunchbaseSql2EsTask(autobatch.AutoBatchTask):
     '''Download tar file of csvs and load them into the MySQL server.
 
     Args:

@@ -1,6 +1,6 @@
 '''
-ElasticsearchTask
-=================
+Sql2EsTask
+==========
 
 Task for piping data from MySQL to Elasticsearch
 '''
@@ -19,7 +19,7 @@ from nesta.production.orms.orm_utils import db_session
 from nesta.production.orms.orm_utils import get_es_ids
 
 
-class ElasticsearchTask(autobatch.AutoBatchTask):
+class Sql2EsTask(autobatch.AutoBatchTask):
     '''Launches batch tasks to pipe data from MySQL to Elasticsearch.
 
     Args:
