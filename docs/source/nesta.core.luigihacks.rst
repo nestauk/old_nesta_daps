@@ -1,6 +1,6 @@
 .. _luigihacks_label:
 
-.. include:: ../../nesta/core.luigihacks/README.rst
+.. include:: ../../nesta/core/luigihacks/README.rst
 
 .. automodule:: core.luigihacks
     :members:

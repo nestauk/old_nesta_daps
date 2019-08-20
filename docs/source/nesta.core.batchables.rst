@@ -1,4 +1,4 @@
-.. include:: ../../nesta/core.batchables/README.rst
+.. include:: ../../nesta/core/batchables/README.rst
 
 .. automodule:: core.batchables
     :members:

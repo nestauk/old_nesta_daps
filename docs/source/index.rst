@@ -15,7 +15,7 @@
 
 	     
 .. include:: ../../nesta/packages/README.rst
-.. include:: ../../nesta/core.README.rst
+.. include:: ../../nesta/core/README.rst
 	   
 
 License

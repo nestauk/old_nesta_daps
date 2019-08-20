@@ -3,7 +3,7 @@ Production
 
 Nesta's production system is based on Luigi_ pipelines, and are designed to be entirely
 run on AWS via the batch service. The main Luigi server runs on a persistent EC2 instance.
-Beyond the well documented Luigi code, the main features of the nesta.core system are:
+Beyond the well documented Luigi code, the main features of the nesta production system are:
 
 .. _Luigi: https://luigi.readthedocs.io/en/stable/
 

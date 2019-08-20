@@ -1,4 +1,4 @@
-.. include:: ../../nesta/core.README.rst
+.. include:: ../../nesta/core/README.rst
 
 How to put code into production at nesta
 ----------------------------------------

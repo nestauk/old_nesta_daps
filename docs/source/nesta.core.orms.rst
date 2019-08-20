@@ -1,4 +1,4 @@
-.. include:: ../../nesta/core.orms/README.rst
+.. include:: ../../nesta/core/orms/README.rst
 
 .. automodule:: core.orms.meetup_orm
     :members:

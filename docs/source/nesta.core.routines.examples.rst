@@ -1,4 +1,4 @@
-.. include:: ../../nesta/core.routines/examples/README.rst
+.. include:: ../../nesta/core/routines/examples/README.rst
 
 .. automodule:: core.routines.examples.s3_example.s3_example
     :members:

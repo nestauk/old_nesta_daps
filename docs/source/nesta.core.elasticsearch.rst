@@ -1,1 +1,1 @@
-.. include:: ../../nesta/core.README-elasticsearch.rst
+.. include:: ../../nesta/core/README-elasticsearch.rst
