@@ -51,5 +51,9 @@
     {
         "tier_0": "countries",
         "tier_1": "json_location_article"
+    },
+    {
+        "tier_0": "year",
+        "tier_1": "year_of_article"
     }
 ]

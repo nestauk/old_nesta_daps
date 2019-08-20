@@ -97,7 +97,7 @@ def run():
             row = object_to_dict(obj)
             # Extract year from date
             if row['created'] is not None:
-                row['year_of_article'] = row['created'].year
+                row['year'] = row['created'].year
 
             # Normalise citation count for searchkit
             if row['citation_count'] is None:

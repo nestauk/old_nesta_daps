@@ -32,7 +32,7 @@ import os
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-BATCHABLE = os.path.join(find_filepath_from_pathstub("production/batchables/meetup"),"{}")
+BATCHABLE = os.path.join(find_filepath_from_pathstub("core/batchables/meetup"),"{}")
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""

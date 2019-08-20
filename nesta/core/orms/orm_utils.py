@@ -126,6 +126,8 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
     # Create the index if required
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
+        print(mapping)
+        assert False
         es.indices.create(index=_index, body=mapping)
     return es, es_config
 
@@ -176,7 +178,7 @@ def get_es_mapping(dataset, aliases):
         :obj:`dict`
     '''
     # Get the mapping and lookup
-    mapping = load_json_from_pathstub("production/orms/",
+    mapping = load_json_from_pathstub("core/orms/",
                                       f"{dataset}_es_config.json")
     alias_lookup = {}
     if aliases is not None:

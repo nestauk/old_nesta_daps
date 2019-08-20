@@ -132,7 +132,7 @@ class RootTask(luigi.WrapperTask):
 
         yield WorldbankTask(date=self.date, db_config=db_config, 
                             variable_codes=variable_codes,
-                            batchable=find_filepath_from_pathstub("production/batchables/collect_worldbank/"),
+                            batchable=find_filepath_from_pathstub("core/batchables/collect_worldbank/"),
                             env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                        find_filepath_from_pathstub("/config/mysqldb.config")],
                             job_def="py36_amzn1_image",
