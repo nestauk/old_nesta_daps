@@ -98,6 +98,9 @@
                 },
                 "url_of_article": {
                     "type": "text"
+                },
+		"year_of_article": {
+                    "type": "integer"
                 }
             }
         }

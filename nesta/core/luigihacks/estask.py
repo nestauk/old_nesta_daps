@@ -77,7 +77,8 @@ class ElasticsearchTask(AutoBatchTask):
                                  drop_and_recreate=False,
                                  dataset=self.dataset,
                                  increment_version=False)
-        ids = get_es_ids(es, es_config, size=10000)
+        ids = get_es_ids(es, es_config, size=10000)  # All ids in this index
+        ids = ids - self._done_ids  # Don't repeat done ids
 
         # Override the default index if specified
         es_config['index'] = (self.index if self.index is not None
@@ -87,8 +88,7 @@ class ElasticsearchTask(AutoBatchTask):
         job_params = []
         batches = split_batches(ids, self.process_batch_size)
         for count, batch in enumerate(batches, 1):
-            done = all(_id in self._done_ids
-                       for _id in batch)
+            done = False  # Already taken care of with _done_ids
             # write batch of ids to s3
             batch_file = ''
             if not done:

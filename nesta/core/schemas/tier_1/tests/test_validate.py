@@ -62,7 +62,7 @@ class TestValidate():
 
     def test_aliases(self):    
         """Assert consistency between the aliases and schemas"""
-        top_dir = find_filepath_from_pathstub("production/orms")
+        top_dir = find_filepath_from_pathstub("core/orms")
         all_fields = {}
         for filename in os.listdir(top_dir):
             if not filename.endswith(ES_CONF_SUFFIX):

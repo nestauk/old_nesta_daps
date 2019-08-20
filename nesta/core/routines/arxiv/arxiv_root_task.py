@@ -9,8 +9,8 @@ import luigi
 import datetime
 import logging
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
+from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.orms.arxiv_orm import Article
-
 from nesta.core.routines.arxiv.arxiv_es_task import ArxivESTask
 from nesta.core.routines.arxiv.deepchange_analysis_task import AnalysisTask
 
@@ -71,14 +71,14 @@ class RootTask(luigi.WrapperTask):
                           intermediate_bucket=('nesta-production'
                                                '-intermediate'),
                           batchable=f3p('batchables/arxiv/'
-                                    'arxiv_elasticsearch'),
+                                        'arxiv_elasticsearch'),
                           env_files=[f3p('nesta/'),
                                      f3p('config/'
                                          'mysqldb.config'),
                                     f3p('schema_transformations/'
                                         'arxiv.json'),
                                      f3p('config/'
-                                        'elasticsearch.config')],
+                                         'elasticsearch.config')],
                           job_def='py36_amzn1_image',
                           job_name=_routine_id,
                           job_queue='HighPriority',
@@ -96,3 +96,53 @@ class RootTask(luigi.WrapperTask):
                            insert_batch_size=self.insert_batch_size,
                            articles_from_date=self.articles_from_date,
                            cherry_picked=cherry_picked)
+
+
+class EsOnlyRootTask(luigi.WrapperTask):
+    '''A dummy root task, which collects the database configurations
+    and executes the central task.
+
+    Args:
+        date (datetime): Date used to label the outputs
+        db_config_path (str): Path to the MySQL database configuration
+        production (bool): Flag indicating whether running in testing
+                           mode (False, default), or production mode (True).
+        drop_and_recreate (bool): If in test mode, allows dropping the dev index from the ES database.
+    
+    '''
+    date = luigi.DateParameter(default=datetime.date.today())
+    db_config_path = luigi.Parameter(default="mysqldb.config")
+    production = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
+
+    def requires(self):
+        '''Collects the database configurations
+        and executes the central task.'''
+        routine_id = "ArxivESTask-{}-{}".format(self.date, self.production)
+        logging.getLogger().setLevel(logging.INFO)
+        yield Sql2EsTask(routine_id=routine_id,
+                         date=self.date,
+                         process_batch_size=10000,
+                         drop_and_recreate=self.drop_and_recreate,
+                         dataset='arxiv',
+                         id_field=Article.id,
+                         entity_type='article',
+                         db_config_env='MYSQLDB',
+                         test=not self.production,
+                         intermediate_bucket=('nesta-production'
+                                              '-intermediate'),
+                         batchable=f3p('batchables/arxiv/'
+                                       'arxiv_elasticsearch'),
+                         env_files=[f3p('nesta/'),
+                                    f3p('config/'
+                                        'mysqldb.config'),
+                                    f3p('schema_transformations/'
+                                        'arxiv.json'),
+                                    f3p('config/'
+                                        'elasticsearch.config')],
+                         job_def='py36_amzn1_image',
+                         job_name=routine_id,
+                         job_queue='HighPriority',
+                         region_name='eu-west-2',
+                         poll_time=10,
+                         max_live_jobs=100)

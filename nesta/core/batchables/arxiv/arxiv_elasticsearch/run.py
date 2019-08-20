@@ -95,6 +95,11 @@ def run():
                                      .filter(Article.id.in_(art_ids))
                                      .all())):
             row = object_to_dict(obj)
+            # Extract year from date
+            if row['created'] is not None:
+                row['year_of_article'] = row['created'].year
+
+            # Normalise citation count for searchkit
             if row['citation_count'] is None:
                 row['citation_count'] = 0
 
@@ -150,7 +155,7 @@ def run():
                                      for g in gids
                                      if g in grid_institutes
                                      and g in good_institutes]
-                row['novelty_of_article'] = novelty0 + np.log(novelty1+1)
+                row['novelty_of_article'] = novelty0 + np.log(novelty1+1)            
 
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
