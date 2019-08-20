@@ -65,7 +65,7 @@ class WorldbankTask(autobatch.AutoBatchTask):
         s3fs = s3.S3FS()
         for i, kwargs in enumerate(kwargs_list):
             params = dict(**kwargs)
-            outfile = ("s3://nesta.core-intermediate/"
+            outfile = ("s3://nesta-production-intermediate/"
                        f"{self.job_name}-{i}")
             params["outinfo"] = outfile
             params["done"] = s3fs.exists(outfile)

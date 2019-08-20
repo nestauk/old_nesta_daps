@@ -30,7 +30,7 @@ import os
 # Define these globally since they are shared resources
 # TODO: consider bundling this into a Singleton
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 BATCHABLE = os.path.join(find_filepath_from_pathstub("production/batchables/meetup"),"{}")
 
@@ -78,7 +78,7 @@ class CountryGroupsTask(autobatch.AutoBatchTask):
         for _coords in chunks(coords, 10):
             # Check whether the job has been done already
             s3_key = self.job_name
-            s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+            s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
             params = {"iso2":self.iso2,
@@ -149,7 +149,7 @@ class GroupsMembersTask(autobatch.AutoBatchTask):
         for group_id, group_urlname in cursor:
             # Check whether the job has been done already
             s3_key = "{}-{}-{}".format(self.job_name, group_id, group_urlname)
-            s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+            s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
             params = {"group_urlname":group_urlname,
@@ -228,7 +228,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
             data = [member_id for member_id, in chunk]
             # Check whether the job has been done already
             s3_key = "{}-{}-{}".format(self.job_name, data[0], data[-1])
-            s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+            s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
             params = {"member_ids":str(data),
@@ -246,7 +246,7 @@ class MembersGroupsTask(autobatch.AutoBatchTask):
         # for member_id, in cursor:
         #     # Check whether the job has been done already
         #     s3_key = "{}-{}".format(self.job_name, member_id)
-        #     s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+        #     s3_path = "s3://nesta-production-intermediate/%s" % s3_key
         #     done = s3_key in DONE_KEYS
         #     # Fill in the params
         #     params = {"member_id":member_id,
@@ -321,7 +321,7 @@ class GroupDetailsTask(autobatch.AutoBatchTask):
                     if group_urlname.count("?") == 0]
             # Check whether the job has been done already
             s3_key = "{}-{}-{}".format(self.job_name, data[0], data[-1])
-            s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+            s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
             params = {"group_urlnames":str([x.encode("utf8") 

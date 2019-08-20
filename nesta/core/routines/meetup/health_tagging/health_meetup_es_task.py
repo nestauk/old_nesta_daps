@@ -81,7 +81,7 @@ class RootTask(luigi.WrapperTask):
                                             topic_perc=self.topic_perc,
                                             db_config_env=self.db_config_env,
                                             test=not self.production,
-                                            intermediate_bucket='nesta.core-intermediate',
+                                            intermediate_bucket='nesta-production-intermediate',
                                             batchable=f3p("batchables/meetup/topic_tag_elasticsearch"),
                                             env_files=[f3p("nesta/"),
                                                        f3p("config/mysqldb.config"),

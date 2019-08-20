@@ -38,7 +38,7 @@ class RootTask(luigi.WrapperTask):
                                          db_config_env="MYSQLDB",
                                          batch_size=self.batch_size,  # example parameter
                                          start_string=self.start_string,  # example parameter
-                                         intermediate_bucket="nesta.core-intermediate",
+                                         intermediate_bucket="nesta-production-intermediate",
                                          batchable=f3p("batchables/examples/template_batchable"),  # folder name
                                          env_files=[f3p("nesta/nesta/"),
                                                     f3p("config/mysqldb.config")],

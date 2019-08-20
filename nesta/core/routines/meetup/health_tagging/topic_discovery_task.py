@@ -16,7 +16,7 @@ from nesta.packages.meetup.meetup_utils import get_members_by_percentile
 from nesta.packages.meetup.meetup_utils import get_core_topics
 
 
-S3PREFIX = "s3://nesta.core-intermediate"
+S3PREFIX = "s3://nesta-production-intermediate"
 
 
 class TopicDiscoveryTask(luigi.Task):

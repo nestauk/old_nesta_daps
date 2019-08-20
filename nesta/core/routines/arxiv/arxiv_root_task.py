@@ -68,7 +68,7 @@ class RootTask(luigi.WrapperTask):
                           entity_type='article',
                           db_config_env='MYSQLDB',
                           test=not self.production,
-                          intermediate_bucket=('nesta.core'
+                          intermediate_bucket=('nesta-production'
                                                '-intermediate'),
                           batchable=f3p('batchables/arxiv/'
                                     'arxiv_elasticsearch'),

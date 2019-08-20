@@ -32,7 +32,7 @@ environ = {"BATCHPAR_coords":("[(3.04197, 36.7525),]"),
            "BATCHPAR_cat":"34",
            "BATCHPAR_iso2":"DZ",
            "BATCHPAR_radius":"188.57589532086934",
-           "BATCHPAR_outinfo":("s3://nesta.core-intermediate/DUMMY"),
+           "BATCHPAR_outinfo":("s3://nesta-production-intermediate/DUMMY"),
            "BATCHPAR_db":"production_tests",
            "BATCHPAR_config": os.environ["MYSQLDBCONF"],
            "MEETUP_API_KEYS": os.environ["MEETUP_API_KEYS"]}

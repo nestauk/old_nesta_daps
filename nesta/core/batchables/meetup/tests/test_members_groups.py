@@ -9,7 +9,7 @@ import os
 from nesta.core.batchables.meetup import members_groups
 
 environ = {"BATCHPAR_member_ids":"[4198106, 7912988, 11475762]",
-           "BATCHPAR_outinfo":("s3://nesta.core-intermediate/DUMMY"),
+           "BATCHPAR_outinfo":("s3://nesta-production-intermediate/DUMMY"),
            "BATCHPAR_db":"production_tests",
            "BATCHPAR_config": os.environ["MYSQLDBCONF"],
            "MEETUP_API_KEYS": os.environ["MEETUP_API_KEYS"]}

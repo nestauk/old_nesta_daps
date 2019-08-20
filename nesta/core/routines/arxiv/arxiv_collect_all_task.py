@@ -17,7 +17,7 @@ from nesta.core.luigihacks import autobatch
 import boto3
 
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 BATCH_SIZE = 10000
 
@@ -57,7 +57,7 @@ class CollectAllTask(autobatch.AutoBatchTask):
                       "start_cursor": batch_start,
                       "end_cursor": end_cursor,
                       "db_name": "production" if not self.test else "dev",
-                      "outinfo": "s3://nesta.core-intermediate/%s" % batch_done_key,
+                      "outinfo": "s3://nesta-production-intermediate/%s" % batch_done_key,
                       "done": done}
             logging.warning(f"Batch {count}: {params}")
             job_params.append(params)

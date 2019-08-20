@@ -176,7 +176,7 @@ if __name__ == "__main__":
                    'config': ('/home/ec2-user/nesta/nesta/'
                               'production/config/mysqldb.config'),
                    'db_name': 'dev',
-                   'bucket': 'nesta.core-intermediate',
+                   'bucket': 'nesta-production-intermediate',
                    'done': "False",
                    'outinfo': ('https://search-arxlive-'
                                't2brq66muzxag44zwmrcfrlmq4.'

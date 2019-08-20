@@ -133,7 +133,7 @@ if __name__ == '__main__':
                              "duplicate_mapping.json"),
                 "db":"dev",
                 "config":(f"{os.environ['HOME']}"
-                          "/nesta/nesta.core"
+                          "/nesta/nesta/core"
                           "/config/mysqldb.config"),
                 "s3_bucket":"innovation-mapping-general",
                 "entity_type":"paper"}

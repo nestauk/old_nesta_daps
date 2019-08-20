@@ -19,7 +19,7 @@ from crunchbase_org_collect_task import OrgCollectTask
 
 
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
@@ -81,7 +81,7 @@ class NonOrgCollectTask(autobatch.AutoBatchTask):
                       "config": "mysqldb.config",
                       "db_name": db_name,
                       "batch_size": self.insert_batch_size,
-                      "outinfo": f"s3://nesta.core-intermediate/{key}",
+                      "outinfo": f"s3://nesta-production-intermediate/{key}",
                       "test": self.test,
                       "done": done}
             job_params.append(params)

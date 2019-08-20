@@ -11,7 +11,7 @@ from nesta.core.batchables.meetup import groups_members
 environ = {"BATCHPAR_group_urlname":"uvs-algiers",
            "BATCHPAR_group_id":"19811679",
            "BATCHPAR_cat":"34",
-           "BATCHPAR_outinfo":("s3://nesta.core-intermediate/DUMMY"),
+           "BATCHPAR_outinfo":("s3://nesta-production-intermediate/DUMMY"),
            "BATCHPAR_db":"production_tests",
            "BATCHPAR_config": os.environ["MYSQLDBCONF"],
            "MEETUP_API_KEYS": os.environ["MEETUP_API_KEYS"]}

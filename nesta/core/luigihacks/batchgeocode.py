@@ -40,7 +40,7 @@ class GeocodeBatchTask(AutoBatchTask):
     country_is_iso2 = luigi.BoolParameter(default=False)
     location_key_col = luigi.Parameter(default=None)
     batch_size = luigi.IntParameter(default=1000)
-    intermediate_bucket = luigi.Parameter(default="nesta.core-intermediate")
+    intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
     batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))
     test_limit = luigi.IntParameter(default=100)
 

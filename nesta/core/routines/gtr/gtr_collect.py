@@ -22,7 +22,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 # Define these globally since they are shared resources
 # TODO: consider bundling this into a Singleton
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
@@ -48,7 +48,7 @@ class GtrTask(autobatch.AutoBatchTask):
         for page in range(1, total_pages+1):
             # Check whether the job has been done already
             s3_key = f"{self.job_name}-{page}"
-            s3_path = "s3://nesta.core-intermediate/%s" % s3_key
+            s3_path = "s3://nesta-production-intermediate/%s" % s3_key
             done = s3_key in DONE_KEYS
             # Fill in the params
             params = {"PAGESIZE":self.page_size,

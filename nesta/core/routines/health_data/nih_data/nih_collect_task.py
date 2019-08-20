@@ -22,7 +22,7 @@ import boto3
 import re
 
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 def exists(_class, **kwargs):
@@ -66,7 +66,7 @@ class CollectTask(autobatch.AutoBatchTask):
                           "url": url,
                           "config": "mysqldb.config",
                           "db_name": "production" if not self.test else "dev",
-                          "outinfo": "s3://nesta.core-intermediate/%s" % url,
+                          "outinfo": "s3://nesta-production-intermediate/%s" % url,
                           "done": done,
                           "entity_type": 'paper'}
                 job_params.append(params)

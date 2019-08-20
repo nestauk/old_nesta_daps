@@ -19,7 +19,7 @@ from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, db_se
 TEST_BATCHES = 2
 # bucket to store done keys from each batch task
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 

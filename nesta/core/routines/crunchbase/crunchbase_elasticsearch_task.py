@@ -25,7 +25,7 @@ from nesta.core.orms.orm_utils import setup_es
 
 
 S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta.core-intermediate")
+_BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 class CrunchbaseSql2EsTask(autobatch.AutoBatchTask):
