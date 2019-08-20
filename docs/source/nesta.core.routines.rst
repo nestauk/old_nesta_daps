@@ -1,4 +1,4 @@
-.. include:: ../../nesta/core.routines/README.rst
+.. include:: ../../nesta/core/routines/README.rst
 
 .. automodule:: core.routines
     :members:

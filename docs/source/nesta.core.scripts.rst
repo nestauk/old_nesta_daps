@@ -1,1 +1,4 @@
-.. include:: ../../nesta/core.scripts/README.rst
+Scripts
+=======
+
+.. include:: ../../nesta/core/scripts/README.rst
