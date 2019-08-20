@@ -1,35 +1,31 @@
 from nesta.core.luigihacks.estask import LazyElasticsearchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import luigi
-from datetime import datetime as dt
 import logging
+from datetime import datetime as dt
 
-class NiHLolveltyRootTask(luigi.WrapperTask):
+class ArxivLolveltyRootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
-    index = luigi.Parameter(default=None)
     date = luigi.DateParameter(default=dt.now())
     def requires(self):
         logging.getLogger().setLevel(logging.INFO)
-        kwargs = {'score_field': '_rank_rhodonite_abstract',
-                  'fields': ['title_of_project', 'title_of_organisation',
-                             'terms_descriptive_project']}
-        if self.production:
-            kwargs = {'score_field': 'rank_rhodonite_abstract',
-                      'fields': ['textBody_abstract_project']}
+        kwargs = {'score_field': 'metric_novelty_article',
+                  'fields': ['textBody_abstract_article']}
         test = not self.production
-        routine_id = f"NiHLolveltyTask-{self.date}-{test}"
-        index = self.index if self.production else 'nih_dev0'
-        assert index is not None
+        routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
+        index = 'arxiv_v0' if self.production else 'arxiv_dev'
         return LazyElasticsearchTask(routine_id=routine_id,
                                      test=test,
                                      index=index,
-                                     dataset='nih',
-                                     entity_type='paper',
+                                     dataset='arxiv',
+                                     entity_type='article',
                                      kwargs=kwargs,
-                                     batchable=f3p("batchables/novelty/lolvelty"),
+                                     batchable=f3p("batchables/novelty"
+                                                   "/lolvelty"),
                                      env_files=[f3p("nesta/"),
                                                 f3p("config/mysqldb.config"),
-                                                f3p("config/elasticsearch.config")],
+                                                f3p("config/"
+                                                    "elasticsearch.config")],
                                      job_def="py36_amzn1_image",
                                      job_name=routine_id,
                                      job_queue="HighPriority",

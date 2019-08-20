@@ -24,7 +24,9 @@ def run():
     # Extract all document ids in this chunk
     s3 = boto3.resource('s3')
     ids_obj = s3.Object(s3_bucket, batch_file)
+    logging.info(f'Getting document ids...')
     all_doc_ids = json.loads(ids_obj.get()['Body']._raw_stream.read())
+    logging.info(f'Got {len(all_doc_ids)} document ids')
     
     # Set up Elasticsearch
     es = ElasticsearchPlus(hosts=es_host,
@@ -45,9 +47,9 @@ def run():
             score = lolvelty(es, es_index, doc_id,
                              fields, total=count,
                              minimum_should_match=min_match)
-
         # Merge existing info into new doc
-        doc = {score_field: score, **existing}
+        doc = {**existing}
+        doc[score_field] = score
         es.index(index=es_index, doc_type=es_type,
                  id=doc_id, body=doc)
 
@@ -61,26 +63,29 @@ if __name__ == "__main__":
 )
         logging.getLogger('urllib3').setLevel(logging.CRITICAL)
         log_level = logging.INFO
-        pars = {'batch_file': (''
-                               ''),
+        pars = {'batch_file': ('ArxivLolveltyTask-2019-08-19'
+                               '-True-15662373053397586.json'),
                 'config': 'mysqldb.config',
                 'bucket': 'nesta-production-intermediate',
                 'done': 'False',
-                'outinfo': ('https://search-health-scanner-'
-                            '5cs7g52446h7qscocqmiky5dn4.'
+                'outinfo': ('https://search-arxlive'
+                            '-t2brq66muzxag44zwmrcfrlmq4.'
                             'eu-west-2.es.amazonaws.com'),
-                'count': '892593',
+                'count': '6000',
                 'out_port': '443',
-                'fields': "['textBody_abstract_project']",
-                'score_field': "rank_rhodonite_abstract",
-                'index': 'nih_v5',
+                'fields': "('textBody_abstract_article',)",
+                'score_field': "metric_novelty_article",
+                'index': 'arxiv_dev',
                 'out_type': '_doc',
                 'aws_auth_region': 'eu-west-2',
-                'entity_type': 'paper',
-                'test': 'False',
+                'entity_type': 'article',
+                'test': 'True',
                 'routine_id': 'DUMMYTEST'}
         for k, v in pars.items():
             os.environ[f'BATCHPAR_{k}'] = v
 
     log_stream_handler = logging.StreamHandler()
+    logging.basicConfig(handlers=[log_stream_handler, ],
+                        level=logging.INFO,
+                        format="%(asctime)s:%(levelname)s:%(message)s")    
     run()

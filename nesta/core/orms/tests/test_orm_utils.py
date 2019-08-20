@@ -120,7 +120,7 @@ class TestOrmUtils(unittest.TestCase):
 
 def test_load_json_from_pathstub():
     for ds in ["nih", "crunchbase"]:
-        js = load_json_from_pathstub("production/orms/",
+        js = load_json_from_pathstub("core/orms/",
                                      f"{ds}_es_config.json")
         assert len(js) > 0
 
