@@ -17,7 +17,7 @@ def get_config(file_name, header):
     Returns:
         :obj:`dict`
     '''
-    conf_dir_path = find_filepath_from_pathstub("production/config/")
+    conf_dir_path = find_filepath_from_pathstub("core/config/")
     conf_path = os.path.join(conf_dir_path, file_name)
     config = configparser.ConfigParser()
     config.read(conf_path)

@@ -50,7 +50,7 @@ class ProcessTask(autobatch.AutoBatchTask):
                           db_config_path=self.db_config_path,
                           batchable=f3p("batchables/health_data/nih_collect_data"),
                           env_files=[f3p("nesta/"),
-                                     f3p("/production/config/mysqldb.config")],
+                                     f3p("/core/config/mysqldb.config")],
                           job_def=self.job_def,
                           job_name="CollectTask-%s" % self._routine_id,
                           job_queue=self.job_queue,

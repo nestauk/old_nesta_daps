@@ -174,7 +174,7 @@ if __name__ == "__main__":
         environ = {'batch_file': ('2019-07-26-False-'
                                   '15641348619563951.json'),
                    'config': ('/home/ec2-user/nesta/nesta/'
-                              'production/config/mysqldb.config'),
+                              'core/config/mysqldb.config'),
                    'db_name': 'dev',
                    'bucket': 'nesta-production-intermediate',
                    'done': "False",

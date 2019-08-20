@@ -162,7 +162,7 @@ if __name__ == "__main__":
         environ = {"AWSBATCHTEST": "",
                    'BATCHPAR_batch_file': 'crunchbase_to_es-15597291977144725.json', 
                    'BATCHPAR_config': ('/home/ec2-user/nesta/nesta/'
-                                       'production/config/mysqldb.config'),
+                                       'core/config/mysqldb.config'),
                    'BATCHPAR_db_name': 'production', 
                    'BATCHPAR_bucket': 'nesta-production-intermediate', 
                    'BATCHPAR_done': "False", 

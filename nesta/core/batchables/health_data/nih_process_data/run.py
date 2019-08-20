@@ -137,7 +137,7 @@ if __name__ == '__main__':
                 'end_index': '2003940',
                 'db': 'dev',
                 'config': (f'{os.environ["HOME"]}/nesta/nesta/'
-                           'production/config/mysqldb.config'),
+                           'core/config/mysqldb.config'),
                 'done': 'False',
                 'outinfo': ('https://search-health-scanner-'
                             '5cs7g52446h7qscocqmiky5dn4.'
