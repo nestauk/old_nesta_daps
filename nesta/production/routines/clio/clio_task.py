@@ -4,17 +4,19 @@ Clio Task
 
 Process/enrich data to be searchable with topics.
 '''
-
-import luigi
 from nesta.production.luigihacks import s3
 from nesta.production.luigihacks import luigi_logging
 from nesta.production.luigihacks.automl import AutoMLTask
 from nesta.production.luigihacks.misctools import get_config
-import os
-import json
+from nesta.production.luigihacks.mysqldb import MySqlTarget
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.production.luigihacks.s3task import S3Task
+
+import luigi
+import os
+import json
 from datetime import datetime
+import logging
 
 S3INTER = "s3://clio-data/{dataset}/{date}/"
 S3PREFIX = ("s3://clio-data/{dataset}/"
@@ -85,6 +87,7 @@ class ClioTask(luigi.Task):
 
     def requires(self):
         """Yield AutoML"""
+        logging.getLogger().setLevel(logging.INFO)
         test = not self.production
         luigi_logging.set_log_level(test, self.verbose)
         return AutoMLTask(s3_path_prefix=S3INTER.format(dataset=self.dataset, date=self.date),
@@ -93,6 +96,14 @@ class ClioTask(luigi.Task):
                           input_task_kwargs={'s3_path':self.s3_path_in},
                           final_task='corex_topic_model',
                           test=test)
+
+    def output(self):
+        '''Points to the output database engine'''
+        db_config = get_config('mysqldb.config', "mysqldb")
+        db_config["database"] = "production" if self.production else "dev"
+        db_config["table"] = f"Clio{self.dataset} <dummy>"  # Note, not a real table
+        update_id = f"Clio{self.dataset}_{self.date}"
+        return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
         """Write data to ElasticSearch if required"""
@@ -107,32 +118,45 @@ class ClioTask(luigi.Task):
         file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
         topic_json = json.load(file_io_topics)
         file_io_topics.close()
-        
+        topic_lookup = topic_json['data']['topic_names']
+        topic_json = {row['id']: row for row in topic_json['data']['rows']}
+
         # Read the raw data
         file_io_input = s3.S3Target(self.s3_path_in).open("rb")
         dirty_json = json.load(file_io_input)
         file_io_input.close()
-
-        uid, cleaned_json, fields = clean(dirty_json, self.dataset)
+        uid, cleaned_json, fields = clean(dirty_json, self.dataset)        
 
         # Assign topics
-        assert len(cleaned_json) == len(topic_json)
-        for row, topic_data in zip(cleaned_json, 
-                                   topic_json['data']['rows']):
-            topics = [k for k, v in topic_data.items()
+        n_topics, n_found = 0, 0
+        for row in cleaned_json:
+            id_ = row[f'id_of_{self.dataset}']
+            if id_ not in topic_json:
+                continue
+            topics = [k for k, v in topic_json[id_].items()
                       if k != 'id' and v >= 0.2]
-            row[f"terms_of_{self.dataset}"] = topics
-        fields.add(f"terms_of_{self.dataset}")
+            n_found += 1
+            if len(topics) > 0:
+                n_topics += 1
+            row[f"terms_topics_{self.dataset}"] = topics
+        logging.info(f'{n_found} documents processed from a possible '
+                     f'{len(cleaned_json)}, of which '
+                     f'{n_topics} have been assigned topics.')
+        fields.add(f"terms_topics_{self.dataset}")
+        fields.add("terms_of_countryTags")
+        fields.add("type_of_entity")
 
         # Prepare connection to ES
         prod_label = '' if self.production else '_dev'
-        es_config = get_config('elasticsearch.config', 'clio')
+        es_config = get_config('elasticsearch.config', 'clio')        
         es_config['index'] = f"clio_{self.dataset}{prod_label}"
-        es = ElasticsearchPlus(entity_type=self.dataset,
+        es = ElasticsearchPlus(hosts=es_config['host'],
+                               port=int(es_config['port']),
+                               use_ssl=True,                               
+                               entity_type=self.dataset,
                                aws_auth_region=es_config.pop('region'),
                                country_detection=True,
-                               caps_to_camel_case=True,
-                               **es_config)
+                               caps_to_camel_case=True)                               
 
         # Dynamically generate the mapping based on a template
         with open("clio_mapping.json") as f:
@@ -147,20 +171,27 @@ class ClioTask(luigi.Task):
             elif not f.startswith("textBody"):
                 _type = "keyword"
             mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type,
-                                                                **kwargs)
+                                                                **kwargs)        
 
         # Drop, create and send data
-        es.indices.delete(index=es_config['index'])
+        if es.indices.exists(index=es_config['index']):
+            es.indices.delete(index=es_config['index'])
         es.indices.create(index=es_config['index'], body=mapping)
         for id_, row in zip(uid, cleaned_json):
             es.index(index=es_config['index'], doc_type=es_config['type'],
                      id=id_, body=row)
 
-
         # Drop, create and send data
+        es = ElasticsearchPlus(hosts=es_config['host'],
+                               port=int(es_config['port']),
+                               use_ssl=True,                               
+                               entity_type='topics',
+                               aws_auth_region=es_config.pop('region'),
+                               country_detection=False,
+                               caps_to_camel_case=False)                               
         topic_idx = f"{es_config['index']}_topics"
-        es.indices.delete(index=topic_idx)
+        if es.indices.exists(index=topic_idx):
+            es.indices.delete(index=topic_idx)
         es.indices.create(index=topic_idx)
-        # for id_, row in zip(uid, cleaned_json):
-        #     es.index(index=es_config['index'], doc_type=es_config['type'],
-        #              id=id_, body=row)
+        es.index(index=topic_idx, doc_type=es_config['type'],
+                 id='topics', body=topic_lookup)
