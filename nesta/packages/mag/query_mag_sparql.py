@@ -5,7 +5,7 @@ import re
 
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.mag_orm import FieldOfStudy
 
 
@@ -223,13 +223,13 @@ def query_fields_of_study_sparql(ids=None, results_limit=None):
             break
 
 
-def update_field_of_study_ids_sparql(session, fos_ids):
+def update_field_of_study_ids_sparql(engine, fos_ids):
     """Queries MAG via the sparql api for fields of study and if found, adds them to the
-    database with the supplied session. Only ids of missing fields of study should be
-    supplied, no check is done here to determine if it already exists.
+    database. Only ids of missing fields of study should be supplied, no check is done
+    here to determine if it already exists.
 
     Args:
-        session (:obj:`sqlalchemy.orm.session`): current session
+        engine (:obj:`sqlalchemy.engine`): database connection
         fos_ids (list): ids to search and update
 
     Returns:
@@ -243,8 +243,9 @@ def update_field_of_study_ids_sparql(session, fos_ids):
     fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
     if fos_not_found:
         logging.warning(f"Fields of study present in articles but could not be found in MAG Fields of Study database: {fos_not_found}")
-    session.add_all(new_fos_to_import)
-    session.commit()
+    with db_session(engine) as session:
+        session.add_all(new_fos_to_import)
+        session.commit()
     logging.info("Added new fields of study to database")
     return fos_not_found
 
