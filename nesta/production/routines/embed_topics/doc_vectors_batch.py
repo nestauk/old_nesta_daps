@@ -1,30 +1,30 @@
 '''
-Batch Example
+Raw text to document vectors
 =============
 
-An example of building a pipeline with batched tasks.
+Luigi batch to load the transform raw text to vectors using the Universal Sentence Encoder model from TensorHub.
+
+The output vectors are stored in S3.
 '''
 
-from nesta.production.luigihacks import autobatch, misctools
-# from nesta.production.luigihacks import s3
-import luigi
-import datetime
-# import json
-import logging
-# import time
+
 import os
-from nesta.production.luigihacks.mysqldb import MySqlTarget
+import datetime
+import logging
+
+
+import luigi
 import boto3
 import numpy as np
-# from sqlalchemy.orm import sessionmaker
-from nesta.production.orms.orm_utils import get_mysql_engine, db_session
-from nesta.production.orms.gtr_orm import Projects
 from sqlalchemy.sql.expression import func
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
-from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
-# from nesta.packages.nlp_utils.text2vec import filter_documents
 
-# S3PREFIX = "s3://clio-text2vec/"
+from nesta.production.orms.gtr_orm import Projects
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks import autobatch, misctools
+from nesta.production.orms.orm_utils import get_mysql_engine, db_session
+from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
+from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
+
 # bucket to store done keys from each batch task
 S3 = boto3.resource('s3')
 _BUCKET = S3.Bucket("nesta-production-intermediate")
@@ -71,7 +71,7 @@ class TextVectors(autobatch.AutoBatchTask):
                        .distinct(Projects.abstractText)
                        .all())
 
-        # 10th percentile
+        # Keep documents with a length larger than the 10th percentile.
         perc = np.percentile([r[1] for r in results], 10)
         all_ids = [r.id for r in results if r[1] >= perc]
 

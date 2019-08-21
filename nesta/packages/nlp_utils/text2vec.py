@@ -9,26 +9,6 @@ import tensorflow_hub as hub
 np.random.seed(42)
 
 
-def filter_documents(data, text_column='abstractText'):
-    """Filter empty values and short documents from a DataFrame.
-
-    Args:
-        data (:obj:`pandas.DataFrame`): Pandas DataFrame with a text field.
-        text_column (:obj:`str`): Column name with the text data to use.
-
-    Returns:
-        (:obj:`list` of :obj:`str`): List of documents.
-
-    """
-    # data['text_len'] = data[text_column].apply(lambda x: len(x) if isinstance(x, str) else np.nan)
-    # data.dropna(subset=['text_len'], inplace=True)
-    # data.drop_duplicates(text_column, inplace=True)
-    # Remove documents with a number of characters up to the 20th percentile of their distribution.
-    short_docs_len = np.percentile(data.text_len, 10)
-    # print(short_docs_len, data[data['text_len'] >= short_docs_len][['id', text_column]].shape)
-    return data[data['text_len'] >= short_docs_len][['id', text_column]]
-
-
 def process_to_IDs_in_sparse_format(sp, documents):
     """Process documents with the SentencePiece processor. The results have a format
     similar to tf.SparseTensor (values, indices, dense_shape)."""
