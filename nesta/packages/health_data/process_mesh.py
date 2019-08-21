@@ -19,9 +19,10 @@ def retrieve_mesh_terms(bucket, key):
     """
     target = f"s3://{bucket}/{key}"
     logging.info(f"Retrieving mesh terms from S3: {target}")
-
     return pd.read_csv(target, sep='|', header=None,
-                       names=['doc_id', 'term', 'term_id', 'cui', 'score', 'indices'])
+                       names=['doc_id', 'term', 'term_id', 
+                              'cui', 'score', 'indices'],
+                       low_memory=False)
 
 
 def format_mesh_terms(df):

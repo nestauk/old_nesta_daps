@@ -172,6 +172,9 @@ def arxiv_batch(resumption_token=None, **kwargs):
     records = root.find(OAI+'ListRecords')
     output = []
 
+    if records is None:
+        raise ValueError('No new records to collect from arXiv')
+
     for record in records.findall(OAI+"record"):
         header = record.find(OAI+'header')
         header_id = header.find(OAI+'identifier').text
@@ -258,7 +261,13 @@ def retrieve_all_arxiv_rows(**kwargs):
     """
     resumption_token = None
     while True:
-        batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        try:
+            batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        except ValueError as e:
+            logging.info(e)
+            # no records to collect
+            break
+
         for row in batch:
             yield row
         if resumption_token is None:
@@ -348,15 +357,17 @@ def add_new_articles(article_batch, session):
     session.commit()
 
 
-def update_existing_articles(article_batch, session):
+def update_existing_articles(article_batch, engine):
     """Updates existing articles from a list of dictionaries. Bulk method is used for
     non relationship fields, with the relationship fields updated using the core orm
     method.
 
     Args:
         article_batch (:obj:`list` of `dict`): articles to add to database
-        session (:obj:`sqlalchemy.orm.session`): active session to use
+        engine (:obj:`sqlalchemy.engine`): connection engine to use
     """
+    Session = sessionmaker(engine)
+    session = Session()
     logging.info(f"Updating a batch of {len(article_batch)} existing articles")
 
     # look for any institutes in provided article_batch
@@ -373,6 +384,12 @@ def update_existing_articles(article_batch, session):
     article_fields_of_study = [dict(article_id=article['id'], fos_id=fos_id)
                                for article in article_batch
                                for fos_id in article.pop('fields_of_study', [])]
+
+    # if not using this function to update match attempted flags, reset the flag to
+    # False so another attempt to match is made using this updated data
+    for row in article_batch:
+        if 'institute_match_attempted' not in row.keys():
+            row.update({'institute_match_attempted': False})
 
     # update unlinked article data in bulk
     logging.debug("bulk update mapping on articles")
@@ -401,6 +418,7 @@ def update_existing_articles(article_batch, session):
                         article_fields_of_study)
 
     session.commit()
+    session.close()
 
 
 def add_article_institutes(article_institutes, engine):
@@ -411,20 +429,20 @@ def add_article_institutes(article_institutes, engine):
                    article_institutes)
 
 
-def create_article_institute_links(article, institute_ids, score):
+def create_article_institute_links(article_id, institute_ids, score):
     """Creates data for the article/institutes association table.
     There will be multiple links if the institute is multinational, one for each country
     entity.
 
     Args:
-        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        article_id (str): arxiv id of the article
         institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
         score (numpy.float64): score for the match
 
     Returns:
         (:obj:`list` of :obj:`dict`): article institute links ready to load to database
     """
-    return [{'article_id': article.id,
+    return [{'article_id': article_id,
              'institute_id': institute_id,
              'is_multinational': len(institute_ids) > 1,
              'matching_score': float(score)}

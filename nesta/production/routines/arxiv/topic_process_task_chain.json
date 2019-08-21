@@ -1,36 +1,39 @@
 [
     {
-	"job_name": "ngram",
-	"batchable": "batchables/nlp/ngrammer",
-	"env_files": ["/nesta","/config/mysqldb.config"],
-	"job_def": "py36_sklearn_amzn1_image",
-	"job_queue": "HighPriority",
-	"region_name": "eu-west-2",
-	"poll_time": 20,
-	"memory": 4000,
-	"use_intermediate_inputs": true
+        "batchable": "batchables/nlp/ngrammer",
+        "env_files": [
+            "/nesta",
+            "/config/mysqldb.config"
+        ],
+        "job_def": "py36_sklearn_amzn1_image",
+        "job_name": "ngram",
+        "job_queue": "HighPriority",
+        "memory": 4000,
+        "poll_time": 20,
+        "region_name": "eu-west-2",
+        "use_intermediate_inputs": true
     },
     {
-	"job_name": "vectorizer", 
-	"batchable": "batchables/nlp/vectorizer",
-	"timeout": 72000,
-	"memory": 16000,
+        "batchable": "batchables/nlp/vectorizer",
         "hyperparameters": {
             "binary": true,
-	    "min_df": 0.001
+            "min_df": 0.001
         },
-	"use_intermediate_inputs": false,
-	"n_batches": 1
-    },    
+        "job_name": "vectorizer",
+        "memory": 16000,
+        "n_batches": 1,
+        "timeout": 72000,
+        "use_intermediate_inputs": false
+    },
     {
-	"job_name": "corex_topic_model", 
-	"batchable": "batchables/nlp/corex_topic_model",
-	"memory": 16000,
-	"job_def": "py36_sklearn_amzn1_image",
+        "batchable": "batchables/nlp/corex_topic_model",
         "hyperparameters": {
             "n_hidden": "np.arange(20, 51, 1)"
-	},
-	"use_intermediate_inputs": false,
-	"n_batches": 1
+        },
+        "job_def": "py36_sklearn_amzn1_image",
+        "job_name": "corex_topic_model",
+        "memory": 16000,
+        "n_batches": 1,
+        "use_intermediate_inputs": false
     }
 ]

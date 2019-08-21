@@ -10,8 +10,10 @@ from sqlalchemy.sql.expression import and_
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import scan
 from datetime import datetime
 
+import re
 import pymysql
 import os
 import json
@@ -19,6 +21,14 @@ import logging
 import time
 
 def object_to_dict(obj, found=None):
+    """Converts a nested SqlAlchemy object to a fully
+    unpacked json object.
+    
+    Args:
+        obj: A SqlAlchemy object (i.e. single 'row' of data)
+    Returns:
+        _obj (dict): An unpacked json-like dict object.
+    """
     if found is None:
         found = set()
     mapper = class_mapper(obj.__class__)
@@ -61,7 +71,8 @@ def assert_correct_config(test, config, key):
                          "must end with '_dev'")
 
 
-def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
+def setup_es(es_mode, test_mode, drop_and_recreate,
+             dataset, aliases=None, increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
@@ -71,6 +82,7 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
         drop_and_recreate (bool): Drop and recreate ES index?
         dataset (str): Name of the dataset for the ES mapping.
         aliases (str): Name of the aliases for the ES mapping.
+        increment_version (bool): Move one version up?
     Returns:
         {es, es_config}: Elasticsearch connection and config dict.
     """
@@ -82,20 +94,55 @@ def setup_es(es_mode, test_mode, drop_and_recreate, dataset, aliases=None):
     key = f"{dataset}_{es_mode}"
     es_config = get_config('elasticsearch.config', key)
     assert_correct_config(test_mode, es_config, key)
+
+    # If required, create new index from the old one
+    if increment_version:
+        old_index = es_config['index']
+        if es_mode == 'prod':
+            tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
+            new_index = f'{tag}{int(version)+1}'
+        else:
+            tag = old_index
+            new_index = f'{old_index}0'
+        es_config['index'] = new_index
+        es_config['old_index'] = old_index
+        if any((new_index == old_index,
+                not old_index.startswith(tag),
+                not new_index.startswith(tag),
+                len(new_index) - len(old_index) > 1)):
+            raise ValueError('Could not create a new valid '
+                             f'index from {old_index}. Tried, '
+                             f'but got {new_index}.')
+
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True)
     # Drop the index if required (must be in test mode to do this)
     _index = es_config['index']
-    if drop_and_recreate and test_mode:
-        es.indices.delete(index=_index)
-    # Create the index if required
     exists = es.indices.exists(index=_index)
+    if drop_and_recreate and test_mode and exists:
+        es.indices.delete(index=_index)
+        exists = False
+    # Create the index if required
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
         es.indices.create(index=_index, body=mapping)
     return es, es_config
 
+def get_es_ids(es, es_config, size=1000):
+    '''Get all existing ES document ids for a given config
+    
+    Args:
+        es: Elasticsearch connection.
+        es_config (dict): Elasticsearch configuration.
+    Returns:
+        existing_ids (set): All existing ids
+    '''
+    scanner = scan(es, query={"_source": False},
+                   index=es_config['index'],
+                   doc_type=es_config['type'],
+                   size=size)
+    return {s['_id'] for s in scanner}
 
 def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
     """Basic wrapper around :obj:`find_filepath_from_pathstub`

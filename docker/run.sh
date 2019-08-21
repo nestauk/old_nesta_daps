@@ -3,4 +3,4 @@
 # luigid &
 
 # pass any arguments straight on to luigi
-luigi --local-scheduler "$@"
+luigi --logging-conf-file /app/docker/luigi_logging_docker.cfg --local-scheduler "$@"
