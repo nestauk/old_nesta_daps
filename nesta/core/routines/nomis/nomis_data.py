@@ -33,6 +33,8 @@ class NomisTask(luigi.Task):
         config, geogs_list, dataset_id, date_format = process_config(self.config_name,
                                                                      test=not self.production)
         for igeo, geographies in enumerate(geogs_list):
+            if igeo == 0:
+                continue
             logging.debug(f"Geography number {igeo}")
             done = False
             record_offset = 0
@@ -44,6 +46,7 @@ class NomisTask(luigi.Task):
                 data = {self.config_name: df}
                 tables = reformat_nomis_columns(data)
                 for name, table in tables.items():
+                    name = name.split('-sic')[0]  # If sic codes are used in the name
                     logging.debug(f"\t\tInserting {len(table)} into nomis_{name}...")
                     _class = get_class_by_tablename(Base, f"nomis_{name}")
                     objs = insert_data(MYSQLDB_ENV, "mysqldb",
@@ -69,8 +72,9 @@ class RootTask(luigi.WrapperTask):
         
         #configs = ["claimantcount", "median_wages",
         #           "population_estimate", "employment", 
-        #           "workforce_jobs", "businesscount"]
-        configs = ["businesscount"]
+        #           "workforce_jobs", "businesscount-sic23",
+        #           "businesscount-sic4a", "businesscount-sic4b"]
+        configs = ["businesscount-sic4a", "businesscount-sic4b"]
 
         #if not self.production:
         #    configs = ["employment"]

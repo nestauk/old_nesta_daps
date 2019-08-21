@@ -23,7 +23,7 @@ class NomisGeographyLookup(Base):
 class NomisIndustryLookup(Base):
     __tablename__ = 'nomis_industry_lookup'
 
-    code = Column(VARCHAR(3), primary_key=True)
+    code = Column(VARCHAR(4), primary_key=True)
     name = Column(TEXT)
 
 
@@ -40,7 +40,7 @@ class NomisBusinessCount(Base):
     date = Column(DATETIME, primary_key=True, index=True)
     employment_sizeband_code = Column(INT, primary_key=True, index=True, autoincrement=False)
     geography_code = Column(VARCHAR(9), primary_key=True, index=True)
-    industry_code = Column(VARCHAR(3), primary_key=True, index=True)
+    industry_code = Column(VARCHAR(4), primary_key=True, index=True)
     obs_value = Column(FLOAT)
 
 

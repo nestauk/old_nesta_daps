@@ -126,12 +126,10 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
     # Create the index if required
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
-        print(mapping)
-        assert False
         es.indices.create(index=_index, body=mapping)
     return es, es_config
 
-def get_es_ids(es, es_config, size=1000):
+def get_es_ids(es, es_config, size=1000, query={}):
     '''Get all existing ES document ids for a given config
     
     Args:
@@ -140,7 +138,8 @@ def get_es_ids(es, es_config, size=1000):
     Returns:
         existing_ids (set): All existing ids
     '''
-    scanner = scan(es, query={"_source": False},
+    query["_source"] = False
+    scanner = scan(es, query=query,
                    index=es_config['index'],
                    doc_type=es_config['type'],
                    size=size)
