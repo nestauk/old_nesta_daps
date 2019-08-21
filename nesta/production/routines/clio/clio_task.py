@@ -14,10 +14,11 @@ import os
 import json
 from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.production.luigihacks.s3task import S3Task
+from datetime import datetime
 
-
-S3INTER = ("s3://clio-data/{dataset}/")
-S3PREFIX = S3INTER+"{phase}/{dataset}_{phase}.json"
+S3INTER = "s3://clio-data/{dataset}/{date}/"
+S3PREFIX = ("s3://clio-data/{dataset}/"
+            "{phase}/{dataset}_{phase}.json")
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,
@@ -72,6 +73,7 @@ class ClioTask(luigi.Task):
          write_es (bool): Whether or not to write data to ES (AutoML will still be run.)
     """
     dataset = luigi.Parameter()
+    date = luigi.DateParameter(default=datetime.today())
     production = luigi.BoolParameter(default=False)
     verbose = luigi.BoolParameter(default=False)
     write_es = luigi.BoolParameter(default=False)
@@ -85,37 +87,40 @@ class ClioTask(luigi.Task):
         """Yield AutoML"""
         test = not self.production
         luigi_logging.set_log_level(test, self.verbose)
-        yield AutoMLTask(s3_path_prefix=S3INTER.format(dataset=self.dataset),
-                         task_chain_filepath=CHAIN_PARAMETER_PATH,
-                         input_task=S3Task,
-                         input_task_kwargs={'s3_path':self.s3_path_in},
-                         test=test)
+        return AutoMLTask(s3_path_prefix=S3INTER.format(dataset=self.dataset, date=self.date),
+                          task_chain_filepath=CHAIN_PARAMETER_PATH,
+                          input_task=S3Task,
+                          input_task_kwargs={'s3_path':self.s3_path_in},
+                          final_task='corex_topic_model',
+                          test=test)
 
     def run(self):
         """Write data to ElasticSearch if required"""
         if not self.write_es:
             return
 
-        # Unused for the moment
-        file_ios = {child: s3.S3Target(params["s3_path_out"])
-                    for child, params in AutoMLTask.task_parameters.items()}
+        # Read the topics data
+        file_ptr = self.input().open("rb")
+        path = file_ptr.read()
+        file_ptr.close()
 
+        file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
+        topic_json = json.load(file_io_topics)
+        file_io_topics.close()
+        
         # Read the raw data
         file_io_input = s3.S3Target(self.s3_path_in).open("rb")
         dirty_json = json.load(file_io_input)
         file_io_input.close()
 
-        # Read the topics data
-        file_io_topics = file_ios["topic_model"].open("rb")
-        topic_json = json.load(file_io_topics)
-        file_io_topics.close()
-
-        # Clean the field names
         uid, cleaned_json, fields = clean(dirty_json, self.dataset)
 
         # Assign topics
         assert len(cleaned_json) == len(topic_json)
-        for row, topics in zip(cleaned_json, topic_json):
+        for row, topic_data in zip(cleaned_json, 
+                                   topic_json['data']['rows']):
+            topics = [k for k, v in topic_data.items()
+                      if k != 'id' and v >= 0.2]
             row[f"terms_of_{self.dataset}"] = topics
         fields.add(f"terms_of_{self.dataset}")
 
@@ -136,12 +141,12 @@ class ClioTask(luigi.Task):
             kwargs = {}
             _type = "text"
             if f.startswith("terms"):
-                kwargs = {"fields": {"keyword": 
+                kwargs = {"fields": {"keyword":
                                      {"type": "keyword"}},
                           "analyzer": "terms_analyzer"}
             elif not f.startswith("textBody"):
                 _type = "keyword"
-            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type, 
+            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type,
                                                                 **kwargs)
 
         # Drop, create and send data
@@ -150,3 +155,12 @@ class ClioTask(luigi.Task):
         for id_, row in zip(uid, cleaned_json):
             es.index(index=es_config['index'], doc_type=es_config['type'],
                      id=id_, body=row)
+
+
+        # Drop, create and send data
+        topic_idx = f"{es_config['index']}_topics"
+        es.indices.delete(index=topic_idx)
+        es.indices.create(index=topic_idx)
+        # for id_, row in zip(uid, cleaned_json):
+        #     es.index(index=es_config['index'], doc_type=es_config['type'],
+        #              id=id_, body=row)

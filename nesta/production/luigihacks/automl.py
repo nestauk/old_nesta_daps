@@ -149,7 +149,6 @@ def ordered_groupby(collection, column):
                     if row[column] == group]
             for group in group_order}
 
-
 def cascade_child_params(chain_params):
     """Find upstream child parameters and cascade these
     to the parent.
@@ -229,14 +228,14 @@ def subsample(rows):
 def bucket_filter(s3_path_prefix, uids):
     """
     Get all json objects in the bucket starting with a valid UID.
-    
+
     Args:
         uids (list): List of UIDs which the s3 keys must start with.
     Yields:
         key, json
     """
     bucket_name, _, _ = deep_split(s3_path_prefix)
-    bucket = boto3.resource('s3').Bucket(bucket_name)        
+    bucket = boto3.resource('s3').Bucket(bucket_name)
     for obj in bucket.objects.all():
         key = obj.key.split('/')[-1]
         if not key.endswith('json'):
@@ -469,6 +468,7 @@ class AutoMLTask(luigi.Task):
                                    configuration file.
         test (bool): Whether or not to run batch tasks in test mode.
         autobatch_kwargs (dict): Extra arguments to pass to autobatch.__init__ (Note that MLTask inherits from AutoBatchTask).
+        final_task (str): Name of the task to optimise for.
         maximize_loss (bool): Maximise the loss function?
         gp_optimizer_kwargs (kwargs): kwargs for the GP optimizer.
     """
@@ -478,6 +478,7 @@ class AutoMLTask(luigi.Task):
     task_chain_filepath = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     autobatch_kwargs = DictParameterPlus(default={})
+    final_task = luigi.Parameter(default=None)
     maximize_loss = luigi.BoolParameter(default=False)
     gp_optimizer_kwargs = luigi.DictParameter(default={})
 
@@ -566,8 +567,8 @@ class AutoMLTask(luigi.Task):
             yield _MLTask(**kwargs, **self.autobatch_kwargs)
 
     def output(self):
-        return s3.S3Target(f"{self.s3_path_prefix}.{self.test}.best")
-
+        return s3.S3Target(f"{self.s3_path_prefix}/"
+                           f"test-{self.test}.best")
 
     def extract_losses(self, uids):
         """Extract the loss values from each output json file"""
@@ -575,14 +576,15 @@ class AutoMLTask(luigi.Task):
         loss_sign = 1 - 2*int(self.maximize_loss)
         # Find the losses
         return {key: loss_sign * js['loss']
-                for key, js in 
+                for key, js in
                 bucket_filter(self.s3_path_prefix, uids)}
 
     def run(self):
         # Get the UIDs for the final tasks
-        final_task = list(AutoMLTask.task_parameters.keys())[-1]        
-        uids = [generate_uid(final_task, row)
-                for row in AutoMLTask.task_parameters[final_task]]
+        if self.final_task is None:
+            self.final_task = list(AutoMLTask.task_parameters.keys())[-1]
+        uids = [generate_uid(self.final_task, row)
+                for row in AutoMLTask.task_parameters[self.final_task]]
         losses = self.extract_losses(uids)
         # Least common = minimum loss
         best_key = Counter(losses).most_common()[-1][0]
