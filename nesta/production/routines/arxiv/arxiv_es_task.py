@@ -10,7 +10,7 @@ import luigi
 import datetime
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.production.luigihacks.estask import ElasticsearchTask
-from arxiv_grid_task import GridTask
+from nesta.production.routines.arxiv.arxiv_grid_task import GridTask
 from nesta.production.luigihacks.parameter import DictParameterPlus
 
 

@@ -101,7 +101,7 @@ class QueryMagTask(luigi.Task):
 
             all_articles_to_update = BatchWriter(self.insert_batch_size,
                                                  update_existing_articles,
-                                                 session)
+                                                 self.engine)
 
             batched_titles = BatchedTitles(arxiv_ids_to_process, 10000, session)
             batch_field_of_study_ids = set()

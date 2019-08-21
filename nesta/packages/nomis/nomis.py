@@ -17,7 +17,7 @@ import datetime
 
 NOMIS = "http://www.nomisweb.co.uk/api/v01/dataset/{}"
 NOMIS_DEF = NOMIS.format("{}def.sdmx.json")
-REGEX = re.compile("(\w+)_code$")
+REGEX = re.compile(r"(\w+)_code$")
 
 def get_base(x):
     """Get the NOMIS column name base entity, for columns named '{something}_code'.
