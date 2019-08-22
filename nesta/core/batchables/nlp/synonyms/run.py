@@ -25,11 +25,14 @@ def run():
     #s3_obj_in = s3.Object(*parse_s3_path(s3_path_in))
     #data = json.load(s3_obj_in.get()['Body'])
 
+    # Curate the output
+    output = {'loss': 100,
+              'data': {'rows': ["DUMMY", "JSON"]}}
+
     # Mark the task as done
     if s3_path_out != "":
-        s3 = boto3.resource('s3')
         s3_obj = s3.Object(*parse_s3_path(s3_path_out))
-        s3_obj.put(Body=json.dumps(["DUMMY", "JSON"]))
+        s3_obj.put(Body=json.dumps(output))
 
 
 if __name__ == "__main__":
