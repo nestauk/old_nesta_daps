@@ -11,11 +11,22 @@ from nesta.production.luigihacks.s3 import parse_s3_path
 from ast import literal_eval
 
 def term_counts(dct, row, binary=False):
+    """Convert a single single document to term counts via
+    a gensim dictionary.
+    
+    Args:
+        dct (Dictionary): Gensim dictionary.
+        row (str): A document.
+        binary (bool): Binary rather than total count?
+    Returns:
+        dict of term id (from the Dictionary) to term count.
+    """
     return {dct[idx]: (count if not binary else 1)
             for idx, count in Counter(dct.doc2idx(row)).items()
             if idx != -1}        
 
 def optional(name, default):
+    """Defines optional env fields with default values"""
     var = f'BATCHPAR_{name}'
     try:
         return (default if var not in os.environ 
@@ -63,9 +74,9 @@ def run():
 
 if __name__ == "__main__":
     if "BATCHPAR_outinfo" not in os.environ:
-        #os.environ["BATCHPAR_s3_path_in"] = 's3://nesta-arxlive/automl/2019-07-03/NGRAM.TEST_True-0.json'        
         os.environ["BATCHPAR_text_field"] = 'abstractText'
         os.environ["BATCHPAR_binary"] = 'True'
         os.environ["BATCHPAR_min_df"] = '0.001'
-        os.environ["BATCHPAR_s3_path_in"] = 's3://clio-data/gtr/NGRAM.TEST_True.json'
+        os.environ["BATCHPAR_s3_path_in"] = ('s3://clio-data/gtr/'
+                                             'NGRAM.TEST_True.json')
     run()
