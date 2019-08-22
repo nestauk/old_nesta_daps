@@ -7,9 +7,9 @@ row-by-row, extracted in memory-efficient chunks.
 '''
 
 import os
-from nesta.production.orms.nih_orm import Base
-from nesta.production.orms.nih_orm import Abstracts
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.nih_orm import Base
+from nesta.core.orms.nih_orm import Abstracts
+from nesta.core.orms.orm_utils import get_mysql_engine
 from sqlalchemy.orm import sessionmaker
 
 

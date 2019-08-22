@@ -21,8 +21,8 @@ from nesta.packages.arxiv.collect_arxiv import retrieve_all_arxiv_rows
 from nesta.packages.arxiv.collect_arxiv import extract_last_update_date
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles
 from nesta.packages.arxiv.collect_arxiv import create_article_institute_links
-from nesta.production.orms.arxiv_orm import Article
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.core.orms.arxiv_orm import Article
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 
 ARXIV_ENDPOINT = 'http://export.arxiv.org/oai2'
 _ARXIV_REQUEST = 'nesta.packages.arxiv.collect_arxiv._arxiv_request'
