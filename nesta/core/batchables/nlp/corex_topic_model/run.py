@@ -8,6 +8,8 @@ import os
 import boto3
 from ast import literal_eval
 
+WEIGHT_THRESHOLD = 1e-2
+
 def run():
     s3_path_in = os.environ['BATCHPAR_s3_path_in']
     n_hidden = int(literal_eval(os.environ['BATCHPAR_n_hidden']))
@@ -16,15 +18,13 @@ def run():
     s3 = boto3.resource('s3')
     s3_obj_in = s3.Object(*parse_s3_path(s3_path_in))
     data = json.load(s3_obj_in.get()['Body'])    
-    # df = pd.DataFrame(data).fillna(0)
-    # del data
-    # X = csr_matrix(df.drop('id', axis=1).values)
 
-    ids = []
-    indptr = [0]
-    indices = []
-    counts = []
-    vocab = {}
+    # Pack the data into a sparse matrix
+    ids = []  # Index of each row
+    indptr = [0]  # Number of non-null entries per row
+    indices = []  # Positions of non-null entries per row
+    counts = []  # Term counts/weights per position
+    vocab = {}  # {Term: position} lookup
     for row in data:
         ids.append(row.pop('id'))
         for term, count in row.items():
@@ -33,6 +33,8 @@ def run():
             counts.append(count)
         indptr.append(len(indices))
     X = csr_matrix((counts, indices, indptr), dtype=int)
+
+    # {Position: term} lookup
     _vocab = {v:k for k, v in vocab.items()}
 
     # Fit the model
@@ -41,22 +43,19 @@ def run():
     topics = topic_model.get_topics()
 
     # Generate topic names
-    #topic_names = {f'topic_{itop}': [df.columns[idx]
     topic_names = {f'topic_{itop}': [_vocab[idx]
                                      for idx, weight in topic]
                    for itop, topic in enumerate(topics)}
 
-    # Generate output data rows
-    #rows = [{f'topic_{itop}': sum(row[idx]*weight
+    # Calculate topic weights as sum(bool(term in doc)*{term_weight})
     rows = [{f'topic_{itop}': sum(row.getcol(idx).toarray()[0][0]*weight
                                   for idx, weight in topic)
              for itop, topic in enumerate(topics)}
             for row in X]
-            #for _, row in df.iterrows()]
+    # Zip the row indexes back in, and ignore small weights
     rows = [dict(id=id, **{k: v for k, v in row.items()
-                           if v > 0})
+                           if v > WEIGHT_THRESHOLD})
             for id, row in zip(ids, rows)]
-            #for id, row in zip(df['id'], rows)]
 
     # Curate the output
     output = {'loss': topic_model.tc,
@@ -73,6 +72,5 @@ def run():
 if __name__ == "__main__":
     if "BATCHPAR_outinfo" not in os.environ:
         os.environ["BATCHPAR_s3_path_in"] = 's3://nesta-arxlive/automl/2019-07-04/VECTORIZER.binary_True.min_df_0.001.NGRAM.TEST_True-0_5164.json'
-        #os.environ["BATCHPAR_s3_path_in"] = 's3://nesta-arxlive/automl/2019-07-07/COREX_TOPIC_MODEL.n_hidden_34.0.VECTORIZER.binary_True.min_df_0.001.NGRAM.TEST_False-0_307504.json'
         os.environ["BATCHPAR_n_hidden"] = '39'
     run()

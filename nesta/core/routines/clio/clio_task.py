@@ -1,25 +1,26 @@
 '''
-S3 Example
+Clio Task
 ==========
 
-An example of building a pipeline with S3 Targets
+Process/enrich data to be searchable with topics.
 '''
+from nesta.production.luigihacks import s3
+from nesta.production.luigihacks import luigi_logging
+from nesta.production.luigihacks.automl import AutoMLTask
+from nesta.production.luigihacks.misctools import get_config
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.production.luigihacks.s3task import S3Task
 
 import luigi
-from nesta.core.luigihacks import s3
-from nesta.core.routines.automl.automl import AutoMLTask
-from nesta.core.luigihacks.misctools import get_config
 import os
-import logging
 import json
-from requests_aws4auth import AWS4Auth
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-import boto3
+from datetime import datetime
+import logging
 
-
-S3INTER = ("s3://clio-data/{dataset}/")
-S3PREFIX = ("s3://clio-data/{dataset}/{phase}/"
-            "{dataset}_{phase}.json")
+S3INTER = "s3://clio-data/{dataset}/{date}/"
+S3PREFIX = ("s3://clio-data/{dataset}/"
+            "{phase}/{dataset}_{phase}.json")
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH,
@@ -74,6 +75,7 @@ class ClioTask(luigi.Task):
          write_es (bool): Whether or not to write data to ES (AutoML will still be run.)
     """
     dataset = luigi.Parameter()
+    date = luigi.DateParameter(default=datetime.today())
     production = luigi.BoolParameter(default=False)
     verbose = luigi.BoolParameter(default=False)
     write_es = luigi.BoolParameter(default=False)
@@ -85,85 +87,115 @@ class ClioTask(luigi.Task):
 
     def requires(self):
         """Yield AutoML"""
-        # Set up test environment if required
+        logging.getLogger().setLevel(logging.INFO)
         test = not self.production
-        if test or self.verbose:
-            logging.getLogger().setLevel(logging.DEBUG)
-            logging.getLogger("luigi-interface").setLevel(logging.DEBUG)
-        if not self.verbose:
-            logging.getLogger("urllib3").setLevel(logging.WARNING)
-            logging.getLogger("botocore").setLevel(logging.WARNING)
-            logging.getLogger("boto3").setLevel(logging.WARNING)
-            logging.getLogger("luigi-interface").setLevel(logging.WARNING)
-        # Launch the dependencies
-        yield AutoMLTask(s3_path_in=self.s3_path_in,
-                         s3_path_prefix=S3INTER.format(dataset=self.dataset),
-                         task_chain_filepath=CHAIN_PARAMETER_PATH,
-                         test=test)
+        luigi_logging.set_log_level(test, self.verbose)
+        return AutoMLTask(s3_path_prefix=S3INTER.format(dataset=self.dataset, date=self.date),
+                          task_chain_filepath=CHAIN_PARAMETER_PATH,
+                          input_task=S3Task,
+                          input_task_kwargs={'s3_path':self.s3_path_in},
+                          final_task='corex_topic_model',
+                          test=test)
+
+    def output(self):
+        '''Points to the output database engine'''
+        db_config = get_config('mysqldb.config', "mysqldb")
+        db_config["database"] = "production" if self.production else "dev"
+        db_config["table"] = f"Clio{self.dataset} <dummy>"  # Note, not a real table
+        update_id = f"Clio{self.dataset}_{self.date}"
+        return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
         """Write data to ElasticSearch if required"""
         if not self.write_es:
             return
 
-        # Unused for the moment
-        file_ios = {child: s3.S3Target(params["s3_path_out"])
-                    for child, params in AutoMLTask.task_parameters.items()}
+        # Read the topics data
+        file_ptr = self.input().open("rb")
+        path = file_ptr.read()
+        file_ptr.close()
+
+        file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
+        topic_json = json.load(file_io_topics)
+        file_io_topics.close()
+        topic_lookup = topic_json['data']['topic_names']
+        topic_json = {row['id']: row for row in topic_json['data']['rows']}
 
         # Read the raw data
         file_io_input = s3.S3Target(self.s3_path_in).open("rb")
         dirty_json = json.load(file_io_input)
         file_io_input.close()
-
-        # Read the topics data
-        file_io_topics = file_ios["topic_model"].open("rb")
-        topic_json = json.load(file_io_topics)
-        file_io_topics.close()
-
-        # Clean the field names
         uid, cleaned_json, fields = clean(dirty_json, self.dataset)
 
         # Assign topics
-        assert len(cleaned_json) == len(topic_json)
-        for row, topics in zip(cleaned_json, topic_json):
-            row[f"terms_of_{self.dataset}"] = topics
-        fields.add(f"terms_of_{self.dataset}")
+        n_topics, n_found = 0, 0
+        for row in cleaned_json:
+            id_ = row[f'id_of_{self.dataset}']
+            if id_ not in topic_json:
+                continue
+            topics = [k for k, v in topic_json[id_].items()
+                      if k != 'id' and v >= 0.2]
+            n_found += 1
+            if len(topics) > 0:
+                n_topics += 1
+            row[f"terms_topics_{self.dataset}"] = topics
+        logging.info(f'{n_found} documents processed from a possible '
+                     f'{len(cleaned_json)}, of which '
+                     f'{n_topics} have been assigned topics.')
+        fields.add(f"terms_topics_{self.dataset}")
+        fields.add("terms_of_countryTags")
+        fields.add("type_of_entity")
 
         # Prepare connection to ES
         prod_label = '' if self.production else '_dev'
         es_config = get_config('elasticsearch.config', 'clio')
         es_config['index'] = f"clio_{self.dataset}{prod_label}"
-        credentials = boto3.Session().get_credentials()
-        awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                           es_config['region'], 'es')
-
-        es = Elasticsearch(es_config['host'],
-                           port=int(es_config['port']),
-                           http_auth=awsauth,
-                           use_ssl=True,
-                           verify_certs=True,
-                           connection_class=RequestsHttpConnection)
-
+        aws_auth_region=es_config.pop('region')
+        es = ElasticsearchPlus(hosts=es_config['host'],
+                               port=int(es_config['port']),
+                               use_ssl=True,
+                               entity_type=self.dataset,
+                               aws_auth_region=aws_auth_region,
+                               country_detection=True,
+                               caps_to_camel_case=True)
 
         # Dynamically generate the mapping based on a template
         with open("clio_mapping.json") as f:
             mapping = json.load(f)
-
         for f in fields:
-            _type = "keyword"
             kwargs = {}
-            if f.startswith("textBody"):
-                _type = "text"
-            elif f.startswith("terms"):
-                _type = "text"
-                kwargs = {"fields": {"keyword": {"type": "keyword"}},
+            _type = "text"
+            if f.startswith("terms"):
+                kwargs = {"fields": {"keyword":
+                                     {"type": "keyword"}},
                           "analyzer": "terms_analyzer"}
-            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type, **kwargs)
-        print(mapping)
+            elif not f.startswith("textBody"):
+                _type = "keyword"
+            mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type,
+                                                                **kwargs)
 
         # Drop, create and send data
-        es.indices.delete(index=es_config['index'])
+        if es.indices.exists(index=es_config['index']):
+            es.indices.delete(index=es_config['index'])
         es.indices.create(index=es_config['index'], body=mapping)
         for id_, row in zip(uid, cleaned_json):
             es.index(index=es_config['index'], doc_type=es_config['type'],
                      id=id_, body=row)
+
+        # Drop, create and send data
+        es = ElasticsearchPlus(hosts=es_config['host'],
+                               port=int(es_config['port']),
+                               use_ssl=True,
+                               entity_type='topics',
+                               aws_auth_region=aws_auth_region,
+                               country_detection=False,
+                               caps_to_camel_case=False)
+        topic_idx = f"{es_config['index']}_topics"
+        if es.indices.exists(index=topic_idx):
+            es.indices.delete(index=topic_idx)
+        es.indices.create(index=topic_idx)
+        es.index(index=topic_idx, doc_type=es_config['type'],
+                 id='topics', body=topic_lookup)
+
+        # Touch the checkpoint
+        self.output().touch()
