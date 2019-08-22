@@ -13,12 +13,9 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                                  drop_and_recreate=False,
                                  dataset=self.dataset,
                                  increment_version=False)
+        field =  "metric_novelty_article"
         ids = get_es_ids(es, es_config, size=10000,
-                         query={"query": {"bool":
-                                          {"should":[
-                                              {"range" : {"metric_novelty_article" : {"gt" : 4} } },
-                                              {"range" : {"metric_novelty_article" : {"lt" : 0} } }
-                                          ]}}})
+                         query={"query": {"exists": {"field" : field}}})
         return ids
 
 
