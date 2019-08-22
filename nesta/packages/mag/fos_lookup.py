@@ -1,6 +1,6 @@
-from nesta.production.orms.orm_utils import db_session
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.mag_orm import FieldOfStudy
+from nesta.core.orms.orm_utils import db_session
+from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.mag_orm import FieldOfStudy
 
 def split_ids(child_ids):
     if child_ids is None:
