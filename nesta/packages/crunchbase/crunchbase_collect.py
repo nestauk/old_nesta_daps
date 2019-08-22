@@ -10,9 +10,9 @@ from collections import defaultdict
 from nesta.packages.crunchbase.utils import split_str  # required for unpickling of split_health_flag: vectoriser
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.geocode import generate_composite_key
-from nesta.production.luigihacks import misctools
-from nesta.production.orms.orm_utils import db_session, insert_data
-from nesta.production.orms.crunchbase_orm import Organization
+from nesta.core.luigihacks import misctools
+from nesta.core.orms.orm_utils import db_session, insert_data
+from nesta.core.orms.crunchbase_orm import Organization
 
 
 @contextmanager

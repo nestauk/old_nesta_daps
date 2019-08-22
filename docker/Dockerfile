@@ -42,10 +42,10 @@ ENV PYTHONIOENCODING=utf8
 ENV LANG=C.UTF-8
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONPATH /app
-ENV MYSQLDB /app/nesta/production/config/mysqldb.config
+ENV MYSQLDB /app/nesta/core/config/mysqldb.config
 ENV LUIGI_CONFIG_DIR /appdocker
-ENV LUIGI_CONFIG_PATH /app/nesta/production/config/luigi.cfg
-ENV PATH "$PATH:/app/nesta/production/scripts/"
+ENV LUIGI_CONFIG_PATH /app/nesta/core/config/luigi.cfg
+ENV PATH "$PATH:/app/nesta/core/scripts/"
 
 WORKDIR /app
 
@@ -67,7 +67,7 @@ RUN git clone https://github.com/nestauk/nesta.git --branch $GIT_TAG --depth 1 -
 
 # Copy in the rest of the app from local to pick up configs
 # TODO: replace when secrets are implemented
-COPY nesta/production/config/ nesta/production/config/
+COPY nesta/core/config/ nesta/core/config/
 
 RUN mkdir -p /var/tmp/batch && \
     mkdir -p /var/log/luigi && \
