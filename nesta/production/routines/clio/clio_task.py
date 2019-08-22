@@ -125,7 +125,7 @@ class ClioTask(luigi.Task):
         file_io_input = s3.S3Target(self.s3_path_in).open("rb")
         dirty_json = json.load(file_io_input)
         file_io_input.close()
-        uid, cleaned_json, fields = clean(dirty_json, self.dataset)        
+        uid, cleaned_json, fields = clean(dirty_json, self.dataset)
 
         # Assign topics
         n_topics, n_found = 0, 0
@@ -148,15 +148,16 @@ class ClioTask(luigi.Task):
 
         # Prepare connection to ES
         prod_label = '' if self.production else '_dev'
-        es_config = get_config('elasticsearch.config', 'clio')        
+        es_config = get_config('elasticsearch.config', 'clio')
         es_config['index'] = f"clio_{self.dataset}{prod_label}"
+        aws_auth_region=es_config.pop('region')
         es = ElasticsearchPlus(hosts=es_config['host'],
                                port=int(es_config['port']),
-                               use_ssl=True,                               
+                               use_ssl=True,
                                entity_type=self.dataset,
-                               aws_auth_region=es_config.pop('region'),
+                               aws_auth_region=aws_auth_region,
                                country_detection=True,
-                               caps_to_camel_case=True)                               
+                               caps_to_camel_case=True)
 
         # Dynamically generate the mapping based on a template
         with open("clio_mapping.json") as f:
@@ -171,7 +172,7 @@ class ClioTask(luigi.Task):
             elif not f.startswith("textBody"):
                 _type = "keyword"
             mapping["mappings"]["_doc"]["properties"][f] = dict(type=_type,
-                                                                **kwargs)        
+                                                                **kwargs)
 
         # Drop, create and send data
         if es.indices.exists(index=es_config['index']):
@@ -184,14 +185,17 @@ class ClioTask(luigi.Task):
         # Drop, create and send data
         es = ElasticsearchPlus(hosts=es_config['host'],
                                port=int(es_config['port']),
-                               use_ssl=True,                               
+                               use_ssl=True,
                                entity_type='topics',
-                               aws_auth_region=es_config.pop('region'),
+                               aws_auth_region=aws_auth_region,
                                country_detection=False,
-                               caps_to_camel_case=False)                               
+                               caps_to_camel_case=False)
         topic_idx = f"{es_config['index']}_topics"
         if es.indices.exists(index=topic_idx):
             es.indices.delete(index=topic_idx)
         es.indices.create(index=topic_idx)
         es.index(index=topic_idx, doc_type=es_config['type'],
                  id='topics', body=topic_lookup)
+
+        # Touch the checkpoint
+        self.output().touch()
