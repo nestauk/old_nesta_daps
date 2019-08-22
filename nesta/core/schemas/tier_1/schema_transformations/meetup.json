@@ -61,6 +61,10 @@
         "tier_1": "terms_topics_group"
     },
     {
+        "tier_0": "mesh_terms",
+        "tier_1": "terms_mesh_group"
+    },
+    {
         "tier_0": "member_origins",
         "tier_1": "terms_memberOrigin_group"
     },

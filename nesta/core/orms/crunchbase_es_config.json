@@ -110,6 +110,9 @@
                     },
                     "type": "text"
                 },
+                "rank_rhodonite_organisation": {
+                    "type": "float"
+                },
                 "status_of_organisation": {
                     "type": "keyword"
                 },

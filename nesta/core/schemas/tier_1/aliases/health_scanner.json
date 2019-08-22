@@ -77,8 +77,8 @@
         "nih": "title_of_organisation"
     },
     "novelty": {
-        "crunchbase": "cost_of_funding",
-        "meetup": "count_member_group",
+        "crunchbase": "rank_rhodonite_organisation",
+        "meetup": "rank_rhodonite_group",
         "nih": "rank_rhodonite_abstract"
     },
     "region": {
@@ -109,7 +109,7 @@
     },
     "terms": {
         "crunchbase": "terms_mesh_description",
-        "meetup": "terms_topics_group",
+        "meetup": "terms_mesh_group",
         "nih": "terms_mesh_abstract"
     },
     "title": {
