@@ -147,21 +147,11 @@ if __name__ == "__main__":
 
     log_level = logging.INFO
     if 'BATCHPAR_outinfo' not in os.environ:
-<<<<<<< HEAD:nesta/core/batchables/meetup/topic_tag_elasticsearch/run.py
         log_level = logging.DEBUG
         environ = {'batch_file': ('2019-08-22-community-environment'
                                   '--health-wellbeing--fitness-'
                                   '10-99-False-1566471880891235.json'),
                    'config': ('/home/ec2-user/nesta-lol/nesta/core/'
-=======
-        log_level = logging.VERBOSE
-        environ = {'batch_file': ('2019-07-17-community-environment'
-                                  '--health-wellbeing'
-                                  '--fitness'
-                                  '-10-99-True-'
-                                  '15633764681888585.json'),
-                    'config': ('/home/ec2-user/nesta/nesta/core/'
->>>>>>> dev:nesta/core/batchables/meetup/topic_tag_elasticsearch/run.py
                                'config/mysqldb.config'),
                     'db_name': 'dev',
                     'bucket': 'nesta-production-intermediate',
