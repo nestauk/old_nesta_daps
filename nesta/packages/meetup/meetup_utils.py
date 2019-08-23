@@ -2,8 +2,8 @@ import os
 import random
 import json
 import numpy as np
-from nesta.production.orms.orm_utils import db_session
-from nesta.production.orms.meetup_orm import Group
+from nesta.core.orms.orm_utils import db_session
+from nesta.core.orms.meetup_orm import Group
 from collections import Counter
 
 

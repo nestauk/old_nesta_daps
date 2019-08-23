@@ -5,8 +5,8 @@ import re
 
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.mag_orm import FieldOfStudy
+from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.mag_orm import FieldOfStudy
 
 
 MAG_ENDPOINT = 'http://ma-graph.org/sparql'
@@ -29,11 +29,15 @@ def _batch_query_articles_by_doi(query, articles, batch_size=10):
         raise ValueError("batch_size must be between 1 and 10")
 
     for articles_batch in split_batches(articles, batch_size):
-        clean_dois = [a['doi'].replace('\n', '').replace('\\', '') for a in articles_batch]
+        clean_dois = [(a['doi']
+                       .replace('\n', '')
+                       .replace('\\', '')
+                       .replace('"', '')) for a in articles_batch]
         concat_dois = ','.join(f'"{a}"^^xsd:string' for a in clean_dois)
         article_filter = f"FILTER (?doi IN ({concat_dois}))"
 
-        for results_batch in sparql_query(MAG_ENDPOINT, query.format(article_filter=article_filter)):
+        for results_batch in sparql_query(MAG_ENDPOINT,
+                                          query.format(article_filter=article_filter)):
             yield articles_batch, results_batch
 
 

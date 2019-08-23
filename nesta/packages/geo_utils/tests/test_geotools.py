@@ -11,6 +11,8 @@ from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
+from nesta.packages.geo_utils.lookup import get_continent_lookup
+from nesta.packages.geo_utils.lookup import get_country_region_lookup
 
 REQUESTS = 'nesta.packages.geo_utils.geocode.requests.get'
 PYCOUNTRY = 'nesta.packages.geo_utils.country_iso_code.pycountry.countries.get'
@@ -442,3 +444,19 @@ def test_generate_composite_key_raises_error_with_invalid_input():
         generate_composite_key(1, 2)
 
 
+def test_get_continent_lookup():
+    continents = get_continent_lookup()
+    assert None in continents
+    assert '' in continents
+    assert continents['NA'] == 'North America'
+    assert len(continents) == 9  # 2 nulls + 7 continents
+
+def test_get_country_region_lookup():
+    countries = get_country_region_lookup()
+    assert len(countries) > 100
+    assert len(countries) < 1000
+    assert all(len(k) == 2 for k in countries.keys())
+    assert all(type(v) is tuple for v in countries.values())
+    assert all(len(v) == 2 for v in countries.values())
+    all_regions = {v[1] for v in countries.values()}
+    assert len(all_regions) == 18

@@ -17,8 +17,8 @@ from retrying import retry
 from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.geocode import _geocode
-from nesta.production.orms.orm_utils import db_session
-from nesta.production.orms.gtr_orm import Organisation, OrganisationLocation
+from nesta.core.orms.orm_utils import db_session
+from nesta.core.orms.gtr_orm import Organisation, OrganisationLocation
 
 
 # Global constants

@@ -1,10 +1,10 @@
 # Test dependencies
 from unittest import mock
 from unittest import TestCase
-from nesta.production.orms.nih_orm import Base
-from nesta.production.orms.nih_orm import Abstracts
+from nesta.core.orms.nih_orm import Base
+from nesta.core.orms.nih_orm import Abstracts
 from sqlalchemy.orm import sessionmaker
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 # What we're actually testing
 from nesta.packages.health_data.nih_abstract_yielder import AbstractYielder
