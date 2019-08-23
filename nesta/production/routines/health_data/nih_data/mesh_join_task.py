@@ -63,13 +63,13 @@ class MeshJoinTask(luigi.Task):
 
     def output(self):
         db_config = get_config(os.environ[self.db_config_env], "mysqldb")
-        db_config['database'] = 'dev' if self.test else 'core'
+        db_config['database'] = 'dev' if self.test else 'production'
         db_config['table'] = "MeshTerms <dummy>"
         update_id = "NihJoinMeshTerms_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        db = 'core' if not self.test else 'dev'
+        db = 'production' if not self.test else 'dev'
 
         bucket = 'innovation-mapping-general'
         key_prefix = 'nih_abstracts_processed/mti'
