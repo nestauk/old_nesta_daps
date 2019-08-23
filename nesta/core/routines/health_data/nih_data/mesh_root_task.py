@@ -1,9 +1,9 @@
 import luigi
 import datetime
 import logging
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
-from nesta.production.routines.health_data.nih_data.mesh_join_task import MeshJoinTask
+from nesta.core.routines.health_data.nih_data.mesh_join_task import MeshJoinTask
 
 class RootTask(luigi.WrapperTask):
 

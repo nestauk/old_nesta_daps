@@ -9,7 +9,7 @@ from sqlalchemy.dialects.mysql import VARCHAR
 from sqlalchemy.types import INTEGER
 from sqlalchemy import Column, Table, ForeignKey
 
-from nesta.production.orms.nih_orm import Projects
+from nesta.core.orms.nih_orm import Projects
 
 Base = declarative_base()
 
