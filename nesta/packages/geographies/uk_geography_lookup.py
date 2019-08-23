@@ -1,5 +1,5 @@
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 from collections import defaultdict
 import requests
 

@@ -53,8 +53,8 @@ def _extract_date(date, date_format='%Y-%m-%d', return_date_object=False):
 if __name__ == "__main__":
     # Local imports and log settings
     from sqlalchemy.orm import sessionmaker
-    from nesta.production.orms.orm_utils import get_mysql_engine
-    from nesta.production.orms.world_reporter_orm import Abstracts
+    from nesta.core.orms.orm_utils import get_mysql_engine
+    from nesta.core.orms.world_reporter_orm import Abstracts
 
     log_stream_handler = logging.StreamHandler()
     log_file_handler = logging.FileHandler('logs.log')

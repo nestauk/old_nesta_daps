@@ -16,7 +16,7 @@ export WORLD_BORDERS=$TOPDIR/nesta/packages/meetup/data/TM_WORLD_BORDERS_SIMPL-0
 ls $WORLD_BORDERS
 
 # Run every test
-for TOPDIRNAME in production packages;
+for TOPDIRNAME in core packages;
 do
     TESTDIRS=$(find nesta/$TOPDIRNAME -name "test*" -type d)
     for TESTDIRNAME in $TESTDIRS;

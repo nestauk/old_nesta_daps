@@ -85,8 +85,8 @@ def format_duplicate_map(dupe_map):
 
 if __name__ == '__main__':
     from sqlalchemy.orm import sessionmaker
-    from nesta.production.orms.orm_utils import get_mysql_engine
-    from nesta.production.orms.nih_orm import Abstracts
+    from nesta.core.orms.orm_utils import get_mysql_engine
+    from nesta.core.orms.nih_orm import Abstracts
 
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
