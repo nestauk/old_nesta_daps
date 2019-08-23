@@ -5,8 +5,8 @@ import re
 
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.mag_orm import FieldOfStudy
+from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.mag_orm import FieldOfStudy
 
 
 MAG_ENDPOINT = 'http://ma-graph.org/sparql'
