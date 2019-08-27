@@ -1,3 +1,10 @@
+"""
+MeetupLolveltyRootTask
+======================
+
+Apply Lolvelty score to meetup data.
+"""
+
 from nesta.core.luigihacks.estask import LazyElasticsearchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import luigi
@@ -5,6 +12,13 @@ from datetime import datetime as dt
 import logging
 
 class MeetupLolveltyRootTask(luigi.WrapperTask):
+    """Apply Lolvelty score to meetup data.
+
+    Args:
+        production (bool): Running in full production mode?
+        index (str): Elasticsearch index to append Lolvelty score to.
+        date (datetime): Date for timestamping this routine.
+    """
     production = luigi.BoolParameter(default=False)
     index = luigi.Parameter(default=None)
     date = luigi.DateParameter(default=dt.now())

@@ -1,3 +1,11 @@
+"""
+CrunchbaseLolveltyRootTask
+==========================
+
+Apply Lolvelty score to crunchbase data.
+"""
+
+
 from nesta.core.luigihacks.estask import LazyElasticsearchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import luigi
@@ -5,13 +13,20 @@ from datetime import datetime as dt
 import logging
 
 class CrunchbaseLolveltyRootTask(luigi.WrapperTask):
+    """Apply Lolvelty score to crunchbase data.
+
+    Args:
+        production (bool): Running in full production mode?
+        index (str): Elasticsearch index to append Lolvelty score to.
+        date (datetime): Date for timestamping this routine.
+    """
     production = luigi.BoolParameter(default=False)
     index = luigi.Parameter(default=None)
     date = luigi.DateParameter(default=dt.now())
     def requires(self):
         logging.getLogger().setLevel(logging.INFO)
         kwargs = {'score_field': 'rank_rhodonite_organisation',
-                  'fields': ['name_of_organisation', 
+                  'fields': ['name_of_organisation',
                              'textBody_descriptive_organisation',
                              'terms_category_organisation']}
         test = not self.production
