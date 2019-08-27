@@ -4,13 +4,13 @@ Clio Task
 
 Process/enrich data to be searchable with topics.
 '''
-from nesta.production.luigihacks import s3
-from nesta.production.luigihacks import luigi_logging
-from nesta.production.luigihacks.automl import AutoMLTask
-from nesta.production.luigihacks.misctools import get_config
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
-from nesta.production.luigihacks.s3task import S3Task
+from nesta.core.luigihacks import s3
+from nesta.core.luigihacks import luigi_logging
+from nesta.core.luigihacks.automl import AutoMLTask
+from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.luigihacks.s3task import S3Task
 
 import luigi
 import os
