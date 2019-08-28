@@ -70,7 +70,7 @@ def extract_fields(data, fields):
     return out_data
 
 
-def get_framework_ids(framework):
+def get_framework_ids(framework, nrows=None):
     """
     Get all IDs of projects by funding framework.
 
@@ -80,6 +80,7 @@ def get_framework_ids(framework):
         ids (list)
     """
     df = pd.read_csv(CSV_URL.format(framework),
+                     nrows=nrows,
                      engine='c',
                      decimal=',', sep=';',
                      error_bad_lines=False,

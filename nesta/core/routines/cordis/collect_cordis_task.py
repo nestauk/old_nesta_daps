@@ -9,9 +9,12 @@ from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.packages.cordis.cordis_api import get_framework_ids
 import luigi
 
+S3BUCKET = "nesta-production-intermediate"
+
 
 class CordisCollectTask(AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=5000)
+    intermediate_bucket = luigi.Parameter(default=S3BUCKET)
 
     def output(self):
         '''Points to the output database engine'''
@@ -30,8 +33,9 @@ class CordisCollectTask(AutoBatchTask):
                                   'mysqldb', database)
 
         # Get all possible ids
-        all_rcn = set(get_framework_ids('fp7') +
-                      get_framework_ids('h2020'))
+        nrows = 1000 if self.test else None
+        all_rcn = set(get_framework_ids('fp7', nrows=nrows) +
+                      get_framework_ids('h2020', nrows=nrows))
         # Subtract off all done ids
         with db_session(engine) as session:
             result = session.query(Project).all()
@@ -42,7 +46,7 @@ class CordisCollectTask(AutoBatchTask):
         batches = split_batches(all_rcn, self.process_batch_size)
         job_params = [{"batch_file": put_s3_batch(batch,
                                                   self.intermediate_bucket,
-                                                  self.routine_id)
+                                                  self.routine_id),
                        "config": 'mysqldb.config',
                        "db_name": database,
                        "bucket": self.intermediate_bucket,

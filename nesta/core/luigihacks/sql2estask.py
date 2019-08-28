@@ -51,7 +51,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         self.db_config_path = os.environ[self.db_config_env]
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = f"{self.routine_id} <dummy>"  # Note, not a real table
+        db_config["table"] = f"{self.routine_id} <dummy>"  # Not a real table
         update_id = f"{self.routine_id}_{self.date}"
         return MySqlTarget(update_id=update_id, **db_config)
 
@@ -68,7 +68,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, 
+        es, es_config = setup_es(es_mode, self.test,
                                  self.drop_and_recreate,
                                  dataset=self.dataset,
                                  aliases=self.aliases)
