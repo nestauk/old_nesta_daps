@@ -57,7 +57,7 @@ def extract_fields(data, fields):
 
     Args:
         data (dict): A row of data to be processed.
-        fields (list): A list of fields to be extracted/
+        fields (list): A list of fields to be extracted.
     Returns:
         out_data (dict): Flatter data, with specific fields extracted.
     """
