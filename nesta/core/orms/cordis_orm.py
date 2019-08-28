@@ -80,7 +80,7 @@ class Publication(Base):
     __table_args__ = {'mysql_collate': 'utf8_bin'}
     id = Column(INTEGER, primary_key=True, autoincrement=False)
     project_rcn = Column(INTEGER, ForeignKey(Project.rcn),
-                         primary_key=True)
+                         primary_key=True, index=True)
     authors = Column(JSON)
     url = Column(TEXT)
     pid = Column(JSON)
@@ -91,7 +91,7 @@ class Publication(Base):
 class Topic(Base):
     __tablename__ = 'cordis_topics'
     __table_args__ = {'mysql_collate': 'utf8_bin'}
-    id = Column(INTEGER, primary_key=True, autoincrement=False)
+    id = Column(INTEGER, primary_key=True, autoincrement=True)
     topic = Column(TEXT)
 
 

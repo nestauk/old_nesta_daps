@@ -1,3 +1,10 @@
+"""
+Cordis API
+==========
+
+Extract all Cordis data via the API, by project.
+"""
+
 import requests
 import pandas as pd
 import json
@@ -6,7 +13,6 @@ from nesta.packages.decorators.ratelimit import ratelimit
 
 TOP_PREFIX = 'http://cordis.europa.eu/{}'
 CSV_URL = TOP_PREFIX.format('data/cordis-{}projects.csv')
-API_URL = TOP_PREFIX.format('api/details')
 
 INFO_FIELDS = ['rcn', 'acronym', 'startDateCode',
                'endDateCode', 'framework',
@@ -24,9 +30,19 @@ ORGS_FIELDS = ['activityType', 'address', 'contribution',
 @retry(stop_max_attempt_number=10)
 @ratelimit(max_per_second=10)
 def hit_api(api='', rcn=None, content_type=None):
+    """
+    Hit the Cordis API by project code
+
+    Args:
+        api (str): Assumed to support '' (cordis) or 'openaire'.
+        rcn (str): RCN id of the project or entity to find.
+        content_type (str): contenttype argument for Cordis API
+    Returns:
+        data (json)
+    """
     url = TOP_PREFIX.format('api/details')
     if api is not None:
-        url = f'{API_URL}/{api}'
+        url = f'{url}/{api}'
     r = requests.get(url, params={'lang': 'en',
                                   'rcn': rcn,
                                   'paramType': 'rcn',
@@ -36,8 +52,17 @@ def hit_api(api='', rcn=None, content_type=None):
 
 
 def extract_fields(data, fields):
+    """
+    Extract specific fields and flatten data from Cordis API.
+
+    Args:
+        data (dict): A row of data to be processed.
+        fields (list): A list of fields to be extracted/
+    Returns:
+        out_data (dict): Flatter data, with specific fields extracted.
+    """
     out_data = {}
-    for field in fields:        
+    for field in fields:
         value = data[field]
         if type(value) is list:
             value = [_row['title'] for _row in value]
@@ -45,7 +70,15 @@ def extract_fields(data, fields):
     return out_data
 
 
-def get_ids(framework):
+def get_framework_ids(framework):
+    """
+    Get all IDs of projects by funding framework.
+
+    Args:
+        framework (str): 'fp7' or 'h2020'
+    Returns:
+        ids (list)
+    """
     df = pd.read_csv(CSV_URL.format(framework),
                      engine='c',
                      decimal=',', sep=';',
@@ -56,6 +89,15 @@ def get_ids(framework):
 
 
 def fetch_data(rcn):
+    """
+    Fetch all data (project, reports, orgs, publications)
+    for a given project id.
+
+    Args:
+        rcn (str): Project id.
+    Returns:
+        data (tuple): project, orgs, reports, pubs
+    """
     # Collect project info
     _project = hit_api(rcn=rcn, content_type='project')
     info = _project['information']
@@ -71,14 +113,16 @@ def fetch_data(rcn):
     # Collect result reports
     _reports = [hit_api(rcn=report['rcn'], content_type='result')
                 for report in info['relatedResultsReport']]
-    reports = [extract_fields(rep, REPS_FIELDS) for rep in _reports]
+    reports = [extract_fields(rep, REPS_FIELDS)
+               for rep in _reports]
     # Collect publications via OpenAIRE
     pubs = hit_api(api='openaire', rcn=rcn)
     return project, orgs, reports, pubs
 
 
 if __name__ == "__main__":
-    #all_rcn = set(get_ids('fp7') + get_ids('h2020'))
+    #all_rcn = set(get_framework_ids('fp7') +/
+    #              get_framework_ids('h2020'))
     #print("Processing", len(all_rcn), "projects")    
     all_rcn = {89242}
     n_proj, _orgs, n_reps, n_pubs = 0, set(), 0, 0
@@ -95,7 +139,6 @@ if __name__ == "__main__":
     #print(pubs['datasets'])
 
     print(project)
-    
     # for p in pubs['publications']:
     #     doi = None
     #     for pid in p['pid']:
@@ -104,4 +147,3 @@ if __name__ == "__main__":
     #             break
     #     if doi is None:
     #         continue
-        
