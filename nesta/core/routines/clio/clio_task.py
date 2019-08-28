@@ -110,10 +110,19 @@ class ClioTask(luigi.Task):
         if not self.write_es:
             return
 
-        # Read the topics data
-        file_ptr = self.input().open("rb")
-        path = file_ptr.read()
-        file_ptr.close()
+        self.cherry_picked=(f'gtr/{self.date}/'.encode('utf-8')+
+                            b'COREX_TOPIC_MODEL.n_hidden_140-0.'
+                            b'VECTORIZER.binary_True.'
+                            b'min_df_0-001.'
+                            b'text_field_abstractText'
+                            b'.NGRAM.TEST_False.json')
+        if self.cherry_picked is None:
+            # Read the topics data
+            file_ptr = self.input().open("rb")
+            path = file_ptr.read()
+            file_ptr.close()
+        else:
+            path = self.cherry_picked
 
         file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
         topic_json = json.load(file_io_topics)
