@@ -19,33 +19,34 @@ import time
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.decorators.ratelimit import ratelimit
 
-COUNTRY_LOOKUP=("https://s3.eu-west-2.amazonaws.com"
-                "/nesta-open-data/country_lookup/Countries-List.csv")
-COUNTRY_TAG="terms_of_countryTags"
-TRANS_TAG="booleanFlag_autotranslated_entity"
-LANGS_TAG="terms_iso2lang_entity"
+COUNTRY_LOOKUP = ("https://s3.eu-west-2.amazonaws.com"
+                  "/nesta-open-data/country_lookup/Countries-List.csv")
+COUNTRY_TAG = "terms_of_countryTags"
+TRANS_TAG = "booleanFlag_autotranslated_entity"
+LANGS_TAG = "terms_iso2lang_entity"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+
 def sentence_chunks(text, chunksize=2000, delim='. '):
-    """Split a string into chunks, but breaking only on 
+    """Split a string into chunks, but breaking only on
     the specified delimiter.
-    
+
     Args:
         text (str): A string to split into chunks
         chunksize (int): Minimum chunk size to yield
         delim (str): Delimiter to split chunks
     Yields:
-        chunk (str): The smallest possible chunks (minimum sise 
+        chunk (str): The smallest possible chunks (minimum sise
                      :pyobject:`chunksize`) of text.
     """
-    chunks = [] 
-    for _text in text.split(delim): 
-        chunks.append(_text) 
-        if sum(len(c) for c in chunks) > chunksize: 
-            yield delim.join(chunks) 
-            chunks = [] 
-    if len(chunks) > 0: 
-        yield delim.join(chunks) 
+    chunks = []
+    for _text in text.split(delim):
+        chunks.append(_text)
+        if sum(len(c) for c in chunks) > chunksize:
+            yield delim.join(chunks)
+            chunks = []
+    if len(chunks) > 0:
+        yield delim.join(chunks)
 
 
 class MLStripper(HTMLParser):
@@ -67,19 +68,20 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
+
 @ratelimit(max_per_second=2.5)
-@retry(wait_random_min=20, wait_random_max=30, 
+@retry(wait_random_min=20, wait_random_max=30,
        stop_max_attempt_number=10)
 def translate(text, translator, chunksize=2000):
     """Translate texts of any length via the Google Translate API.
-    
+
     Args:
         text (str): text to translate to English.
         translator: A Translator instance.
         chunksize (int): Ideal chunk size of text. Note, text is
                          chunked in sentences defined by '. '
     Returns:
-        {text, langs} ({str, set}): Translated text and set of 
+        {text, langs} ({str, set}): Translated text and set of
                                     detected languages.
     """
     chunks = list(sentence_chunks(text, chunksize=chunksize))
@@ -99,7 +101,7 @@ def _auto_translate(row, translator, min_len=150, chunksize=2000):
     Returns:
         _row (dict): Modified row.
     """
-    _row = deepcopy(row)    
+    _row = deepcopy(row)
     _row[TRANS_TAG] = False
     _row[LANGS_TAG] = set()
     for k, v in row.items():
@@ -110,7 +112,7 @@ def _auto_translate(row, translator, min_len=150, chunksize=2000):
         result, langs = translate(v, translator, chunksize)
         _row[LANGS_TAG] = _row[LANGS_TAG].union(langs)
         if langs == {'en'}:
-            continue        
+            continue
         _row[k] = result
         _row[TRANS_TAG] = True
     _row[LANGS_TAG] = list(_row[LANGS_TAG])
@@ -552,7 +554,7 @@ class ElasticsearchPlus(Elasticsearch):
         if auto_translate:
             # URLs to load balance Google Translate
             urls = list(f"translate.google.{ext}"
-                        for ext in ('com', 'co.uk', 'co.kr', 'at', 
+                        for ext in ('com', 'co.uk', 'co.kr', 'at',
                                     'ru', 'fr', 'de', 'ch', 'es'))
             translator = Translator(service_urls=urls)
             self.transforms.append(lambda row: _auto_translate(row, translator))
@@ -597,15 +599,15 @@ class ElasticsearchPlus(Elasticsearch):
             super().index(body=body, **kwargs)
         return body
 
-    def near_duplicates(self, index, doc_id, 
+    def near_duplicates(self, index, doc_id,
                         fields,
                         doc_type,
-                        threshold=0.98, 
+                        threshold=0.98,
                         min_term_freq=1,
                         max_query_terms=25):
         """Yield near duplicate documents, compared to the input
         document id.
-        
+
         Args:
             index (str): Index in which to scan for documents.
             doc_id (str): Document id for which to find duplicates.
@@ -624,7 +626,7 @@ class ElasticsearchPlus(Elasticsearch):
         body = {"query": {"more_like_this": mlt_query}}
         results = self.search(index=index, body=body)
 
-        # Mock a result if there are no results                
+        # Mock a result if there are no results
         if results['hits']['total'] == 0:
             _doc = self.get(index=index,
                             doc_type=doc_type,
@@ -632,14 +634,14 @@ class ElasticsearchPlus(Elasticsearch):
             _doc['_score'] = 1
             results['hits']['max_score'] = 1
             results['hits']['hits'] = [_doc]
-        
+
         # Yield duplicates
         max_score = results['hits']['max_score']
         hits = []
         for hit in results['hits']['hits']:
             score = hit['_score']
-            # Break when the score is too different              
-            # (note: the results are sorted by score)            
+            # Break when the score is too different
+            # (note: the results are sorted by score)
             if score/max_score < threshold:
                 break
             yield hit

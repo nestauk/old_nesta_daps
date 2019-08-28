@@ -46,7 +46,7 @@ class ElasticsearchTask(AutoBatchTask):
         '''All document ids which do not require processing. If
         you want to avoid writing that function see
         :obj:`LazyElasticsearchTask`.
-        
+
         Returns:
             done_ids (set): A set of document ids, not to be processed.
         '''

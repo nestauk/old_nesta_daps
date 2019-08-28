@@ -93,7 +93,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                                                     self.process_batch_size),
                                       1):
             # write batch of ids to s3
-            batch_file = put_s3_batch(batch, self.intermediate_bucket, self.routine_id)
+            batch_file = put_s3_batch(batch, self.intermediate_bucket,
+                                      self.routine_id)
             params = {
                 "batch_file": batch_file,
                 "config": 'mysqldb.config',
