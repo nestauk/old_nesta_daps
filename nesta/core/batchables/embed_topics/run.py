@@ -6,10 +6,10 @@ import boto3
 from ast import literal_eval
 from urllib.parse import urlsplit
 
-from nesta.production.orms.gtr_orm import Projects
-from nesta.production.orms.orm_utils import db_session
+from nesta.core.orms.gtr_orm import Projects
+from nesta.core.orms.orm_utils import db_session
 from nesta.packages.nlp_utils.text2vec import docs2vectors
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 
 def parse_s3_path(path):
@@ -61,25 +61,3 @@ def run():
     s3 = boto3.resource('s3')
     obj = s3.Object(output_bucket, f'{outinfo}.json')
     obj.put(Body=json.dumps(processed_batch))
-
-
-if __name__ == "__main__":
-    log_stream_handler = logging.StreamHandler()
-    logging.basicConfig(handlers=[log_stream_handler, ],
-                        level=logging.INFO,
-                        format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # set environ to run it locally
-    if 'BATCHPAR_outinfo' not in os.environ:
-        environ = {'batch_file': ('test-ids.json'),
-                   'config': 'mysqldb.config',
-                   'db_name': 'dev',
-                   'bucket': 'nesta-production-intermediate',
-                   'done': "False",
-                   'outinfo': ('test-text2vectors'),
-                   'aws_auth_region': 'eu-west-2',
-                   'test': "True"}
-        for k, v in environ.items():
-            os.environ[f'BATCHPAR_{k}'] = v
-
-    run()

@@ -1,15 +1,11 @@
 import numpy as np
 from sklearn.mixture import GaussianMixture
 
-np.random.seed(42)
 
-
-def vals2arr(d):
-    """Store dictionary keys and values in arrays."""
-    return list(d.keys()), np.array(list(d.values()))
-
-
-def clustering(vectors):
+def clustering(vectors, covariance_type='tied', init_params='kmeans', max_iter=100,
+               means_init=None, n_components=80, n_init=1, precisions_init=None,
+               random_state=42, reg_covar=1e-06, tol=0.001, verbose=0,
+               verbose_interval=10, warm_start=False, weights_init=None):
     """Vector clustering with Gaussian Mixtures.
 
     Args:
@@ -20,24 +16,10 @@ def clustering(vectors):
 
     """
     # For now, GMMs hyperparameters are hardcoded.
-    gmm = GaussianMixture(covariance_type='tied', init_params='kmeans', max_iter=100,
-                          means_init=None, n_components=80, n_init=1, precisions_init=None,
-                          random_state=42, reg_covar=1e-06, tol=0.001, verbose=0,
-                          verbose_interval=10, warm_start=False, weights_init=None)
+    gmm = GaussianMixture(covariance_type=covariance_type, init_params=init_params, max_iter=max_iter,
+                          means_init=means_init, n_components=n_components, n_init=n_init,
+                          precisions_init=precisions_init, random_state=random_state, reg_covar=reg_covar,
+                          tol=tol, verbose=verbose, verbose_interval=verbose_interval, warm_start=warm_start,
+                          weights_init=weights_init)
     gmm.fit(vectors)
     return gmm
-
-
-def filter_arr(arr, thresh=.2):
-    """Keep the index and the values of an array if they are larger than the threshold.
-
-    Args:
-        arr (:obj:`numpy.array` of :obj:`float`): Array of numbers.
-        thresh (:obj:`int`): Keep values larger than the threshold.
-
-    Returns:
-        (:obj:`dict`): Dictionary where of the format dict({arr index, probability})
-
-    """
-    ids = np.where(arr >= thresh)[0]
-    return {id_: arr[id_] for id_ in ids}

@@ -38,6 +38,7 @@ def test_process_to_IDs_in_sparse_format():
         sp.Load(spm_path)
         values, indices, dense_shape = process_to_IDs_in_sparse_format(sp, documents)
     assert(dense_shape[0] == len(documents))
+    assert(len(values) - 2 == len(set(values)))
 
 
 @mock.patch('nesta.packages.nlp_utils.text2vec.process_to_IDs_in_sparse_format')

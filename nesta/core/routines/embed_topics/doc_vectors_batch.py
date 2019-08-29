@@ -18,12 +18,12 @@ import boto3
 import numpy as np
 from sqlalchemy.sql.expression import func
 
-from nesta.production.orms.gtr_orm import Projects
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks import autobatch, misctools
-from nesta.production.orms.orm_utils import get_mysql_engine, db_session
+from nesta.core.orms.gtr_orm import Projects
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks import autobatch, misctools
+from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub as f3p
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 # bucket to store done keys from each batch task
 S3 = boto3.resource('s3')
@@ -114,7 +114,7 @@ class RootTask(luigi.WrapperTask):
         _routine_id = "{}-{}".format(self.date, self.production)
         logging.getLogger().setLevel(logging.INFO)
         return TextVectors(date=self.date,
-                           batchable=("~/nesta/nesta/production/"
+                           batchable=("~/nesta/nesta/core/"
                                       "batchables/embed_topics/"),
                            test=not self.production,
                            db_config_env="MYSQLDB",
