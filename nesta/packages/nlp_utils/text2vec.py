@@ -7,6 +7,7 @@ import sentencepiece as spm
 import tensorflow_hub as hub
 
 np.random.seed(42)
+USE_LITE = "https://tfhub.dev/google/universal-sentence-encoder-lite/2"
 
 
 def process_to_IDs_in_sparse_format(sp, documents):
@@ -31,7 +32,7 @@ def docs2vectors(documents):
         doc_embeddings (:obj:`numpy.array` of :obj:`numpy.array` of :obj:`float`): Vector representation of documents.
 
     """
-    module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder-lite/2")
+    module = hub.Module(USE_LITE)
     input_placeholder = tf.compat.v1.sparse_placeholder(tf.int64, shape=[None, None])
     encodings = module(
         inputs=dict(
@@ -52,16 +53,3 @@ def docs2vectors(documents):
                                            input_placeholder.indices: indices,
                                            input_placeholder.dense_shape: dense_shape})
     return doc_embeddings
-
-
-if __name__ == '__main__':
-    df = pd.read_json(sys.argv[1])
-    start = time.time()
-    df = filter_documents(df)
-    print(f'TIME SPENT ON PROCESSING THE DATA: {time.time() - start}')
-    # For now, use a random sample of 200 documents
-    df = df.sample(200)
-    start = time.time()
-    vectors = docs2vectors(list(df.abstractText))
-    print(f'TIME SPENT ON TEXT2VEC: {time.time() - start}')
-    print(f'SHAPE OF VECTORS: {vectors.shape}')
