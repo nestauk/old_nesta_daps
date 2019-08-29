@@ -64,6 +64,8 @@ def extract_fields(data, fields):
     """
     out_data = {}
     for field in fields:
+        if field not in data:
+            continue
         value = data[field]
         if type(value) is list:
             value = [{k: _row[k] for k in ['title', 'rcn']}
@@ -92,6 +94,28 @@ def get_framework_ids(framework, nrows=None):
     return list(df.rcn)
 
 
+def filter_pubs(pubs):
+    """Remove publications without links, and merge
+    datasets and publications data together. 
+    Also deduplicates publications based on pids.
+    
+    Args:
+        pubs (dict): Publication data from OpenAIRE.
+    Returns:
+        _pubs (list): Flattened list of input data.
+    """
+    _pubs, pids = [], set()
+    for p in pubs['datasets'] + pubs['publications']:
+        if 'pid' not in p:
+            continue
+        already_found = any(id in pids for id in p['pid'])
+        pids = pids.union(p['pid'])
+        if already_found or len(p['pid']) == 0:
+            continue
+        _pubs.append(dict(id=p['pid'][0], **p))
+    return _pubs
+
+
 def fetch_data(rcn):
     """
     Fetch all data (project, reports, orgs, publications)
@@ -104,7 +128,7 @@ def fetch_data(rcn):
     """
     # Collect project info
     _project = hit_api(rcn=rcn, content_type='project')
-    info = _project['information']
+    info = _project['information']    
     project = {**extract_fields(info, INFO_FIELDS),
                **extract_fields(_project['objective'],
                                 OBJS_FIELDS)}
@@ -121,6 +145,7 @@ def fetch_data(rcn):
                for rep in _reports]
     # Collect publications via OpenAIRE
     pubs = hit_api(api='openaire', rcn=rcn)
+    pubs = filter_pubs(pubs)
     return project, orgs, reports, pubs
 
 

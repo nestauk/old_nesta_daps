@@ -201,7 +201,8 @@ def get_es_mapping(dataset, aliases):
     return mapping
 
 
-def filter_out_duplicates(db_env, section, database, Base, _class, data,
+def filter_out_duplicates(db_env, section, database, 
+                          Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
     already exist in the data.
@@ -234,11 +235,14 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    is_auto_pkey = all(p.autoincrement for p in pkey_cols)
+    is_auto_pkey = all(p.autoincrement and
+                       p.type.python_type is int
+                       for p in pkey_cols)
 
     # Read all pks if in low_memory mode
     if low_memory and not is_auto_pkey:
-        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+        fields = [getattr(_class, pkey.name) 
+                  for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
     for irow, row in enumerate(data):
@@ -251,11 +255,8 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
 
         # Generate the pkey for this row
         if not is_auto_pkey:
-            pk = tuple([row[pkey.name]                       # Cast to str if required, since
-                        if pkey.type.python_type is not str  # pandas may have wrongly guessed
-                        else str(row[pkey.name])             # the type as int
+            pk = tuple([pkey.type.python_type(row[pkey.name])
                         for pkey in pkey_cols])
-
             # The row mustn't aleady exist in the input data
             if pk in all_pks and not is_auto_pkey:
                 existing_objs.append(row)
@@ -296,11 +297,14 @@ def insert_data(db_env, section, database, Base,
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section,
-                                                             database=database,
-                                                             Base=Base, _class=_class, data=data,
-                                                             low_memory=low_memory)
-
+    response = filter_out_duplicates(db_env=db_env, 
+                                     section=section,
+                                     database=database,
+                                     Base=Base, 
+                                     _class=_class, 
+                                     data=data,
+                                     low_memory=low_memory)
+    objs, existing_objs, failed_objs = response
     # save and commit
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
