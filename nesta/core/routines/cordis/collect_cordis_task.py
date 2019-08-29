@@ -7,7 +7,9 @@ from nesta.core.orms.cordis_orm import Project
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.packages.cordis.cordis_api import get_framework_ids
+
 import luigi
+from datetime import datetime as dt
 
 S3BUCKET = "nesta-production-intermediate"
 
@@ -18,11 +20,11 @@ class CordisCollectTask(AutoBatchTask):
 
     def output(self):
         '''Points to the output database engine'''
-        db_config = get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "CordisCollect <dummy>"  # not a real table
-        update_id = "CordisCollect_{}".format(self.date)
-        return MySqlTarget(update_id=update_id, **db_config)
+        db_conf = get_config(self.db_config_path, "mysqldb")
+        db_conf["database"] = 'dev' if self.test else 'production'
+        db_conf["table"] = "CordisCollect <dummy>"  # not a real table
+        update_id = self.job_name
+        return MySqlTarget(update_id=update_id, **db_conf)
 
     def prepare(self):
         if self.test:
@@ -32,10 +34,11 @@ class CordisCollectTask(AutoBatchTask):
         engine = get_mysql_engine(self.db_config_env,
                                   'mysqldb', database)
 
-        # Get all possible ids
+        # Get all possible ids (or "RCN" in Cordis-speak)
         nrows = 1000 if self.test else None
         all_rcn = set(get_framework_ids('fp7', nrows=nrows) +
                       get_framework_ids('h2020', nrows=nrows))
+
         # Subtract off all done ids
         with db_session(engine) as session:
             result = session.query(Project).all()
@@ -44,16 +47,39 @@ class CordisCollectTask(AutoBatchTask):
 
         # Generate the job params
         batches = split_batches(all_rcn, self.process_batch_size)
-        job_params = [{"batch_file": put_s3_batch(batch,
-                                                  self.intermediate_bucket,
-                                                  self.routine_id),
-                       "config": 'mysqldb.config',
-                       "db_name": database,
-                       "bucket": self.intermediate_bucket,
-                       "done": False,
-                       'test': self.test}
-                      for count, batch in enumerate(batches, 1)]
-        return job_params
+        params = [{"batch_file": put_s3_batch(batch,
+                                              self.intermediate_bucket,
+                                              self._routine_id),
+                   "config": 'mysqldb.config',
+                   "db_name": database,
+                   "bucket": self.intermediate_bucket,
+                   "done": False,
+                   'test': self.test}
+                  for count, batch in enumerate(batches, 1)]
+        assert False
+        return params
 
     def combine(self, job_params):
         self.output().touch()
+
+
+class RootTask(luigi.WrapperTask):
+    production = luigi.BoolParameter(default=False)
+    date = luigi.DateParameter(default=dt.now())
+
+    def requires(self):
+        batchable = f3p("batchables/cordis/cordis_api")
+        env_files = [f3p("nesta"), f3p("config/mysqldb.config")]
+        routine_id = 'Cordis-{self.date}-(self.production}'
+        return CordisCollectTask(date=self.date,
+                                 _routine_id=routine_id,
+                                 test=not self.production,
+                                 batchable=batchable,
+                                 env_files=env_files,
+                                 job_def="py36_amzn1_image",
+                                 job_name=f"Collect-{routine_id}",
+                                 job_queue="HighPriority",
+                                 region_name="eu-west-2",
+                                 poll_time=10,
+                                 memory=2048,
+                                 max_live_jobs=100)

@@ -164,6 +164,7 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.loads(_js)
     return js
 
+
 def get_es_mapping(dataset, aliases):
     '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`
@@ -269,7 +270,9 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     return objs, existing_objs, failed_objs
 
 
-def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
+def insert_data(db_env, section, database, Base,
+                _class, data, return_non_inserted=False,
+                low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained

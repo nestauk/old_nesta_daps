@@ -29,12 +29,15 @@ def test_extract_fields():
     fields = ['fourth', 'third']
     data = {'first': '1st',
             'second': '2nd',
-            'third': [{'title': '3rd', 'other': 'junk'},
-                      {'title': '3ard', 'other': 'junka'}],
+            'third': [{'title': '3rd', 'rcn': '33',
+                       'other': 'junk'},
+                      {'title': '3ard', 'rcn': '33a',
+                       'other': 'junka'}],
             'fourth': '4th'}
     out_data = extract_fields(data, fields)
     assert set(out_data.keys()) == set(fields)
-    assert out_data['third'] == ['3rd', '3ard']
+    assert out_data['third'] == [{'title': '3rd', 'rcn': '33'},
+                                 {'title': '3ard', 'rcn': '33a'}]
     assert out_data['fourth'] == data['fourth']
 
 

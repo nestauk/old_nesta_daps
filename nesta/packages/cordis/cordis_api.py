@@ -10,6 +10,7 @@ import pandas as pd
 import json
 from retrying import retry
 from nesta.packages.decorators.ratelimit import ratelimit
+from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
 
 TOP_PREFIX = 'http://cordis.europa.eu/{}'
 CSV_URL = TOP_PREFIX.format('data/cordis-{}projects.csv')
@@ -65,8 +66,10 @@ def extract_fields(data, fields):
     for field in fields:
         value = data[field]
         if type(value) is list:
-            value = [_row['title'] for _row in value]
-        out_data[field] = value
+            value = [{k: _row[k] for k in ['title', 'rcn']}
+                     for _row in value]
+        snake_field = camel_to_snake(field)
+        out_data[snake_field] = value
     return out_data
 
 

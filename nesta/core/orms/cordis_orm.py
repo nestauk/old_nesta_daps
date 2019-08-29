@@ -91,8 +91,8 @@ class Publication(Base):
 class Topic(Base):
     __tablename__ = 'cordis_topics'
     __table_args__ = {'mysql_collate': 'utf8_bin'}
-    id = Column(INTEGER, primary_key=True, autoincrement=True)
-    topic = Column(TEXT)
+    rcn = Column(INTEGER, primary_key=True, autoincrement=False)
+    title = Column(TEXT)
 
 
 class ProjectTopic(Base):
@@ -100,23 +100,22 @@ class ProjectTopic(Base):
     __tablename__ = 'cordis_project_topics'
     project_rcn = Column(INTEGER, ForeignKey(Project.rcn),
                          primary_key=True)
-    topic_id = Column(INTEGER, ForeignKey(Topic.id),
-                      primary_key=True,
-                      autoincrement=False)
+    rcn = Column(INTEGER, ForeignKey(Topic.rcn),
+                 primary_key=True,
+                 autoincrement=False)
 
 
 class ProposalCall(Base):
     __tablename__ = 'cordis_proposal_calls'
     __table_args__ = {'mysql_collate': 'utf8_bin'}
-    id = Column(INTEGER, primary_key=True, autoincrement=False)
-    call = Column(TEXT)
+    rcn = Column(INTEGER, primary_key=True, autoincrement=False)
+    title = Column(TEXT)
 
 
-"""Association table for projects and their associated call."""
-project_calls = Table('cordis_project_calls', Base.metadata,
-                      Column('project_rcn', INTEGER,
-                             ForeignKey('cordis_projects.rcn'),
-                             primary_key=True),
-                      Column('call_id', INTEGER,
-                             ForeignKey('cordis_proposal_calls.id'),
-                             primary_key=True))
+class ProjectProposalCall(Base):
+    __tablename__ = 'cordis_project_proposal_calls'
+    project_rcn = Column(INTEGER, ForeignKey(Project.rcn),
+                         primary_key=True)
+    rcn = Column(INTEGER, ForeignKey(ProposalCall.rcn),
+                 primary_key=True,
+                 autoincrement=False)
