@@ -5,9 +5,9 @@ import pandas as pd
 import requests
 from retrying import retry
 
-from nesta.production.luigihacks import misctools
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.mag_orm import FieldOfStudy
+from nesta.core.luigihacks import misctools
+from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.mag_orm import FieldOfStudy
 
 
 ENDPOINT = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
