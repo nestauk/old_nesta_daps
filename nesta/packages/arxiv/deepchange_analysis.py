@@ -4,8 +4,8 @@ from io import BytesIO
 import logging
 import sqlalchemy
 
-from nesta.production.orms.arxiv_orm import ArticleTopic, CorExTopic
-from nesta.production.orms.orm_utils import db_session
+from nesta.core.orms.arxiv_orm import ArticleTopic, CorExTopic
+from nesta.core.orms.orm_utils import db_session
 
 
 def add_before_date_flag(data, date_column, before_year):
