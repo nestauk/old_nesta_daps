@@ -17,7 +17,7 @@ def test_gaussian_mixture_clustering():
     gmm_model_v3 = clustering(iris, n_components=4)
     arr1 = gmm_model_v3.predict(iris)
     scores = []
-    for i in range(10):
+    for i in range(1, 11):
         gmm_model_v4 = clustering(iris, n_components=4, random_state=i)
         arr2 = gmm_model_v4.predict(iris)
         scores.append(
