@@ -9,24 +9,8 @@ import tensorflow_hub as hub
 
 
 # To be tested
-from nesta.packages.nlp_utils.text2vec import filter_documents
 from nesta.packages.nlp_utils.text2vec import process_to_IDs_in_sparse_format
 from nesta.packages.nlp_utils.text2vec import docs2vectors
-
-
-def test_filter_documents():
-    data = pd.DataFrame({'id': ['a', 'b', 'c', 'd', 'e'],
-                         'abstractText': ['Water under the bridge.',
-                                          'Who let the dogs out.',
-                                          'Hello world.',
-                                          np.nan,
-                                          'Who let the dogs out.']})
-
-    expected_result = pd.DataFrame({'id': ['a', 'b'],
-                                    'abstractText': ['Water under the bridge.',
-                                                     'Who let the dogs out.']})
-    result = filter_documents(data)
-    pd.testing.assert_frame_equal(result, expected_result, check_like=False)
 
 
 def test_process_to_IDs_in_sparse_format():
