@@ -4,13 +4,13 @@ Clio Task
 
 Process/enrich data to be searchable with topics.
 '''
-from nesta.production.luigihacks import s3
-from nesta.production.luigihacks import luigi_logging
-from nesta.production.luigihacks.automl import AutoMLTask
-from nesta.production.luigihacks.misctools import get_config
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
-from nesta.production.luigihacks.s3task import S3Task
+from nesta.core.luigihacks import s3
+from nesta.core.luigihacks import luigi_logging
+from nesta.core.luigihacks.automl import AutoMLTask
+from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.luigihacks.s3task import S3Task
 
 import luigi
 import os
@@ -110,10 +110,19 @@ class ClioTask(luigi.Task):
         if not self.write_es:
             return
 
-        # Read the topics data
-        file_ptr = self.input().open("rb")
-        path = file_ptr.read()
-        file_ptr.close()
+        self.cherry_picked=(f'gtr/{self.date}/'.encode('utf-8')+
+                            b'COREX_TOPIC_MODEL.n_hidden_140-0.'
+                            b'VECTORIZER.binary_True.'
+                            b'min_df_0-001.'
+                            b'text_field_abstractText'
+                            b'.NGRAM.TEST_False.json')
+        if self.cherry_picked is None:
+            # Read the topics data
+            file_ptr = self.input().open("rb")
+            path = file_ptr.read()
+            file_ptr.close()
+        else:
+            path = self.cherry_picked
 
         file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
         topic_json = json.load(file_io_topics)

@@ -29,7 +29,7 @@
         "memory": 16000,
         "job_def": "py36_sklearn_amzn1_image",
         "hyperparameters": {
-            "n_hidden": "np.arange(20, 51, 1)"
+            "n_hidden": "np.arange(50, 210, 10)"
         },
         "use_intermediate_inputs": false,
         "n_batches": 1
