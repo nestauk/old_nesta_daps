@@ -3,7 +3,8 @@ import lxml  # To force pipreqs' hand
 
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
-
+from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
+from nesta.packages.health_data.process_mesh import format_mesh_terms
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.meetup_orm import Group
@@ -35,12 +36,14 @@ def run():
     routine_id = os.environ["BATCHPAR_routine_id"]
 
     # Get continent lookup
-    url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
-    continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
+    url = ("https://nesta-open-data.s3.eu-west-2"
+           ".amazonaws.com/rwjf-viz/continent_codes_names.json")
+    continent_lookup = {row["Code"]: row["Name"] 
+                        for row in requests.get(url).json()}
     continent_lookup[None] = None
 
     # Extract the core topics
-    logging.DEBUG('Getting topics')
+    logging.debug('Getting topics')
     s3 = boto3.resource('s3')
     topics_key = f'meetup-topics-{routine_id}.json'
     topics_obj = s3.Object(s3_bucket, topics_key)
@@ -50,7 +53,16 @@ def run():
     ids_obj = s3.Object(s3_bucket, batch_file)
     group_ids = set(json.loads(ids_obj.get()['Body']._raw_stream.read()))
 
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
+    # Extract the mesh terms for this task
+    mesh_obj = s3.Object('innovation-mapping-general', 
+                         'meetup_mesh/meetup_mesh_processed.txt')
+    df_mesh = retrieve_mesh_terms('innovation-mapping-general',
+                                  'meetup_mesh/meetup_mesh_processed.txt')
+    mesh_terms = format_mesh_terms(df_mesh)
+
+    # Setup ES+
+    field_null_mapping = load_json_from_pathstub(("tier_1/"
+                                                  "field_null_mappings/"),
                                                  "health_scanner.json")
     strans_kwargs={'filename':'meetup.json',
                    'from_key':'tier_0',
@@ -74,7 +86,8 @@ def run():
     with db_session(engine) as session:
         query_result = session.query(Geographic).all()
         for geography in query_result:
-            geo_lookup[geography.id] = {k: v for k, v in geography.__dict__.items()
+            geo_lookup[geography.id] = {k: v for k, v in 
+                                        geography.__dict__.items()
                                         if k in geography.__table__.columns}
 
     # Pipe the groups
@@ -94,6 +107,12 @@ def run():
                       if topic['name'] in core_topics]
             if len(topics) == 0:
                 continue
+
+            # Assign mesh terms
+            mesh_id = f'{row["id"]}'.zfill(8)
+            row['mesh_terms'] = None
+            if mesh_id in mesh_terms:
+                row['mesh_terms'] = mesh_terms[mesh_id]
 
             # Get the geographic data for this row
             country_name = country_iso_code_to_name(row['country'], iso2=True)
@@ -128,28 +147,25 @@ if __name__ == "__main__":
 
     log_level = logging.INFO
     if 'BATCHPAR_outinfo' not in os.environ:
-        log_level = logging.VERBOSE
-        environ = {'batch_file': ('2019-07-17-community-environment'
-                                  '--health-wellbeing'
-                                  '--fitness'
-                                  '-10-99-True-'
-                                  '15633764681888585.json'),
-                    'config': ('/home/ec2-user/nesta/nesta/core/'
+        log_level = logging.DEBUG
+        environ = {'batch_file': ('2019-08-22-community-environment'
+                                  '--health-wellbeing--fitness-'
+                                  '10-99-False-1566471880891235.json'),
+                   'config': ('/home/ec2-user/nesta-lol/nesta/core/'
                                'config/mysqldb.config'),
-                    'db_name': 'production',
+                    'db_name': 'dev',
                     'bucket': 'nesta-production-intermediate',
                     'outinfo': ('https://search-health-scanner'
                                 '-5cs7g52446h7qscocqmiky5dn4.'
                                 'eu-west-2.es.amazonaws.com'),
                     'out_port': '443',
-                    'out_index': 'meetup_v2',
+                    'out_index': 'meetup_dev',
                     'out_type': '_doc',
                     'aws_auth_region': 'eu-west-2',
                     'entity_type': 'meetup',
                     'members_perc': '10',
-                    'routine_id': ('2019-07-17-community-environment-'
-                                   '-health-wellbeing--fitness-'
-                                   '10-99-True')}
+                    'routine_id': ('2019-08-22-community-environment-'
+                                   '-health-wellbeing--fitness-10-99-False')}
 
         for k, v in environ.items():
             os.environ[f"BATCHPAR_{k}"] = v
