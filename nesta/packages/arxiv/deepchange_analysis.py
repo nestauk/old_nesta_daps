@@ -123,4 +123,4 @@ def highly_cited(row, lookup):
     Returns:
         (bool): True if greater than the yearly median
     """
-    return row.citation_count > lookup.loc[row.year]
+    return list(row.citation_count > lookup.loc[row.year])[0]
