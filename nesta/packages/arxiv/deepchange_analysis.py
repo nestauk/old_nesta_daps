@@ -3,9 +3,27 @@ from datetime import date
 from io import BytesIO
 import logging
 import sqlalchemy
+import re
 
 from nesta.core.orms.arxiv_orm import ArticleTopic, CorExTopic
 from nesta.core.orms.orm_utils import db_session
+
+
+def is_multinational(text, countries):
+    """Returns True if :obj:`text` ends with any of
+    :obj:`countries` in brackets. For example:
+
+        'Blah blah (Germany)'
+        'Something  (China)'
+        'oe.,e.de (United States)'
+    
+    would return True.
+    """
+    results = re.findall(r"^.* \((.*)\)$", text)
+    if len(results) == 0:
+        return False
+    is_mn = (results[-1] in countries)
+    return is_mn
 
 
 def add_before_date_flag(data, date_column, before_year):
@@ -123,4 +141,4 @@ def highly_cited(row, lookup):
     Returns:
         (bool): True if greater than the yearly median
     """
-    return list(row.citation_count > lookup.loc[row.year])[0]
+    return (row.citation_count > lookup.loc[row.year]).bool()

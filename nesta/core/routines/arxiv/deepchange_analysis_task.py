@@ -18,12 +18,15 @@ from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.routines.arxiv.arxiv_topic_tasks import WriteTopicTask
 from nesta.core.luigihacks.parameter import DictParameterPlus
 
+matplotlib.rcParams['figure.figsize'] = (20, 13)
+matplotlib.rcParams.update({'font.size': 25, "axes.labelpad":10})
+
 DEEPCHANGE_QUERY = misctools.find_filepath_from_pathstub('arxlive_deepchange.sql')
 YEAR_THRESHOLD = 2012
 MIN_RCA_YEAR = 2007  # minimum year when calculating rca pre 2012
-N_TOP = 20  # number of countries / cities / categories to show
-COLOR_A = '#992b15'
-COLOR_B = '#d18270'
+N_TOP = 15  # number of countries / cities / categories to show
+COLOR_A = '#631607'
+COLOR_B = '#d68b7a'
 STATIC_FILES_BUCKET = 'arxlive-static-files'
 
 

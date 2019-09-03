@@ -16,7 +16,7 @@ from nesta.packages.arxiv.deepchange_analysis import calculate_rca_by_country
 from nesta.packages.arxiv.deepchange_analysis import get_article_ids_by_term
 from nesta.packages.arxiv.deepchange_analysis import plot_to_s3
 from nesta.packages.arxiv.deepchange_analysis import highly_cited
-
+from nesta.packages.arxiv.deepchange_analysis import is_multinational
 
 def test_add_before_date_flag_correctly_adds_flags():
     data = pd.DataFrame({'id': [0, 1, 2],
@@ -124,10 +124,26 @@ def test_highly_cited():
     lookup = pd.DataFrame({'citation_count': [2, 8, 7]}, index=[2000, 2001, 2002])
 
     row = pd.Series({'id': 1, 'citation_count': 5, 'year': 2000})
-    assert highly_cited(row, lookup).bool() is True
+    assert highly_cited(row, lookup) is True
 
     row = pd.Series({'id': 2, 'citation_count': 6, 'year': 2001})
-    assert highly_cited(row, lookup).bool() is False
+    assert highly_cited(row, lookup) is False
 
     row = pd.Series({'id': 3, 'citation_count': 7, 'year': 2002})
-    assert highly_cited(row, lookup).bool() is False
+    assert highly_cited(row, lookup) is False
+
+
+def test_is_multinational():
+    countries = ['China', 'Joel', 'Nesta']
+    # Should be True
+    for text in ['Something (China)', '(Something) (China)',
+                 'blasj.erer  ereren ererer (Joel)',
+                 'erere (ere) (Nesta)']:
+        assert is_multinational(text, countries)
+
+    # Should be False
+    for text in ['(China)', '(China) (Something)',
+                 'blasj.erer  ereren ererer',
+                 'erere (Nesta) (Nesta']:
+        assert not is_multinational(text, countries)
+
