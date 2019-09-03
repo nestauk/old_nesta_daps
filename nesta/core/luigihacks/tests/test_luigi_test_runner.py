@@ -4,6 +4,7 @@ from unittest import mock
 from nesta.core.luigihacks.luigi_test_runner import luigi_test_runner
 from nesta.core.luigihacks.luigi_test_runner import find_root_tasks
 from nesta.core.luigihacks.luigi_test_runner import find_python_files
+from nesta.core.luigihacks.luigi_test_runner import build_docker_image
 
 
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.run_luigi_pipeline', autospec=True)
@@ -26,14 +27,15 @@ class TestTestRunner:
 
         mocked_find_root_tasks.assert_called_once_with(start_directory='routines')
 
-    def test_build_docker_image_is_called_with_specified_branch(self,
-                                                                mocked_find_root_tasks,
-                                                                mocked_build_image,
-                                                                mocked_recreate_database,
-                                                                mocked_run_pipeline):
+    def test_build_docker_image_is_called_with_branch_in_buildargs(self,
+                                                                   mocked_find_root_tasks,
+                                                                   mocked_build_image,
+                                                                   mocked_recreate_database,
+                                                                   mocked_run_pipeline):
         luigi_test_runner(start_directory='routines', branch='new_feature')
 
-        mocked_build_image.assert_called_once_with(branch='new_feature')
+        buildargs = mocked_build_image.call_args[1]['buildargs']
+        assert buildargs == {'GIT_TAG': 'new_feature'}
 
     def test_recreate_database_is_called_correctly(self,
                                                    mocked_find_root_tasks,
@@ -73,8 +75,8 @@ class TestTestRunner:
         assert mocked_run_pipeline.call_count == 3
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.contains_root_task')
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.find_python_files')
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.contains_root_task', autospec=True)
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.find_python_files', autospec=True)
 class TestFindRootTasks:
     @pytest.fixture
     def paths_to_find(self):
@@ -109,7 +111,7 @@ class TestFindRootTasks:
         assert 'routines.crunchbase.crunchbase_root_task' not in result
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.glob.glob')
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.glob.glob', autospec=True)
 class TestFindPythonFiles:
     def test_glob_is_called_correctly(self, mocked_glob):
         find_python_files('subfolder/routines')
@@ -120,3 +122,15 @@ class TestFindPythonFiles:
         find_python_files('subfolder/routines/')
 
         assert mocked_glob.call_args[0][0] == 'subfolder/routines/**/*.py'
+
+
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.docker.from_env', autospec=True)
+def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_docker):
+    mocked_client = mock.Mock()
+    mocked_client.images.build.return_value = None, []
+    mocked_docker.return_value = mocked_client
+
+    build_docker_image('test_tag:test')
+
+    assert all(mocked_client.images.build.call_args[1][arg]
+               for arg in ['nocache', 'rm'])

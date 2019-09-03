@@ -1,3 +1,4 @@
+import docker
 import glob
 import logging
 import re
@@ -67,10 +68,27 @@ def find_root_tasks(start_directory):
     return modules
 
 
-def build_docker_image(dockerfile='docker/Dockerfile', **kwargs):
-    # client = docker.from_env()
-    # use low level api and capture the logs
-    pass
+def build_docker_image(image_tag,
+                       path='.',
+                       dockerfile='docker/Dockerfile',
+                       buildargs=None):
+    """Builds the specified image from a Dockerfile.
+
+    Args:
+        image_tag(str): name and tag for the build image in the format name:tag
+        path(str): context for the build
+        dockerfile(str): path to the Dockefile
+        buildargs(dict): arguments to supply to the build
+
+    Yields:
+        (dict): build logs
+    """
+    client = docker.from_env()
+
+    _, logs = client.images.build(path=path, dockerfile=dockerfile, tag=image_tag,
+                                  nocache=True, rm=True, buildargs=buildargs)
+
+    return logs
 
 
 def recreate_test_database():
@@ -86,7 +104,8 @@ def run_luigi_pipeline(module, **kwargs):
 def luigi_test_runner(start_directory,
                       dockerfile='docker/Dockerfile',
                       branch='dev',
-                      luigi_kwargs=None):
+                      luigi_kwargs=None,
+                      image_tag='luigi_test_runner:test'):
     """Identifies all Luigi pipelines and runs them in Docker for end-to-end testing.
 
     Args:
@@ -96,7 +115,8 @@ def luigi_test_runner(start_directory,
         luigi_kwargs(dict): arguments to pass to Luigi tasks eg date
     """
     logging.info(f"Building docker image on branch: {branch}")
-    build_docker_image(branch=branch)
+    buildargs = {'GIT_TAG': branch}
+    build_docker_image(image_tag, buildargs=buildargs)
 
     root_tasks = find_root_tasks(start_directory)
     logging.info(f"Found {len(root_tasks)} pipelines to run")
