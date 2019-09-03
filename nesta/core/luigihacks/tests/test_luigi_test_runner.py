@@ -115,3 +115,8 @@ class TestFindPythonFiles:
         find_python_files('subfolder/routines')
 
         mocked_glob.assert_called_once_with('subfolder/routines/**/*.py', recursive=True)
+
+    def test_trailing_slash_is_removed_from_start_directory(self, mocked_glob):
+        find_python_files('subfolder/routines/')
+
+        assert mocked_glob.call_args[0][0] == 'subfolder/routines/**/*.py'

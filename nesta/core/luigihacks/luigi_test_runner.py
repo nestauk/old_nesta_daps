@@ -12,14 +12,31 @@ def find_python_files(start_directory):
     Returns:
         (list): all found files
     """
+    if start_directory.endswith('/'):
+        start_directory = start_directory[:-1]
+
     path = f"{start_directory}/**/*.py"
     python_files = glob.glob(path, recursive=True)
 
     return python_files
 
 
-def contains_root_task(python_file):
-    pass
+def contains_root_task(file_path):
+    """Searches line by line through a file looking for a RootTask class.
+
+    Args:
+        file_path(str): path to the file to check
+
+    Returns:
+        (bool): True if the file contains a RootTask
+    """
+    root_task_class = 'class RootTask(luigi.WrapperTask):\n'
+
+    for line in open(file_path, mode='r'):
+        if line == root_task_class:
+            return True
+
+    return False
 
 
 def find_root_tasks(start_directory):
