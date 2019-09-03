@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sqlalchemy
 from unittest import mock
+import pytest
 
 # for mocking
 from nesta.packages.arxiv.deepchange_analysis import ArticleTopic, CorExTopic
@@ -14,9 +15,12 @@ from nesta.packages.arxiv.deepchange_analysis import boto3
 from nesta.packages.arxiv.deepchange_analysis import add_before_date_flag
 from nesta.packages.arxiv.deepchange_analysis import calculate_rca_by_country
 from nesta.packages.arxiv.deepchange_analysis import get_article_ids_by_term
+from nesta.packages.arxiv.deepchange_analysis import get_article_ids_by_terms
 from nesta.packages.arxiv.deepchange_analysis import plot_to_s3
 from nesta.packages.arxiv.deepchange_analysis import highly_cited
 from nesta.packages.arxiv.deepchange_analysis import is_multinational
+
+PREFIX = 'nesta.packages.arxiv.deepchange_analysis.{}'
 
 def test_add_before_date_flag_correctly_adds_flags():
     data = pd.DataFrame({'id': [0, 1, 2],
@@ -94,7 +98,7 @@ def test_plot_to_s3_applies_public_permissions(mocked_boto3_resource):
     assert 'ACL' not in mocked_s3.Object().put.call_args[1].keys()
 
 
-@mock.patch("nesta.packages.arxiv.deepchange_analysis.db_session", autospec=True)
+@mock.patch(PREFIX.format("db_session"), autospec=True)
 def test_get_article_ids_by_term(mocked_db_session):
     mocked_session = mock.Mock(spec=sqlalchemy.orm.session)
     mocked_engine = mock.Mock(spec=sqlalchemy.engine)
@@ -118,6 +122,32 @@ def test_get_article_ids_by_term(mocked_db_session):
 
     assert (ExpressionMatcher(mocked_session.query().filter.mock_calls[2])
             == mock.call((ArticleTopic.topic_id == 1) & (ArticleTopic.topic_weight >= 0.1)))
+
+
+@mock.patch(PREFIX.format("db_session"), autospec=True)
+@mock.patch(PREFIX.format("get_article_ids_by_term"))
+def test_get_article_ids_by_term(mocked_get_ids, mocked_db_session):
+    mocked_session = mock.Mock(spec=sqlalchemy.orm.session)
+    mocked_engine = mock.Mock(spec=sqlalchemy.engine)
+    mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
+    mocked_get_ids.side_effect = [{1,2,3},
+                                  {},
+                                  {2,4,5}]
+    ids = get_article_ids_by_terms(mocked_engine, terms=['a','b','c'],
+                                   min_weight=0.3)
+    assert ids == {1,2,3,4,5}
+
+
+@mock.patch(PREFIX.format("db_session"), autospec=True)
+@mock.patch(PREFIX.format("get_article_ids_by_term"))
+def test_get_article_ids_by_term_fail(mocked_get_ids, mocked_db_session):
+    mocked_session = mock.Mock(spec=sqlalchemy.orm.session)
+    mocked_engine = mock.Mock(spec=sqlalchemy.engine)
+    mocked_db_session(mocked_engine).__enter__.return_value = mocked_session
+    mocked_get_ids.side_effect = [{}, {}, {}]
+    with pytest.raises(ValueError):
+        get_article_ids_by_terms(mocked_engine, terms=['a','b','c'],
+                                 min_weight=0.3)
 
 
 def test_highly_cited():
@@ -146,4 +176,3 @@ def test_is_multinational():
                  'blasj.erer  ereren ererer',
                  'erere (Nesta) (Nesta']:
         assert not is_multinational(text, countries)
-
