@@ -7,6 +7,10 @@ from nesta.packages.mag.query_mag_api import query_mag_api
 from nesta.packages.mag.query_mag_api import dedupe_entities
 from nesta.packages.mag.query_mag_sparql import extract_entity_id
 from nesta.packages.mag.query_mag_sparql import query_articles_by_doi
+from nesta.packages.mag.query_mag_sparql import _batch_query_sparql
+from nesta.packages.mag.query_mag_sparql import _batched_entity_filter
+from nesta.packages.mag.query_mag_sparql import MAG_ENDPOINT
+from nesta.packages.mag.query_mag_sparql import get_eu_countries
 
 
 class TestPrepareTitle:
@@ -94,7 +98,6 @@ class TestQueryArticles:
         assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'},
                           {'paperTitle': 'title_b', 'score': 0, 'id': 2, 'doi': '2.2/4321'}]
 
-
     @mock.patch('nesta.packages.mag.query_mag_sparql._batch_query_articles_by_doi', autospec=True)
     @mock.patch('nesta.packages.mag.query_mag_sparql.levenshtein_distance', autospec=True)
     def test_query_articles_by_doi_returns_no_results_when_doi_not_found(self,
@@ -111,3 +114,165 @@ class TestQueryArticles:
 
         result = list(query_articles_by_doi(missing_articles))
         assert result == [{'paperTitle': 'title_aa', 'score': 1, 'id': 1, 'doi': '1.1/1234'}]
+
+
+class TestBatchQuerySparql:
+    @mock.patch('nesta.packages.mag.query_mag_sparql._batched_entity_filter', autospec=True)
+    @mock.patch('nesta.packages.mag.query_mag_sparql.sparql_query', autospec=True)
+    def test_batch_query_sparql_raises_if_batch_size_invalid(self,
+                                                             mocked_sparql_query,
+                                                             mocked_entity_filter):
+        batch_size_error = "batch_size must be between 1 and 50"
+
+        with pytest.raises(ValueError) as e:
+            list(_batch_query_sparql('test_query', batch_size=51))
+        assert str(e.value) == batch_size_error
+        mocked_sparql_query.assert_not_called()
+        mocked_entity_filter.assert_not_called()
+
+        with pytest.raises(ValueError) as e:
+            list(_batch_query_sparql('test_query', batch_size=0))
+        assert str(e.value) == batch_size_error
+        mocked_sparql_query.assert_not_called()
+        mocked_entity_filter.assert_not_called()
+
+    @mock.patch('nesta.packages.mag.query_mag_sparql._batched_entity_filter', autospec=True)
+    @mock.patch('nesta.packages.mag.query_mag_sparql.sparql_query', autospec=True)
+    def test_batch_query_sparql_raises_if_wrong_arguments_provided(self,
+                                                                   mocked_sparql_query,
+                                                                   mocked_entity_filter):
+        argument_error = ("concat_format, filter_on and ids must all "
+                          "be supplied together or not at all")
+
+        with pytest.raises(ValueError) as e:
+            list(_batch_query_sparql('test_query', concat_format='concat_format'))
+        assert str(e.value) == argument_error
+        mocked_sparql_query.assert_not_called()
+        mocked_entity_filter.assert_not_called()
+
+        with pytest.raises(ValueError) as e:
+            list(_batch_query_sparql('test_query', filter_on='filter'))
+        assert str(e.value) == argument_error
+        mocked_sparql_query.assert_not_called()
+        mocked_entity_filter.assert_not_called()
+
+        with pytest.raises(ValueError) as e:
+            list(_batch_query_sparql('test_query', ids=['id1', 'id2']))
+        assert str(e.value) == argument_error
+        mocked_sparql_query.assert_not_called()
+        mocked_entity_filter.assert_not_called()
+
+    @mock.patch('nesta.packages.mag.query_mag_sparql._batched_entity_filter', autospec=True)
+    @mock.patch('nesta.packages.mag.query_mag_sparql.sparql_query', autospec=True)
+    def test_batch_query_sparql_queries_all_if_no_filtering_provided(self,
+                                                                     mocked_sparql_query,
+                                                                     mocked_entity_filter):
+        mocked_sparql_query.return_value = iter([[1, 2, 3], [4, 5, 6], [7]])
+        query = "SELECT ?somefield WHERE ?data graph:node ?somefield {}"
+
+        result = list(_batch_query_sparql(query))
+
+        assert result == [1, 2, 3, 4, 5, 6, 7]
+        mocked_sparql_query.assert_called_once_with(
+            MAG_ENDPOINT,
+            "SELECT ?somefield WHERE ?data graph:node ?somefield "
+        )
+        mocked_entity_filter.assert_not_called()
+
+    @mock.patch('nesta.packages.mag.query_mag_sparql._batched_entity_filter', autospec=True)
+    @mock.patch('nesta.packages.mag.query_mag_sparql.sparql_query', autospec=True)
+    def test_batch_query_sparql_limits_query_if_filtering_provided(self,
+                                                                   mocked_sparql_query,
+                                                                   mocked_entity_filter):
+        mocked_sparql_query.return_value = iter(['a', 'b', 'c'])
+        mocked_entity_filter.return_value = iter(["FILTER (?data IN (<1>,<2>,<3>))"])
+        query = "SELECT ?somefield WHERE ?data graph:node ?somefield {}"
+        concat_format = '<{}>'
+        filter_on = 'data'
+        ids = [1, 2, 3]
+        batch_size = 50
+
+        result = list(_batch_query_sparql(query, concat_format, filter_on, ids,
+                                          batch_size))
+
+        assert result == ['a', 'b', 'c']
+        mocked_entity_filter.assert_called_once_with(concat_format, filter_on, ids,
+                                                     batch_size)
+        mocked_sparql_query.assert_called_once_with(
+            MAG_ENDPOINT, ("SELECT ?somefield WHERE ?data graph:node "
+                           "?somefield FILTER (?data IN (<1>,<2>,<3>))"))
+
+    @mock.patch('nesta.packages.mag.query_mag_sparql._batched_entity_filter', autospec=True)
+    @mock.patch('nesta.packages.mag.query_mag_sparql.sparql_query', autospec=True)
+    def test_batch_query_sparql_splits_batches_of_ids(self,
+                                                      mocked_sparql_query,
+                                                      mocked_entity_filter):
+        mocked_sparql_query.side_effect = iter([['a', 'b'], ['c']])
+        mocked_entity_filter.return_value = iter(["FILTER (?data IN (<1>,<2>))",
+                                                 "FILTER (?data IN (<3>))"])
+        query = "SELECT ?somefield WHERE ?data graph:node ?somefield {}"
+        concat_format = '<{}>'
+        filter_on = 'data'
+        ids = [1, 2, 3]
+        batch_size = 2
+
+        result = list(_batch_query_sparql(query, concat_format, filter_on, ids,
+                                          batch_size))
+
+        assert result == ['a', 'b', 'c']
+        assert mocked_sparql_query.mock_calls == [
+            mock.call(MAG_ENDPOINT, ("SELECT ?somefield WHERE ?data graph:node "
+                                     "?somefield FILTER (?data IN (<1>,<2>))")),
+            mock.call(MAG_ENDPOINT, ("SELECT ?somefield WHERE ?data graph:node "
+                                     "?somefield FILTER (?data IN (<3>))"))]
+        mocked_entity_filter.assert_called_once_with(concat_format, filter_on, ids,
+                                                     batch_size)
+
+
+class TestBatchedEntityFilter:
+    @mock.patch('nesta.packages.mag.query_mag_sparql.split_batches', autospec=True)
+    def test_batched_entity_filter_constructs_correct_format(self,
+                                                             mocked_split_batches):
+        concat_format = '<{}>'
+        filter_on = 'data'
+        ids = [1, 2, 3]
+        batch_size = 50
+        mocked_split_batches.return_value = iter([[1, 2, 3]])
+
+        result = list(_batched_entity_filter(concat_format, filter_on, ids,
+                                             batch_size))
+
+        assert result == ["FILTER (?data IN (<1>,<2>,<3>))"]
+        mocked_split_batches.assert_called_once_with(ids, batch_size)
+
+    @mock.patch('nesta.packages.mag.query_mag_sparql.split_batches', autospec=True)
+    def test_batched_entity_filter_splits_batches_of_ids(self, mocked_split_batches):
+        concat_format = '<{}>'
+        filter_on = 'data'
+        ids = [1, 2, 3]
+        batch_size = 2
+        mocked_split_batches.return_value = iter([[1, 2], [3]])
+
+        result = list(_batched_entity_filter(concat_format, filter_on, ids,
+                                             batch_size))
+
+        assert result == ["FILTER (?data IN (<1>,<2>))",
+                          "FILTER (?data IN (<3>))"]
+        mocked_split_batches.assert_called_once_with(ids, batch_size)
+
+
+@mock.patch('nesta.packages.mag.query_mag_sparql.requests.get', autospec=True)
+def test_get_eu_countries_returns_countries(mocked_requests):
+    some_html = '''
+        <div id="content" style="max-width:950px">
+        <div class="table" id="year-entry2">
+        <table><tbody><tr><th class="table_th_pos_1" colspan="2">Countries</th>
+        </tr><tr><td><a href="">Austria</a></td> <td><a href="">Italy</a></td>
+        </tr><tr><td><a href="">Belgium</a></td> <td><a href="">Latvia</a></td>
+        </tr></tbody></table></div>
+        </div>
+        '''
+    mocked_response = mock.Mock(text=some_html)
+    mocked_requests.return_value = mocked_response
+
+    assert get_eu_countries() == ['Austria', 'Italy', 'Belgium', 'Latvia']

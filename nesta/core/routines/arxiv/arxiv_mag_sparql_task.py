@@ -146,7 +146,8 @@ class MagSparqlTask(luigi.Task):
                 missing_fos_ids = row['fields_of_study'] - found_fos_ids
                 if missing_fos_ids:
                     logging.info(f"Missing field of study ids: {missing_fos_ids}")
-                    fos_not_found = update_field_of_study_ids_sparql(session, missing_fos_ids)
+                    fos_not_found = update_field_of_study_ids_sparql(self.engine,
+                                                                     missing_fos_ids)
                     # any fos not found in mag are removed to prevent foreign key
                     # constraint errors when building the link table
                     for fos in fos_not_found:
