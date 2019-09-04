@@ -90,7 +90,7 @@ class AnalysisTask(luigi.Task):
         '''Points to the output database engine'''
         db_config = get_config(self.db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = "arXlive <dummy>"  # Note, not a real table
+        db_config["table"] = "arXlive <dummy>"  # NB: not a real table
         update_id = "ArxivAnalysis_{}_{}".format(self.date, self.test)
         return mysqldb.MySqlTarget(update_id=update_id, **db_config)
 
@@ -223,8 +223,8 @@ class AnalysisTask(luigi.Task):
         condition = (df_all_cats.id.str.startswith('cs.') |
                      (df_all_cats.id.str == 'stat.ML'))
         all_categories = list(df_all_cats.loc[condition].description)
-        _before = f'After {year_threshold}'
-        _after = f'Before {year_threshold}'
+        _before = f'Before {year_threshold}'
+        _after = f'After {year_threshold}'
 
         cat_period_container = []
         for cat in all_categories:
