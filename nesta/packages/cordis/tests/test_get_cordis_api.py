@@ -43,9 +43,8 @@ def test_extract_fields():
 
 def test_extract_fields_bad_field():
     fields = ['fifth']
-    data = {'first': '1st'}
-    with pytest.raises(KeyError):
-        extract_fields(data, fields)
+    data = {'first': '1st'}    
+    assert extract_fields(data, fields) == {}
 
 
 @mock.patch(PKGPATH.format('pd'))
