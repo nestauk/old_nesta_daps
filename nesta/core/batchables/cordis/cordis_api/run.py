@@ -14,8 +14,11 @@ from collections import defaultdict
 
 def extract_core_orgs(orgs, project_rcn):
     core_orgs = []
-    for org in orgs:
+    for org in orgs:        
         ctry = org.pop('country')
+        # Ignore objects without a good PK
+        if org['organization_id'] == '':
+            continue
         core_orgs.append({'name': org.pop('name'),
                           'id': org['organization_id'],
                           'country_code': ctry['isoCode'],
@@ -29,8 +32,12 @@ def prepare_data(items, rcn):
 
 def split_links(items, project_rcn):
     for item in items:
-        yield ({'title': item['title'], 'rcn': item['rcn']},
-               {'project_rcn': project_rcn, 'rcn': item['rcn']})
+        rcn = item['rcn']
+        # Ignore objects without a good PK
+        if rcn == '':
+            continue
+        yield ({'title': item['title'], 'rcn': rcn},
+               {'project_rcn': project_rcn, 'rcn': rcn})
 
 
 def run():
@@ -42,7 +49,6 @@ def run():
 
     # Setup the database connectors
     engine = get_mysql_engine(db_env, db_section, db_name)
-    #Base.metadata.drop_all(engine)
     try_until_allowed(Base.metadata.create_all, engine)
 
     # Retrieve RCNs to iterate over
@@ -55,6 +61,8 @@ def run():
     data = defaultdict(list)
     for i, rcn in enumerate(all_rcn):
         project, orgs, reports, pubs = fetch_data(rcn)
+        if project is None:
+            continue
         _topics = project.pop('topics')
         _calls = project.pop('proposal_call')
         # NB: Order below matters due to FK constraints!
@@ -83,7 +91,7 @@ if __name__ == "__main__":
     if 'BATCHPAR_config' not in os.environ:
         from nesta.core.luigihacks.luigi_logging import set_log_level
         set_log_level(True)
-        os.environ['BATCHPAR_batch_file'] = ('Cordis-2019-08-29-False-1567092984546124.json')
+        os.environ['BATCHPAR_batch_file'] = ('Cordis-2019-08-30-False-15671754144164176.json')
         os.environ['BATCHPAR_db_name'] = 'dev'
         os.environ["BATCHPAR_config"] = ('/home/ec2-user/'
                                          'nesta/nesta/core/config/'

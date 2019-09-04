@@ -11,6 +11,8 @@ import json
 from retrying import retry
 from nesta.packages.decorators.ratelimit import ratelimit
 from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
+from json.decoder import JSONDecodeError
+from requests.exceptions import HTTPError
 
 TOP_PREFIX = 'http://cordis.europa.eu/{}'
 CSV_URL = TOP_PREFIX.format('data/cordis-{}projects.csv')
@@ -48,6 +50,9 @@ def hit_api(api='', rcn=None, content_type=None):
                                   'rcn': rcn,
                                   'paramType': 'rcn',
                                   'contenttype': content_type})
+    if (r.status_code == 500 and 
+        r.json()['payload']['errorType'] == 'ica'):
+        return None
     r.raise_for_status()
     return r.json()['payload']
 
@@ -128,6 +133,8 @@ def fetch_data(rcn):
     """
     # Collect project info
     _project = hit_api(rcn=rcn, content_type='project')
+    if _project is None:
+        return (None,None,None,None)
     info = _project['information']    
     project = {**extract_fields(info, INFO_FIELDS),
                **extract_fields(_project['objective'],
@@ -141,11 +148,19 @@ def fetch_data(rcn):
     # Collect result reports
     _reports = [hit_api(rcn=report['rcn'], content_type='result')
                 for report in info['relatedResultsReport']]
-    reports = [extract_fields(rep, REPS_FIELDS)
-               for rep in _reports]
+    reports = []
+    if _reports is not None:
+        reports = [extract_fields(rep, REPS_FIELDS)
+                   for rep in _reports]
     # Collect publications via OpenAIRE
-    pubs = hit_api(api='openaire', rcn=rcn)
-    pubs = filter_pubs(pubs)
+    try:
+        pubs = hit_api(api='openaire', rcn=rcn)
+        if pubs is None:
+            raise HTTPError
+    except (HTTPError, JSONDecodeError):
+        pubs = []
+    else:
+        pubs = filter_pubs(pubs)
     return project, orgs, reports, pubs
 
 
@@ -157,6 +172,8 @@ if __name__ == "__main__":
     n_proj, _orgs, n_reps, n_pubs = 0, set(), 0, 0
     for rcn in all_rcn:
         project, orgs, reports, pubs = fetch_data(rcn)
+        if project is None:
+            continue
         n_proj += 1
         _orgs = _orgs.union(row['organizationId'] for row in orgs)
         n_reps += len(reports)

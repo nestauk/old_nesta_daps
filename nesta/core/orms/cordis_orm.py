@@ -6,7 +6,7 @@ Cordis
 from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.mysql import MEDIUMTEXT
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.types import DATETIME, INTEGER, JSON
 from sqlalchemy.types import TEXT, VARCHAR
 
@@ -26,7 +26,7 @@ class Project(Base):
     objective =  Column(TEXT)
     project_description = Column(TEXT)
     start_date_code = Column(DATETIME, index=True)
-    status = Column(VARCHAR(7))
+    status = Column(VARCHAR(10))
     title = Column(TEXT)
     total_cost = Column(INTEGER)
     website = Column(TEXT)
@@ -71,7 +71,7 @@ class Report(Base):
     final_results = Column(TEXT)
     work_performed = Column(TEXT)
     teaser = Column(TEXT)
-    summary = Column(MEDIUMTEXT)
+    summary = Column(LONGTEXT)
     title = Column(TEXT)
 
 
