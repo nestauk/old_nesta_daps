@@ -5,7 +5,7 @@ import configparser
 import os
 
 
-def get_config(file_name, header):
+def get_config(file_name, header, path="core/config/"):
     '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`
     into a `dict`.
@@ -17,7 +17,7 @@ def get_config(file_name, header):
     Returns:
         :obj:`dict`
     '''
-    conf_dir_path = find_filepath_from_pathstub("core/config/")
+    conf_dir_path = find_filepath_from_pathstub(path)
     conf_path = os.path.join(conf_dir_path, file_name)
     config = configparser.ConfigParser()
     config.read(conf_path)
