@@ -3,9 +3,27 @@ from datetime import date
 from io import BytesIO
 import logging
 import sqlalchemy
+import re
 
 from nesta.core.orms.arxiv_orm import ArticleTopic, CorExTopic
 from nesta.core.orms.orm_utils import db_session
+
+
+def is_multinational(text, countries):
+    """Returns True if :obj:`text` ends with any of
+    :obj:`countries` in brackets. For example:
+
+        'Blah blah (Germany)'
+        'Something  (China)'
+        'oe.,e.de (United States)'
+    
+    would return True.
+    """
+    results = re.findall(r"^.* \((.*)\)$", text)
+    if len(results) == 0:
+        return False
+    is_mn = (results[-1] in countries)
+    return is_mn
 
 
 def add_before_date_flag(data, date_column, before_year):
@@ -113,6 +131,36 @@ def get_article_ids_by_term(engine, term, min_weight):
     return article_ids
 
 
+def get_article_ids_by_terms(engine, terms, min_weight):
+    """Identifies articles related multiple terms.
+
+    The topic id is collected from sql and then a 
+    list of article ids is returned.
+
+    Args:
+        engine (:code:`sqlalchemy.engine`): connection to the database
+        terms (list): List of terms to search for
+        min_weight (float): minimum acceptable weight for matches
+
+    Returns:
+        (set): ids of articles which are in any of the topic, at or above the specified weight
+    """
+    dl_topic_ids = set()
+    for term in terms:
+        try:
+            _ids = get_article_ids_by_term(engine=engine,
+                                           term=term,
+                                           min_weight=min_weight)
+        except ValueError:
+            logging.info(f'{term} NOT found in topics')
+        else:
+            logging.info(f'{term} found in topics')
+            dl_topic_ids = dl_topic_ids.union(_ids)
+    if len(dl_topic_ids) == 0:
+        raise ValueError(f'None of {terms} found in any topic')
+    return dl_topic_ids
+
+
 def highly_cited(row, lookup):
     """Determines if an article has more citations than the yearly median.
 
@@ -123,4 +171,4 @@ def highly_cited(row, lookup):
     Returns:
         (bool): True if greater than the yearly median
     """
-    return row.citation_count > lookup.loc[row.year]
+    return (row.citation_count > lookup.loc[row.year]).bool()
