@@ -5,10 +5,15 @@ from nesta.core.luigihacks.luigi_test_runner import luigi_test_runner
 from nesta.core.luigihacks.luigi_test_runner import find_root_tasks
 from nesta.core.luigihacks.luigi_test_runner import find_python_files
 from nesta.core.luigihacks.luigi_test_runner import build_docker_image
+from nesta.core.luigihacks.luigi_test_runner import containerised_database
+
+from nesta.core.luigihacks.luigi_test_runner import docker
+from nesta.core.luigihacks.luigi_test_runner import misctools
+from nesta.core.luigihacks.luigi_test_runner import os
 
 
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.run_luigi_pipeline', autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.recreate_test_database', autospec=True)
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.containerised_database')
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.build_docker_image', autospec=True)
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.find_root_tasks', autospec=True)
 class TestTestRunner:
@@ -21,7 +26,7 @@ class TestTestRunner:
     def test_find_root_tasks_is_called_correctly(self,
                                                  mocked_find_root_tasks,
                                                  mocked_build_image,
-                                                 mocked_recreate_database,
+                                                 mocked_database,
                                                  mocked_run_pipeline):
         luigi_test_runner(start_directory='routines')
 
@@ -30,28 +35,17 @@ class TestTestRunner:
     def test_build_docker_image_is_called_with_branch_in_buildargs(self,
                                                                    mocked_find_root_tasks,
                                                                    mocked_build_image,
-                                                                   mocked_recreate_database,
+                                                                   mocked_database,
                                                                    mocked_run_pipeline):
         luigi_test_runner(start_directory='routines', branch='new_feature')
 
         buildargs = mocked_build_image.call_args[1]['buildargs']
         assert buildargs == {'GIT_TAG': 'new_feature'}
 
-    def test_recreate_database_is_called_correctly(self,
-                                                   mocked_find_root_tasks,
-                                                   mocked_build_image,
-                                                   mocked_recreate_database,
-                                                   mocked_run_pipeline,
-                                                   modules_to_find):
-        mocked_find_root_tasks.return_value = modules_to_find
-        luigi_test_runner(start_directory='routines')
-
-        assert mocked_recreate_database.call_count == len(modules_to_find)
-
     def test_all_pipelines_are_run(self,
                                    mocked_find_root_tasks,
                                    mocked_build_image,
-                                   mocked_recreate_database,
+                                   mocked_database,
                                    mocked_run_pipeline,
                                    modules_to_find):
         mocked_find_root_tasks.return_value = modules_to_find
@@ -64,7 +58,7 @@ class TestTestRunner:
     def test_all_pipelines_are_still_run_when_they_error(self,
                                                          mocked_find_root_tasks,
                                                          mocked_build_image,
-                                                         mocked_recreate_database,
+                                                         mocked_database,
                                                          mocked_run_pipeline,
                                                          modules_to_find):
         mocked_find_root_tasks.return_value = modules_to_find
@@ -134,3 +128,52 @@ def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_dock
 
     assert all(mocked_client.images.build.call_args[1][arg]
                for arg in ['nocache', 'rm'])
+
+
+@mock.patch.object(os, 'environ', autospec=True)
+@mock.patch.object(misctools, 'get_config', autospec=True)
+@mock.patch.object(docker, 'from_env', autospec=True)
+class TestCreateDatabase:
+    def test_run_is_called_with_auto_remove_and_detatch(self,
+                                                        mocked_docker,
+                                                        mocked_get_config,
+                                                        mocked_environ):
+        mocked_client = mock.Mock()
+        mocked_docker.return_value = mocked_client
+
+        with containerised_database(name='testdb',
+                                    db_config='DB_CONFIG',
+                                    config_header='config_section'):
+            pass
+
+        assert all(mocked_client.containers.run.call_args[1][arg]
+                   for arg in ['auto_remove', 'detach'])
+
+    def test_run_is_called_with_correctly_formatted_config_from_file(self,
+                                                                     mocked_docker,
+                                                                     mocked_get_config,
+                                                                     mocked_environ):
+        config = dict(user='test_runner',
+                      password='my_testing_pw',
+                      host='some_ip',
+                      port=1234,
+                      version=1)
+        mocked_get_config.return_value = config
+        mocked_client = mock.Mock()
+        mocked_docker.return_value = mocked_client
+        database_name = 'testdb'
+
+        with containerised_database(name=database_name,
+                                    db_config='DB_CONFIG',
+                                    config_header='config_section'):
+            pass
+
+        run_call_args = mocked_client.containers.run.call_args[0]
+        run_call_kwargs = mocked_client.containers.run.call_args[1]
+
+        assert run_call_kwargs['name'] == database_name
+        assert run_call_kwargs['ports'] == {3306: 3306}
+        assert run_call_kwargs['environment'] == {
+            'MYSQL_ROOT_PASSWORD': config['password'],
+            'MYSQL_DATABASE': 'dev'}
+        assert f"mysql:{config['version']}" in run_call_args
