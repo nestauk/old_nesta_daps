@@ -95,6 +95,24 @@ def build_docker_image(image_tag,
     return logs
 
 
+def stop_and_remove_container(name):
+    """Stops and removes a container with the supplied name.
+
+    Args:
+        name(str): name of the container
+    """
+    client = docker.from_env()
+    # there can only be one container with the same name
+    try:
+        container = client.containers.list(filters={'name': name}, all=True)[0]
+    except IndexError:
+        # not running
+        pass
+    else:
+        container.stop()
+        container.remove()
+
+
 @contextmanager
 def containerised_database(*, name='luigi-test-runner-db', db_config, config_header):
     client = docker.from_env()
@@ -105,11 +123,11 @@ def containerised_database(*, name='luigi-test-runner-db', db_config, config_hea
     environment = {'MYSQL_ROOT_PASSWORD': config['password'],
                    'MYSQL_DATABASE': 'dev'}  # all pipelines are run in test mode
 
+    stop_and_remove_container(name)
     container = client.containers.run(image,
                                       detach=True,
-                                      auto_remove=True,
                                       name=name,
-                                      ports={3306: 3306},
+                                      ports={config['port']: 3306},
                                       environment=environment)
     yield
     container.stop()

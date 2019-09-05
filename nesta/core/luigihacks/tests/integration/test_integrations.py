@@ -8,19 +8,24 @@ from nesta.core.luigihacks.luigi_test_runner import contains_root_task
 from nesta.core.luigihacks.luigi_test_runner import find_root_tasks
 from nesta.core.luigihacks.luigi_test_runner import build_docker_image
 from nesta.core.luigihacks.luigi_test_runner import containerised_database
+from nesta.core.luigihacks.luigi_test_runner import stop_and_remove_container
 
-FIXTURE_DIRECTORY = 'fixtures/luigi_test_runner'  # relative to the tests/ directory
+FIXTURE_DIRECTORY = 'tests/fixtures/luigi_test_runner'  # relative to luigihacks
 DB_CONFIG_ENVAR = 'LUIGI_TEST_RUNNER_INTEGRATION_TESTING_DB_CONFIG'
-DB_CONFIG_FILE = 'testing_db.config'  # in the fixtures directory
+DB_CONFIG_FILE = 'luigi_test_runner_db.config'
 DB_CONTAINER_NAME = 'luigi-testing-mysql'
 
 
 @pytest.fixture(scope='module')
-def fixture_dir():
+def luigihacks_dir():
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    one_dir_up = os.path.split(current_dir)[0]
+    luigihacks = os.path.join(current_dir, '../..')
+    return luigihacks
 
-    return os.path.join(one_dir_up, FIXTURE_DIRECTORY)
+
+@pytest.fixture(scope='module')
+def fixture_dir(luigihacks_dir):
+    return os.path.join(luigihacks_dir, FIXTURE_DIRECTORY)
 
 
 @pytest.fixture(scope='module')
@@ -28,13 +33,12 @@ def python_files(fixture_dir):
     files = ['working_task.py',  # root task
              'subfolder/failing_task.py',  # root task
              'orphaned_task.py']  # NO root task
-
     return [os.path.join(fixture_dir, f) for f in files]
 
 
 @pytest.fixture(scope='module')
-def database_config(fixture_dir):
-    db_config_file = os.path.join(fixture_dir, DB_CONFIG_FILE)
+def database_config(luigihacks_dir):
+    db_config_file = os.path.join(luigihacks_dir, DB_CONFIG_FILE)
     with mock.patch.dict(os.environ, {DB_CONFIG_ENVAR: db_config_file}):
         yield
 
@@ -99,17 +103,23 @@ class TestDockerBuild:
 
 class TestDatabase:
     @pytest.fixture
-    def database_teardown(self, docker_client):
+    def recreate_database(self, docker_client):
         try:
             docker_client.stop(DB_CONTAINER_NAME)
+            docker_client.remove_container(DB_CONTAINER_NAME)
         except docker.errors.NotFound:
             # not running
             pass
+        environment = {'MYSQL_ROOT_PASSWORD': 'test'}
+        docker_client.create_container('mysql:5.7',
+                                       name=DB_CONTAINER_NAME,
+                                       environment=environment)
+        docker_client.stop(DB_CONTAINER_NAME)
 
-    def test_containerised_database_is_launched(self, database_teardown,
-                                                database_config, docker_client):
-        print(os.environ[DB_CONFIG_ENVAR])
-
+    def test_containerised_database_is_launched(self,
+                                                recreate_database,
+                                                database_config,
+                                                docker_client):
         with containerised_database(name=DB_CONTAINER_NAME,
                                     db_config=DB_CONFIG_ENVAR,
                                     config_header='mysqldb'):
@@ -121,12 +131,46 @@ class TestDatabase:
     def test_luigi_updates_table_is_the_only_table(self):
         pass
 
-    def test_database_is_torn_down(self, database_teardown,
-                                   database_config, docker_client):
+    def test_database_is_removed_and_recreated_before_running(self,
+                                                              recreate_database,
+                                                              database_config,
+                                                              docker_client):
+        try:
+            with containerised_database(name=DB_CONTAINER_NAME,
+                                        db_config=DB_CONFIG_ENVAR,
+                                        config_header='mysqldb'):
+                pass
+        except docker.errors.APIError:
+            pytest.fail("Container was not removed before starting run")
+
+    def test_database_is_stopped_when_exiting_context_manager(self,
+                                                              recreate_database,
+                                                              database_config,
+                                                              docker_client):
         with containerised_database(name=DB_CONTAINER_NAME,
                                     db_config=DB_CONFIG_ENVAR,
                                     config_header='mysqldb'):
             pass
 
         containers = docker_client.containers(filters={'name': DB_CONTAINER_NAME})
-        assert len(containers) == 0
+        assert len(containers) == 0, "Container is still running"
+
+    def test_container_is_stopped_and_removed(self,
+                                              recreate_database,
+                                              docker_client):
+        stop_and_remove_container(DB_CONTAINER_NAME)
+
+        containers = docker_client.containers(filters={'name': DB_CONTAINER_NAME},
+                                              all=True)
+
+        assert len(containers) == 0, "Container still exists"
+
+    def test_stop_and_remove_works_on_already_stopped_containers(self,
+                                                                 recreate_database,
+                                                                 docker_client):
+        stop_and_remove_container(DB_CONTAINER_NAME)
+
+        try:
+            stop_and_remove_container(DB_CONTAINER_NAME)
+        except Exception:
+            pytest.fail("Failed to run stop and remove on stopped container")

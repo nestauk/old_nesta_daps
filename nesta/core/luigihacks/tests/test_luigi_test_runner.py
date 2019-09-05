@@ -130,14 +130,17 @@ def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_dock
                for arg in ['nocache', 'rm'])
 
 
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.stop_and_remove_container',
+            autospec=True)
 @mock.patch.object(os, 'environ', autospec=True)
 @mock.patch.object(misctools, 'get_config', autospec=True)
 @mock.patch.object(docker, 'from_env', autospec=True)
 class TestCreateDatabase:
-    def test_run_is_called_with_auto_remove_and_detatch(self,
-                                                        mocked_docker,
-                                                        mocked_get_config,
-                                                        mocked_environ):
+    def test_container_run_is_called_with_detatch(self,
+                                                  mocked_docker,
+                                                  mocked_get_config,
+                                                  mocked_environ,
+                                                  mocked_stop):
         mocked_client = mock.Mock()
         mocked_docker.return_value = mocked_client
 
@@ -146,13 +149,14 @@ class TestCreateDatabase:
                                     config_header='config_section'):
             pass
 
-        assert all(mocked_client.containers.run.call_args[1][arg]
-                   for arg in ['auto_remove', 'detach'])
+        _, run_kwargs = mocked_client.containers.run.call_args
+        assert run_kwargs['detach'] is True
 
-    def test_run_is_called_with_correctly_formatted_config_from_file(self,
-                                                                     mocked_docker,
-                                                                     mocked_get_config,
-                                                                     mocked_environ):
+    def test_container_run_is_called_with_config_from_file(self,
+                                                           mocked_docker,
+                                                           mocked_get_config,
+                                                           mocked_environ,
+                                                           mocked_stop):
         config = dict(user='test_runner',
                       password='my_testing_pw',
                       host='some_ip',
@@ -168,12 +172,10 @@ class TestCreateDatabase:
                                     config_header='config_section'):
             pass
 
-        run_call_args = mocked_client.containers.run.call_args[0]
-        run_call_kwargs = mocked_client.containers.run.call_args[1]
-
-        assert run_call_kwargs['name'] == database_name
-        assert run_call_kwargs['ports'] == {3306: 3306}
-        assert run_call_kwargs['environment'] == {
+        run_args, run_kwargs = mocked_client.containers.run.call_args
+        assert run_kwargs['name'] == database_name
+        assert run_kwargs['ports'] == {config['port']: 3306}
+        assert run_kwargs['environment'] == {
             'MYSQL_ROOT_PASSWORD': config['password'],
             'MYSQL_DATABASE': 'dev'}
-        assert f"mysql:{config['version']}" in run_call_args
+        assert run_args == (f"mysql:{config['version']}",)
