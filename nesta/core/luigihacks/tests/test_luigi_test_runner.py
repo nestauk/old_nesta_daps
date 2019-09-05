@@ -6,10 +6,12 @@ from nesta.core.luigihacks.luigi_test_runner import find_root_tasks
 from nesta.core.luigihacks.luigi_test_runner import find_python_files
 from nesta.core.luigihacks.luigi_test_runner import build_docker_image
 from nesta.core.luigihacks.luigi_test_runner import containerised_database
+from nesta.core.luigihacks.luigi_test_runner import wait_until_db_ready
 
 from nesta.core.luigihacks.luigi_test_runner import docker
 from nesta.core.luigihacks.luigi_test_runner import misctools
 from nesta.core.luigihacks.luigi_test_runner import os
+from nesta.core.luigihacks.luigi_test_runner import time
 
 
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.run_luigi_pipeline', autospec=True)
@@ -130,6 +132,10 @@ def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_dock
                for arg in ['nocache', 'rm'])
 
 
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.create_luigi_table_updates',
+            autospec=True)
+@mock.patch('nesta.core.luigihacks.luigi_test_runner.wait_until_db_ready',
+            autospec=True)
 @mock.patch('nesta.core.luigihacks.luigi_test_runner.stop_and_remove_container',
             autospec=True)
 @mock.patch.object(os, 'environ', autospec=True)
@@ -140,7 +146,9 @@ class TestCreateDatabase:
                                                   mocked_docker,
                                                   mocked_get_config,
                                                   mocked_environ,
-                                                  mocked_stop):
+                                                  mocked_stop,
+                                                  mocked_ready_check,
+                                                  mocked_luigi_updates):
         mocked_client = mock.Mock()
         mocked_docker.return_value = mocked_client
 
@@ -156,7 +164,9 @@ class TestCreateDatabase:
                                                            mocked_docker,
                                                            mocked_get_config,
                                                            mocked_environ,
-                                                           mocked_stop):
+                                                           mocked_stop,
+                                                           mocked_ready_check,
+                                                           mocked_luigi_updates):
         config = dict(user='test_runner',
                       password='my_testing_pw',
                       host='some_ip',
@@ -179,3 +189,43 @@ class TestCreateDatabase:
             'MYSQL_ROOT_PASSWORD': config['password'],
             'MYSQL_DATABASE': 'dev'}
         assert run_args == (f"mysql:{config['version']}",)
+
+
+@mock.patch.object(time, 'sleep', autospec=True)
+class TestWaitUntilDbReady:
+    @pytest.fixture
+    def container_with_response(self):
+        def _container_with_response(exit_code, output):
+            mocked_container = mock.Mock()
+            mocked_response = mock.Mock(exit_code=exit_code, output=output)
+            mocked_container.exec_run.return_value = mocked_response
+            return mocked_container
+        return _container_with_response
+
+    def test_raise_connection_error_after_specified_attempts(self,
+                                                             mocked_sleep,
+                                                             container_with_response):
+        container = container_with_response(1, b'')
+
+        with pytest.raises(ConnectionError):
+            wait_until_db_ready(container, attempts=10)
+
+    def test_sleep_for_specified_time(self,
+                                      mocked_sleep,
+                                      container_with_response):
+        container = container_with_response(1, b'')
+
+        with pytest.raises(ConnectionError):
+            wait_until_db_ready(container, delay=5)
+            assert mocked_sleep.call_count == 10
+            assert mocked_sleep.called_with(5)
+
+    def test_success_with_exit_code_1_and_empty_response(self,
+                                                         mocked_sleep,
+                                                         container_with_response):
+        container = container_with_response(0, b'')
+
+        try:
+            wait_until_db_ready(container)
+        except ConnectionError:
+            pytest.fail("Error raised when successfull response sent")

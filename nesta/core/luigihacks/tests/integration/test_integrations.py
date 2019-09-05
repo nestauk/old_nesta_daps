@@ -1,7 +1,10 @@
 import docker
 import pytest
 import os
+import sqlalchemy
 from unittest import mock
+
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 from nesta.core.luigihacks.luigi_test_runner import find_python_files
 from nesta.core.luigihacks.luigi_test_runner import contains_root_task
@@ -9,6 +12,7 @@ from nesta.core.luigihacks.luigi_test_runner import find_root_tasks
 from nesta.core.luigihacks.luigi_test_runner import build_docker_image
 from nesta.core.luigihacks.luigi_test_runner import containerised_database
 from nesta.core.luigihacks.luigi_test_runner import stop_and_remove_container
+
 
 FIXTURE_DIRECTORY = 'tests/fixtures/luigi_test_runner'  # relative to luigihacks
 DB_CONFIG_ENVAR = 'LUIGI_TEST_RUNNER_INTEGRATION_TESTING_DB_CONFIG'
@@ -78,6 +82,7 @@ class TestDockerBuild:
         images = api_client.images()
 
         tags = {tag for tags in images
+                if tags['RepoTags'] is not None
                 for tag in tags['RepoTags']}
 
         return tag in tags
@@ -128,8 +133,32 @@ class TestDatabase:
             # it is not possible to run more than one container with the same name at once
             assert len(containers) == 1, "Container is not running"
 
-    def test_luigi_updates_table_is_the_only_table(self):
-        pass
+    def test_database_is_ready_to_connect(self,
+                                          recreate_database,
+                                          database_config):
+        engine = get_mysql_engine(DB_CONFIG_ENVAR, 'mysqldb', 'dev')
+
+        with containerised_database(name=DB_CONTAINER_NAME,
+                                    db_config=DB_CONFIG_ENVAR,
+                                    config_header='mysqldb'):
+            try:
+                engine.connect()
+            except sqlalchemy.exc.OperationalError:
+                pytest.fail("Database is not ready to connect")
+
+    def test_luigi_updates_is_created(self,
+                                      recreate_database,
+                                      database_config):
+        engine = get_mysql_engine(DB_CONFIG_ENVAR, 'mysqldb', 'dev')
+
+        with containerised_database(name=DB_CONTAINER_NAME,
+                                    db_config=DB_CONFIG_ENVAR,
+                                    config_header='mysqldb'):
+            connection = engine.connect()
+            table_names = [name for table in connection.execute('show tables').fetchall()
+                           for name in table]  # annoyingly returned as a list of tuples
+
+        assert table_names == ['luigi_table_updates']
 
     def test_database_is_removed_and_recreated_before_running(self,
                                                               recreate_database,

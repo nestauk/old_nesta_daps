@@ -3,8 +3,11 @@ import docker
 import glob
 import logging
 import os
+import sqlalchemy
 import re
+import time
 
+from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.luigihacks import misctools
 
 
@@ -106,22 +109,73 @@ def stop_and_remove_container(name):
     try:
         container = client.containers.list(filters={'name': name}, all=True)[0]
     except IndexError:
-        # not running
+        # not found
         pass
     else:
         container.stop()
         container.remove()
 
 
+def create_luigi_table_updates(db_config, config_header, database):
+    """Creates the table luigi_table_updates in the specified database.
+
+    Args:
+        db_config(str): environmental variable containing the path to the .config file
+        config_header(str): header in the config file
+        database(str): name of the database
+    """
+    engine = get_mysql_engine(db_config, config_header, database)
+    connection = engine.connect()
+    try:
+        connection.execute("CREATE TABLE luigi_table_updates ("
+                           "id            BIGINT(20)    NOT NULL AUTO_INCREMENT,"
+                           "update_id     VARCHAR(128)  NOT NULL,"
+                           "target_table  VARCHAR(128),"
+                           "inserted      TIMESTAMP DEFAULT NOW(),"
+                           "PRIMARY KEY (update_id),"
+                           "KEY id (id))")
+    except sqlalchemy.exc.InternalError:
+        # table already exists
+        pass
+
+
+def wait_until_db_ready(container, attempts=20, delay=2):
+    """Checks a running container to see if mysql has started up.
+
+    Args:
+        container(:obj:`docker.container`): container to check
+        attempts(int): number of attempts to make
+        delay(int): seconds to wait between each attempt
+    """
+    for _ in range(attempts):
+        result = container.exec_run('mysqladmin ping --silent')
+        if result.exit_code == 0 and bool(result.output) is False:
+            return
+        else:
+            logging.info("Waiting for database to be ready")
+            time.sleep(delay)
+    raise ConnectionError(f"MYSQL was not ready after {attempts} attempts. Aborting")
+
+
 @contextmanager
 def containerised_database(*, name='luigi-test-runner-db', db_config, config_header):
+    """Creates a MYSQL database running in docker and provides a context manager.
+    The database is created from scratch each time. When exiting the context manager the
+    container is stopped but not removed so any issues can be investigated.
+
+    Args:
+        name(str): name to give the container
+        db_config(str): environmental variable containing the path to the .config file
+        config_header(str): header in the config file
+    """
     client = docker.from_env()
     db_config_path = os.environ[db_config]
     config = misctools.get_config(db_config_path, config_header)
+    database = 'dev'  # all pipelines are run in test mode
 
     image = f"mysql:{config['version']}"
     environment = {'MYSQL_ROOT_PASSWORD': config['password'],
-                   'MYSQL_DATABASE': 'dev'}  # all pipelines are run in test mode
+                   'MYSQL_DATABASE': database}
 
     stop_and_remove_container(name)
     container = client.containers.run(image,
@@ -129,12 +183,10 @@ def containerised_database(*, name='luigi-test-runner-db', db_config, config_hea
                                       name=name,
                                       ports={config['port']: 3306},
                                       environment=environment)
+    wait_until_db_ready(container)
+    create_luigi_table_updates(db_config, config_header, database)
     yield
     container.stop()
-
-
-def create_luigi_table_updates_table():
-    pass
 
 
 def run_luigi_pipeline(module, **kwargs):
