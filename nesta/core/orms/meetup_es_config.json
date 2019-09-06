@@ -14,9 +14,6 @@
                     },
                     "type": "text"
                 },
-                "_rank_rhodonite_description": {
-                    "type": "float"
-                },
                 "_terms_memberOrigin_group": {
                     "analyzer": "mesh_terms_analyzer",
                     "fields": {
@@ -100,8 +97,20 @@
                     },
                     "type": "text"
                 },
+                "rank_rhodonite_group": {
+                    "type": "float"
+                },
                 "terms_iso2lang_entity": {
                     "type": "keyword"
+                },
+                "terms_mesh_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "terms_of_countryTags": {
                     "type": "keyword"

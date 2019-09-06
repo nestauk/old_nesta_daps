@@ -1,5 +1,5 @@
 import luigi
-from nesta.production.luigihacks import s3
+from nesta.core.luigihacks import s3
 
 class S3Task(luigi.ExternalTask):
     s3_path = luigi.Parameter()
