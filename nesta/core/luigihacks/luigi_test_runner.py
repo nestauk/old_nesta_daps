@@ -193,17 +193,39 @@ def containerised_database(*,
     container.stop()
 
 
-def run_luigi_pipeline(module, **kwargs):
-    # collect configuration for excludes, run first and run lasts
-    # launches the pipeline
-    pass
+def run_luigi_pipeline(image, container_name, config_path, module_path, **kwargs):
+    """Runs the specified luigi pipeline in a container.
+
+    Args:
+        image(str): name of the image to use to launch the task
+        container_name(str): name to give the container when running
+        config_path(str): path to the database configuration within the container
+        module_path(str): module to run in luigi. must be absolute and in . format
+        kwargs: these get passed to every luigi task as flags
+    """
+    client = docker.from_env()
+    home_dir = os.environ['HOME']
+    aws_dir = os.path.join(home_dir, '.aws')
+    volumes = {aws_dir: {'bind': '/root/.aws', 'mode': 'ro'}}
+    environment = {'MYSQLDB': config_path}
+    flags = [f" --{k.replace('_', '-')} {v}" for k, v in kwargs.items()]
+    command = f"--module {module_path} RootTask" + ''.join(flags)
+
+    container = client.containers.run(image,
+                                      command=command,
+                                      name=container_name,
+                                      volumes=volumes,
+                                      environment=environment)
+    return container
 
 
 def luigi_test_runner(start_directory,
                       dockerfile='docker/Dockerfile',
                       branch='dev',
                       luigi_kwargs=None,
-                      image_tag='luigi_test_runner:test'):
+                      image='luigi_test_runner:test',
+                      db_config='MYSQLDB_TEST_RUNNER',
+                      rebuild=True):
     """Identifies all Luigi pipelines and runs them in Docker for end-to-end testing.
 
     Args:
@@ -211,21 +233,36 @@ def luigi_test_runner(start_directory,
         dockerfile(str): path to the Dockerfile to use to build the image
         branch(str): name or tag of the branch to use when running pipelines
         luigi_kwargs(dict): arguments to pass to Luigi tasks eg date
+        image(str): image to use when running pipelines
+        db_config(str): environmental variable containing the path to the .config file
+        rebuild(bool): if True the docker image is rebuilt before running
     """
-    logging.info(f"Building docker image on branch: {branch}")
-    buildargs = {'GIT_TAG': branch}
-    build_docker_image(image_tag, buildargs=buildargs)
+    if rebuild is True:
+        logging.info(f"Building docker image on branch: {branch}")
+        buildargs = {'GIT_TAG': branch}
+        build_docker_image(image, dockerfile=dockerfile, buildargs=buildargs)
 
     root_tasks = find_root_tasks(start_directory)
     logging.info(f"Found {len(root_tasks)} pipelines to run")
 
-    with containerised_database:
+    if luigi_kwargs is None:
+        luigi_kwargs = {}
+    config_path = '/app/nesta/core/luigihacks/luigi_test_runner_db.config'
+
+    with containerised_database(db_config=db_config, config_header='mysqldb'):
+        fails = 0
         for task in root_tasks:
+            task_name = task.split('.')[-1]
+            logging.info(f"Running pipeline {task_name}")
             try:
                 logging.info(f"Running pipeline: {task}")
-                run_luigi_pipeline(task)
+                stop_and_remove_container(task_name)
+                run_luigi_pipeline(image, task_name, config_path, task, **luigi_kwargs)
             except Exception as e:
+                fails += 1
                 logging.error(e)
+
+    logging.info(f"Finished running pipelines. {fails} failed from {len(root_tasks)}.")
 
 
 if __name__ == '__main__':
@@ -233,3 +270,6 @@ if __name__ == '__main__':
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
+
+    # luigi_test_runner('nesta/core/routines', branch='test_runner')
+    luigi_test_runner('nesta/core/routines', branch='test_runner', rebuild=False)

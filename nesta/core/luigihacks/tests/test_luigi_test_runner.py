@@ -7,6 +7,7 @@ from nesta.core.luigihacks.luigi_test_runner import find_python_files
 from nesta.core.luigihacks.luigi_test_runner import build_docker_image
 from nesta.core.luigihacks.luigi_test_runner import containerised_database
 from nesta.core.luigihacks.luigi_test_runner import wait_until_db_ready
+from nesta.core.luigihacks.luigi_test_runner import run_luigi_pipeline
 
 from nesta.core.luigihacks.luigi_test_runner import docker
 from nesta.core.luigihacks.luigi_test_runner import misctools
@@ -46,6 +47,17 @@ class TestTestRunner:
         buildargs = mocked_build_image.call_args[1]['buildargs']
         assert buildargs == {'GIT_TAG': 'new_feature'}
 
+    def test_build_docker_image_is_not_called_when_rebuild_is_false(self,
+                                                                    mocked_find_root_tasks,
+                                                                    mocked_build_image,
+                                                                    mocked_database,
+                                                                    mocked_run_pipeline):
+        luigi_test_runner(start_directory='routines',
+                          branch='new_feature',
+                          rebuild=False)
+
+        mocked_build_image.assert_not_called()
+
     def test_all_pipelines_are_run(self,
                                    mocked_find_root_tasks,
                                    mocked_build_image,
@@ -53,11 +65,10 @@ class TestTestRunner:
                                    mocked_run_pipeline,
                                    modules_to_find):
         mocked_find_root_tasks.return_value = modules_to_find
-        expected_result = [mock.call(module) for module in modules_to_find]
 
         luigi_test_runner(start_directory='routines')
 
-        assert mocked_run_pipeline.mock_calls == expected_result
+        assert mocked_run_pipeline.call_count == len(modules_to_find)
 
     def test_all_pipelines_are_still_run_when_they_error(self,
                                                          mocked_find_root_tasks,
@@ -70,7 +81,7 @@ class TestTestRunner:
 
         luigi_test_runner(start_directory='routines')
 
-        assert mocked_run_pipeline.call_count == 3
+        assert mocked_run_pipeline.call_count == len(modules_to_find)
 
 
 @mock.patch(LUIGIHACKS + '.contains_root_task', autospec=True)
@@ -230,3 +241,48 @@ class TestWaitUntilDbReady:
             wait_until_db_ready(container)
         except ConnectionError:
             pytest.fail("Error raised when successfull response sent")
+
+
+@mock.patch.object(os.path, 'join', autospec=True)
+@mock.patch.object(os, 'environ', autospec=True)
+@mock.patch.object(docker, 'from_env', autospec=True)
+class TestRunPipeline:
+    def test_specified_pipeline_is_run_with_correct_config(self,
+                                                           mocked_docker,
+                                                           mocked_environ,
+                                                           mocked_join):
+        mocked_client = mock.Mock()
+        mocked_docker.return_value = mocked_client
+        aws_dir = '/path/to/home/.aws'
+        mocked_join.return_value = aws_dir
+        image = 'pipeline_image:testing'
+        container_name = 'example_pipeline:2001-01-01'
+        module_path = 'path.to.my.module'
+        config_path = '/dir/subdir/sql.config'
+        volumes = {aws_dir: {'bind': '/root/.aws', 'mode': 'ro'}}
+
+        run_luigi_pipeline(image, container_name, config_path, module_path)
+
+        run_args, run_kwargs = mocked_client.containers.run.call_args
+        assert run_args[0] == image
+        assert run_kwargs['command'] == f'--module {module_path} RootTask'
+        assert run_kwargs['name'] == container_name
+        assert run_kwargs['volumes'] == volumes
+        assert run_kwargs['environment'] == {'MYSQLDB': config_path}
+        assert 'detach' not in run_kwargs or run_kwargs['detach'] is False
+
+    def test_kwargs_are_converted_to_flags(self,
+                                           mocked_docker,
+                                           mocked_environ,
+                                           mocked_join):
+        mocked_client = mock.Mock()
+        mocked_docker.return_value = mocked_client
+        module_path = 'path.to.my.module'
+
+        run_luigi_pipeline('some_image', 'cool_name', 'path_to_conf', module_path,
+                           date='2001-01-02', my_other_flag=True)
+
+        _, run_kwargs = mocked_client.containers.run.call_args
+        expected_command = (
+            f"--module {module_path} RootTask --date 2001-01-02 --my-other-flag True")
+        assert run_kwargs['command'] == expected_command
