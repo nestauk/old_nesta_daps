@@ -38,6 +38,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     routine_id = luigi.Parameter()
     intermediate_bucket = luigi.Parameter()
     db_config_env = luigi.Parameter()
+    db_section = luigi.Parameter(default="mysqldb")
     process_batch_size = luigi.IntParameter(default=10000)
     drop_and_recreate = luigi.BoolParameter(default=False)
     aliases = luigi.Parameter(default=None)
@@ -64,7 +65,9 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
         # MySQL setup
         database = 'dev' if self.test else 'production'
-        engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        engine = get_mysql_engine(self.db_config_env,
+                                  self.db_section,
+                                  database)
 
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
