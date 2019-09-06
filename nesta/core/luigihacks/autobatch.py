@@ -9,7 +9,6 @@ from nesta.core.luigihacks import batchclient
 from subprocess import check_output
 from subprocess import CalledProcessError
 import time
-#import random
 import luigi
 from nesta.core.luigihacks.misctools import get_config
 import logging

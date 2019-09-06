@@ -54,8 +54,10 @@ Base = declarative_base()
 class DummyModel(Base):
     __tablename__ = 'dummy_model'
 
-    _id = Column(INTEGER, primary_key=True)
-    _another_id = Column(INTEGER, primary_key=True)
+    _id = Column(INTEGER, primary_key=True, 
+                 autoincrement=False)
+    _another_id = Column(INTEGER, primary_key=True, 
+                         autoincrement=False)
     some_field = Column(INTEGER)
 
 

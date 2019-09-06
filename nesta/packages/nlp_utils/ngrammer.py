@@ -101,7 +101,7 @@ class Ngrammer:
 
 if __name__ == "__main__":
     ngrammer = Ngrammer("/Users/jklinger/Nesta-AWS/AWS-RDS-config/"
-                        "innovation-mapping.conf")
+                        "innovation-mapping-5712.config")
     document = ("This is a document about machine "
                 "learning, convolutional neural networks, "
                 "neural networks and bed and breakfast")

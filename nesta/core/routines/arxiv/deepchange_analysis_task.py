@@ -2,9 +2,10 @@
 arXlive analysis for arXlive
 ============================
 
-Luigi routine to extract arXive data and perform the analysis from the Deep learning,
-deep change paper, placing the results in an S3 bucket to be picked up by the arXlive
-front end.
+Luigi routine to extract arXive data and perform the 
+analysis from the Deep learning,
+deep change paper, placing the results in an 
+S3 bucket to be picked up by the arXlive front end.
 """
 import logging
 import luigi
@@ -47,8 +48,8 @@ def sql_queries():
 
 
 class AnalysisTask(luigi.Task):
-    """Extract and analyse arXiv data to produce data and charts for the arXlive front
-    end to consume.
+    """Extract and analyse arXiv data to produce data 
+    and charts for the arXlive front end to consume.
 
     Proposed charts:
         1. distribution of dl/non dl papers by country (horizontal bar)
