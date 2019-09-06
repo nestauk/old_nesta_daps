@@ -4,6 +4,7 @@ from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.orm_utils import try_until_allowed
 from nesta.core.orms.orm_utils import get_class_by_tablename
 from nesta.core.orms.orm_utils import insert_data
+from nesta.core.luigihacks.luigi_logging import set_log_level
 
 import logging
 import os
@@ -13,12 +14,19 @@ from collections import defaultdict
 
 
 def extract_core_orgs(orgs, project_rcn):
+    """Seperate a project-organisation (which)
+    is likely to be a department, with a non-unique
+    address.
+    
+    Args:
+        orgs (list): List of organiations to process (NB: this will be modified)
+        project_rcn (str): The record number of this project
+    Returns:
+        core_orgs (list): The unique 'parent' organisations.
+    """
     core_orgs = []
     for org in orgs:        
         ctry = org.pop('country')
-        # Ignore objects without a good PK
-        if org['organization_id'] == '':
-            continue
         core_orgs.append({'name': org.pop('name'),
                           'id': org['organization_id'],
                           'country_code': ctry['isoCode'],
@@ -60,6 +68,7 @@ def run():
     # Retrieve all topics
     data = defaultdict(list)
     for i, rcn in enumerate(all_rcn):
+        logging.info(i)
         project, orgs, reports, pubs = fetch_data(rcn)
         if project is None:
             continue
@@ -87,12 +96,11 @@ def run():
                     _class, rows, low_memory=True)
 
 if __name__ == "__main__":
-    
+
+    set_log_level(True)    
     if 'BATCHPAR_config' not in os.environ:
-        from nesta.core.luigihacks.luigi_logging import set_log_level
-        set_log_level(True)
-        os.environ['BATCHPAR_batch_file'] = ('Cordis-2019-08-30-False-15671754144164176.json')
-        os.environ['BATCHPAR_db_name'] = 'dev'
+        os.environ['BATCHPAR_batch_file'] = ('Cordis-2019-09-05-True-1567679610283401.json')
+        os.environ['BATCHPAR_db_name'] = 'production'
         os.environ["BATCHPAR_config"] = ('/home/ec2-user/'
                                          'nesta/nesta/core/config/'
                                          'mysqldb.config')

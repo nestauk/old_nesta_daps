@@ -30,6 +30,29 @@ ORGS_FIELDS = ['activityType', 'address', 'contribution',
                'type', 'website']
 
 
+def generate_id(text):
+    """Deterministically generates an ID from a given text.
+    NOT guaranteed to be unique, but the alternative was to
+    either drop some data for not having IDs, or 
+    generating uniquely on the fly: which is hard to do on
+    a batch system.
+    
+    A negative integer is returned to avoid conflicts 
+    with the data which have ids already. 8 digits are
+    returned, since 9 are the maximum allowed in the schema.
+
+    Args:
+        text (str): Text to convert to a negative 8-digit integer
+    Returns:
+        _id (int): A negative 8-digit integer.
+    """
+    # Start from the second digit to allow for 
+    _id = str(int.from_bytes(text.encode(), 'big',
+                             signed=False))
+    end = 9 if len(_id) > 8 else None
+    start = 1 if len(_id) > 8 else None
+    return -int(_id[start:end])
+
 @retry(stop_max_attempt_number=10)
 @ratelimit(max_per_second=10)
 def hit_api(api='', rcn=None, content_type=None):
@@ -96,7 +119,8 @@ def get_framework_ids(framework, nrows=None):
                      error_bad_lines=False,
                      warn_bad_lines=True,
                      encoding='latin')
-    return list(df.rcn)
+    col = 'rcn' if 'rcn' in df.columns else 'projectRcn'
+    return list(df[col])
 
 
 def filter_pubs(pubs):
@@ -141,12 +165,20 @@ def fetch_data(rcn):
                                 OBJS_FIELDS)}
     # Collect organisations
     orgs = []
+    oid_field = 'organizationId'
     for _orgs in _project['organizations'].values():
-        orgs += [extract_fields(org, ORGS_FIELDS)
-                 for org in _orgs
-                 if 'organizationId' in org]
+        for org in _orgs:
+            no_id_found = (oid_field not in org or 
+                           org[oid_field] == '')
+            if 'name' not in org and no_id_found:
+                continue
+            elif no_id_found:
+                org[oid_field] = generate_id(org['name'])
+            orgs.append(extract_fields(org, ORGS_FIELDS))
+
     # Collect result reports
-    _reports = [hit_api(rcn=report['rcn'], content_type='result')
+    _reports = [hit_api(rcn=report['rcn'], 
+                        content_type='result')
                 for report in info['relatedResultsReport']]
     reports = []
     if _reports is not None:
@@ -162,34 +194,3 @@ def fetch_data(rcn):
     else:
         pubs = filter_pubs(pubs)
     return project, orgs, reports, pubs
-
-
-if __name__ == "__main__":
-    #all_rcn = set(get_framework_ids('fp7') +/
-    #              get_framework_ids('h2020'))
-    #print("Processing", len(all_rcn), "projects")    
-    all_rcn = {89242}
-    n_proj, _orgs, n_reps, n_pubs = 0, set(), 0, 0
-    for rcn in all_rcn:
-        project, orgs, reports, pubs = fetch_data(rcn)
-        if project is None:
-            continue
-        n_proj += 1
-        _orgs = _orgs.union(row['organizationId'] for row in orgs)
-        n_reps += len(reports)
-        n_pubs += len(pubs)
-        # Split orgs into permanent + link table
-        # Insert everything, with project id for reference
-    print(n_proj, n_reps, n_pubs, len(_orgs))
-    #print(pubs['publications'])
-    #print(pubs['datasets'])
-
-    print(project)
-    # for p in pubs['publications']:
-    #     doi = None
-    #     for pid in p['pid']:
-    #         doi = pid
-    #         if 'doi' in pid:
-    #             break
-    #     if doi is None:
-    #         continue

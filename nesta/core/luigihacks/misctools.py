@@ -7,8 +7,8 @@ import os
 
 def get_config(file_name, header):
     '''Get the configuration from a file in the luigi config path
-    directory, and convert the key-value pairs under the config :code:`header`
-    into a `dict`.
+    directory, and convert the key-value pairs under the 
+    config :code:`header` into a `dict`.
 
     Parameters:
         file_name (str): The configuation file name.

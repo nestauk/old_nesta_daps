@@ -36,7 +36,7 @@ def sentence_chunks(text, chunksize=2000, delim='. '):
         chunksize (int): Minimum chunk size to yield
         delim (str): Delimiter to split chunks
     Yields:
-        chunk (str): The smallest possible chunks (minimum sise
+        chunk (str): The smallest possible chunks (minimum size
                      :pyobject:`chunksize`) of text.
     """
     chunks = []

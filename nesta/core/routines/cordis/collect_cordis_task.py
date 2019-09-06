@@ -1,6 +1,7 @@
 from nesta.core.luigihacks.autobatch import AutoBatchTask
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.cordis_orm import Base
@@ -17,7 +18,7 @@ S3BUCKET = "nesta-production-intermediate"
 
 
 class CordisCollectTask(AutoBatchTask):
-    process_batch_size = luigi.IntParameter(default=1000)
+    process_batch_size = luigi.IntParameter(default=500)
     intermediate_bucket = luigi.Parameter(default=S3BUCKET)
     db_config_path = luigi.Parameter(default=f3p('config/mysqldb.config'))
     db_config_env = luigi.Parameter(default='MYSQLDB')
@@ -62,7 +63,7 @@ class CordisCollectTask(AutoBatchTask):
                    "outinfo": 'dummy',
                    "done": False,
                    'test': self.test}
-                  for count, batch in enumerate(batches, 1)]
+                  for batch in batches]
         return params
 
     def combine(self, job_params):
@@ -72,6 +73,7 @@ class CordisCollectTask(AutoBatchTask):
 class RootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
+    set_log_level(True)
 
     def requires(self):
         batchable = f3p("batchables/cordis/cordis_api")
