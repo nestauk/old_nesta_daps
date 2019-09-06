@@ -4,6 +4,7 @@ beautifulsoup4==4.8.0
 boto3==1.9.159
 botocore==1.12.205
 corextopic==1.0.4
+docker_py==1.10.6
 elasticsearch==6.4.0
 fuzzywuzzy==0.17.0
 gensim==3.7.3
