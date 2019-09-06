@@ -164,6 +164,7 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.loads(_js)
     return js
 
+
 def get_es_mapping(dataset, aliases):
     '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`
@@ -200,7 +201,8 @@ def get_es_mapping(dataset, aliases):
     return mapping
 
 
-def filter_out_duplicates(db_env, section, database, Base, _class, data,
+def filter_out_duplicates(db_env, section, database, 
+                          Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
     already exist in the data.
@@ -233,33 +235,35 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
+    is_auto_pkey = all(p.autoincrement and
+                       p.type.python_type is int
+                       for p in pkey_cols)
 
     # Read all pks if in low_memory mode
-    if low_memory:
-        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+    if low_memory and not is_auto_pkey:
+        fields = [getattr(_class, pkey.name) 
+                  for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
-        if not all(pkey.name in row for pkey in pkey_cols):
-            logging.warning(f"{row} does not contain any of "
-                            "{[pkey.name in row for pkey in pkey_cols]}")
+        if not is_auto_pkey and not all(pkey.name in row for pkey in pkey_cols):
+            logging.warning(f"{row} does not contain any of {pkey_cols}"
+                            f"{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
 
         # Generate the pkey for this row
-        pk = tuple([row[pkey.name]                       # Cast to str if required, since
-                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
-                    else str(row[pkey.name])             # the type as int
-                    for pkey in pkey_cols])
-
-        # The row mustn't aleady exist in the input data
-        if pk in all_pks:
-            existing_objs.append(row)
-            continue
-        all_pks.add(pk)
+        if not is_auto_pkey:
+            pk = tuple([pkey.type.python_type(row[pkey.name])
+                        for pkey in pkey_cols])
+            # The row mustn't aleady exist in the input data
+            if pk in all_pks and not is_auto_pkey:
+                existing_objs.append(row)
+                continue
+            all_pks.add(pk)
         # Nor should the row exist in the DB
-        if not low_memory and session.query(exists(_class, **row)).scalar():
+        if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
         objs.append(_class(**row))
@@ -267,7 +271,9 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     return objs, existing_objs, failed_objs
 
 
-def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
+def insert_data(db_env, section, database, Base,
+                _class, data, return_non_inserted=False,
+                low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -291,11 +297,14 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section,
-                                                             database=database,
-                                                             Base=Base, _class=_class, data=data,
-                                                             low_memory=low_memory)
-
+    response = filter_out_duplicates(db_env=db_env, 
+                                     section=section,
+                                     database=database,
+                                     Base=Base, 
+                                     _class=_class, 
+                                     data=data,
+                                     low_memory=low_memory)
+    objs, existing_objs, failed_objs = response
     # save and commit
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
