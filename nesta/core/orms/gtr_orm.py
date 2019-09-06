@@ -10,7 +10,8 @@ sampling the first 100 projects.
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT, DECIMAL
 from sqlalchemy.types import JSON, INT, DATETIME, FLOAT
-from sqlalchemy import Column
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -63,7 +64,7 @@ class Organisation(Base):
 
 class Participant(Base):
     __tablename__ = "gtr_participant"
-    
+
     id = Column(VARCHAR(72), primary_key=True)
     organisation_id = Column(VARCHAR(36), index=True)
     projectCost = Column(FLOAT)
@@ -229,7 +230,7 @@ class Dissemination(Base):
 
 class PolicyInfluence(Base):
     __tablename__ = "gtr_outcomes_policyinfluences"
-    
+
     id = Column(VARCHAR(36), primary_key=True)
     influence = Column(TEXT)
     type = Column(VARCHAR(200), index=True)
@@ -241,7 +242,7 @@ class PolicyInfluence(Base):
 
 class Product(Base):
     __tablename__ = "gtr_outcomes_products"
-    
+
     id = Column(VARCHAR(36), primary_key=True)
     title = Column(VARCHAR(200))
     description = Column(TEXT)
@@ -288,3 +289,12 @@ class SoftwareAndTechnicalProducts(Base):
     softwareOpenSourced = Column(VARCHAR(30))
     yearFirstProvided = Column(INT)
     supportingUrl = Column(TEXT)
+
+
+class DocumentClusters(Base):
+    __tablename__ = 'grt_doc_clusters'
+
+    doc_id = Column(VARCHAR(36), ForeignKey('gtr_projects.id'), primary_key=True)
+    cluster_id = Column(INT, primary_key=True, index=True)
+    weight = Column(FLOAT)
+    projects = relationship('Projects')
