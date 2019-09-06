@@ -158,7 +158,11 @@ def wait_until_db_ready(container, attempts=20, delay=2):
 
 
 @contextmanager
-def containerised_database(*, name='luigi-test-runner-db', db_config, config_header):
+def containerised_database(*,
+                           name='luigi-test-runner-db',
+                           db_config,
+                           config_header,
+                           database='dev'):
     """Creates a MYSQL database running in docker and provides a context manager.
     The database is created from scratch each time. When exiting the context manager the
     container is stopped but not removed so any issues can be investigated.
@@ -167,11 +171,11 @@ def containerised_database(*, name='luigi-test-runner-db', db_config, config_hea
         name(str): name to give the container
         db_config(str): environmental variable containing the path to the .config file
         config_header(str): header in the config file
+        database(str): name of the database to create
     """
     client = docker.from_env()
     db_config_path = os.environ[db_config]
     config = misctools.get_config(db_config_path, config_header)
-    database = 'dev'  # all pipelines are run in test mode
 
     image = f"mysql:{config['version']}"
     environment = {'MYSQL_ROOT_PASSWORD': config['password'],

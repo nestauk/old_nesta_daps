@@ -160,13 +160,13 @@ class TestCreateDatabase:
         _, run_kwargs = mocked_client.containers.run.call_args
         assert run_kwargs['detach'] is True
 
-    def test_container_run_is_called_with_config_from_file(self,
-                                                           mocked_docker,
-                                                           mocked_get_config,
-                                                           mocked_environ,
-                                                           mocked_stop,
-                                                           mocked_ready_check,
-                                                           mocked_luigi_updates):
+    def test_container_run_is_called_with_correct_config(self,
+                                                         mocked_docker,
+                                                         mocked_get_config,
+                                                         mocked_environ,
+                                                         mocked_stop,
+                                                         mocked_ready_check,
+                                                         mocked_luigi_updates):
         config = dict(user='test_runner',
                       password='my_testing_pw',
                       host='some_ip',
@@ -175,19 +175,21 @@ class TestCreateDatabase:
         mocked_get_config.return_value = config
         mocked_client = mock.Mock()
         mocked_docker.return_value = mocked_client
-        database_name = 'testdb'
+        container_name = 'testdb_container'
+        database = 'testing-db'
 
-        with containerised_database(name=database_name,
+        with containerised_database(name=container_name,
                                     db_config='DB_CONFIG',
-                                    config_header='config_section'):
+                                    config_header='config_section',
+                                    database=database):
             pass
 
         run_args, run_kwargs = mocked_client.containers.run.call_args
-        assert run_kwargs['name'] == database_name
+        assert run_kwargs['name'] == container_name
         assert run_kwargs['ports'] == {config['port']: 3306}
         assert run_kwargs['environment'] == {
             'MYSQL_ROOT_PASSWORD': config['password'],
-            'MYSQL_DATABASE': 'dev'}
+            'MYSQL_DATABASE': database}
         assert run_args == (f"mysql:{config['version']}",)
 
 
