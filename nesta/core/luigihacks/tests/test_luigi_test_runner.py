@@ -13,11 +13,13 @@ from nesta.core.luigihacks.luigi_test_runner import misctools
 from nesta.core.luigihacks.luigi_test_runner import os
 from nesta.core.luigihacks.luigi_test_runner import time
 
+LUIGIHACKS = 'nesta.core.luigihacks.luigi_test_runner'
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.run_luigi_pipeline', autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.containerised_database')
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.build_docker_image', autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.find_root_tasks', autospec=True)
+
+@mock.patch(LUIGIHACKS + '.run_luigi_pipeline', autospec=True)
+@mock.patch(LUIGIHACKS + '.containerised_database')
+@mock.patch(LUIGIHACKS + '.build_docker_image', autospec=True)
+@mock.patch(LUIGIHACKS + '.find_root_tasks', autospec=True)
 class TestTestRunner:
     @pytest.fixture
     def modules_to_find(self):
@@ -71,8 +73,8 @@ class TestTestRunner:
         assert mocked_run_pipeline.call_count == 3
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.contains_root_task', autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.find_python_files', autospec=True)
+@mock.patch(LUIGIHACKS + '.contains_root_task', autospec=True)
+@mock.patch(LUIGIHACKS + '.find_python_files', autospec=True)
 class TestFindRootTasks:
     @pytest.fixture
     def paths_to_find(self):
@@ -107,7 +109,7 @@ class TestFindRootTasks:
         assert 'routines.crunchbase.crunchbase_root_task' not in result
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.glob.glob', autospec=True)
+@mock.patch(LUIGIHACKS + '.glob.glob', autospec=True)
 class TestFindPythonFiles:
     def test_glob_is_called_correctly(self, mocked_glob):
         find_python_files('subfolder/routines')
@@ -120,7 +122,7 @@ class TestFindPythonFiles:
         assert mocked_glob.call_args[0][0] == 'subfolder/routines/**/*.py'
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.docker.from_env', autospec=True)
+@mock.patch(LUIGIHACKS + '.docker.from_env', autospec=True)
 def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_docker):
     mocked_client = mock.Mock()
     mocked_client.images.build.return_value = None, []
@@ -132,12 +134,9 @@ def test_docker_build_called_with_nocache_and_rm_options_set_to_true(mocked_dock
                for arg in ['nocache', 'rm'])
 
 
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.create_luigi_table_updates',
-            autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.wait_until_db_ready',
-            autospec=True)
-@mock.patch('nesta.core.luigihacks.luigi_test_runner.stop_and_remove_container',
-            autospec=True)
+@mock.patch(LUIGIHACKS + '.create_luigi_table_updates', autospec=True)
+@mock.patch(LUIGIHACKS + '.wait_until_db_ready', autospec=True)
+@mock.patch(LUIGIHACKS + '.stop_and_remove_container', autospec=True)
 @mock.patch.object(os, 'environ', autospec=True)
 @mock.patch.object(misctools, 'get_config', autospec=True)
 @mock.patch.object(docker, 'from_env', autospec=True)
