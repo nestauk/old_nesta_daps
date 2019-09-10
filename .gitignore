@@ -109,3 +109,10 @@ venv.bak/
 *bin
 *npy
 *pickle
+
+# osx
+*.DS_Store
+
+# vim
+*.swp
+*.swo
