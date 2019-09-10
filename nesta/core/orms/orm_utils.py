@@ -20,12 +20,14 @@ import json
 import logging
 import time
 
-def object_to_dict(obj, found=None):
+
+def object_to_dict(obj, shallow=False, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
-    
+
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
+        shallow (bool): Fully unpack nested objs via relationships.
     Returns:
         _obj (dict): An unpacked json-like dict object.
     """
@@ -38,15 +40,19 @@ def object_to_dict(obj, found=None):
                      else (c, getattr(obj, c)))
     out = dict(map(get_key_value, columns))
     for name, relation in mapper.relationships.items():
+        if shallow:
+            break
         if relation not in found:
             found.add(relation)
             related_obj = getattr(obj, name)
             if related_obj is not None:
                 if relation.uselist:
-                    out[name] = [object_to_dict(child, found)
+                    out[name] = [object_to_dict(child,
+                                                found=found)
                                  for child in related_obj]
                 else:
-                    out[name] = object_to_dict(related_obj, found)
+                    out[name] = object_to_dict(related_obj,
+                                               found=found)
     return out
 
 
