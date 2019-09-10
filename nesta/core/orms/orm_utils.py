@@ -12,6 +12,7 @@ from nesta.core.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
+from py2neo.database import Graph
 
 import re
 import pymysql
@@ -471,9 +472,9 @@ def graph_session(*args, **kwargs):
     Yields:
         py2neo.database.Transaction
     '''
+    graph = Graph(*args, **kwargs)
+    transaction = graph.begin()
     try:
-        graph = Graph(**graph_kwargs)
-        transaction = graph.begin()
         yield transaction
         transaction.commit()
     except:
