@@ -460,3 +460,25 @@ def merge_metadata(base, *other_bases):
         for (table_name, table) in b.metadata.tables.items():
             base.metadata._add_table(table_name, table.schema, table)
     return base
+
+@contextmanager
+def graph_session(*args, **kwargs):
+    '''Generate a Neo4j graph transaction object with
+    safe commit/rollback built-in.
+    
+    Args:
+        {*args, **kwargs}: Any arguments for py2neo.database.Graph
+    Yields:
+        py2neo.database.Transaction
+    '''
+    try:
+        graph = Graph(**graph_kwargs)
+        transaction = graph.begin()
+        yield transaction
+        transaction.commit()
+    except:
+        transaction.rollback()
+        raise
+    finally:
+        del transaction
+        del graph
