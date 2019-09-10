@@ -21,6 +21,8 @@ from nesta.core.orms.orm_utils import setup_es
 from nesta.core.orms.orm_utils import Elasticsearch
 from nesta.core.orms.orm_utils import merge_metadata
 from nesta.core.orms.orm_utils import get_es_ids
+from nesta.core.orms.orm_utils import object_to_dict
+from nesta.core.orms.orm_utils import db_session
 
 @pytest.fixture
 def alias_lookup():
@@ -131,14 +133,27 @@ class TestOrmUtils(unittest.TestCase):
         dfw = DummyFunctionWrapper(Exception)
         self.assertRaises(Exception, try_until_allowed, dfw.f)
 
+
+class TestOrmUtils2(unittest.TestCase):
+    ''''''
+    @classmethod
+    def setUpClass(cls):
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        Base.metadata.drop_all(engine)
+
+    @classmethod
+    def tearDownClass(cls):
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        Base.metadata.drop_all(engine)
+
     def test_object_to_dict(self):
         parents = [{"_id": 10, "_another_id": 2,
                     "some_field": 20},
                    {"_id": 20, "_another_id": 2,
                     "some_field": 20}]
         _parents = insert_data("MYSQLDBCONF", "mysqldb", "production_tests",
-                               Base, DummyModel, data)
-        assert len(parents) == len(data)
+                               Base, DummyModel, parents)
+        assert len(parents) == len(_parents)
 
 
         children = [{"_id": 10, "parent_id": 10},
@@ -147,23 +162,25 @@ class TestOrmUtils(unittest.TestCase):
                     {"_id": 30, "parent_id": 20}]
         _children = insert_data("MYSQLDBCONF", "mysqldb", "production_tests",
                                 Base, DummyChild, children)
-        assert len(_children) == len(children)
+        assert len(children) == len(_children)
 
-        found_children = set()
-        for p in parents:
-            row = object_to_dict(p)
-            assert type(row) is dict
-            assert len(row['children']) > 0
-            _found_children = set((c._id, c.parent_id)
-                                  for c in row['children'])
-            found_children = found_children.union(_found_children)
-
-            _row = object_to_dict(p, shallow=True)
-            assert len(_row['children']) == 0
-            del _row['children']
-            del row['children']
-            assert row == _row
-        assert len(found_children) == len(children) == len(_children)
+        # Re-retrieve parents from the database
+        found_children = set()    
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        with db_session(engine) as session:
+            for p in session.query(DummyModel).all():
+                row = object_to_dict(p)
+                assert type(row) is dict
+                assert len(row['children']) > 0
+                _found_children = set((c['_id'], c['parent_id'])
+                                      for c in row['children'])
+                found_children = found_children.union(_found_children)
+                
+                _row = object_to_dict(p, shallow=True)
+                assert 'children' not in _row
+                del row['children']
+                assert row == _row
+            assert len(found_children) == len(children) == len(_children)
 
 
 def test_load_json_from_pathstub():
