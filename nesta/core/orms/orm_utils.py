@@ -12,6 +12,7 @@ from nesta.core.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
+from py2neo.database import Graph
 
 import re
 import pymysql
@@ -460,3 +461,25 @@ def merge_metadata(base, *other_bases):
         for (table_name, table) in b.metadata.tables.items():
             base.metadata._add_table(table_name, table.schema, table)
     return base
+
+@contextmanager
+def graph_session(*args, **kwargs):
+    '''Generate a Neo4j graph transaction object with
+    safe commit/rollback built-in.
+    
+    Args:
+        {*args, **kwargs}: Any arguments for py2neo.database.Graph
+    Yields:
+        py2neo.database.Transaction
+    '''
+    graph = Graph(*args, **kwargs)
+    transaction = graph.begin()
+    try:
+        yield transaction
+        transaction.commit()
+    except:
+        transaction.rollback()
+        raise
+    finally:
+        del transaction
+        del graph
