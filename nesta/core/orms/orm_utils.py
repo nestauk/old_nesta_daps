@@ -325,6 +325,34 @@ def insert_data(db_env, section, database, Base,
     return objs
 
 
+def db_session_query(query, engine, chunksize=1000,
+                     limit=None):
+    """Perform queries in chunks, with one session per chunk
+    to avoid long sessions from dying.
+
+    Args:
+        query: A valid SqlAlchemy query string or object
+        engine: A valid SqlAlchemy connectable
+        chunksize (int): Chunk size after which to reset the db connection
+        limit (int): Maximum number of results to return.
+    Yields:
+        {db, row} ({:obj:`sqlalchemy.orm.session.Session`, data}): SqlAlchemy session and row of data
+    """
+    n = 0
+    n_results = chunksize
+    while n_results == chunksize:
+        logging.info('[db_session_query] (re)starting DB '
+                     f'session after {n*chunksize + n_results}')
+        with db_session(engine) as db:
+            n_results = 0
+            for row in (db.query(query).offset(n*chunksize)
+                        .limit(chunksize)):
+                n_results += 1
+                yield db, row
+                if n*chunksize + n_results == limit:
+                    return
+        n += 1
+
 @contextmanager
 def db_session(engine):
     """Creates and mangages an sqlalchemy session.
