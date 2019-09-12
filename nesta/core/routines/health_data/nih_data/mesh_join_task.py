@@ -84,12 +84,12 @@ class MeshJoinTask(luigi.Task):
             existing_projects = set()
             projects = session.query(Projects.application_id).distinct()
             for p in projects:
-                existing_projects.update(int(p.application_id))
+                existing_projects.update({int(p.application_id)})
             
             projects_done = set()
             projects_mesh = session.query(ProjectMeshTerms.project_id).distinct()
             for p in projects_mesh:
-                projects_done.update(int(p.project_id))
+                projects_done.update({int(p.project_id)})
             
             mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
 
