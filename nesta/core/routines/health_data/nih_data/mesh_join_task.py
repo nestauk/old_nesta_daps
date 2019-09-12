@@ -81,11 +81,10 @@ class MeshJoinTask(luigi.Task):
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
         with db_session(engine) as session:
             
-            if self.test:
-                existing_projects = set()
-                projects = session.query(Projects.application_id).distinct()
-                for p in projects:
-                    existing_projects.update(int(p.application_id))
+            existing_projects = set()
+            projects = session.query(Projects.application_id).distinct()
+            for p in projects:
+                existing_projects.update(int(p.application_id))
             
             projects_done = set()
             projects_mesh = session.query(ProjectMeshTerms.project_id).distinct()
