@@ -35,7 +35,7 @@ def _get_key_value(obj, key):
     value = getattr(obj, key)
     if isinstance(value, datetime):
         value = value.isoformat()
-    return (c, value)
+    return (key, value)
 
 
 def object_to_dict(obj, shallow=False, found=None):
@@ -45,7 +45,7 @@ def object_to_dict(obj, shallow=False, found=None):
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
         shallow (bool): Fully unpack nested objs via relationships.
-        found: FOR INTERNAL RECURSION, do not change the default.
+        found: For internal recursion, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.
     """
@@ -54,10 +54,10 @@ def object_to_dict(obj, shallow=False, found=None):
     # Set up the mapper and retrieve shallow values
     mapper = class_mapper(obj.__class__)
     columns = [column.key for column in mapper.columns]
-    out = dict(map(_get_key_value, columns))
-    if shallow:  # Shallow means ignore relationships
-        mapper.relationships = {}
-    for name, relation in mapper.relationships.items():
+    out = dict(map(lambda c: _get_key_value(obj, c), columns))
+    # Shallow means ignore relationships
+    relationships = {} if shallow else mapper.relationships
+    for name, relation in relationships.items():
         if relation in found:  # Don't repeat relationships
             continue
         found.add(relation)
