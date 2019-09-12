@@ -22,6 +22,22 @@ import logging
 import time
 
 
+def _get_key_value(obj, key):
+    """Helper method to an attribute value, dealing
+    gracefully with datetimes by converting to isoformat
+
+    Args:
+        obj: Object to retrieve value from
+        key (str): Name of the attribute to retrieve.
+    Returns:
+        {key, value}: A key-value pair corresponding to the attribute
+    """
+    value = getattr(obj, key)
+    if isinstance(value, datetime):
+        value = value.isoformat()
+    return (c, value)
+
+
 def object_to_dict(obj, shallow=False, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
@@ -29,31 +45,31 @@ def object_to_dict(obj, shallow=False, found=None):
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
         shallow (bool): Fully unpack nested objs via relationships.
+        found: FOR INTERNAL RECURSION, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.
     """
-    if found is None:
+    if found is None:  # First time
         found = set()
+    # Set up the mapper and retrieve shallow values
     mapper = class_mapper(obj.__class__)
     columns = [column.key for column in mapper.columns]
-    get_key_value = (lambda c: (c, getattr(obj, c).isoformat())
-                     if isinstance(getattr(obj, c), datetime)
-                     else (c, getattr(obj, c)))
-    out = dict(map(get_key_value, columns))
+    out = dict(map(_get_key_value, columns))
+    if shallow:  # Shallow means ignore relationships
+        mapper.relationships = {}
     for name, relation in mapper.relationships.items():
-        if shallow:
-            break
-        if relation not in found:
-            found.add(relation)
-            related_obj = getattr(obj, name)
-            if related_obj is not None:
-                if relation.uselist:
-                    out[name] = [object_to_dict(child,
-                                                found=found)
-                                 for child in related_obj]
-                else:
-                    out[name] = object_to_dict(related_obj,
-                                               found=found)
+        if relation in found:  # Don't repeat relationships
+            continue
+        found.add(relation)
+        related_obj = getattr(obj, name)
+        if related_obj is None:  # Don't pursue null relations
+            continue
+        # Unpack flat or recursively, as required
+        if relation.uselist:
+            out[name] = [object_to_dict(child, found=found)
+                         for child in related_obj]
+        else:
+            out[name] = object_to_dict(related_obj, found=found)
     return out
 
 
@@ -352,6 +368,8 @@ def db_session_query(query, engine, chunksize=1000,
                 if n*chunksize + n_results == limit:
                     return
         n += 1
+    return
+
 
 @contextmanager
 def db_session(engine):
