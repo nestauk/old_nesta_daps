@@ -342,7 +342,7 @@ def insert_data(db_env, section, database, Base,
 
 
 def db_session_query(query, engine, chunksize=1000,
-                     limit=None):
+                     limit=None, offset=0):
     """Perform queries in chunks, with one session per chunk
     to avoid long sessions from dying.
 
@@ -361,7 +361,7 @@ def db_session_query(query, engine, chunksize=1000,
                      f'session after {n*chunksize + n_results}')
         with db_session(engine) as db:
             n_results = 0
-            for row in (db.query(query).offset(n*chunksize)
+            for row in (db.query(query).offset(offset + n*chunksize)
                         .limit(chunksize)):
                 n_results += 1
                 yield db, row
