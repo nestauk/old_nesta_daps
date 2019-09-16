@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column
-from sqlalchemy.types import CHAR,VARCHAR,SMALLINT,INT,REAL,DATE,NVARCHAR
+from sqlalchemy.types import REAL,NVARCHAR,VARCHAR,INT,CHAR,SMALLINT,DATE
 
 Base = declarative_base()
 
