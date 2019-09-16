@@ -43,6 +43,7 @@
             "city",
             "continent",
             "country",
+	    "countries",
             "created",
             "crunchBase",
             "datestamp",

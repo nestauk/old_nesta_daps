@@ -4,7 +4,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.crunchbase_orm import Organization
-from nesta.orms.patstat_2019_05_13 import Tls201Appln as Patent
+from nesta.core.orms.patstat_2019_05_13 import Tls201Appln as Patent
 
 from datetime import datetime as dt
 import luigi
@@ -12,11 +12,12 @@ import luigi
 S3_BUCKET='nesta-production-intermediate'
 
 def kwarg_maker(dataset):
-    dataset = f'eu-{dataset}'
+    dataset = f'{dataset}-eu'
     env_files=[f3p('config/mysqldb.config'),
                f3p('config/elasticsearch.config'),
-               f3p(f'schema_transformations/{dataset}.json')]
-    batchable=f3p(f'batchables/elasticsearch/{dataset}')
+               f3p('schema_transformations/eurito/'
+                   f'{dataset}.json')]
+    batchable=f3p(f'batchables/eurito/{dataset}')
     return dict(dataset=dataset,
                 env_files=env_files,
                 batchable=batchable)
@@ -49,8 +50,8 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('arxiv', 'article', Article.id),
-                  ('crunchbase', 'company', Organization.id),
-                  ('patstat', 'patent', Patent.appln_id))
+                  ('crunchbase', 'company', Organization.id))
+                  #('patstat', 'patent', Patent.appln_id))
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
