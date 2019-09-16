@@ -12,6 +12,7 @@ from nesta.core.luigihacks.misctools import get_config
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
+from py2neo.database import Graph
 
 import re
 import pymysql
@@ -20,33 +21,55 @@ import json
 import logging
 import time
 
-def object_to_dict(obj, found=None):
+
+def _get_key_value(obj, key):
+    """Helper method to an attribute value, dealing
+    gracefully with datetimes by converting to isoformat
+
+    Args:
+        obj: Object to retrieve value from
+        key (str): Name of the attribute to retrieve.
+    Returns:
+        {key, value}: A key-value pair corresponding to the attribute
+    """
+    value = getattr(obj, key)
+    if isinstance(value, datetime):
+        value = value.isoformat()
+    return (key, value)
+
+
+def object_to_dict(obj, shallow=False, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
-    
+
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
+        shallow (bool): Fully unpack nested objs via relationships.
+        found: For internal recursion, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.
     """
-    if found is None:
+    if found is None:  # First time
         found = set()
+    # Set up the mapper and retrieve shallow values
     mapper = class_mapper(obj.__class__)
     columns = [column.key for column in mapper.columns]
-    get_key_value = (lambda c: (c, getattr(obj, c).isoformat())
-                     if isinstance(getattr(obj, c), datetime)
-                     else (c, getattr(obj, c)))
-    out = dict(map(get_key_value, columns))
-    for name, relation in mapper.relationships.items():
-        if relation not in found:
-            found.add(relation)
-            related_obj = getattr(obj, name)
-            if related_obj is not None:
-                if relation.uselist:
-                    out[name] = [object_to_dict(child, found)
-                                 for child in related_obj]
-                else:
-                    out[name] = object_to_dict(related_obj, found)
+    out = dict(map(lambda c: _get_key_value(obj, c), columns))
+    # Shallow means ignore relationships
+    relationships = {} if shallow else mapper.relationships
+    for name, relation in relationships.items():
+        if relation in found:  # Don't repeat relationships
+            continue
+        found.add(relation)
+        related_obj = getattr(obj, name)
+        if related_obj is None:  # Don't pursue null relations
+            continue
+        # Unpack flat or recursively, as required
+        if relation.uselist:
+            out[name] = [object_to_dict(child, found=found)
+                         for child in related_obj]
+        else:
+            out[name] = object_to_dict(related_obj, found=found)
     return out
 
 
@@ -164,6 +187,7 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.loads(_js)
     return js
 
+
 def get_es_mapping(dataset, aliases):
     '''Get the configuration from a file in the luigi config path
     directory, and convert the key-value pairs under the config :code:`header`
@@ -200,7 +224,8 @@ def get_es_mapping(dataset, aliases):
     return mapping
 
 
-def filter_out_duplicates(db_env, section, database, Base, _class, data,
+def filter_out_duplicates(db_env, section, database, 
+                          Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
     already exist in the data.
@@ -233,33 +258,35 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
+    is_auto_pkey = all(p.autoincrement and
+                       p.type.python_type is int
+                       for p in pkey_cols)
 
     # Read all pks if in low_memory mode
-    if low_memory:
-        fields = [getattr(_class, pkey.name) for pkey in pkey_cols]
+    if low_memory and not is_auto_pkey:
+        fields = [getattr(_class, pkey.name) 
+                  for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
-        if not all(pkey.name in row for pkey in pkey_cols):
-            logging.warning(f"{row} does not contain any of "
-                            "{[pkey.name in row for pkey in pkey_cols]}")
+        if not is_auto_pkey and not all(pkey.name in row for pkey in pkey_cols):
+            logging.warning(f"{row} does not contain any of {pkey_cols}"
+                            f"{[pkey.name in row for pkey in pkey_cols]}")
             failed_objs.append(row)
             continue
 
         # Generate the pkey for this row
-        pk = tuple([row[pkey.name]                       # Cast to str if required, since
-                    if pkey.type.python_type is not str  # pandas may have incorrectly guessed
-                    else str(row[pkey.name])             # the type as int
-                    for pkey in pkey_cols])
-
-        # The row mustn't aleady exist in the input data
-        if pk in all_pks:
-            existing_objs.append(row)
-            continue
-        all_pks.add(pk)
+        if not is_auto_pkey:
+            pk = tuple([pkey.type.python_type(row[pkey.name])
+                        for pkey in pkey_cols])
+            # The row mustn't aleady exist in the input data
+            if pk in all_pks and not is_auto_pkey:
+                existing_objs.append(row)
+                continue
+            all_pks.add(pk)
         # Nor should the row exist in the DB
-        if not low_memory and session.query(exists(_class, **row)).scalar():
+        if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
         objs.append(_class(**row))
@@ -267,7 +294,9 @@ def filter_out_duplicates(db_env, section, database, Base, _class, data,
     return objs, existing_objs, failed_objs
 
 
-def insert_data(db_env, section, database, Base, _class, data, return_non_inserted=False, low_memory=False):
+def insert_data(db_env, section, database, Base,
+                _class, data, return_non_inserted=False,
+                low_memory=False):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -291,11 +320,14 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    objs, existing_objs, failed_objs = filter_out_duplicates(db_env=db_env, section=section,
-                                                             database=database,
-                                                             Base=Base, _class=_class, data=data,
-                                                             low_memory=low_memory)
-
+    response = filter_out_duplicates(db_env=db_env, 
+                                     section=section,
+                                     database=database,
+                                     Base=Base, 
+                                     _class=_class, 
+                                     data=data,
+                                     low_memory=low_memory)
+    objs, existing_objs, failed_objs = response
     # save and commit
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
@@ -307,6 +339,36 @@ def insert_data(db_env, section, database, Base, _class, data, return_non_insert
     if return_non_inserted:
         return objs, existing_objs, failed_objs
     return objs
+
+
+def db_session_query(query, engine, chunksize=1000,
+                     limit=None, offset=0):
+    """Perform queries in chunks, with one session per chunk
+    to avoid long sessions from dying.
+
+    Args:
+        query: A valid SqlAlchemy query string or object
+        engine: A valid SqlAlchemy connectable
+        chunksize (int): Chunk size after which to reset the db connection
+        limit (int): Maximum number of results to return.
+    Yields:
+        {db, row} ({:obj:`sqlalchemy.orm.session.Session`, data}): SqlAlchemy session and row of data
+    """
+    n = 0
+    n_results = chunksize
+    while n_results == chunksize:
+        logging.info('[db_session_query] (re)starting DB '
+                     f'session after {n*chunksize + n_results}')
+        with db_session(engine) as db:
+            n_results = 0
+            for row in (db.query(query).offset(offset + n*chunksize)
+                        .limit(chunksize)):
+                n_results += 1
+                yield db, row
+                if n*chunksize + n_results == limit:
+                    return
+        n += 1
+    return
 
 
 @contextmanager
@@ -451,3 +513,29 @@ def merge_metadata(base, *other_bases):
         for (table_name, table) in b.metadata.tables.items():
             base.metadata._add_table(table_name, table.schema, table)
     return base
+
+
+@contextmanager
+def graph_session(yield_graph=False, *args, **kwargs):
+    '''Generate a Neo4j graph transaction object with
+    safe commit/rollback built-in.
+
+    Args:
+        {*args, **kwargs}: Any arguments for py2neo.database.Graph
+    Yields:
+        py2neo.database.Transaction
+    '''
+    graph = Graph(*args, **kwargs)
+    transaction = graph.begin()
+    try:
+        if yield_graph:
+            yield (graph, transaction)
+        else:
+            yield transaction
+        transaction.commit()
+    except:
+        transaction.rollback()
+        raise
+    finally:
+        del transaction
+        del graph

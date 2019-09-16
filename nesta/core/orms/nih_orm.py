@@ -11,7 +11,7 @@ World ExPORTER (which explains the unusual VARCHAR limits).
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.types import INTEGER
-from sqlalchemy import Column
+from sqlalchemy import Column, Table
 
 
 Base = declarative_base()
