@@ -78,6 +78,15 @@
                     },
                     "type": "text"
                 },
+                "terms_tokens_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
                 "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
