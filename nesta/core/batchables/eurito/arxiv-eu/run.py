@@ -5,6 +5,7 @@ import logging
 import os
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
@@ -28,13 +29,17 @@ def run():
     entity_type = os.environ["BATCHPAR_entity_type"]
     aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
 
-    # database setup
+    # database setup    
+    logging.info('Retrieving engine connection')
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", 
                               db_name)
-    fos_lookup = build_fos_lookup(engine)
+    logging.info('Building FOS lookup')
+    max_lvl = 4  # used again later
+    fos_lookup = build_fos_lookup(engine, max_lvl=max_lvl)
 
     # es setup
-    strans_kwargs={'filename':'eurito/arxiv.json',
+    logging.info('Connecting to ES')
+    strans_kwargs={'filename':'eurito/arxiv-eu.json',
                    'from_key':'tier_0', 'to_key':'tier_1',
                    'ignore':['id']}
     es = ElasticsearchPlus(hosts=es_host,
@@ -50,6 +55,7 @@ def run():
                            do_sort=False)
 
     # collect file
+    logging.info('Retrieving article ids')
     nrows = 20 if test else None
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
@@ -59,6 +65,7 @@ def run():
     
     # Get all grid countries
     # and country: continent lookup
+    logging.info('Doing country lookup')
     country_lookup = get_country_region_lookup()                
     with db_session(engine) as session:
         grid_countries = {obj.id: country_lookup[obj.country_code]
@@ -67,6 +74,7 @@ def run():
         grid_institutes = {obj.id: obj.name
                            for obj in session.query(Inst).all()}
     #
+    logging.info('Processing rows')
     with db_session(engine) as session:
         for count, obj in enumerate((session.query(Art)
                                      .filter(Art.id.in_(art_ids))
@@ -81,18 +89,31 @@ def run():
                 row['citation_count'] = 0
 
             # Extract field of study
-            fos = []
             fos_objs = row.pop('fields_of_study')
             fos_ids = set(fos['id'] for fos in fos_objs)
             for f in fos_objs:
-                key = f'fos_lvl_{f["level"]}'
-                if key not in row:
-                    row[f'fos_lvl_{lvl}'] = []
+                if f["level"] > max_lvl:
+                    continue
+                key0 = f'fos_level_{f["level"]}'
+                if key0 not in row:
+                    row[key0] = []
                 for cid in split_ids(f['child_ids']):
                     if cid not in fos_ids:
+                        continue                    
+                    key1 = f'fos_level_{f["level"]+1}'
+                    if key1 not in row:
+                        row[key1] = []
+                    try:
+                        fos = fos_lookup[(f['id'], cid)]
+                    except KeyError:
                         continue
-                    fos = reversed(fos_lookup[(f['id'], cid)])
-                    row[f'fos_lvl_{lvl}'] += fos
+                    row[key0].append(fos[0])
+                    row[key1].append(fos[1])
+            for k, v in row.items():
+                if not (type(v) is str 
+                        and v.startswith('fos_level')):
+                    continue
+                row[k] = list(set(v))
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
@@ -101,12 +122,15 @@ def run():
             good_institutes = [i['institute_id'] 
                                for i in institutes
                                if i['matching_score'] > 0.9]
-            row['countries'] = set(grid_countries[inst_id]
+            countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
+            row['countries'] = [c for c, r in countries]
+            row['regions'] = [r for c, r in countries]
 
             # Pull out international institute info
-            has_mn = any(is_multinational(inst, countries)
+            has_mn = any(is_multinational(inst, 
+                                          grid_countries.values())
                          for inst in good_institutes)
             row['has_multinational'] = has_mn
 
@@ -140,12 +164,29 @@ def run():
 
 
 if __name__ == "__main__":
-    set_log_level(True)
+    set_log_level()
     if 'BATCHPAR_outinfo' not in os.environ:
+        set_log_level(True)
         from nesta.core.orms.orm_utils import setup_es
         es, es_config = setup_es('dev', True, True,
-                                 dataset='arxiv')
-        environ = {}
+                                 dataset='arxiv-eu')
+        environ = {'outinfo':('https://search-eurito-dev-'
+                              'vq22tw6otqjpdh47u75bh2g7ba.'
+                              'eu-west-2.es.amazonaws.com'),
+                   'config':('/home/ec2-user/nesta-eu/'
+                             'nesta/core/config/mysqldb.config'),
+                   'bucket':'nesta-production-intermediate',
+                   'batch_file': ('ElasticsearchTask-2019-'
+                                  '09-17-True-'
+                                  '15687118121284823.json'),
+                   'out_port': '443',
+                   'out_type': '_doc',
+                   'db_name': 'dev',
+                   'entity_type': 'article',
+                   'out_index': 'arxiv_dev',
+                   'test': 'True',
+                   'aws_auth_region': 'eu-west-2'}
         for k, v in environ.items():
             os.environ[f'BATCHPAR_{k}'] = v
+    logging.info('Starting...')
     run()

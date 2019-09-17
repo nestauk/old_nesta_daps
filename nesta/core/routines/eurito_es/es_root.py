@@ -15,8 +15,8 @@ def kwarg_maker(dataset):
     dataset = f'{dataset}-eu'
     env_files=[f3p('config/mysqldb.config'),
                f3p('config/elasticsearch.config'),
-               f3p('schema_transformations/eurito/'
-                   f'{dataset}.json')]
+               f3p('schema_transformations/eurito/'),
+               f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}')
     return dict(dataset=dataset,
                 env_files=env_files,
@@ -30,11 +30,11 @@ class RootTask(luigi.WrapperTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
-        set_log_level()
         batch = (self.process_batch_size if self.production
-                 else 1000)
+                 else 50)
         test = not self.production
-        routine_id = 'ElasticsearchTask-{self.date}-{test}'
+        set_log_level(test)
+        routine_id = f'ElasticsearchTask-{self.date}-{test}'
         default_kwargs = dict(routine_id=routine_id,
                               date=self.date,
                               process_batch_size=batch,
@@ -47,10 +47,11 @@ class RootTask(luigi.WrapperTask):
                               max_live_jobs=100,
                               db_config_env='MYSQLDB',
                               test=test,
+                              memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('arxiv', 'article', Article.id),
-                  ('crunchbase', 'company', Organization.id))
+        params = (('arxiv', 'article', Article.id),)
+                  #('crunchbase', 'company', Organization.id))
                   #('patstat', 'patent', Patent.appln_id))
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
