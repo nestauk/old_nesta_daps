@@ -101,7 +101,7 @@ class MeshJoinTask(luigi.Task):
         logging.info('Inserting associations')
         
         for key_count, key in enumerate(keys):
-            mesh_table_objs = []
+            mesh_term_objs = []
             rows = []
             if self.test and (key_count > 2):
                 continue
