@@ -131,7 +131,7 @@ class MeshJoinTask(luigi.Task):
                     mesh_term_objs, low_memory=True)
             # inesrt rows to link table
             chunk_size = 10000
-            for i, chunk in enumerate(chunks(rows, chunk_size)):
+            for i, chunk in enumerate(self.chunks(rows, chunk_size)):
                 start = i * chunk_size
                 end = start + chunk_size - 1
                 d = datetime.datetime.utcnow().strftime('%H:%M:%S %d-%m-%Y')
