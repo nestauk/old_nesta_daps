@@ -66,6 +66,11 @@ class MeshJoinTask(luigi.Task):
         s3bucket = s3.Bucket(bucket)
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
+    @staticmethod
+    def chunks(l, n):
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
     def output(self):
         db_config = get_config(os.environ[self.db_config_env], "mysqldb")
         db_config['database'] = 'dev' if self.test else 'production'
@@ -96,6 +101,8 @@ class MeshJoinTask(luigi.Task):
         logging.info('Inserting associations')
         
         for key_count, key in enumerate(keys):
+            mesh_table_objs = []
+            rows = []
             if self.test and (key_count > 2):
                 continue
             # collect mesh results from s3 file and groups by project id
@@ -104,7 +111,6 @@ class MeshJoinTask(luigi.Task):
             project_terms = self.format_mesh_terms(df_mesh)
             # go through documents
             for project_count, (project_id, terms) in enumerate(project_terms.items()):
-                rows = []
                 if self.test and (project_count > 2):
                     continue
                 if (project_id in projects_done) or (project_id not in existing_projects):
@@ -114,14 +120,16 @@ class MeshJoinTask(luigi.Task):
                     term_id = int(term_id)
                     # add term to mesh term table if not present
                     if term_id not in mesh_term_ids:
-                        objs = insert_data(
-                                self.db_config_env, 'mysqldb', db, Base, MeshTerms, 
-                                [{'id': term_id, 'term': term}], low_memory=True)
+                        mesh_table_objs.append({'id': term_id, 'term': term})
                         mesh_term_ids.update({term_id})
                     # prepare row to be added to project-mesh_term link table
                     rows.append({'project_id': project_id, 'mesh_term_id': term_id})
-                # inesrt rows to link table
-                insert_data(self.db_config_env, 'mysqldb', db, Base, 
-                        ProjectMeshTerms, rows, low_memory=True)
+            # insert all missing mesh labels
+            mesh_objs = insert_data(self.db_config_env, 'mysqldb', db, Base, MeshTerms, 
+                    mesh_term_objs, low_memory=True)
+            # inesrt rows to link table
+            for chunk in chunks(rows, 10000):
+                insert_data(self.db_config_env, 'mysqldb', db, Base, ProjectMeshTerms, 
+                        chunk, low_memory=True)
         self.output().touch() # populate project-mesh_term link table
 
