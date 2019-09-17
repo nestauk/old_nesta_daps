@@ -122,7 +122,7 @@ class MeshJoinTask(luigi.Task):
                     term_id = int(term_id)
                     # add term to mesh term table if not present
                     if term_id not in mesh_term_ids:
-                        mesh_table_objs.append({'id': term_id, 'term': term})
+                        mesh_term_objs.append({'id': term_id, 'term': term})
                         mesh_term_ids.update({term_id})
                     # prepare row to be added to project-mesh_term link table
                     rows.append({'project_id': project_id, 'mesh_term_id': term_id})
