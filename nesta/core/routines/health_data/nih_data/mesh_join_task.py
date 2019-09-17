@@ -108,6 +108,8 @@ class MeshJoinTask(luigi.Task):
             # collect mesh results from s3 file and groups by project id
             # each project id has set of mesh terms and corresponding term ids
             df_mesh = retrieve_mesh_terms(bucket, key)
+            n_terms = df_mesh.shape[0]
+            logging.info(f'Found {n_terms} MeSH terms.')
             project_terms = self.format_mesh_terms(df_mesh)
             # go through documents
             for project_count, (project_id, terms) in enumerate(project_terms.items()):
@@ -128,7 +130,12 @@ class MeshJoinTask(luigi.Task):
             mesh_objs = insert_data(self.db_config_env, 'mysqldb', db, Base, MeshTerms, 
                     mesh_term_objs, low_memory=True)
             # inesrt rows to link table
-            for chunk in chunks(rows, 10000):
+            chunk_size = 10000
+            for i, chunk in enumerate(chunks(rows, chunk_size)):
+                start = i * chunk_size
+                end = start + chunk_size - 1
+                d = datetime.datetime.utcnow().strftime('%H:%M:%S %d-%m-%Y')
+                logging.info(f'{d}: Inserting terms {start} to {end}')
                 insert_data(self.db_config_env, 'mysqldb', db, Base, ProjectMeshTerms, 
                         chunk, low_memory=True)
         self.output().touch() # populate project-mesh_term link table
