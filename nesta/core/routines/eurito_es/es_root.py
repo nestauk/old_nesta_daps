@@ -30,14 +30,12 @@ class RootTask(luigi.WrapperTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
-        batch = (self.process_batch_size if self.production
-                 else 50)
         test = not self.production
         set_log_level(test)
-        routine_id = f'ElasticsearchTask-{self.date}-{test}'
+        routine_id = f'EURITO-ElasticsearchTask-{self.date}-{test}'
         default_kwargs = dict(routine_id=routine_id,
                               date=self.date,
-                              process_batch_size=batch,
+                              process_batch_size=self.process_batch_size,
                               drop_and_recreate=self.drop_and_recreate,
                               job_def='py36_amzn1_image',
                               job_name=routine_id,
@@ -50,10 +48,11 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('arxiv', 'article', Article.id),)
-                  #('crunchbase', 'company', Organization.id))
-                  #('patstat', 'patent', Patent.appln_id))
+        #params = #(('arxiv', 'article', Article.id),
+        params = (('crunchbase', 'company', Organization.id),)
+        #('patstat', 'patent', Patent.appln_id))
         for dataset, entity_type, id_field in params:
+            print(dataset, entity_type, id_field)
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
                              **kwarg_maker(dataset),

@@ -51,9 +51,7 @@ def run():
     continent_lookup[None] = None
 
     # es setup
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
-                                                 "health_scanner.json")
-    strans_kwargs={'filename':'crunchbase_organisation_members.json',
+    strans_kwargs={'filename':'eurito/crunchbase-eu.json',
                    'from_key':'tier_0',
                    'to_key':'tier_1',
                    'ignore':['id']}
@@ -63,7 +61,6 @@ def run():
                            no_commit=("AWSBATCHTEST" in os.environ),
                            entity_type=entity_type,
                            strans_kwargs=strans_kwargs,
-                           field_null_mapping=field_null_mapping,
                            null_empty_str=True,
                            coordinates_as_floats=True,
                            country_detection=True,
@@ -153,43 +150,26 @@ if __name__ == "__main__":
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    if 'BATCHPAR_outinfo' not in os.environ:
-        from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='crunchbase',
-                                 aliases='health_scanner')
+    # if 'BATCHPAR_outinfo' not in os.environ:
+    #     from nesta.core.orms.orm_utils import setup_es
+    #     es, es_config = setup_es('dev', True, True,
+    #                              dataset='crunchbase',
+    #                              aliases='health_scanner')
 
-        environ = {"AWSBATCHTEST": "",
-                   'BATCHPAR_batch_file': 'crunchbase_to_es-15597291977144725.json', 
-                   'BATCHPAR_config': ('/home/ec2-user/nesta/nesta/'
-                                       'core/config/mysqldb.config'),
-                   'BATCHPAR_db_name': 'production', 
-                   'BATCHPAR_bucket': 'nesta-production-intermediate', 
-                   'BATCHPAR_done': "False", 
-                   'BATCHPAR_outinfo': ('https://search-health-scanner-'
-                               '5cs7g52446h7qscocqmiky5dn4.'
-                               'eu-west-2.es.amazonaws.com'), 
-                   'BATCHPAR_out_port': '443', 
-                   'BATCHPAR_out_index': 'companies_v1', 
-                   'BATCHPAR_out_type': '_doc', 
-                   'BATCHPAR_aws_auth_region': 'eu-west-2', 
-                   'BATCHPAR_entity_type': 'company', 
-                   'BATCHPAR_test': "False"}
-
-        # environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
-        #            "BATCHPAR_outinfo": ("search-health-scanner-"
-        #                                 "5cs7g52446h7qscocqmiky5dn4"
-        #                                 ".eu-west-2.es.amazonaws.com"),
-        #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta/core/config/mysqldb.config",
-        #            "BATCHPAR_bucket":"nesta-production-intermediate",
-        #            "BATCHPAR_done":"False",
-        #            "BATCHPAR_batch_file":"crunchbase_to_es-1559658702669423.json",
-        #            "BATCHPAR_out_type": "_doc",
-        #            "BATCHPAR_out_port": "443",
-        #            "BATCHPAR_test":"True",
-        #            "BATCHPAR_db_name":"production",
-        #            "BATCHPAR_out_index":"companies_dev",
-        #            "BATCHPAR_entity_type":"company"}
-        for k, v in environ.items():
-            os.environ[k] = v
+    #     # environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
+    #     #            "BATCHPAR_outinfo": ("search-health-scanner-"
+    #     #                                 "5cs7g52446h7qscocqmiky5dn4"
+    #     #                                 ".eu-west-2.es.amazonaws.com"),
+    #     #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta/core/config/mysqldb.config",
+    #     #            "BATCHPAR_bucket":"nesta-production-intermediate",
+    #     #            "BATCHPAR_done":"False",
+    #     #            "BATCHPAR_batch_file":"crunchbase_to_es-1559658702669423.json",
+    #     #            "BATCHPAR_out_type": "_doc",
+    #     #            "BATCHPAR_out_port": "443",
+    #     #            "BATCHPAR_test":"True",
+    #     #            "BATCHPAR_db_name":"production",
+    #     #            "BATCHPAR_out_index":"companies_dev",
+    #     #            "BATCHPAR_entity_type":"company"}
+    #     for k, v in environ.items():
+    #         os.environ[k] = v
     run()
