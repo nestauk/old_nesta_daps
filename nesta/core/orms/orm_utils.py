@@ -21,33 +21,55 @@ import json
 import logging
 import time
 
-def object_to_dict(obj, found=None):
+
+def _get_key_value(obj, key):
+    """Helper method to an attribute value, dealing
+    gracefully with datetimes by converting to isoformat
+
+    Args:
+        obj: Object to retrieve value from
+        key (str): Name of the attribute to retrieve.
+    Returns:
+        {key, value}: A key-value pair corresponding to the attribute
+    """
+    value = getattr(obj, key)
+    if isinstance(value, datetime):
+        value = value.isoformat()
+    return (key, value)
+
+
+def object_to_dict(obj, shallow=False, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
-    
+
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
+        shallow (bool): Fully unpack nested objs via relationships.
+        found: For internal recursion, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.
     """
-    if found is None:
+    if found is None:  # First time
         found = set()
+    # Set up the mapper and retrieve shallow values
     mapper = class_mapper(obj.__class__)
     columns = [column.key for column in mapper.columns]
-    get_key_value = (lambda c: (c, getattr(obj, c).isoformat())
-                     if isinstance(getattr(obj, c), datetime)
-                     else (c, getattr(obj, c)))
-    out = dict(map(get_key_value, columns))
-    for name, relation in mapper.relationships.items():
-        if relation not in found:
-            found.add(relation)
-            related_obj = getattr(obj, name)
-            if related_obj is not None:
-                if relation.uselist:
-                    out[name] = [object_to_dict(child, found)
-                                 for child in related_obj]
-                else:
-                    out[name] = object_to_dict(related_obj, found)
+    out = dict(map(lambda c: _get_key_value(obj, c), columns))
+    # Shallow means ignore relationships
+    relationships = {} if shallow else mapper.relationships
+    for name, relation in relationships.items():
+        if relation in found:  # Don't repeat relationships
+            continue
+        found.add(relation)
+        related_obj = getattr(obj, name)
+        if related_obj is None:  # Don't pursue null relations
+            continue
+        # Unpack flat or recursively, as required
+        if relation.uselist:
+            out[name] = [object_to_dict(child, found=found)
+                         for child in related_obj]
+        else:
+            out[name] = object_to_dict(related_obj, found=found)
     return out
 
 
@@ -319,6 +341,36 @@ def insert_data(db_env, section, database, Base,
     return objs
 
 
+def db_session_query(query, engine, chunksize=1000,
+                     limit=None, offset=0):
+    """Perform queries in chunks, with one session per chunk
+    to avoid long sessions from dying.
+
+    Args:
+        query: A valid SqlAlchemy query string or object
+        engine: A valid SqlAlchemy connectable
+        chunksize (int): Chunk size after which to reset the db connection
+        limit (int): Maximum number of results to return.
+    Yields:
+        {db, row} ({:obj:`sqlalchemy.orm.session.Session`, data}): SqlAlchemy session and row of data
+    """
+    n = 0
+    n_results = chunksize
+    while n_results == chunksize:
+        logging.info('[db_session_query] (re)starting DB '
+                     f'session after {n*chunksize + n_results}')
+        with db_session(engine) as db:
+            n_results = 0
+            for row in (db.query(query).offset(offset + n*chunksize)
+                        .limit(chunksize)):
+                n_results += 1
+                yield db, row
+                if n*chunksize + n_results == limit:
+                    return
+        n += 1
+    return
+
+
 @contextmanager
 def db_session(engine):
     """Creates and mangages an sqlalchemy session.
@@ -462,11 +514,12 @@ def merge_metadata(base, *other_bases):
             base.metadata._add_table(table_name, table.schema, table)
     return base
 
+
 @contextmanager
-def graph_session(*args, **kwargs):
+def graph_session(yield_graph=False, *args, **kwargs):
     '''Generate a Neo4j graph transaction object with
     safe commit/rollback built-in.
-    
+
     Args:
         {*args, **kwargs}: Any arguments for py2neo.database.Graph
     Yields:
@@ -475,7 +528,10 @@ def graph_session(*args, **kwargs):
     graph = Graph(*args, **kwargs)
     transaction = graph.begin()
     try:
-        yield transaction
+        if yield_graph:
+            yield (graph, transaction)
+        else:
+            yield transaction
         transaction.commit()
     except:
         transaction.rollback()
