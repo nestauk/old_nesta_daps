@@ -65,7 +65,7 @@ class QueryMagTask(luigi.Task):
 
     def run(self):
         pp = pprint.PrettyPrinter(indent=4, width=100)
-        mag_config = misctools.get_config(self.mag_config_path, 'mag')
+        mag_config = misctools.get_config(self.mag_config_path, 'mag2')
         mag_subscription_key = mag_config['subscription_key']
 
         # database setup

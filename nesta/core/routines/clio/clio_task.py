@@ -116,7 +116,7 @@ class ClioTask(luigi.Task):
                             b'min_df_0-001.'
                             b'text_field_abstractText'
                             b'.NGRAM.TEST_False.json')
-        if self.cherry_picked is None:
+        if self.cherry_picked is None or not self.production:
             # Read the topics data
             file_ptr = self.input().open("rb")
             path = file_ptr.read()
@@ -124,7 +124,8 @@ class ClioTask(luigi.Task):
         else:
             path = self.cherry_picked
 
-        file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
+        file_io_topics = s3.S3Target('s3://clio-data/'
+                                     f'{path.decode("utf-8")}').open("rb")
         topic_json = json.load(file_io_topics)
         file_io_topics.close()
         topic_lookup = topic_json['data']['topic_names']
