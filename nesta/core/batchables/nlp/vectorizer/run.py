@@ -49,8 +49,10 @@ def run():
 
     # Extract what you need from the data
     _data = [list(itertools.chain.from_iterable(row[text_field]))
-             for row in data if type(row[text_field]) is list]
+             if type(row[text_field]) is list
+             else [] for row in data ]
     index = [row[id_field] for row in data]
+    assert len(_data) == len(data)
     del data
 
     # Build the corpus
@@ -78,5 +80,5 @@ if __name__ == "__main__":
         os.environ["BATCHPAR_binary"] = 'True'
         os.environ["BATCHPAR_min_df"] = '0.001'
         os.environ["BATCHPAR_s3_path_in"] = ('s3://clio-data/gtr/'
-                                             'NGRAM.TEST_True.json')
+                                             '2019-09-19/NGRAM.TEST_True.json')
     run()
