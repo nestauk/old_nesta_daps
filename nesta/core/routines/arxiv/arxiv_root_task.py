@@ -13,6 +13,8 @@ from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.routines.arxiv.arxiv_es_task import ArxivESTask
 from nesta.core.routines.arxiv.deepchange_analysis_task import AnalysisTask
+from nesta.core.luigihacks.parameter import DictParameterPlus
+
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
@@ -57,34 +59,31 @@ class RootTask(luigi.WrapperTask):
                            '.n_hidden_36-0.VECTORIZER.binary_True'
                            '.min_df_0-001.NGRAM.TEST_True.json')
 
-        logging.getLogger().setLevel(logging.INFO)
-        yield ArxivESTask(routine_id=_routine_id,
-                          date=self.date,
-                          grid_task_kwargs=grid_task_kwargs,
-                          process_batch_size=10000,
-                          drop_and_recreate=self.drop_and_recreate,
-                          dataset='arxiv',
-                          id_field=Article.id,
-                          entity_type='article',
-                          db_config_env='MYSQLDB',
-                          test=not self.production,
-                          intermediate_bucket=('nesta-production'
-                                               '-intermediate'),
-                          batchable=f3p('batchables/arxiv/'
-                                        'arxiv_elasticsearch'),
-                          env_files=[f3p('nesta/'),
-                                     f3p('config/'
-                                         'mysqldb.config'),
-                                    f3p('schema_transformations/'
-                                        'arxiv.json'),
-                                     f3p('config/'
-                                         'elasticsearch.config')],
-                          job_def='py36_amzn1_image',
-                          job_name=_routine_id,
-                          job_queue='HighPriority',
-                          region_name='eu-west-2',
-                          poll_time=10,
-                          max_live_jobs=100)
+        kwargs = {'score_field': 'metric_novelty_article',
+                  'fields': ['textBody_abstract_article']}
+        test = not self.production
+        routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
+        index = 'arxiv_v2' if self.production else 'arxiv_dev'
+        return ArxivElasticsearchTask(routine_id=routine_id,
+                                      grid_task_kwargs=grid_task_kwargs,
+                                      test=test,
+                                      index=index,
+                                      dataset='arxiv',
+                                      entity_type='article',
+                                      kwargs=kwargs,
+                                      batchable=f3p("batchables/novelty"
+                                                    "/lolvelty"),
+                                      env_files=[f3p("nesta/"),
+                                                 f3p("config/mysqldb.config"),
+                                                 f3p("config/"
+                                                     "elasticsearch.config")],
+                                      job_def="py36_amzn1_image",
+                                      job_name=routine_id,
+                                      job_queue="HighPriority",
+                                      region_name="eu-west-2",
+                                      poll_time=10,
+                                      memory=1024,
+                                      max_live_jobs=30)
 
         yield AnalysisTask(date=self.date,
                            grid_task_kwargs=grid_task_kwargs,
@@ -144,5 +143,6 @@ class EsOnlyRootTask(luigi.WrapperTask):
                          job_name=routine_id,
                          job_queue='HighPriority',
                          region_name='eu-west-2',
+                         memory=2048,
                          poll_time=10,
                          max_live_jobs=100)

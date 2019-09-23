@@ -1,5 +1,7 @@
 FROM amazonlinux:1
 
+RUN mkdir /root/.conda
+
 # Install common dependencies
 RUN rm -rf /var/cache/yum/x86_64/latest
 RUN yum update -y
@@ -17,6 +19,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 ENV PATH /opt/conda/bin:$PATH
 RUN conda create -y -n py36 python=3.6 cython
 RUN conda init bash
+RUN conda clean --all
 
 # Set global env variables
 ARG MEETUP_API_KEYS

@@ -66,19 +66,13 @@
                     },
                     "type": "nested"
                 },
+                "metric_citations_article": {
+                    "type": "float"
+                },
                 "metric_novelty_article": {
                     "type": "float"
                 },
                 "terms_authors_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_tokens_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -95,6 +89,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_tokens_article": {
+                    "type": "keyword"
                 },
                 "textBody_abstract_article": {
                     "type": "text"
