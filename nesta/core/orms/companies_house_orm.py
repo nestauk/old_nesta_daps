@@ -3,14 +3,14 @@ Companies House ORM
 """
 
 from sqlalchemy import Column
-from sqlalchemy.dialects.mysql import VARCHAR, INTEGER
+from sqlalchemy.dialects.mysql import INTEGER, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
 
 class Company(Base):
-    __tablename__ = 'ch_companies'
+    __tablename__ = "ch_companies"
 
     company_number = Column(VARCHAR(10), primary_key=True)
     company_name = Column(VARCHAR(200))
@@ -19,7 +19,7 @@ class Company(Base):
 
 
 class DiscoveredCompany(Base):
-    __tablename__ = 'ch_discovered'
+    __tablename__ = "ch_discovered"
 
     company_number = Column(VARCHAR(10), primary_key=True)
     response = Column(INTEGER)

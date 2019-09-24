@@ -17,6 +17,7 @@ from nesta.packages.companies_house.collect_ch_data_dump import (
 
 MYSQLDB_ENV = "MYSQLDB"
 
+
 class RootTask(luigi.WrapperTask):
     """ Root task
 
@@ -35,6 +36,7 @@ class RootTask(luigi.WrapperTask):
 
         return CHDataDump(date=self.date, test=not self.production)
 
+
 class CHDataDump(luigi.Task):
     """ Collects latest data dump and puts them into a db
 
@@ -42,13 +44,14 @@ class CHDataDump(luigi.Task):
         date(`datetime`): Date used to label the outputs and construct data-dump URL
         test (`bool`): Test mode or production mode
     """
+
     date = luigi.DateParameter(default=datetime.datetime.today())
     test = luigi.BoolParameter()
 
     def output(self):
         """ """
         db_config = get_config(os.environ[MYSQLDB_ENV], "mysqldb")
-        db_config["database"] = 'dev' if self.test else 'production'
+        db_config["database"] = "dev" if self.test else "production"
         db_config["table"] = "CompaniesHouse <dummy>"
         update_id = f"CHDataDump_{self.date}"
         return MySqlTarget(update_id=update_id, **db_config)
@@ -62,12 +65,17 @@ class CHDataDump(luigi.Task):
         df = download_data_dump(self.date, cache=False, nrows=nrows).pipe(clean_ch)
 
         # Write data to DB
-        objs = insert_data(MYSQLDB_ENV, "mysqldb",
-                           "production" if not self.test else "dev",
-                           Base, Company, df.to_dict('records'), low_memory=True)
+        objs = insert_data(
+            MYSQLDB_ENV,
+            "mysqldb",
+            "production" if not self.test else "dev",
+            Base,
+            Company,
+            df.to_dict("records"),
+            low_memory=True,
+        )
 
         self.output().touch()
-
 
     def requires(self):
         pass

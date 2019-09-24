@@ -1,5 +1,6 @@
 """
-Query Companies House API with possibly valid company numbers to get the full population of company numbers.
+Query Companies House API with possibly valid company numbers
+to get the full population of company numbers.
 
 TODO Retries
 TODO Account for bad server responses
@@ -76,7 +77,7 @@ async def dispatcher(candidates, api_key, consume, ratelim):
         api_key (`str`): API key for Companies House
         consumer (`object`, optional): A method that consumes the output of
              `try_company_number`, e.g. `print` or a call to a database.
-        ratelim (`tuple`): Max number of API calls (first element) in a given 
+        ratelim (`tuple`): Max number of API calls (first element) in a given
             number of seconds (second element).
     """
     API_CALLS, API_TIME = ratelim
@@ -121,4 +122,6 @@ if __name__ == "__main__":
             candidates.append(c)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(dispatcher(candidates, api_key, consume=print, ratelim=(API_CALLS, API_TIME)))
+    loop.run_until_complete(
+        dispatcher(candidates, api_key, consume=print, ratelim=(API_CALLS, API_TIME))
+    )
