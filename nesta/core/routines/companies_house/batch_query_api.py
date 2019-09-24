@@ -1,18 +1,20 @@
 import datetime
 import json
+import logging
 import os
 import time
-import logging
 from itertools import chain
 
-import numpy as np
 import boto3
 import luigi
+import numpy as np
 
-from nesta.production.luigihacks import autobatch, s3
-from nesta.production.luigihacks.misctools import get_config, find_filepath_from_pathstub
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.packages.companies_house.find_dissolved import generate_company_number_candidates
+from nesta.core.luigihacks import autobatch, s3
+from nesta.core.luigihacks.misctools import (find_filepath_from_pathstub,
+                                             get_config)
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.packages.companies_house.find_dissolved import \
+    generate_company_number_candidates
 
 S3 = boto3.resource('s3')
 S3_PREFIX = "s3://nesta-production-intermediate/CH_batch_params"

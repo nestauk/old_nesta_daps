@@ -8,12 +8,12 @@ import os
 
 import luigi
 
+from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.orms.companies_house_orm import Base, Company
+from nesta.core.orms.orm_utils import insert_data
 from nesta.packages.companies_house.collect_ch_data_dump import (
     clean_ch, download_data_dump)
-from nesta.production.luigihacks.misctools import get_config
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.orms.companies_house_orm import Base, Company
-from nesta.production.orms.orm_utils import insert_data
 
 MYSQLDB_ENV = "MYSQLDB"
 
