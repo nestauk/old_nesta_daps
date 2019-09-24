@@ -2,17 +2,19 @@ import datetime
 import json
 import logging
 import os
-import time
 from itertools import chain
 
 import boto3
 import luigi
 import numpy as np
+from pandas import read_sql_query
 
 from nesta.core.luigihacks import autobatch, s3
 from nesta.core.luigihacks.misctools import (find_filepath_from_pathstub,
                                              get_config)
 from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.orms.orm_utils import (db_session, get_mysql_engine,
+                                       try_until_allowed)
 from nesta.packages.companies_house.find_dissolved import \
     generate_company_number_candidates
 
@@ -25,7 +27,7 @@ MYSQLDB_ENV = "MYSQLDB"
 
 
 class CHBatchQuery(autobatch.AutoBatchTask):
-    """A set of batched tasks which increments the age of the muppets by 1 year.
+    """
     Args:
         date (datetime): Date used to label the outputs
         batchable (str): Path to the directory containing the run.py batchable
@@ -56,19 +58,53 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         with open(os.environ["CH_API"], "r") as f:
             api_key_l = f.read().split(",")
 
+        def already_found():
+            """ From SQL"""
+            engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb", db_name)
+            return set(
+                read_sql_query(
+                    "SELECT company_number from ch_companies", engine
+                ).company_number.to_list()
+            )
+
+        def already_not_found():
+            """ From s3 `interiminfo`"""
+
+            # Get filenames
+            files = list(
+                get_matching_s3_keys(
+                    "nesta-production-intermediate", prefix=f"CH_{key}_interim"
+                )
+            )
+            # Concatenate files into set
+            return set(
+                chain(
+                    *(
+                        json.loads(
+                            s3.Object("nesta-production-intermediate", f)
+                            .get()["Body"]
+                            .read()
+                        )
+                        for f in files
+                    )
+                )
+            )
+
         prefixes = ["0", "OC", "LP", "SC", "SO", "SL", "NI", "R", "NC", "NL"]
         candidates = list(
             map(
                 list,
                 np.array_split(
-                    list(
+                    list(set(
                         chain(
                             *[
                                 generate_company_number_candidates(prefix)
                                 for prefix in prefixes
                             ]
                         )
-                    ),
+                    )
+                    - already_found()
+                    - already_not_found()),
                     len(api_key_l),
                 ),
             )
@@ -89,11 +125,13 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                     Body=json.dumps(batch_candidates)
                 )
             )
+            interiminfo = f"s3://nesta-production-intermediate/CH_{key}_interim"
 
             params = {
                 "CH_API_KEY": api_key,
                 "db_name": "CompaniesHouse <dummy>",
                 "inputinfo": inputinfo,
+                "interiminfo": interiminfo,
                 "outinfo": f"{S3_PREFIX}_{key}",
                 "test": self.test,
                 "done": key in DONE_KEYS,
@@ -134,3 +172,53 @@ class RootTask(luigi.Task):
 
     def run(self):
         pass
+
+
+# TODO: factor out into some utils file
+def get_matching_s3_objects(bucket, prefix="", suffix=""):
+    """
+    Generate objects in an S3 bucket.
+
+    :param bucket: Name of the S3 bucket.
+    :param prefix: Only fetch objects whose key starts with
+        this prefix (optional).
+    :param suffix: Only fetch objects whose keys end with
+        this suffix (optional).
+    """
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+
+    kwargs = {"Bucket": bucket}
+
+    # We can pass the prefix directly to the S3 API.  If the user has passed
+    # a tuple or list of prefixes, we go through them one by one.
+    if isinstance(prefix, str):
+        prefixes = (prefix,)
+    else:
+        prefixes = prefix
+
+    for key_prefix in prefixes:
+        kwargs["Prefix"] = key_prefix
+
+        for page in paginator.paginate(**kwargs):
+            try:
+                contents = page["Contents"]
+            except KeyError:
+                return
+
+            for obj in contents:
+                key = obj["Key"]
+                if key.endswith(suffix):
+                    yield obj
+
+
+def get_matching_s3_keys(bucket, prefix="", suffix=""):
+    """
+    Generate the keys in an S3 bucket.
+
+    :param bucket: Name of the S3 bucket.
+    :param prefix: Only fetch keys that start with this prefix (optional).
+    :param suffix: Only fetch keys that end with this suffix (optional).
+    """
+    for obj in get_matching_s3_objects(bucket, prefix, suffix):
+        yield obj["Key"]

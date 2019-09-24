@@ -1,4 +1,4 @@
-import asyncio
+import datetime
 import json
 import logging
 import os
@@ -21,6 +21,7 @@ def run():
     s3_path = os.environ["BATCHPAR_outinfo"]
 
     s3_input = os.environ["BATCHPAR_inputinfo"]
+    s3_interim = os.environ["BATCHPAR_interiminfo"]
     api_key = os.environ["BATCHPAR_CH_API_KEY"]
 
     # Read candidates from S3 input
@@ -41,27 +42,35 @@ def run():
         DiscoveredCompany.__table__.create(engine)
         logging.info(f"Table {DiscoveredCompany.__table__} created")
 
+    def save_not_found(not_found_list):
+        s3.Object(*parse_s3_path(f"{s3_interim}/{datetime.datetime.now()}")).put(
+            Body=json.dumps(not_found_list)
+        )
+
     def consume(r):
         """ Enter row into database """
-        success, row = r
-        logging.debug(row)
-        if row["status"] != 404:
+        logging.debug(r)
+        if r.status_code == 200:
             engine.execute(
                 "REPLACE INTO ch_discovered "
                 "(company_number, response) "
                 "VALUES (%s, %s)",
-                (row["company_number"], int(row["status"])),
+                (r.company_number, int(r.status_code)),
             )
+        elif r.status_code == 404:
+            logging.debug(f"404: {r.company_number} does not exist")
+            not_found_list.append(r.company_number)
+            if len(not_found_list) % chunksize == 0:  # TODO: Misses last chunk?
+                save_not_found(not_found_list)
+                not_found_list = []
         else:
-            logging.debug(f"404: {row['company_number']} does not exist")
+            logging.debug(f"FAIL")
 
     # Make requests
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(
-        dispatcher(candidates, api_key, consume=consume, ratelim=(API_CALLS, API_TIME))
-    )
-
-    # TODO Re-run on non 404 or 200 status codes
+    chunksize = 1000
+    not_found_list = []
+    dispatcher(candidates, api_key, consume=consume)
+    save_not_found(not_found_list)
 
     logging.info(f"Marking task as done to {s3_path}")
     s3 = boto3.resource("s3")
@@ -71,21 +80,29 @@ def run():
 
 if __name__ == "__main__":
     if "BATCHPAR_outinfo" not in os.environ.keys():  # Local testing
-        os.environ["BATCHPAR_CH_API_KEY"] = "EKiJ7O-o-j_6zHuFogXiwOO5VuVYnrnAI8rFSY5N"
+        bucket = "nesta-production-intermediate"
+        api_key = os.environ["CH_API_KEY"]
+        input_info = f"s3://{bucket}/CH_batch_params_{api_key}_input"
+
+        os.environ["BATCHPAR_CH_API_KEY"] = api_key
         os.environ["BATCHPAR_db_name"] = "dev"
-        os.environ[
-            "BATCHPAR_inputinfo"
-        ] = "s3://nesta-production-intermediate/CH_batch_params_EKiJ7O-o-j_6zHuFogXiwOO5VuVYnrnAI8rFSY5N_input"
-        os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/local_out"
+        os.environ["BATCHPAR_inputinfo"] = input_info
+        os.environ["BATCHPAR_outinfo"] = f"s3://{bucket}/CH_{api_key}_local_out"
         os.environ["BATCHPAR_done"] = "False"
         os.environ["BATCHPAR_test"] = "True"
         os.environ["BATCHPAR_config"] = os.environ["MYSQLDB"]
+
+        os.environ["BATCHPAR_interiminfo"] = f"s3://{bucket}/CH_{api_key}_interim"
+
+        # Input data
+        s3 = boto3.resource("s3")
+        s3_obj = s3.Object(*parse_s3_path(input_info))
+        s3_obj.put(Body='["SC612773","SC612774","SC612775","SC612776","SO300397"]')
+
         level = logging.DEBUG
+        level = logging.INFO
     else:
         level = logging.INFO
-
-    API_CALLS, API_TIME = 600, 300
-    key = os.environ["BATCHPAR_CH_API_KEY"]
 
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(
