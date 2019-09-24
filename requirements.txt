@@ -1,10 +1,13 @@
+aiohttp==3.5.4
 alchemy_mock==0.4.1
 alphabet_detector==0.0.7
+aws_logging_handlers==2.0.3
 beautifulsoup4==4.8.0
 boto3==1.9.159
 botocore==1.12.205
 corextopic==1.0.4
 elasticsearch==6.4.0
+engarde==0.4.0
 fuzzywuzzy==0.17.0
 gensim==3.7.3
 geopy==1.20.0
