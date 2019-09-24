@@ -11,10 +11,10 @@ import logging
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.orms.arxiv_orm import Article
-from nesta.core.routines.arxiv.arxiv_es_task import ArxivESTask
+from nesta.core.orms.orm_utils import setup_es
 from nesta.core.routines.arxiv.deepchange_analysis_task import AnalysisTask
 from nesta.core.luigihacks.parameter import DictParameterPlus
-
+from nesta.core.routines.arxiv.arxiv_lolvelty import ArxivElasticsearchTask
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
@@ -34,7 +34,7 @@ class RootTask(luigi.WrapperTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     articles_from_date = luigi.Parameter(default=None)
     insert_batch_size = luigi.IntParameter(default=500)
-    debug = luigi.BoolParameter(default=False)
+    debug = luigi.BoolParameter(default=False)    
 
     def requires(self):
         '''Collects the database configurations
@@ -63,27 +63,34 @@ class RootTask(luigi.WrapperTask):
                   'fields': ['textBody_abstract_article']}
         test = not self.production
         routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
-        index = 'arxiv_v2' if self.production else 'arxiv_dev'
-        return ArxivElasticsearchTask(routine_id=routine_id,
-                                      grid_task_kwargs=grid_task_kwargs,
-                                      test=test,
-                                      index=index,
-                                      dataset='arxiv',
-                                      entity_type='article',
-                                      kwargs=kwargs,
-                                      batchable=f3p("batchables/novelty"
-                                                    "/lolvelty"),
-                                      env_files=[f3p("nesta/"),
-                                                 f3p("config/mysqldb.config"),
-                                                 f3p("config/"
-                                                     "elasticsearch.config")],
-                                      job_def="py36_amzn1_image",
-                                      job_name=routine_id,
-                                      job_queue="HighPriority",
-                                      region_name="eu-west-2",
-                                      poll_time=10,
-                                      memory=1024,
-                                      max_live_jobs=30)
+
+        # Elasticsearch setup
+        dataset = 'arxiv'
+        _, es_config = setup_es('prod' if self.production else 'dev', 
+                                not self.production,
+                                self.drop_and_recreate,
+                                dataset=dataset)
+        yield ArxivElasticsearchTask(date=self.date,
+                                     routine_id=routine_id,
+                                     grid_task_kwargs=grid_task_kwargs,
+                                     test=not self.production,
+                                     index=es_config['index'],
+                                     dataset='arxiv',
+                                     entity_type='article',
+                                     kwargs=kwargs,
+                                     batchable=f3p("batchables/novelty"
+                                                   "/lolvelty"),
+                                     env_files=[f3p("nesta/"),
+                                                f3p("config/mysqldb.config"),
+                                                f3p("config/"
+                                                    "elasticsearch.config")],
+                                     job_def="py36_amzn1_image",
+                                     job_name=routine_id,
+                                     job_queue="HighPriority",
+                                     region_name="eu-west-2",
+                                     poll_time=10,
+                                     memory=1024,
+                                     max_live_jobs=30)
 
         yield AnalysisTask(date=self.date,
                            grid_task_kwargs=grid_task_kwargs,
