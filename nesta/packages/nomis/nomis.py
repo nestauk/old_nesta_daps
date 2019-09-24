@@ -7,7 +7,7 @@ Collect official data from the NOMIS API, using configuration files.
 
 import requests
 from collections import Counter
-from nesta.production.luigihacks.misctools import get_config
+from nesta.core.luigihacks.misctools import get_config
 from io import StringIO
 import pandas as pd
 from collections import defaultdict

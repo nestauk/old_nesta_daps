@@ -1,12 +1,15 @@
+from bs4 import BeautifulSoup
 from collections import defaultdict
 from jellyfish import levenshtein_distance
+import json
 import logging
 import re
+import requests
 
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.production.orms.orm_utils import get_mysql_engine
-from nesta.production.orms.mag_orm import FieldOfStudy
+from nesta.core.orms.orm_utils import db_session, get_mysql_engine
+from nesta.core.orms.mag_orm import FieldOfStudy
 
 
 MAG_ENDPOINT = 'http://ma-graph.org/sparql'
@@ -22,8 +25,8 @@ def _batch_query_articles_by_doi(query, articles, batch_size=10):
             Must contatin at least `id` and `doi` in each dict.
         batch_size (int): number of ids to query in a batch. Max size = 50
 
-    Returns:
-        (:obj:`list` of :obj:`dict`): yields batches of data returned from MAG
+    Yields:
+        (:obj:`list` of :obj:`dict`): batches of data returned from MAG
     """
     if not 1 <= batch_size <= 10:  # max limit for uri length
         raise ValueError("batch_size must be between 1 and 10")
@@ -49,8 +52,8 @@ def query_articles_by_doi(articles):
         articles (:obj:`list` of :obj:`dict`): articles to query in MAG.
             Must contatin at least `id` and `doi` in each dict.
 
-    Returns:
-        (:obj:`list` of :obj:`dict`): data returned from MAG
+    Yields:
+        (dict): single article
     """
     query = '''
     PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -106,7 +109,38 @@ def query_articles_by_doi(articles):
             yield best_match
 
 
-def _batch_query_sparql(query, concat_format=None, filter_on=None, ids=None, batch_size=50):
+def _batched_entity_filter(concat_format, filter_on, ids, batch_size):
+    """Creates batches of entity filters for SPARQL queries. Constructing a
+    'filter in' statement using the provided ids, splitting whenever the batch size is
+    hit.
+
+    A call with the following arguments:
+        _batched_entity_filter('<http://ma-graph.org/entity/{}>', 'data', [1, 2], 50)
+
+    Will return a generator which yields the following:
+        "FILTER (?data IN (<http://ma-graph.org/entity/1>,<http://ma-graph.org/entity/2>))"
+
+    Args:
+        concat_format (str): string format to be applied when concatenating ids
+            requires a placeholder for id {}
+        filter_on (str): name of the field to use in the filter. The '?' prefix
+            is not required
+        ids (list): If ids are supplied they are queried as batches, otherwise
+            all entities are queried
+        batch_size (int): number of ids to query in a batch.
+
+    Yields:
+        (str): filter string containing ids up to the chosen batch size
+    """
+    for batch_of_ids in split_batches(ids, batch_size):
+        entities = ','.join(concat_format.format(i) for i in batch_of_ids)
+
+        yield f"FILTER (?{filter_on} IN ({entities}))"
+
+
+def _batch_query_sparql(query,
+                        concat_format=None, filter_on=None, ids=None,
+                        batch_size=50):
     """Manages batching of sparql queries, with filtering and yielding of single rows
     mag via the sparql api.
 
@@ -114,29 +148,31 @@ def _batch_query_sparql(query, concat_format=None, filter_on=None, ids=None, bat
         query (str): sparql query containing a format string placeholder {}
         concat_format (str): string format to be applied when concatenating ids
             requires a placeholder for id {}
-        filter_on (str): name of the field to use in the filter (no '?' required)
+        filter_on (str): name of the field to use in the filter. The '?' prefix
+            is not required
         ids (list): If ids are supplied they are queried as batches, otherwise
             all entities are queried
         batch_size (int): number of ids to query in a batch. Maximum = 50
 
-    Returns:
-        (dict): single rows of returned data are yielded
+    Yields:
+        (dict): single row of returned data
     """
     if not 1 <= batch_size <= 50:  # max limit for uri length
         raise ValueError("batch_size must be between 1 and 50")
 
     if all([concat_format, filter_on, ids]):
-        for batch_of_ids in split_batches(ids, batch_size):
-            entities = ','.join(concat_format.format(i) for i in batch_of_ids)
-            entity_filter = f"FILTER (?{filter_on} IN ({entities}))"
+        entity_filters = _batched_entity_filter(concat_format, filter_on, ids,
+                                                batch_size)
     elif any([concat_format, filter_on, ids]):
-        raise ValueError("concat_format, filter_on and ids must all be supplied together or not at all")
+        raise ValueError("concat_format, filter_on and ids must all be supplied "
+                         "together or not at all")
     else:
-        # retrieve all fields of study
-        entity_filter = ''
+        # retrieve all
+        entity_filters = ['']
 
-    for batch in sparql_query(MAG_ENDPOINT, query.format(entity_filter)):
-        yield from batch
+    for entity_filter in entity_filters:
+        for batch in sparql_query(MAG_ENDPOINT, query.format(entity_filter)):
+            yield from batch
 
 
 def extract_entity_id(entity):
@@ -166,7 +202,7 @@ def query_fields_of_study_sparql(ids=None, results_limit=None):
                                      all are returned if None
         results_limit (int): limit the number of results returned (for testing)
 
-    Returns:
+    Yields:
         (dict): processed field of study
     """
     query = '''
@@ -223,13 +259,13 @@ def query_fields_of_study_sparql(ids=None, results_limit=None):
             break
 
 
-def update_field_of_study_ids_sparql(session, fos_ids):
+def update_field_of_study_ids_sparql(engine, fos_ids):
     """Queries MAG via the sparql api for fields of study and if found, adds them to the
-    database with the supplied session. Only ids of missing fields of study should be
-    supplied, no check is done here to determine if it already exists.
+    database. Only ids of missing fields of study should be supplied, no check is done
+    here to determine if it already exists.
 
     Args:
-        session (:obj:`sqlalchemy.orm.session`): current session
+        engine (:obj:`sqlalchemy.engine`): database connection
         fos_ids (list): ids to search and update
 
     Returns:
@@ -240,11 +276,12 @@ def update_field_of_study_ids_sparql(session, fos_ids):
                          for fos in query_fields_of_study_sparql(fos_ids)]
 
     logging.info(f"Retrieved {len(new_fos_to_import)} new fields of study from MAG")
-    fos_not_found = fos_ids - {fos.id for fos in new_fos_to_import}
+    fos_not_found = set(fos_ids) - {fos.id for fos in new_fos_to_import}
     if fos_not_found:
         logging.warning(f"Fields of study present in articles but could not be found in MAG Fields of Study database: {fos_not_found}")
-    session.add_all(new_fos_to_import)
-    session.commit()
+    with db_session(engine) as session:
+        session.add_all(new_fos_to_import)
+        session.commit()
     logging.info("Added new fields of study to database")
     return fos_not_found
 
@@ -256,8 +293,8 @@ def query_authors(ids=None, results_limit=None):
         ids: (:obj:`list` of `int`): author ids to query, all are returned if None
         results_limit (int): limit the number of results returned (for testing)
 
-    Returns:
-        (dict): yields a single author at a time, with affiliation
+    Yields:
+        (dict): a single author with affiliation
     """
     query = '''
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -307,6 +344,181 @@ def query_authors(ids=None, results_limit=None):
         if results_limit is not None and count >= results_limit:
             logging.warning(f"Breaking after {results_limit} for testing")
             break
+
+
+def check_institute_exists(grid_id):
+    query = '''
+    PREFIX magc: <http://ma-graph.org/class/>
+    PREFIX magp: <http://ma-graph.org/property/>
+
+    SELECT ?affiliationId
+
+    WHERE {{
+    ?affiliationId rdf:type magc:Affiliation .
+    ?affiliationId magp:grid ?affiliationGridId .
+
+    FILTER (?affiliationGridId = <http://www.grid.ac/institutes/{grid_id}>)
+    }}
+    '''
+    logging.debug(f"Checking {grid_id} exists in MAG")
+    return list(sparql_query(MAG_ENDPOINT, query.format(grid_id=grid_id))) != []
+
+
+def query_by_grid_id(grid_id, from_date='2000-01-01', min_citations=1,
+                     batch_size=5000, batch_limit=None):
+    """Queries the MAG for authors, papers, fields of study from a grid id.
+
+    Args:
+        ids: (:obj:`list` of `int`): author ids to query, all are returned if None
+        from_date (str): minimum date for paper created date in YYYY-MM-DD format
+        min_citations (int): minimum number of citations a paper has received
+        batch_size (int): number of rows to retrieve when batching calls to MAG
+        results_limit (int): limit the number of results returned, for testing
+
+    Yields:
+        (dict): yields a row of returned data
+    """
+    query = '''
+    PREFIX magc: <http://ma-graph.org/class/>
+    PREFIX grid: <http://www.grid.ac/institutes>
+    PREFIX magp: <http://ma-graph.org/property/>
+    PREFIX org: <http://www.w3.org/ns/org#>
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX datacite: <http://purl.org/spar/datacite/>
+    PREFIX fabio: <http://purl.org/spar/fabio/>
+
+    SELECT
+        ?authorId
+        ?authorName
+        ?paperId
+        ?paperTitle
+        ?paperCitationCount
+        ?paperCreatedDate
+        ?paperDoi
+        ?paperLanguage
+        ?bookTitle
+        ?fieldOfStudyId
+
+    WHERE {{
+        ?affiliationId rdf:type magc:Affiliation .
+        ?affiliationId magp:grid ?affiliationGridId .
+        ?authorId org:memberOf ?affiliationId .
+        ?authorId foaf:name ?authorName .
+        ?paperId dcterms:creator ?authorId .
+        ?paperId dcterms:title ?paperTitle .
+        ?paperId magp:citationCount ?paperCitationCount .
+        ?paperId dcterms:created ?paperCreatedDate .
+        OPTIONAL {{?paperId datacite:doi ?paperDoi .}}
+        OPTIONAL {{?paperId dcterms:language ?paperLanguage .}}
+        OPTIONAL {{?paperId magp:bookTitle ?bookTitle .}}
+        ?paperId fabio:hasDiscipline ?fieldOfStudyId .
+
+        FILTER (?paperCreatedDate >= "{from_date}"^^xsd:date)
+        FILTER (?paperCitationCount >= {min_citations})
+        FILTER (?affiliationGridId = <http://www.grid.ac/institutes/{grid_id}>)
+    }}
+    '''
+    logging.debug(f"Querying MAG for institute {grid_id}")
+
+    for batch in (sparql_query(MAG_ENDPOINT,
+                               nbatch=batch_size,
+                               batch_limit=batch_limit,
+                               query=query.format(grid_id=grid_id,
+                                                  from_date=from_date,
+                                                  min_citations=min_citations))):
+        for row in batch:
+            # extract any of ids
+            yield {k: extract_entity_id(v) if k.endswith('Id') else v
+                   for k, v in row.items()}
+
+
+def batch_query_papers_by_institute_id(query):
+    """Queries MAG for a batch and yields a row of data at a time.
+
+    Args:
+        query(str): SPARQL query
+
+    Yields:
+        (dict): row of data
+    """
+    for batch in sparql_query(MAG_ENDPOINT, query):
+        yield from batch
+
+def count_papers(institutes, done_institutes, paper_ids, intermediate_file,
+                 save_every=1000000, limit=None):
+    """Count the number of papers produced from a list of supplied institues.
+
+    Args:
+        institutes(list): GRID IDs of the institutes to look up
+        done_institutes(list): GRID IDs of institues which have already been processed
+        paper_ids(list): MAG IDs of papers which have already been processed
+        intermediate_file(:obj:`boto3.resources.s3.object`): file to store processed
+        institutes and paper ids
+        save_every(int): saves to s3 each time this number of papers are found
+        limit(int): break at this number of processed records, for testing
+
+    Returns:
+        (int): total number of papers found
+    """
+    query = '''
+    PREFIX magp: <http://ma-graph.org/property/>
+    PREFIX org: <http://www.w3.org/ns/org#>
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+
+    SELECT ?paperId
+
+    WHERE {{
+    ?affiliationId magp:grid <http://www.grid.ac/institutes/{}> .
+    ?authorId org:memberOf ?affiliationId .
+    ?paperId dcterms:creator ?authorId .
+    }}
+    '''
+    count = 0
+    for institute in institutes:
+        for row in batch_query_papers_by_institute_id(query.format(institute)):
+            count += 1
+            logging.debug(row)
+            paper_id = extract_entity_id(row['paperId'])
+            if paper_id in paper_ids:
+                continue
+            paper_ids.add(paper_id)
+            total = len(paper_ids)
+            if not total % 1000:
+                logging.info(f"{total:,} EU papers found")
+
+            if not total % save_every:
+                # write out to file on S3 for safekeeping
+                logging.info("Writing out to file with "
+                             f"{len(done_institutes)} institutes "
+                             f"and {total} papers")
+                intermediate_file.put(Body=json.dumps({'paper_ids': list(paper_ids),
+                                                       'institutes': list(done_institutes)}))
+
+            if limit is not None and count >= limit:
+                logging.warning(f"Breaking after {limit} papers in test mode")
+                return limit
+
+        done_institutes.add(institute)
+
+    return len(paper_ids)
+
+
+def get_eu_countries():
+    """Retrieves names of EU countries from online service and parses them.
+
+    Returns:
+        (:obj:`list` of :obj:`str`): names of all the countries in the EU
+    """
+    country_endpoint = "https://europa.eu/european-union/about-eu/countries_en"
+
+    response = requests.get(country_endpoint)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, features='lxml')
+    table = soup.find(id='year-entry2')
+
+    return [country.string for country in table.find_all('a')]
 
 
 if __name__ == "__main__":

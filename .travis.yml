@@ -6,15 +6,16 @@ install:
   - pip install --upgrade setuptools
   - python setup.py install
   - pip install -r requirements.txt
+  - pip install -r nesta/packages/tf_requirements.txt
   - python -m nltk.downloader punkt
   - python -m nltk.downloader stopwords
   - pip install lxml
   - python -c "import sys; print(sys.path)"
 before_script:
-  - mkdir nesta/production/config/
-  - echo -e "[mysqldb]\nx=1" > nesta/production/config/mysqldb.config  # create dummy file with just the config x=1
-  - echo -e "[worker]\nx=1" > nesta/production/config/luigi.cfg  # create dummy file for luigi
-  - echo -e "[crunchbase]\nuser_key=1" > nesta/production/config/crunchbase.config  # create dummy file for crunchbase
+  - mkdir nesta/core/config/
+  - echo -e "[mysqldb]\nx=1" > nesta/core/config/mysqldb.config  # create dummy file with just the config x=1
+  - echo -e "[worker]\nx=1" > nesta/core/config/luigi.cfg  # create dummy file for luigi
+  - echo -e "[crunchbase]\nuser_key=1" > nesta/core/config/crunchbase.config  # create dummy file for crunchbase
   - sudo rm -f /etc/boto.cfg
   - mysql -e 'CREATE DATABASE production_tests;'
   - mysql_upgrade -u root --force

@@ -10,9 +10,9 @@ import os
 from sqlalchemy.orm import sessionmaker
 from collections import defaultdict
 
-from nesta.production.orms.wiktionary_ngrams_orm import WiktionaryNgram
-from nesta.production.orms.wiktionary_ngrams_orm import Base
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.wiktionary_ngrams_orm import WiktionaryNgram
+from nesta.core.orms.wiktionary_ngrams_orm import Base
+from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.packages.nlp_utils.preprocess import tokenize_document
 from nesta.packages.nlp_utils.preprocess import stop_words
 
@@ -101,7 +101,7 @@ class Ngrammer:
 
 if __name__ == "__main__":
     ngrammer = Ngrammer("/Users/jklinger/Nesta-AWS/AWS-RDS-config/"
-                        "innovation-mapping.conf")
+                        "innovation-mapping-5712.config")
     document = ("This is a document about machine "
                 "learning, convolutional neural networks, "
                 "neural networks and bed and breakfast")
