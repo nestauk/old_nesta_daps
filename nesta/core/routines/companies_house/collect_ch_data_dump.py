@@ -62,10 +62,12 @@ class CHDataDump(luigi.Task):
         else:
             nrows = None
 
-        df = download_data_dump(self.date, cache=False, nrows=nrows).pipe(clean_ch)
+        df = download_data_dump(self.date, cache_path="/tmp", nrows=nrows).pipe(
+            clean_ch
+        )
 
         # Write data to DB
-        objs = insert_data(
+        insert_data(
             MYSQLDB_ENV,
             "mysqldb",
             "production" if not self.test else "dev",

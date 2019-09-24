@@ -29,7 +29,7 @@ def test_download_data_dump(mock_requests):
     good_date = datetime.datetime.now().replace(day=2)
     # The headers are not a zipped csv file so we expect an error here
     with pytest.raises(zipfile.BadZipFile):
-        download_data_dump(good_date, cache=False)
+        download_data_dump(good_date, cache_path="/tmp")
 
     bad_dates = [datetime.datetime.now().replace(year=2018)]
     for date in bad_dates:

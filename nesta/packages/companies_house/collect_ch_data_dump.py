@@ -8,14 +8,14 @@ TODO: Merge with NSPL
 import datetime
 import logging
 import os
+from pathlib import Path
 
 import engarde.checks as edc
-import numpy as np
 import pandas as pd
 import requests
 
 
-def _data_dump_url(date: datetime) -> str:
+def _data_dump_url(date):
     """ Return data dump url based on current date """
     date = date.replace(day=1).strftime("%Y-%m-%d")  # Must be first day of month
     url = f"http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-{date}.zip"
@@ -23,23 +23,22 @@ def _data_dump_url(date: datetime) -> str:
     return url
 
 
-def download_data_dump(date: datetime, cache: bool = True, nrows: int = None):
+def download_data_dump(date, cache_path="/tmp", nrows=None):
     """ Retrieve the data dump from companies house (or cached download if it exists)
 
     Args:
         date (`datetime`): Date-time of the month for the data-dump to get.
-        cache (`bool`): If True, read from cache file if it exists or fetch and
-            save to cache if it doesn't. If False don't read/write from cache file.
+        cache_path (`str`, optional): Read from cache file if it exists
+            or fetch and save to `cache_path`` if it doesn't.
         nrows (`int`, optional): Number of rows to read
 
     Returns:
         pandas.DataFrame
     """
-    cache_path = (
-        f"/tmp/companies_house_data_dump_{date.strftime('%Y-%m-%d').replace('-', '_')}"
-    )
+    date_str = date.strftime("%Y-%m-%d").replace("-", "_")
+    cache_path = Path(f"{cache_path}/companies_house_data_dump_{date_str}").resolve()
 
-    if os.path.isfile(cache_path) and cache:
+    if os.path.isfile(cache_path):
         logging.info("Loading cached data dump")
     else:
         r = requests.get(_data_dump_url(date), allow_redirects=True)
