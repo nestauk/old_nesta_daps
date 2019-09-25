@@ -71,9 +71,12 @@ class CHBatchQuery(autobatch.AutoBatchTask):
             """ From s3 `interiminfo`"""
 
             # Get filenames
-            files = list(
-                get_matching_s3_keys(
-                    "nesta-production-intermediate", prefix=f"CH_{key}_interim"
+            files = chain(
+                *(
+                    get_matching_s3_keys(
+                        "nesta-production-intermediate", prefix=f"CH_{key}_interim"
+                    )
+                    for key in api_key_l
                 )
             )
             # Concatenate files into set
