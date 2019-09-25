@@ -95,16 +95,18 @@ class CHBatchQuery(autobatch.AutoBatchTask):
             map(
                 list,
                 np.array_split(
-                    list(set(
-                        chain(
-                            *[
-                                generate_company_number_candidates(prefix)
-                                for prefix in prefixes
-                            ]
+                    list(
+                        set(
+                            chain(
+                                *[
+                                    generate_company_number_candidates(prefix)
+                                    for prefix in prefixes
+                                ]
+                            )
                         )
-                    )
-                    - already_found()
-                    - already_not_found()),
+                        - already_found()
+                        - already_not_found()
+                    ),
                     len(api_key_l),
                 ),
             )
@@ -135,6 +137,7 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                 "outinfo": f"{S3_PREFIX}_{key}",
                 "test": self.test,
                 "done": key in DONE_KEYS,
+                "config": os.environ[MYSQLDB_ENV],
             }
 
             logging.info(params)
@@ -158,10 +161,13 @@ class RootTask(luigi.Task):
         """Get the output from the batchtask"""
         return CHBatchQuery(
             date=self.date,
-            batchable=("~/nesta/nesta/production/" "batchables/companies_house/"),
+            batchable=(find_filepath_from_pathstub("batchables/companies_house/")),
             job_def="standard_image",
             job_name="ch-batch-api-%s" % self.date,
-            env_files=[find_filepath_from_pathstub("nesta/nesta")],
+            env_files=(
+                find_filepath_from_pathstub("nesta/nesta"),
+                find_filepath_from_pathstub("config/mysqldb.config"),
+            ),
             job_queue="MinimalCpus",
             region_name="eu-west-2",
             poll_time=5,
