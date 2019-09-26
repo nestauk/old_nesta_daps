@@ -28,5 +28,4 @@ conda clean -afy
 # Check the file exists and run it
 echo "Starting..."
 cat run.py &> /dev/null
-#time /usr/bin/python3.6 run.py
 time python run.py

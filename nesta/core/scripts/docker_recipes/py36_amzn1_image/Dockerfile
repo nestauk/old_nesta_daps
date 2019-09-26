@@ -1,5 +1,6 @@
 FROM amazonlinux:1
 
+# For debugging (leaving this here since we're still near the docker diskspace thresholds)
 RUN du -cxh --threshold=5M --max-depth=3 /
 
 RUN mkdir /root/.conda
@@ -9,9 +10,7 @@ ENV PYTHONIOENCODING=utf8
 # Install common dependencies
 RUN rm -rf /var/cache/yum/x86_64/latest
 RUN yum update -y
-#RUN yum install sudo -y
 RUN yum install aws-cli -y
-#RUN yum install zip -y
 RUN yum install unzip -y
 RUN yum install which -y
 RUN yum install findutils -y
@@ -38,6 +37,7 @@ RUN rm -rf /usr/share/doc/*
 RUN rm -rf /opt/conda/envs/py36/share/*
 RUN rm -rf /opt/conda/share/*
 
+# For debugging (leaving this here since we're still near the docker diskspace thresholds)
 RUN du -cxh --threshold=5M --max-depth=3 /
 RUN du -cxh --threshold=5M --max-depth=3 /opt/conda/
 RUN conda init bash
