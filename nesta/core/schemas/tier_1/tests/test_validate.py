@@ -1,4 +1,5 @@
 import os
+import glob
 import json
 from collections import Counter
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
@@ -27,14 +28,13 @@ class TestValidate():
             assert term_type in ontology
 
         # Iterate over schema transformations
-        dirname = os.path.join(cwd, '../schema_transformations/')
         all_fields = {}
-        for filename in os.listdir(dirname):            
+        for filename in glob.glob(f'{cwd}/../**/*json', 
+                                  recursive=True):
             # Load the transformation
-            if not filename.endswith(".json"):
+            if 'schema_transformations' not in filename:
                 continue
             print(filename)
-            filename = os.path.join(dirname, filename)
             with open(filename) as f:
                 data = json.load(f)
             # Assert that the terms are in the ontology
@@ -71,6 +71,7 @@ class TestValidate():
             filename = os.path.join(top_dir, filename)            
             with open(filename) as f:
                 data = json.load(f)
+            print(f'Found {filename}')
             fields = data["mappings"]["_doc"]["properties"].keys()
             all_fields[dataset] = fields
 
@@ -79,7 +80,6 @@ class TestValidate():
         for filename in os.listdir(path):
             if not filename.endswith(".json"):
                 continue
-            print(filename)
             filename =  os.path.join(path, filename)
             for alias, dataset, field in alias_info(filename):
                 print("\t", alias, dataset, field)
