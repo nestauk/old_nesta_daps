@@ -1,0 +1,7 @@
+[nomis]
+dataset=NM_944_1
+date=latest
+geography_type=local authorities: district / unitary (prior to April 2015)
+indgepuk11=1...3,11...28
+measures=20100
+select=date,geography_name,geography_code,indgepuk11_name,obs_value

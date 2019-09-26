@@ -29,6 +29,10 @@
         "tier_1": "count_citations_article"
     },
     {
+        "tier_0": "normalised_citation",
+        "tier_1": "metric_citations_article"
+    },
+    {
         "tier_0": "fos",
         "tier_1": "json_fieldOfStudy_article"
     },
@@ -43,6 +47,10 @@
     {
         "tier_0": "institutes",
         "tier_1": "terms_institutes_article"
+    },
+    {
+        "tier_0": "tokens",
+        "tier_1": "terms_tokens_article"
     },
     {
         "tier_0": "novelty_of_article",

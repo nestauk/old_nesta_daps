@@ -24,7 +24,7 @@ class Ngrammer:
     Args:
         config_filepath (str): Path to the db configuration file.
                   If not specified, it looks instead for the environ
-                  varialble 'MYSQLDBCONF'
+                  variable 'MYSQLDBCONF'
         database (str): Database name
     """
     def __init__(self, config_filepath=None, database="dev"):

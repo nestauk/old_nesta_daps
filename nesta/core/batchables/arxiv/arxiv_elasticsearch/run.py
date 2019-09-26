@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 from collections import defaultdict
 import numpy as np
+from datetime import datetime as dt
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
@@ -17,6 +18,8 @@ from nesta.core.orms.grid_orm import Institute
 from nesta.packages.mag.fos_lookup import build_fos_lookup
 from nesta.packages.mag.fos_lookup import split_ids
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
+from nesta.packages.arxiv.deepchange_analysis import is_multinational
+from nesta.packages.nlp_utils.ngrammer import Ngrammer
 
 def hierarchy_field(row_data):
     new_column = []
@@ -54,6 +57,10 @@ def run():
     # database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
     fos_lookup = build_fos_lookup(engine)
+    
+    # Setup ngrammer
+    os.environ['MYSQLDBCONF'] = os.environ['BATCHPAR_config']
+    ngrammer = Ngrammer()
 
     # es setup
     strans_kwargs={'filename':'arxiv.json',
@@ -90,18 +97,39 @@ def run():
         grid_institutes = {obj.id: obj.name
                            for obj in session.query(Institute).all()}
     #
+    current_year = dt.now().year
     with db_session(engine) as session:
         for count, obj in enumerate((session.query(Article)
                                      .filter(Article.id.in_(art_ids))
                                      .all())):
             row = object_to_dict(obj)
             # Extract year from date
+            year = 1990
             if row['created'] is not None:
                 row['year'] = row['created'].year
+                year = row['created'].year
 
             # Normalise citation count for searchkit
             if row['citation_count'] is None:
                 row['citation_count'] = 0
+            row['normalised_citation'] = row['citation_count']/np.log(current_year-year+2)
+
+            # If abstract doesn't meet requirements, zero novelty
+            # all other novelty will be assigned in a later task
+            text = row['abstract'] + ' ' + row['title']
+            if (len(text) < 400
+                or any(x in row['abstract'].lower()
+                       for x in ('withdrawn', 'arxiv administrators'))
+                or any(x in row['title'].lower()
+                       for x in ('reply to', 'reply on', 
+                                 'comment to', 'comment on',
+                                 'remarks to', 'remarks on'))):
+                row['novelty_of_article'] = 0
+
+            processed_tokens = ngrammer.process_document(row['abstract'])
+            row['tokens'] = [t.replace('_', ' ') 
+                             for tokens in processed_tokens
+                             for t in tokens]
 
             # Extract field of study Level 0 --> Level 1 paths
             fos = []
@@ -124,20 +152,21 @@ def run():
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
             row['categories'], _, _ = hierarchy_field(cats)
-            row['fos'], novelty0, novelty1 = hierarchy_field(fos)
+            row['fos'], _, _ = hierarchy_field(fos)
             row['countries'], _, _ = hierarchy_field(countries)
 
             # Pull out international institute info
-            row['has_multinational'] = any(i['is_multinational']
-                                           for i in institutes
-                                           if i['institute_id'] in good_institutes)
+            has_mn = any(is_multinational(inst,
+                                          grid_countries.values())
+                         for inst in good_institutes)
+            row['has_multinational'] = has_mn
 
             # Generate author & institute properties
             mag_authors = row.pop('mag_authors')
             if mag_authors is None:
                 row['authors'] = None
                 row['institutes'] = None
-                row['novelty_of_article'] = 0
+                #row['novelty_of_article'] = 0
             else:
                 if all('author_order' in a for a in mag_authors):
                     mag_authors = sorted(mag_authors,
@@ -155,7 +184,7 @@ def run():
                                      for g in gids
                                      if g in grid_institutes
                                      and g in good_institutes]
-                row['novelty_of_article'] = novelty0 + np.log(novelty1+1)            
+                #row['novelty_of_article'] = novelty0 + np.log(novelty1+1)            
 
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
@@ -176,9 +205,9 @@ if __name__ == "__main__":
         from nesta.core.orms.orm_utils import setup_es
         es, es_config = setup_es('dev', True, True,
                                  dataset='arxiv')
-        environ = {'batch_file': ('2019-07-26-False-'
-                                  '15641348619563951.json'),
-                   'config': ('/home/ec2-user/nesta/nesta/'
+        environ = {'batch_file': ('ArxivESTask-2019-09-19-'
+                                  'False-1568888970724721.json'),
+                   'config': ('/home/ec2-user/nesta-eu/nesta/'
                               'core/config/mysqldb.config'),
                    'db_name': 'dev',
                    'bucket': 'nesta-production-intermediate',
