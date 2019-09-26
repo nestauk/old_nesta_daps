@@ -1,6 +1,7 @@
 import logging
 
 def set_log_level(test=False, verbose=False):
+    logging.getLogger().setLevel(logging.INFO)
     if test or verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.getLogger("luigi-interface").setLevel(logging.DEBUG)
