@@ -1,0 +1,83 @@
+[
+    {
+        "tier_0": "id",
+        "tier_1": "id_iso3_country",
+        "unique": true
+    },
+    {
+        "tier_0": "capitalCity",
+        "tier_1": "placeName_capitalCity_country"
+    },
+    {
+        "tier_0": "incomeLevel",
+        "tier_1": "level_income_country"
+    },
+    {
+        "tier_0": "iso2Code",
+        "tier_1": "id_iso2_country"
+    },
+    {
+        "tier_0": "latitude",
+        "tier_1": "coordinate_latitude_country"
+    },
+    {
+        "tier_0": "longitude",
+        "tier_1": "coordinate_longitude_country"
+    },
+    {
+        "tier_0": "year",
+        "tier_1": "year_datestamp_country"
+    },
+    {
+        "tier_0": "name",
+        "tier_1": "placeName_of_country"
+    },
+    {
+        "tier_0": "region",
+        "tier_1": "placeName_worldRegion_country"
+    },
+    {
+        "tier_0": "adminregion",
+        "tier_1": "placeName_adminRegion_country"
+    },
+    {
+        "tier_0": "gini_index",
+        "tier_1": "metric_gini_country"
+    },
+    {
+        "tier_0": "life_expectancy_at_birth_total_years",
+        "tier_1": "metric_lifeExpAtBirth_country"
+    },
+    {
+        "tier_0": "population_total",
+        "tier_1": "count_population_country"
+    },
+    {
+        "tier_0": "age_dependency_ratio_pc_of_working_age_population",
+        "tier_1": "metric_ageDepRatioPercWorkAgePop_country"
+    },
+    {
+        "tier_0": "barro_lee_percentage_of_population_age_25_with_no_education",
+        "tier_1": "metric_percPopOver25NoEduc_country"
+    },
+    {
+        "tier_0": "barro_lee_perce_of_popul_age_25_with_tertia_school_comple_tertia",
+        "tier_1": "metric_percPopOver25TertiaryEduc_country"
+    },
+    {
+        "tier_0": "poverty_headcount_ratio_at_national_poverty_line_pc_of_populatio",
+        "tier_1": "metric_percPopBelowPovertyLine_country"
+    },
+    {
+        "tier_0": "rural_population_pc_of_total_population",
+        "tier_1": "metric_percPopRural_country"
+    },
+    {
+        "tier_0": "mortality_rate_infant_per_1_000_live_births",
+        "tier_1": "metric_infMortPer1000LiveBirths_country"
+    },
+    {
+        "tier_0": "urban_population_pc_of_total",
+        "tier_1": "metric_percPopUrban_country"
+    }
+]

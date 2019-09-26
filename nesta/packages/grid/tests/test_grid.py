@@ -6,7 +6,7 @@ from unittest import mock
 
 from nesta.packages.grid.grid import ComboFuzzer
 from nesta.packages.grid.grid import grid_name_lookup
-from nesta.production.orms.grid_orm import Institute, Alias
+from nesta.core.orms.grid_orm import Institute, Alias
 
 
 class TestComboFuzzer:

@@ -1,5 +1,5 @@
 from nesta.packages.misc_utils.sparql_query import sparql_query
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 from collections import defaultdict
 import requests
 
@@ -20,10 +20,15 @@ def _get_children(base, geocode):
     Returns:
         List of dict of children.
     """
+    import warnings
+    warnings.warn("UK Geographies is deprecated, "
+                  "and needs fixing, but there are currently "
+                  "no dependencies", DeprecationWarning)
     params=dict(in_collection=COLLECTION.format(base),
                 within_area=WITHIN.format(geocode),
                 per_page=100000)
     r = requests.get(BASE_URL, params=params)
+    print(r.text)
     children = [{"id": row["@id"].split("/")[-1],
                  #"name": row[OFFICIAL_NAME][0]['@value'],
                  "parent_id": geocode}

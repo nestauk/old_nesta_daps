@@ -1,0 +1,67 @@
+[
+    {
+        "tier_0": "id",
+        "tier_1": "id_of_article",
+        "unique": true
+    },
+    {
+        "tier_0": "created",
+        "tier_1": "date_created_article"
+    },
+    {
+        "tier_0": "title",
+        "tier_1": "title_of_article"
+    },
+    {
+        "tier_0": "doi",
+        "tier_1": "id_digitalObjectIdentifier_article"
+    },
+    {
+        "tier_0": "abstract",
+        "tier_1": "textBody_abstract_article"
+    },
+    {
+        "tier_0": "authors",
+        "tier_1": "terms_authors_article"
+    },
+    {
+        "tier_0": "citation_count",
+        "tier_1": "count_citations_article"
+    },
+    {
+        "tier_0": "normalised_citation",
+        "tier_1": "metric_citations_article"
+    },
+    {
+        "tier_0": "fos",
+        "tier_1": "json_fieldOfStudy_article"
+    },
+    {
+        "tier_0": "categories",
+        "tier_1": "json_category_article"
+    },
+    {
+        "tier_0": "has_multinational",
+        "tier_1": "booleanFlag_multinational_article"
+    },
+    {
+        "tier_0": "institutes",
+        "tier_1": "terms_institutes_article"
+    },
+    {
+        "tier_0": "tokens",
+        "tier_1": "terms_tokens_article"
+    },
+    {
+        "tier_0": "novelty_of_article",
+        "tier_1": "metric_novelty_article"
+    },
+    {
+        "tier_0": "countries",
+        "tier_1": "json_location_article"
+    },
+    {
+        "tier_0": "year",
+        "tier_1": "year_of_article"
+    }
+]

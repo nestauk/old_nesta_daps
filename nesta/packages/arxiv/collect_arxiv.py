@@ -14,8 +14,8 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Article, Category
+from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.core.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -172,6 +172,9 @@ def arxiv_batch(resumption_token=None, **kwargs):
     records = root.find(OAI+'ListRecords')
     output = []
 
+    if records is None:
+        raise ValueError('No new records to collect from arXiv')
+
     for record in records.findall(OAI+"record"):
         header = record.find(OAI+'header')
         header_id = header.find(OAI+'identifier').text
@@ -245,7 +248,7 @@ def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
             start_cursor = int(resumption_token.split("|")[1])
         for row in batch:
             yield row
-                     
+
 
 def retrieve_all_arxiv_rows(**kwargs):
     """Iterate through batches and yield single rows through the whole dataset.
@@ -258,7 +261,13 @@ def retrieve_all_arxiv_rows(**kwargs):
     """
     resumption_token = None
     while True:
-        batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        try:
+            batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        except ValueError as e:
+            logging.info(e)
+            # no records to collect
+            break
+
         for row in batch:
             yield row
         if resumption_token is None:
@@ -348,15 +357,17 @@ def add_new_articles(article_batch, session):
     session.commit()
 
 
-def update_existing_articles(article_batch, session):
+def update_existing_articles(article_batch, engine):
     """Updates existing articles from a list of dictionaries. Bulk method is used for
     non relationship fields, with the relationship fields updated using the core orm
     method.
 
     Args:
         article_batch (:obj:`list` of `dict`): articles to add to database
-        session (:obj:`sqlalchemy.orm.session`): active session to use
+        engine (:obj:`sqlalchemy.engine`): connection engine to use
     """
+    Session = sessionmaker(engine)
+    session = Session()
     logging.info(f"Updating a batch of {len(article_batch)} existing articles")
 
     # look for any institutes in provided article_batch
@@ -374,6 +385,12 @@ def update_existing_articles(article_batch, session):
                                for article in article_batch
                                for fos_id in article.pop('fields_of_study', [])]
 
+    # if not using this function to update match attempted flags, reset the flag to
+    # False so another attempt to match is made using this updated data
+    for row in article_batch:
+        if 'institute_match_attempted' not in row.keys():
+            row.update({'institute_match_attempted': False})
+
     # update unlinked article data in bulk
     logging.debug("bulk update mapping on articles")
     session.bulk_update_mappings(Article, article_batch)
@@ -381,10 +398,10 @@ def update_existing_articles(article_batch, session):
     if article_categories:
         # remove and re-create links
         article_cats_table = Base.metadata.tables['arxiv_article_categories']
-        all_article_ids = {a['id'] for a in article_batch}
+        art_ids = {a['id'] for a in article_batch}
         logging.debug("core orm delete on categories")
         session.execute(article_cats_table.delete()
-                        .where(article_cats_table.columns['article_id'].in_(all_article_ids)))
+                        .where(article_cats_table.columns['article_id'].in_(art_ids)))
         logging.debug("core orm insert on categories")
         session.execute(article_cats_table.insert(),
                         article_categories)
@@ -392,15 +409,16 @@ def update_existing_articles(article_batch, session):
     if article_fields_of_study:
         # remove and re-create links
         article_fos_table = Base.metadata.tables['arxiv_article_fields_of_study']
-        all_article_ids = {a['id'] for a in article_batch}
+        art_ids = {a['id'] for a in article_batch}
         logging.debug("core orm delete on fields of study")
         session.execute(article_fos_table.delete()
-                        .where(article_fos_table.columns['article_id'].in_(all_article_ids)))
+                        .where(article_fos_table.columns['article_id'].in_(art_ids)))
         logging.debug("core orm insert on fields of study")
         session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
                         article_fields_of_study)
 
     session.commit()
+    session.close()
 
 
 def add_article_institutes(article_institutes, engine):
@@ -411,25 +429,39 @@ def add_article_institutes(article_institutes, engine):
                    article_institutes)
 
 
-def create_article_institute_links(article, institute_ids, score):
+def create_article_institute_links(article_id, institute_ids, score):
     """Creates data for the article/institutes association table.
     There will be multiple links if the institute is multinational, one for each country
     entity.
 
     Args:
-        article (:obj: `sqlalchemy.ext.declarative.api.DeclarativeMeta`): article orm object
+        article_id (str): arxiv id of the article
         institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
         score (numpy.float64): score for the match
 
     Returns:
         (:obj:`list` of :obj:`dict`): article institute links ready to load to database
     """
-    return [{'article_id': article.id,
+    return [{'article_id': article_id,
              'institute_id': institute_id,
              'is_multinational': len(institute_ids) > 1,
              'matching_score': float(score)}
             for institute_id in institute_ids]
 
+
+def all_article_ids(engine, limit=None):
+    """Retrieve the id of every article from MYSQL.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.Base.Engine`): db connectable.
+        limit (int): row limit to apply to query (e.g. for testing)
+
+    Returns:
+        (set): all article ids
+    """
+    with db_session(engine) as session:
+        arts = session.query(Article.id).limit(limit)
+        return {art.id for art in arts}
 
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()

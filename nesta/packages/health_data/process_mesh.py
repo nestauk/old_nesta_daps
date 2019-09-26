@@ -19,9 +19,10 @@ def retrieve_mesh_terms(bucket, key):
     """
     target = f"s3://{bucket}/{key}"
     logging.info(f"Retrieving mesh terms from S3: {target}")
-
     return pd.read_csv(target, sep='|', header=None,
-                       names=['doc_id', 'term', 'term_id', 'cui', 'score', 'indices'])
+                       names=['doc_id', 'term', 'term_id', 
+                              'cui', 'score', 'indices'],
+                       low_memory=False)
 
 
 def format_mesh_terms(df):
@@ -84,8 +85,8 @@ def format_duplicate_map(dupe_map):
 
 if __name__ == '__main__':
     from sqlalchemy.orm import sessionmaker
-    from nesta.production.orms.orm_utils import get_mysql_engine
-    from nesta.production.orms.nih_orm import Abstracts
+    from nesta.core.orms.orm_utils import get_mysql_engine
+    from nesta.core.orms.nih_orm import Abstracts
 
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
