@@ -19,6 +19,6 @@ def dicts2sql_format(d1, d2):
 
     """
     return [
-        [dict(doc_id=id_, cluster_id=k, weight=v) for k, v in arr.items()]
+        [dict(doc_id=id_, cluster_id=int(k), weight=float(v)) for k, v in arr.items()]
         for id_, arr in zip(d1.keys(), d2)
     ]
