@@ -87,7 +87,7 @@ class TextVectors(autobatch.AutoBatchTask):
                 "batch_file": batch_file,
                 "db_name": db,
                 "done": done,
-                'outinfo': f"s3://{self.intermediate_bucket}/{key}",  # mark as done
+                'outinfo': f"{key}",  # mark as done
                 'test': self.test,
             }
             job_params.append(params)
