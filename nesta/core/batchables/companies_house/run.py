@@ -37,11 +37,6 @@ def run():
     logging.info(f"Using {db_name} database")
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
-    # Create table if it doesn't exist - TODO put this in prepare
-    if not engine.dialect.has_table(engine, "ch_discovered"):
-        DiscoveredCompany.__table__.create(engine)
-        logging.info(f"Table {DiscoveredCompany.__table__} created")
-
     def save_not_found(not_found_list):
         s3.Object(*parse_s3_path(f"{s3_interim}/{datetime.datetime.now()}")).put(
             Body=json.dumps(not_found_list)
@@ -51,12 +46,39 @@ def run():
         """ Enter row into database """
         logging.debug(r)
         if r.status_code == 200:
-            engine.execute(
-                "REPLACE INTO ch_discovered "
-                "(company_number, response) "
-                "VALUES (%s, %s)",
-                (r.company_number, int(r.status_code)),
-            )
+            def insert_company(r):
+                engine.execute(
+                    "REPLACE INTO ch_discovered "
+                    "(company_number, response) "
+                    "VALUES (%s, %s)",
+                    (r['company_number'], r['status_code']),
+                )
+            import pdb
+            # pdb.set_trace()
+            def process_discovered_company(r):
+                # https://developer.companieshouse.gov.uk/api/docs/company/company_number/companyProfile-resource.html
+                s = r.json()
+
+                company = s
+                company['status_code'] = 200
+
+                address = s.pop('registered_office_address')
+                address['company_number'] = company['company_number']
+
+                if 'sic_codes' in s.keys():  # sic_codes may not be available
+                    sector = {f"sic_code_{i}": v for i, v in enumerate(s['sic_codes'])}
+                    sector['company_number'] = company['company_number']
+
+                if 'previous_company_names' in s.keys():
+                    names = s.pop('previous_company_names')
+                    names['company_number'] = company['company_number']
+
+                keep = ['company_number', 'company_name', 'status_code']
+                company = {k: v for k, v in company.items() if k in keep}
+
+                return company
+
+            insert_company(process_discovered_company(r))
         elif r.status_code == 404:
             logging.debug(f"404: {r.company_number} does not exist")
             not_found_list.append(r.company_number)
@@ -97,7 +119,7 @@ if __name__ == "__main__":
         # Input data
         s3 = boto3.resource("s3")
         s3_obj = s3.Object(*parse_s3_path(input_info))
-        s3_obj.put(Body='["SC612773","SC612774","SC612775","SC612776","SO300397", "fail"]')
+        s3_obj.put(Body='["SC612773","SC612774","SC612775","SC612776","SO300397", "07706036", "fail"]')
 
         level = logging.DEBUG
         level = logging.INFO

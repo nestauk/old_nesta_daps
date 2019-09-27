@@ -13,6 +13,7 @@ from nesta.core.luigihacks import autobatch, s3
 from nesta.core.luigihacks.misctools import (find_filepath_from_pathstub,
                                              get_config)
 from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.orms.companies_house_orm import Base, DiscoveredCompany
 from nesta.core.orms.orm_utils import (db_session, get_mysql_engine,
                                        try_until_allowed)
 from nesta.packages.companies_house.find_dissolved import \
@@ -55,6 +56,11 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         """Prepare the batch job parameters"""
         db_name = "dev" if self.test else "production"
 
+        # Create tables if they don't already exist
+        engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb", db_name)
+        Base.create_all(engine)
+
+        # Companies House api keys
         with open(os.environ["CH_API"], "r") as f:
             api_key_l = f.read().split(",")
 
@@ -81,7 +87,7 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                 *(
                     get_matching_s3_keys(
                         "nesta-production-intermediate",
-                        prefix=f"CH_{self.date}_{key}_interim"
+                        prefix=f"CH_{self.date}_{key}_interim",
                     )
                     for key in api_key_l
                 )
@@ -103,7 +109,9 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         prefixes = ["0", "OC", "LP", "SC", "SO", "SL", "NI", "R", "NC", "NL"]
         set_found = already_found()
         set_not_found = already_not_found()
-        logging.info(f"Already found {len(set_found)}, already not found {len(set_not_found)}")
+        logging.info(
+            f"Already found {len(set_found)}, already not found {len(set_not_found)}"
+        )
         candidates = list(
             map(
                 list,
@@ -140,7 +148,9 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                     Body=json.dumps(batch_candidates)
                 )
             )
-            interiminfo = f"s3://nesta-production-intermediate/CH_{self.date}_{key}_interim"
+            interiminfo = (
+                f"s3://nesta-production-intermediate/CH_{self.date}_{key}_interim"
+            )
 
             params = {
                 "CH_API_KEY": api_key,
@@ -150,7 +160,7 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                 "outinfo": f"{S3_PREFIX}_{self.date}_{key}",
                 "test": self.test,
                 "done": key in DONE_KEYS,
-                "config": 'mysqldb.config',
+                "config": "mysqldb.config",
             }
 
             logging.info(params)
