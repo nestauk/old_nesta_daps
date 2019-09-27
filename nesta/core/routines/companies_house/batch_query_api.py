@@ -61,11 +61,17 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         def already_found():
             """ From SQL"""
             engine = get_mysql_engine(MYSQLDB_ENV, "mysqldb", db_name)
-            return set(
+            ch_companies = set(
                 read_sql_query(
                     "SELECT company_number from ch_companies", engine
                 ).company_number.to_list()
             )
+            ch_discovered = set(
+                read_sql_query(
+                    "SELECT company_number from ch_discovered", engine
+                ).company_number.to_list()
+            )
+            return ch_companies | ch_discovered
 
         def already_not_found():
             """ From s3 `interiminfo`"""
@@ -74,7 +80,8 @@ class CHBatchQuery(autobatch.AutoBatchTask):
             files = chain(
                 *(
                     get_matching_s3_keys(
-                        "nesta-production-intermediate", prefix=f"CH_{key}_interim"
+                        "nesta-production-intermediate",
+                        prefix=f"CH_{self.date}_{key}_interim"
                     )
                     for key in api_key_l
                 )
@@ -84,7 +91,7 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                 chain(
                     *(
                         json.loads(
-                            s3.Object("nesta-production-intermediate", f)
+                            S3.Object("nesta-production-intermediate", f)
                             .get()["Body"]
                             .read()
                         )
@@ -94,6 +101,9 @@ class CHBatchQuery(autobatch.AutoBatchTask):
             )
 
         prefixes = ["0", "OC", "LP", "SC", "SO", "SL", "NI", "R", "NC", "NL"]
+        set_found = already_found()
+        set_not_found = already_not_found()
+        logging.info(f"Already found {len(set_found)}, already not found {len(set_not_found)}")
         candidates = list(
             map(
                 list,
@@ -107,8 +117,8 @@ class CHBatchQuery(autobatch.AutoBatchTask):
                                 ]
                             )
                         )
-                        - already_found()
-                        - already_not_found()
+                        - set_found
+                        - set_not_found
                     ),
                     len(api_key_l),
                 ),
@@ -124,23 +134,23 @@ class CHBatchQuery(autobatch.AutoBatchTask):
         for api_key, batch_candidates in zip(api_key_l, candidates):
             key = api_key
             # Save candidate numbers to S3 by api_key
-            inputinfo = f"{S3_PREFIX}_{key}_input"
+            inputinfo = f"{S3_PREFIX}_{self.date}_{key}_input"
             (
                 S3.Object(*s3.parse_s3_path(inputinfo)).put(
                     Body=json.dumps(batch_candidates)
                 )
             )
-            interiminfo = f"s3://nesta-production-intermediate/CH_{key}_interim"
+            interiminfo = f"s3://nesta-production-intermediate/CH_{self.date}_{key}_interim"
 
             params = {
                 "CH_API_KEY": api_key,
-                "db_name": "CompaniesHouse <dummy>",
+                "db_name": "dev",
                 "inputinfo": inputinfo,
                 "interiminfo": interiminfo,
-                "outinfo": f"{S3_PREFIX}_{key}",
+                "outinfo": f"{S3_PREFIX}_{self.date}_{key}",
                 "test": self.test,
                 "done": key in DONE_KEYS,
-                "config": os.environ[MYSQLDB_ENV],
+                "config": 'mysqldb.config',
             }
 
             logging.info(params)
@@ -165,7 +175,7 @@ class RootTask(luigi.Task):
         return CHBatchQuery(
             date=self.date,
             batchable=(find_filepath_from_pathstub("batchables/companies_house/")),
-            job_def="standard_image",
+            job_def="py36_amzn1_image",
             job_name="ch-batch-api-%s" % self.date,
             env_files=(
                 find_filepath_from_pathstub("nesta/nesta"),

@@ -31,7 +31,7 @@ def run():
     candidates = json.loads(s3_obj.get()["Body"].read())
 
     if test:
-        candidates = candidates[:10]
+        candidates = candidates[:300]
         logging.info(candidates)
 
     logging.info(f"Using {db_name} database")
@@ -60,9 +60,9 @@ def run():
         elif r.status_code == 404:
             logging.debug(f"404: {r.company_number} does not exist")
             not_found_list.append(r.company_number)
-            if len(not_found_list) % chunksize == 0:  # TODO: Misses last chunk?
+            if (len(not_found_list) % chunksize == 0 and len(not_found_list) > 0):
                 save_not_found(not_found_list)
-                not_found_list = []
+                not_found_list.clear()
         else:
             logging.debug(f"FAIL")
 
@@ -70,7 +70,7 @@ def run():
     chunksize = 1000
     not_found_list = []
     dispatcher(candidates, api_key, consume=consume)
-    save_not_found(not_found_list)
+    save_not_found(not_found_list)  # Save remaining partial chunk
 
     logging.info(f"Marking task as done to {s3_path}")
     s3 = boto3.resource("s3")
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         # Input data
         s3 = boto3.resource("s3")
         s3_obj = s3.Object(*parse_s3_path(input_info))
-        s3_obj.put(Body='["SC612773","SC612774","SC612775","SC612776","SO300397"]')
+        s3_obj.put(Body='["SC612773","SC612774","SC612775","SC612776","SO300397", "fail"]')
 
         level = logging.DEBUG
         level = logging.INFO
