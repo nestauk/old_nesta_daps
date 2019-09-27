@@ -12,7 +12,10 @@ from nesta.core.luigihacks.misctools import get_config
 from nesta.core.routines.embed_topics.doc_vectors_batch import TextVectors
 from nesta.packages.embed_topics.embed_clustering import clustering
 from nesta.packages.misc_utils.np_utils import arr2dic
+from nesta.packages.format_utils.listtools import flatten_lists, dicts2sql_format
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
+import pickle
 import numpy as np
 import json
 import boto3
@@ -20,10 +23,6 @@ import luigi
 import datetime
 import os
 import logging
-
-# params to set
-my_bucket = None  # clio-text2vec, bucket with {ID:vector} dicts
-output_bucket = None  # clio-vectors2clusters, bucket to store clustering model
 
 
 class ClusterVectors(luigi.Task):
@@ -35,13 +34,10 @@ class ClusterVectors(luigi.Task):
     """
     date = luigi.DateParameter(default=datetime.datetime.today())
     test = luigi.BoolParameter()
+    db_config_env = luigi.Parameter()
 
     def requires(self):
-        yield TextVectors(  # just pass on parameters the previous tasks need:
-                           _routine_id=self._routine_id,
-                           test=self.test,
-                           insert_batch_size=self.insert_batch_size,
-                           db_config_env='MYSQLDB')
+        yield TextVectors()  # add params
 
     def output(self):
         """Points to the output database engine where the task is marked as done."""
@@ -56,15 +52,19 @@ class ClusterVectors(luigi.Task):
         database = 'dev' if self.test else 'production'
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
         try_until_allowed(Base.metadata.create_all, self.engine)
+
         # Get data from S3 and merge {IDs:vectors} dictionaries.
         s3 = boto3.resource('s3')
-        my_bucket = s3.Bucket('clio-text2vec')
+        input_bucket = s3.Bucket('clio-text2vec')
+        output_bucket = 'clio-vectors2clusters'
 
         dicts = {}
-        for stored_obj in my_bucket.objects.all():
+        for stored_obj in input_bucket.objects.all():
             obj = s3.Object('clio-text2vec', stored_obj.key)
             d = json.loads(obj.get()['Body']._raw_stream.read())
             dicts.update(d)
+
+        logging.info(f'Loaded {len(dicts)} objects from {input_bucket}')
 
         # Fit cluster model
         logging.info("Clustering vectors")
@@ -76,13 +76,14 @@ class ClusterVectors(luigi.Task):
         topics_arr = [arr2dic(probs, thresh=.1) for probs in clusters_probs]
 
         # Save cluster model on S3
-        s3.Object('clio-vectors2clusters', 'gmm.pickle').put(Body=gmm)
+        s3.Object(output_bucket, 'gmm.pickle').put(Body=pickle.dumps(gmm))
         logging.info("Saved fitted GMM.")
 
         # Save {IDs:topics} on MYSQL
         # Map IDs to topics.
-        d = {id_: arr for id_, arr in zip(dicts.keys(), topics_arr)}
-        insert_data(self.db_config_env, 'mysqldb', database, Base, DocumentClusters, )
+        # d = {id_: arr for id_, arr in zip(dicts.keys(), topics_arr)}
+        items = flatten_lists(dicts2sql_format(dicts, topics_arr))
+        insert_data(self.db_config_env, 'mysqldb', database, Base, DocumentClusters, items)
         # Mark as done
         logging.info("Task complete")
 
@@ -90,3 +91,58 @@ class ClusterVectors(luigi.Task):
         # raise NotImplementedError
         # while testing to prevent the local scheduler from marking the task as done
         self.output().touch()
+
+
+class RootTask(luigi.WrapperTask):
+    """Collect the supplied parameters and call the previous task.
+    Args:
+        date (datetime): Date used to label the completed task
+        production (bool): enable test (False) or production mode (True)
+    """
+    date = luigi.DateParameter(default=datetime.datetime.today())
+    production = luigi.BoolParameter(default=False)
+
+    def requires(self):
+        """Call the previous task in the pipeline."""
+
+        logging.getLogger().setLevel(logging.INFO)
+        return ClusterVectors(date=self.date, test=not self.production,
+        job_def="py36_amzn1_image", db_config_env="MYSQLDB",
+                                   job_name="cluster-vectors-%s" % self.date,
+                                   job_queue="HighPriority",
+                                   region_name="eu-west-2",
+                                   env_files=[f3p("nesta/nesta/"),
+                                              f3p("config/mysqldb.config")])
+#
+#
+# class RootTask(luigi.WrapperTask):
+#     '''Add document vectors in S3.
+#
+#     Args:
+#         date (datetime): Date used to label the outputs
+#     '''
+#     date = luigi.DateParameter(default=datetime.date.today())
+#     production = luigi.BoolParameter(default=False)
+#
+#     def requires(self):
+#         '''Get the output from the batchtask'''
+#         _routine_id = "{}-{}".format(self.date, self.production)
+#         logging.getLogger().setLevel(logging.INFO)
+#         return TextVectors(date=self.date,
+#                            batchable=("~/nesta/nesta/core/"
+#                                       "batchables/embed_topics/"),
+#                            test=not self.production,
+#                            db_config_env="MYSQLDB",
+#                            process_batch_size=self.process_batch_size,
+#                            intermediate_bucket="nesta-production-intermediate",
+#                            job_def="py36_amzn1_image",
+#                            job_name="text2vectors-%s" % self.date,
+#                            job_queue="HighPriority",
+#                            region_name="eu-west-2",
+#                            env_files=[f3p("nesta/nesta/"),
+#                                       f3p("config/mysqldb.config")],
+#                            routine_id=_routine_id,
+#                            poll_time=10,
+#                            memory=4096,
+#                            max_live_jobs=5)
+#
