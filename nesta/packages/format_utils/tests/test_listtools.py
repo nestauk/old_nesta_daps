@@ -16,18 +16,28 @@ def test_dicts2sql_format():
         {0: 0.906, 1: 0.674, 3: 0.548, 4: 0.287},
         {0: 0.906, 1: 0.674, 2: 0.11, 4: 0.287},
         {0: 0.906},
-        {0: 0.906, 1: 0.674, 2: 0.12, 3: 0.548, 4: 0.287}
+        {0: 0.906, 1: 0.674, 2: 0.12, 3: 0.548, 4: 0.287},
     ]
 
     assert dicts2sql_format(dicts, arrs) == [
-        [("a", 0, 0.906), ("a", 1, 0.674), ("a", 3, 0.548), ("a", 4, 0.287)],
-        [("b", 0, 0.906), ("b", 1, 0.674), ("b", 2, 0.11), ("b", 4, 0.287)],
-        [("c", 0, 0.906)],
         [
-            ("d", 0, 0.906),
-            ("d", 1, 0.674),
-            ("d", 2, 0.12),
-            ("d", 3, 0.548),
-            ("d", 4, 0.287)
-        ]
+            {"doc_id": "a", "cluster_id": 0, "weight": 0.906},
+            {"doc_id": "a", "cluster_id": 1, "weight": 0.674},
+            {"doc_id": "a", "cluster_id": 3, "weight": 0.548},
+            {"doc_id": "a", "cluster_id": 4, "weight": 0.287},
+        ],
+        [
+            {"doc_id": "b", "cluster_id": 0, "weight": 0.906},
+            {"doc_id": "b", "cluster_id": 1, "weight": 0.674},
+            {"doc_id": "b", "cluster_id": 2, "weight": 0.11},
+            {"doc_id": "b", "cluster_id": 4, "weight": 0.287},
+        ],
+        [{"doc_id": "c", "cluster_id": 0, "weight": 0.906}],
+        [
+            {"doc_id": "d", "cluster_id": 0, "weight": 0.906},
+            {"doc_id": "d", "cluster_id": 1, "weight": 0.674},
+            {"doc_id": "d", "cluster_id": 2, "weight": 0.12},
+            {"doc_id": "d", "cluster_id": 3, "weight": 0.548},
+            {"doc_id": "d", "cluster_id": 4, "weight": 0.287},
+        ],
     ]

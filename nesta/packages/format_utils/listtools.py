@@ -18,4 +18,7 @@ def dicts2sql_format(d1, d2):
         (:obj:`list`): List containing the rows of a SQL table.
 
     """
-    return [[(id_, k, v) for k, v in arr.items()] for id_, arr in zip(d1.keys(), d2)]
+    return [
+        [dict(doc_id=id_, cluster_id=k, weight=v) for k, v in arr.items()]
+        for id_, arr in zip(d1.keys(), d2)
+    ]
