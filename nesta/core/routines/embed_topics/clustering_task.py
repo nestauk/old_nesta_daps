@@ -34,9 +34,10 @@ class ClusterVectors(luigi.Task):
     date = luigi.DateParameter(default=datetime.datetime.today())
     test = luigi.BoolParameter()
     db_config_env = luigi.Parameter()
+    text2vectors = luigi.Parameter()
 
-    # def requires(self):
-    #     yield TextVectors()  # add params
+    def requires(self):
+        yield TextVectors(**self.text2vectors)
 
     def output(self):
         """Points to the output database engine where the task is marked as done."""
@@ -80,7 +81,6 @@ class ClusterVectors(luigi.Task):
 
         # Save {IDs:topics} on MYSQL
         # Map IDs to topics.
-        # d = {id_: arr for id_, arr in zip(dicts.keys(), topics_arr)}
         items = flatten_lists(dicts2sql_format(dicts, topics_arr))
         insert_data(
             self.db_config_env, "mysqldb", database, Base, DocumentClusters, items
@@ -94,26 +94,20 @@ class ClusterVectors(luigi.Task):
         self.output().touch()
 
 
-class RootTask(luigi.WrapperTask):
-    """Collect the supplied parameters and call the previous task.
-    Args:
-        date (datetime): Date used to label the completed task
-        production (bool): enable test (False) or production mode (True)
-    """
-
-    date = luigi.DateParameter(default=datetime.datetime.today())
-    production = luigi.BoolParameter(default=False)
-
-    def requires(self):
-        """Call the previous task in the pipeline."""
-
-        logging.getLogger().setLevel(logging.INFO)
-        return ClusterVectors(
-            date=self.date, test=not self.production, db_config_env="MYSQLDB"
-        )
-# job_def="py36_amzn1_image",
-#                                    job_name="cluster-vectors-%s" % self.date,
-#                                    job_queue="HighPriority",
-#                                    region_name="eu-west-2",
-#                                    env_files=[f3p("nesta/nesta/"),
-#                                               f3p("config/mysqldb.config")])
+# class RootTask(luigi.WrapperTask):
+#     """Collect the supplied parameters and call the previous task.
+#     Args:
+#         date (datetime): Date used to label the completed task
+#         production (bool): enable test (False) or production mode (True)
+#     """
+#
+#     date = luigi.DateParameter(default=datetime.datetime.today())
+#     production = luigi.BoolParameter(default=False)
+#
+#     def requires(self):
+#         """Call the previous task in the pipeline."""
+#
+#         logging.getLogger().setLevel(logging.INFO)
+#         return ClusterVectors(
+#             date=self.date, test=not self.production, db_config_env="MYSQLDB"
+#         )
