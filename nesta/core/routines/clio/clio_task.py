@@ -125,6 +125,7 @@ class ClioTask(luigi.Task):
             path = self.cherry_picked
 
         file_io_topics = s3.S3Target(f's3://clio-data/{path.decode("utf-8")}').open("rb")
+
         topic_json = json.load(file_io_topics)
         file_io_topics.close()
         topic_lookup = topic_json['data']['topic_names']

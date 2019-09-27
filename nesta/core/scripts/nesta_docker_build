@@ -64,6 +64,7 @@ if [[ $? -ne 0 ]];
 then    
     exit 1
 fi
+docker image ls ${DKR_PKG_NAME}
 
 # Back to the top
 cd ${TOP_DIR}

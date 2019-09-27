@@ -25,6 +25,7 @@ def term_counts(dct, row, binary=False):
             for idx, count in Counter(dct.doc2idx(row)).items()
             if idx != -1}        
 
+
 def optional(name, default):
     """Defines optional env fields with default values"""
     var = f'BATCHPAR_{name}'
@@ -33,6 +34,20 @@ def optional(name, default):
                 else literal_eval(os.environ[var]))
     except ValueError:
         return os.environ[var]
+
+
+def merge_lists(list_of_lists):
+    """
+    Join a lists of lists into a single list. 
+    Returns an empty list if the input is not a list, 
+    which is expected to happen (from the ngrammer) 
+    if no long text was found
+    """
+    if type(list_of_lists) is not list:  # expected to happen if ngrammer skipped this row
+        list_of_lists = []
+    iter_ = itertools.chain.from_iterable(list_of_lists)
+    return list(iter_)
+
 
 def run():
     s3_path_in = os.environ['BATCHPAR_s3_path_in']
@@ -47,10 +62,10 @@ def run():
     s3_obj_in = s3.Object(*parse_s3_path(s3_path_in))    
     data = json.load(s3_obj_in.get()['Body'])
 
-    # Extract what you need from the data
-    _data = [list(itertools.chain.from_iterable(row[text_field]))
-             for row in data if type(row[text_field]) is list]
+    # Extract text and indexes from the data, then delete the dead weight
+    _data = [merge_lists(row[text_field]) for row in data]
     index = [row[id_field] for row in data]
+    assert len(_data) == len(data)
     del data
 
     # Build the corpus
@@ -78,5 +93,5 @@ if __name__ == "__main__":
         os.environ["BATCHPAR_binary"] = 'True'
         os.environ["BATCHPAR_min_df"] = '0.001'
         os.environ["BATCHPAR_s3_path_in"] = ('s3://clio-data/gtr/'
-                                             'NGRAM.TEST_True.json')
+                                             '2019-09-19/NGRAM.TEST_True.json')
     run()

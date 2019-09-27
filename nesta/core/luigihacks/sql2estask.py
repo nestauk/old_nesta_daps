@@ -9,7 +9,8 @@ import logging
 import luigi
 import os
 
-from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
+from nesta.packages.misc_utils.batches import split_batches
+from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.core.luigihacks import autobatch
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
