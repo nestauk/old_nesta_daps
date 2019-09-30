@@ -97,36 +97,3 @@ class TextVectors(autobatch.AutoBatchTask):
     def combine(self, job_params):
         """Touch the checkpoint"""
         self.output().touch()
-
-
-class RootTask(luigi.WrapperTask):
-    '''Add document vectors in S3.
-
-    Args:
-        date (datetime): Date used to label the outputs
-    '''
-    date = luigi.DateParameter(default=datetime.date.today())
-    production = luigi.BoolParameter(default=False)
-    process_batch_size = luigi.IntParameter(default=1000)
-
-    def requires(self):
-        '''Get the output from the batchtask'''
-        _routine_id = "{}-{}".format(self.date, self.production)
-        logging.getLogger().setLevel(logging.INFO)
-        return TextVectors(date=self.date,
-                           batchable=("~/nesta/nesta/core/"
-                                      "batchables/embed_topics/"),
-                           test=not self.production,
-                           db_config_env="MYSQLDB",
-                           process_batch_size=self.process_batch_size,
-                           intermediate_bucket="nesta-production-intermediate",
-                           job_def="py36_tf_image",
-                           job_name="text2vectors-%s" % self.date,
-                           job_queue="HighPriority",
-                           region_name="eu-west-2",
-                           env_files=[f3p("nesta/nesta/"),
-                                      f3p("config/mysqldb.config")],
-                           routine_id=_routine_id,
-                           poll_time=10,
-                           memory=4096,
-                           max_live_jobs=5)

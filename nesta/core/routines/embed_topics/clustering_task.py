@@ -123,7 +123,7 @@ class RootTask(luigi.WrapperTask):
             db_config_env="MYSQLDB",
             process_batch_size=self.process_batch_size,
             intermediate_bucket="nesta-production-intermediate",
-            job_def="py36_amzn1_image",
+            job_def="py36_tf_image",
             job_name="text2vectors-%s" % self.date,
             job_queue="HighPriority",
             region_name="eu-west-2",
@@ -141,22 +141,3 @@ class RootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)
 
         return ClusterVectors(**cluster_task_kwargs, text2vectors=text2vec_task_kwargs)
-
-
-# class RootTask(luigi.WrapperTask):
-#     """Collect the supplied parameters and call the previous task.
-#     Args:
-#         date (datetime): Date used to label the completed task
-#         production (bool): enable test (False) or production mode (True)
-#     """
-#
-#     date = luigi.DateParameter(default=datetime.datetime.today())
-#     production = luigi.BoolParameter(default=False)
-#
-#     def requires(self):
-#         """Call the previous task in the pipeline."""
-#
-#         logging.getLogger().setLevel(logging.INFO)
-#         return ClusterVectors(
-#             date=self.date, test=not self.production, db_config_env="MYSQLDB"
-#         )
