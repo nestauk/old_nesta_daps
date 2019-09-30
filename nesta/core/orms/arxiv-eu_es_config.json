@@ -15,64 +15,64 @@
                 "id_digitalObjectIdentifier_article": {
                     "type": "text"
                 },
-                "json_category_article": {
-                    "properties": {
-                        "ancestors": {
-                            "type": "keyword"
-                        },
-                        "level": {
-                            "type": "integer"
-                        },
-                        "order": {
-                            "type": "integer"
-                        },
-                        "value": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "nested"
-                },
-                "json_fieldOfStudy_article": {
-                    "properties": {
-                        "ancestors": {
-                            "type": "keyword"
-                        },
-                        "level": {
-                            "type": "integer"
-                        },
-                        "order": {
-                            "type": "integer"
-                        },
-                        "value": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "nested"
-                },
-                "json_location_article": {
-                    "properties": {
-                        "ancestors": {
-                            "type": "keyword"
-                        },
-                        "level": {
-                            "type": "integer"
-                        },
-                        "order": {
-                            "type": "integer"
-                        },
-                        "value": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "nested"
-                },
-                "metric_citations_article": {
-                    "type": "float"
-                },
                 "metric_novelty_article": {
                     "type": "float"
                 },
                 "terms_authors_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_category_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_countries_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_fieldOfStudy1_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_fieldOfStudy2_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_fieldOfStudy3_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_fieldOfStudy4_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -90,8 +90,14 @@
                     },
                     "type": "text"
                 },
-                "terms_tokens_article": {
-                    "type": "keyword"
+                "terms_regions_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "textBody_abstract_article": {
                     "type": "text"

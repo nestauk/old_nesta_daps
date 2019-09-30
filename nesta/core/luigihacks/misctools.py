@@ -29,7 +29,8 @@ def get_paths_from_relative(relative=1):
     Prints all file and directory paths from a relative number of
     'backward steps' from the current working directory.'''
     paths = []
-    for root, subdirs, files in os.walk(f"./{'../'*relative}"):
+    for root, subdirs, files in os.walk(f"./{'../'*relative}",
+                                        followlinks=True):
         # Get all directory paths
         for subdir in subdirs:
             paths.append(os.path.join(root, subdir))

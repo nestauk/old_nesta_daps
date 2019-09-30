@@ -29,16 +29,24 @@
         "tier_1": "count_citations_article"
     },
     {
-        "tier_0": "normalised_citation",
-        "tier_1": "metric_citations_article"
+        "tier_0": "fos_level_1",
+        "tier_1": "terms_fieldOfStudy1_article"
     },
     {
-        "tier_0": "fos",
-        "tier_1": "json_fieldOfStudy_article"
+        "tier_0": "fos_level_2",
+        "tier_1": "terms_fieldOfStudy2_article"
+    },
+    {
+        "tier_0": "fos_level_3",
+        "tier_1": "terms_fieldOfStudy3_article"
+    },
+    {
+        "tier_0": "fos_level_4",
+        "tier_1": "terms_fieldOfStudy4_article"
     },
     {
         "tier_0": "categories",
-        "tier_1": "json_category_article"
+        "tier_1": "terms_category_article"
     },
     {
         "tier_0": "has_multinational",
@@ -49,16 +57,16 @@
         "tier_1": "terms_institutes_article"
     },
     {
-        "tier_0": "tokens",
-        "tier_1": "terms_tokens_article"
-    },
-    {
         "tier_0": "novelty_of_article",
         "tier_1": "metric_novelty_article"
     },
     {
         "tier_0": "countries",
-        "tier_1": "json_location_article"
+        "tier_1": "terms_countries_article"
+    },
+    {
+        "tier_0": "regions",
+        "tier_1": "terms_regions_article"
     },
     {
         "tier_0": "year",
