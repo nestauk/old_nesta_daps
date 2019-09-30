@@ -61,3 +61,7 @@ def run():
     s3 = boto3.resource('s3')
     obj = s3.Object(output_bucket, f'{outinfo}.json')
     obj.put(Body=json.dumps(processed_batch))
+
+
+if __name__ == '__main__':
+    run()
