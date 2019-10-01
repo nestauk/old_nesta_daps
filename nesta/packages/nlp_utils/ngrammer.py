@@ -95,7 +95,7 @@ class Ngrammer:
             for sentence in text:
                 sentence = [token for token in sentence
                             if token not in stop_words and
-                            not all(len(t) <= 2 
+                            not all(t in stop_words
                                     for t in token.split('_'))]
                 processed_doc.append(sentence)
         return processed_doc
