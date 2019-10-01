@@ -54,7 +54,7 @@ def clean_and_tokenize(text, remove_stops):
     tokens = tokens_re.findall(text)
     _tokens = [t.lower() for t in tokens]
     filtered_tokens = [token.replace('-', '_') for token in _tokens
-                       if len(token) > 2
+                       if (not remove_stops or len(token) > 2)
                        and (not remove_stops or token not in stop_words)
                        and not any(x in token for x in string.digits)
                        and any(x in token for x in string.ascii_lowercase)]
