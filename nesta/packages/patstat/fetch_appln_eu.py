@@ -23,11 +23,23 @@ def generate_temp_tables(engine):
 
 
 def temp_tables_to_dfs(engine, tables=["tmp_appln_fam_groups",
-                                       "tmp_appln_no_fam"]):
+                                       "tmp_appln_no_fam"],
+                       chunksize=10000, limit=None):
     '''Read the required temporary tables into Pandas'''
     sql_select = "SELECT * FROM %s"
-    dfs = {tbl: pd.read_sql(sql_select % tbl, engine)
-           for tbl in tables}
+    dfs = {}
+    if limit is not None and chunksize > limit:
+        chunksize = limit
+    for tbl in tables:
+        _df = []
+        totalsize = 0
+        for chunk in pd.read_sql(sql_select % tbl, engine,
+                                 chunksize=chunksize):
+            totalsize += chunksize
+            _df.append(chunk)
+            if limit is not None and totalsize >= limit:
+                break
+        dfs[tbl] = pd.concat(_df)
     return dfs
 
 
@@ -48,7 +60,7 @@ def concat_dfs(dfs):
     return data
 
 
-def extract_data(db='patstat_2019_05_13'):
+def extract_data(limit=1000, db='patstat_2019_05_13'):
     '''
     '''
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', db)
@@ -59,10 +71,4 @@ def extract_data(db='patstat_2019_05_13'):
     return concat_dfs(dfs)
 
 if __name__ == "__main__":
-    dfs = extract_data()
-
-
-    for k, df in dfs.items():
-        print(k, len(df))
-        print(df.head())
-        print()
+    data = extract_data()
