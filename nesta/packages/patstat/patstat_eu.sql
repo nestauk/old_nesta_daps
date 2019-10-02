@@ -19,7 +19,8 @@ WHERE
       AND
       tls906_person.person_ctry_code IN (SELECT ctry_code
 					 FROM tls801_country
-					 WHERE eu_member = 'Y');
+					 WHERE eu_member = 'Y')
+LIMIT :limit;
 
 
 -- Granted apps w/ family, > 2000, EU people
@@ -71,7 +72,8 @@ WHERE
       AND
       tls906_person.person_ctry_code IN (SELECT ctry_code
                                          FROM tls801_country
-                                         WHERE eu_member = 'Y');
+                                         WHERE eu_member = 'Y')
+LIMIT :limit;
 
 
 -- Output 2: Granted apps w/out family, > 2000, EU people, w/ abstract

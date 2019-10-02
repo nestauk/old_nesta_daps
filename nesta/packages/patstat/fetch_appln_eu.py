@@ -4,11 +4,14 @@ from sqlalchemy.orm import Session
 import pandas as pd
 
 
-def generate_temp_tables(engine):
+def generate_temp_tables(engine, limit=None):
     '''
     Generate some temporary tables, 
     which will be selected by Pandas
     '''
+    if limit is None:
+        limit = 18446744073709551615  # BIGINT
+
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     pysql_path = "patstat_eu.sql"
@@ -17,7 +20,7 @@ def generate_temp_tables(engine):
         sql = f.read()
     session = Session(bind=engine)    
     for _sql in sql.split("\n\n\n"):
-        session.execute(_sql)
+        session.execute(_sql, {"limit":limit})
     session.commit()
     return session
 
@@ -35,7 +38,7 @@ def temp_tables_to_dfs(engine, tables=["tmp_appln_fam_groups",
         totalsize = 0
         for chunk in pd.read_sql(sql_select % tbl, engine,
                                  chunksize=chunksize):
-            totalsize += chunksize
+            totalsize += len(chunk)
             _df.append(chunk)
             if limit is not None and totalsize >= limit:
                 break
@@ -60,12 +63,12 @@ def concat_dfs(dfs):
     return data
 
 
-def extract_data(limit=1000, db='patstat_2019_05_13'):
+def extract_data(limit=None, db='patstat_2019_05_13'):
     '''
     '''
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', db)
-    session = generate_temp_tables(engine)
-    dfs = temp_tables_to_dfs(engine)
+    session = generate_temp_tables(engine, limit=limit)
+    dfs = temp_tables_to_dfs(engine, limit=limit)
     session.close()
     del session
     return concat_dfs(dfs)
