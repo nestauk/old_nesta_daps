@@ -5,37 +5,52 @@ import pandas as pd
 
 
 def generate_temp_tables(engine):
-    '''Generate some temporary tables, which will be selected by Pandas'''
+    '''
+    Generate some temporary tables, 
+    which will be selected by Pandas
+    '''
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     pysql_path = "patstat_eu.sql"
     data_path = os.path.join(dir_path, pysql_path)
     with open(data_path) as f:
         sql = f.read()
-    session = Session(bind=engine)
-    for _sql in sql.split("\n\n"):
+    session = Session(bind=engine)    
+    for _sql in sql.split("\n\n\n"):
         session.execute(_sql)
     session.commit()
     return session
 
 
-def temp_tables_to_dfs(engine):
+def temp_tables_to_dfs(engine, tables=["tmp_appln_fam_groups",
+                                       "tmp_appln_no_fam"]):
     '''Read the required temporary tables into Pandas'''
     sql_select = "SELECT * FROM %s"
-    tbls = ["tmp_appln_fam_groups", "tmp_appln_no_fam"]
     dfs = {tbl: pd.read_sql(sql_select % tbl, engine)
-           for tbl in tbls}
+           for tbl in tables}
     return dfs
 
+
+def pop_and_split(data, col, delimiter=','):
+    '''Split the given field, and pop it out of the input'''
+    return str(data.pop(col)).split(delimiter)
+    
+
 def concat_dfs(dfs):
-    data = [{'appln_id': row.pop('appln_id').split(','), 
-             'appln_auth': row.pop('appln_auth').split(','),
-             **row} for _, df in dfs.items()          
-            for _, row in df.iterrows()] 
+    '''
+    Join both of the temporary tables 
+    together (since they have the same schema)
+    '''
+    data = [{'appln_id': pop_and_split(row, 'appln_id'),
+             'appln_auth': pop_and_split(row, 'appln_auth'),
+             **row} for _, df in dfs.items()
+            for _, row in df.iterrows()]
     return data
 
 
 def extract_data(db='patstat_2019_05_13'):
+    '''
+    '''
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', db)
     session = generate_temp_tables(engine)
     dfs = temp_tables_to_dfs(engine)
