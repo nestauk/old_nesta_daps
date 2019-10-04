@@ -502,6 +502,7 @@ class ElasticsearchPlus(Elasticsearch):
                  null_pairs={},
                  auto_translate=False,
                  do_sort=True,
+                 auto_translate_kwargs={},
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -557,7 +558,8 @@ class ElasticsearchPlus(Elasticsearch):
                         for ext in ('com', 'co.uk', 'co.kr', 'at',
                                     'ru', 'fr', 'de', 'ch', 'es'))
             translator = Translator(service_urls=urls)
-            self.transforms.append(lambda row: _auto_translate(row, translator))
+            self.transforms.append(lambda row: _auto_translate(row, translator,
+                                                               **auto_translate_kwargs))
 
         # Clean up lists (dedup, remove None, empty lists are None)
         self.transforms.append(_sanitize_html)

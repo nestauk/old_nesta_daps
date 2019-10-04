@@ -82,7 +82,8 @@ SELECT a.appln_id AS appln_id,
        appln_auth,
        nb_citing_docdb_fam,
        earliest_filing_date,
-       earliest_filing_year
+       earliest_filing_year,
+       docdb_family_id
 FROM tmp_applnid_no_fam a
 LEFT JOIN tls201_appln b ON a.appln_id = b.appln_id
 LEFT JOIN tls203_appln_abstr c ON a.appln_id = c.appln_id

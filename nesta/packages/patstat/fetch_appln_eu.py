@@ -11,7 +11,6 @@ def generate_temp_tables(engine, limit=None):
     '''
     if limit is None:
         limit = 18446744073709551615  # BIGINT
-
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     pysql_path = "patstat_eu.sql"

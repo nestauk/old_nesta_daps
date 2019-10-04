@@ -1,7 +1,0 @@
-PREFIX stats: <http://statistics.data.gov.uk/def/statistical-geography#>
-
-SELECT ?label
-WHERE {
-  ?s ?p "<gss_code>".
-  ?s stats:officialname ?label
-}

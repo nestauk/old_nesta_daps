@@ -4,7 +4,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.crunchbase_orm import Organization
-from nesta.core.orms.patstat_2019_05_13 import Tls201Appln as Patent
+from nesta.core.orms.patstat_eu_orm import ApplnFamily
 
 from datetime import datetime as dt
 import luigi
@@ -48,9 +48,10 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        #params = #(('arxiv', 'article', Article.id),
-        params = (('crunchbase', 'company', Organization.id),)
-        #('patstat', 'patent', Patent.appln_id))
+        #params = (('arxiv', 'article', Article.id),
+        #          ('crunchbase', 'company', Organization.id),
+        #          ('patstat', 'patent', ApplnFamily.docdb_family_id))
+        params = (('patstat', 'patent', ApplnFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             print(dataset, entity_type, id_field)
             yield Sql2EsTask(id_field=id_field,
