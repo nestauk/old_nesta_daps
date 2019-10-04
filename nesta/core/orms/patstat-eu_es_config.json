@@ -3,9 +3,9 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
-		"booleanFlag_autotranslated_entity":{
-		    "type": "boolean"
-		},
+                "booleanFlag_autotranslated_entity": {
+                    "type": "boolean"
+                },
                 "count_citations_patent": {
                     "type": "integer"
                 },
@@ -24,7 +24,7 @@
                     },
                     "type": "text"
                 },
-		"terms_iso2lang_entity": {
+                "terms_ipc_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -33,7 +33,7 @@
                     },
                     "type": "text"
                 },
-                "terms_ipc_patent": {
+                "terms_iso2lang_entity": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
