@@ -48,10 +48,10 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        #params = (('arxiv', 'article', Article.id),
-        #          ('crunchbase', 'company', Organization.id),
-        #          ('patstat', 'patent', ApplnFamily.docdb_family_id))
-        params = (('patstat', 'patent', ApplnFamily.docdb_family_id),)
+        params = (('arxiv', 'article', Article.id),
+                  ('crunchbase', 'company', Organization.id),
+                  ('patstat', 'patent', ApplnFamily.docdb_family_id))
+        #params = (('patstat', 'patent', ApplnFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             print(dataset, entity_type, id_field)
             yield Sql2EsTask(id_field=id_field,

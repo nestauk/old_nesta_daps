@@ -80,7 +80,7 @@ class OrgCollectTask(luigi.Task):
                                                                     org_descriptions)
         # Insert CatGroups
         insert_data(self.db_config_env, 'mysqldb', database,
-                    Base, CategoryGroup, missing_cat_groups)        
+                    Base, CategoryGroup, missing_cat_groups)
         # Insert orgs in batches
         n_batches = round(len(processed_orgs)/self.insert_batch_size)
         logging.info(f"Inserting {n_batches} batches of size {self.insert_batch_size}")

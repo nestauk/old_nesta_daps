@@ -42,8 +42,8 @@
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
-                "datetime_updated_organisation": {
-                    "format": "yyyy-MM-dd HH:mm:ss",
+                "date_updated_organisation": {
+                    "format": "yyyy-MM-dd",
                     "type": "date"
                 },
                 "id_continent_organisation": {
