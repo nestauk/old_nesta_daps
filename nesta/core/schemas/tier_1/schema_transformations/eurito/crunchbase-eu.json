@@ -125,7 +125,7 @@
     },
     {
         "tier_0": "updated_at",
-        "tier_1": "datetime_updated_organisation"
+        "tier_1": "date_updated_organisation"
     },
     {
         "tier_0": "primary_role",

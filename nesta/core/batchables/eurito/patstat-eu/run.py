@@ -13,9 +13,11 @@ from nesta.core.orms.patstat_eu_orm import ApplnFamily
 from nesta.core.orms.patstat_2019_05_13 import *
 
 def select_text(objs, lang_field, text_field):
+    if len(objs) == 0:
+        return None
     _objs = [t for t in objs if t[lang_field] == 'en']
     if len(_objs) == 0:
-        _objs = objs
+        _objs = objs    
     obj = sorted(_objs, key=lambda x: len(x), reverse=True)[0]
     return obj[text_field]
 
