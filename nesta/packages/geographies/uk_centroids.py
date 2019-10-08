@@ -1,4 +1,4 @@
-from nesta.packages.geographies.uk_geography_lookup import get_gss_codes
+#from nesta.packages.geographies.uk_geography_lookup import get_gss_codes
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 
 
@@ -32,7 +32,7 @@ def get_ttwa_codes(test=False):
     data = sparql_query(ENDPOINT, query, batch_limit=n)
     return [row["area_code"] for batch in data for row in batch]
 
-def get_ttwa_to_lsoa():
+def ttwa_to_lsoa():
     '''
     Returns a list of LSOAs IDs (str) in a given TTWA based on the TTWA ID (str).
     Example:
@@ -40,5 +40,5 @@ def get_ttwa_to_lsoa():
     '''
     return False
 
-def get_lsoa_to_oa():
+def lsoa_to_oa():
     return False
