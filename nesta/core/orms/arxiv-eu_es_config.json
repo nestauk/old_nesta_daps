@@ -10,11 +10,15 @@
                     "type": "integer"
                 },
                 "date_created_article": {
-		    "format": "yyyy-MM-dd",
+                    "format": "yyyy-MM-dd",
                     "type": "date"
                 },
                 "id_digitalObjectIdentifier_article": {
                     "type": "keyword"
+                },
+                "json_fieldOfStudy_article": {
+                    "dynamic": true,
+                    "properties": {}
                 },
                 "metric_novelty_article": {
                     "type": "float"
@@ -46,10 +50,6 @@
                     },
                     "type": "text"
                 },
-                "json_fieldOfStudy_article": {
-		    "dynamic": true,
-		    "properties": {}
-		},
                 "terms_fieldOfStudy_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
@@ -57,8 +57,8 @@
                             "type": "keyword"
                         }
                     },
-                    "type": "text"		    
-		},
+                    "type": "text"
+                },
                 "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {

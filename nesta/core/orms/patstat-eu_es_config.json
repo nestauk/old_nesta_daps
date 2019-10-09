@@ -10,7 +10,7 @@
                     "type": "integer"
                 },
                 "date_of_patent": {
-		    "format": "yyyy-MM-dd",
+                    "format": "yyyy-MM-dd",
                     "type": "date"
                 },
                 "metric_novelty_patent": {
