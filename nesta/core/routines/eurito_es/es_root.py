@@ -11,7 +11,7 @@ import luigi
 
 S3_BUCKET='nesta-production-intermediate'
 
-def kwarg_maker(dataset):
+def kwarg_maker(dataset, routine_id):
     dataset = f'{dataset}-eu'
     env_files=[f3p('config/mysqldb.config'),
                f3p('config/elasticsearch.config'),
@@ -19,6 +19,7 @@ def kwarg_maker(dataset):
                f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}')
     return dict(dataset=dataset,
+                routine_id=f'dataset_{routine_id}',
                 env_files=env_files,
                 batchable=batchable)
 
@@ -31,10 +32,9 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         test = not self.production
-        set_log_level(test)
+        set_log_level(True, True)
         routine_id = f'EURITO-ElasticsearchTask-{self.date}-{test}'
-        default_kwargs = dict(routine_id=routine_id,
-                              date=self.date,
+        default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
                               drop_and_recreate=self.drop_and_recreate,
                               job_def='py36_amzn1_image',
@@ -56,5 +56,6 @@ class RootTask(luigi.WrapperTask):
             print(dataset, entity_type, id_field)
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
-                             **kwarg_maker(dataset),
+                             **kwarg_maker(dataset, 
+                                           routine_id),
                              **default_kwargs)

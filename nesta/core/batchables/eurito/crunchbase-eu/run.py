@@ -133,7 +133,7 @@ def run():
             row_combined['placeName_state_organisation'] = states_lookup[state_code]
             continent_code = row_combined['continent']
             row_combined['placeName_continent_organisation'] = continent_lookup[continent_code]
-            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d')
 
             uid = row_combined.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
