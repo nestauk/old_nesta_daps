@@ -42,6 +42,7 @@ def _find_index(field, fos_map):
             return i_level, _unique_index(field, fields)
         except ValueError:
             pass
+    return None, None
 
 
 def _make_fos_map(fos_rows, fos_lookup):
@@ -79,12 +80,15 @@ def _make_fos_tree(fos_map):
             child = row[0]  # Indexing used since size not known
             parent = row[-1]  # Note: child could equal parent
             c_level, c_idx = _find_index(child, fos_map)
+            if c_level is None:
+                continue
             if child != parent:
                 # If there is a parent, generate the link
                 # from parent to child
                 p_level, p_idx = _find_index(parent, fos_map)
-                links.append([[p_level, p_idx],
-                              [c_level, c_idx]])
+                if p_level is not None:
+                    links.append([[p_level, p_idx],
+                                  [c_level, c_idx]])
             nodes[c_level][c_idx] = child
     nodes = json.loads(json.dumps(nodes, sort_keys=True))
     return {'nodes': nodes, 'links': sorted(links)}

@@ -119,11 +119,10 @@ def test_temp_tables_to_dfs_no_limit(mocked_pd, df_groups,
         assert list(_dfs[k].columns) == list(v.columns)
 
 
+@mock.patch("builtins.open", new_callable=mock.mock_open,
+            read_data='\n\n\n'.join(["aaa"]*32))
 @mock.patch(PATH.format('Session'))
-def test_generate_temp_tables(mocked_session):
-    session = generate_temp_tables(engine=None)
-    assert sum(arg[0][0].startswith('-- Output') 
-               for arg in 
-               session.execute.call_args_list) == 2
-    assert len(session.execute.call_args_list) == 6
+def test_generate_temp_tables(mocked_session, mocked_open):
+    session = generate_temp_tables(engine=None)    
+    assert len(session.execute.call_args_list) == 32
     assert len(session.commit.call_args_list) == 1

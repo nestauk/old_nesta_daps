@@ -32,7 +32,7 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         test = not self.production
-        set_log_level(True, True)
+        set_log_level(True)
         routine_id = f'EURITO-ElasticsearchTask-{self.date}-{test}'
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
