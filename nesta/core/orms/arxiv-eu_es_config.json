@@ -47,14 +47,18 @@
                     "type": "text"
                 },
                 "json_fieldOfStudy_article": {
+		    "dynamic": true,
+		    "properties": {}
+		},
+                "terms_fieldOfStudy_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
                             "type": "keyword"
                         }
                     },
-                    "type": "text"
-                },
+                    "type": "text"		    
+		},
                 "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {

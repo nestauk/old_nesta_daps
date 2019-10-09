@@ -13,7 +13,7 @@ from nesta.core.orms.arxiv_orm import Article as Art
 from nesta.core.orms.grid_orm import Institute as Inst
 from nesta.packages.arxiv.deepchange_analysis import is_multinational
 from nesta.packages.mag.fos_lookup import build_fos_lookup
-from nesta.packages.mag.fos_lookup import split_ids
+from nesta.packages.mag.fos_lookup import make_fos_tree
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
 
 def run():
@@ -34,8 +34,7 @@ def run():
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", 
                               db_name)
     logging.info('Building FOS lookup')
-    max_lvl = 4  # used again later
-    fos_lookup = build_fos_lookup(engine, max_lvl=max_lvl)
+    fos_lookup = build_fos_lookup(engine, max_lvl=6)
 
     # es setup
     logging.info('Connecting to ES')
@@ -91,6 +90,10 @@ def run():
             # Extract field of study
             row['fields_of_study'] = make_fos_tree(row['fields_of_study'],
                                                    fos_lookup)
+            fields_of_study = []
+            for _, fields in row['fields_of_study']['nodes']:
+                fields_of_study += list(fields.values())
+            row['_fields_of_study'] = fields_of_study
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
