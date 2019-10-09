@@ -90,10 +90,9 @@ def run():
             # Extract field of study
             row['fields_of_study'] = make_fos_tree(row['fields_of_study'],
                                                    fos_lookup)
-            fields_of_study = []
-            for _, fields in row['fields_of_study']['nodes']:
-                fields_of_study += list(fields.values())
-            row['_fields_of_study'] = fields_of_study
+            row['_fields_of_study'] = [f for fields in 
+                                       row['fields_of_study']['nodes'].values()
+                                       for f in fields.values()]
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
