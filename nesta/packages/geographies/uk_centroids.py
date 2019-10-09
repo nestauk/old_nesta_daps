@@ -4,6 +4,12 @@ import requests
 
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
 LSOA11_TTWA11_LU = 'https://opendata.arcgis.com/datasets/50ce6db9e3a24f16b3f63f07e6a069f0_0.geojson'
+TTWA11_LIST = 'https://opendata.arcgis.com/datasets/9ac894d3086641bebcbfa9960895db39_0.geojson'
+#TODO: move to services1.arcgis.com/ESMAR type links
+OA11_LSOA11_LU = ''.join(['https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/',
+'rest/services/OA11_LSOA11_MSOA11_LAD11_EW_LUv2/FeatureServer/0/query?where=1%3D1',
+'&outFields=OA11CD,LSOA11CD,ObjectId&resultOffset={}&resultRecordCount={}&outSR=4326&f=json'])
+
 
 def get_ttwa_name_from_id(ttwa_id):
     """
@@ -17,8 +23,23 @@ def get_ttwa_id_from_name(ttwa_name):
     Returns the ID (string) of the TTWA given its NAME (string).
     Example: get_ttwa_name_from_id('Sheffield') = 'E30000261'
     """
-    assert()
     return False
+
+def hit_odarcgis_api(api_code, test=False):
+    '''
+    Get the response from the given API URL (opendata.arcgis.com)
+
+    Returns the
+    '''
+    r = requests.get(api_code)
+    assert r.status_code == 200
+    r = r.json()
+    assert('features' in r)
+    children = r['features']
+    if test & (len(children)>9):
+        children = children[:10]
+    return children
+
 
 def get_ttwa_codes(test=False):
     """
@@ -39,7 +60,10 @@ def get_ttwa_codes(test=False):
     print([row for batch in data for row in batch])
     return [row["area_code"] for batch in data for row in batch]
 
-def get_ttwa11_codes():
+
+def get_ttwa11_codes(test=False):
+    #TODO: a dict ID : NAME would be better but then it's incompatible with
+    #get_ttwa_codes
     '''
     Collect TTWA11 codes from fixed URI on ONS database.
     It is specifically linked to TTWA from 2011 Census.
@@ -47,21 +71,18 @@ def get_ttwa11_codes():
     Return:
             A list of TTWA IDs.
     '''
-    return True
+    children = hit_odarcgis_api(TTWA11_LIST, test=test)
+    return [child['properties']['TTWA11CD'] for child in children]
 
-def ttwa_to_lsoa(test=False):
+def ttwa11_to_lsoa11(test=False):
     '''
+    Collects the lookup table between TTWAs and LSOAs (both from 2011 Census)
+    from the ONS website and parses it to return all possible pairs
+
     Returns a list of string pairs (TTWA ID, LSOA IDs) (both str)
 
-    Example:
-    get_ttwa_to_lsoa('E30000261') --> [LSOAs]
     '''
-    r_json = requests.get(LSOA11_TTWA11_LU).json()
-    assert('features' in r_json)
-    children = r_json['features']
-    assert('properties' in children[0])
-    if test:
-        children = children[:10]
+    children = hit_odarcgis_api(LSOA11_TTWA11_LU,test=test)
     table_lu = [(child['properties']['TTWA11CD'], child['properties']['LSOA11CD'])
                             for child in children]
     return table_lu
