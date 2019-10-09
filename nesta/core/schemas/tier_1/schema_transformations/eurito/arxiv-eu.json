@@ -29,20 +29,8 @@
         "tier_1": "count_citations_article"
     },
     {
-        "tier_0": "fos_level_1",
-        "tier_1": "terms_fieldOfStudy1_article"
-    },
-    {
-        "tier_0": "fos_level_2",
-        "tier_1": "terms_fieldOfStudy2_article"
-    },
-    {
-        "tier_0": "fos_level_3",
-        "tier_1": "terms_fieldOfStudy3_article"
-    },
-    {
-        "tier_0": "fos_level_4",
-        "tier_1": "terms_fieldOfStudy4_article"
+        "tier_0": "fields_of_study",
+        "tier_1": "json_fieldOfStudy_article"
     },
     {
         "tier_0": "categories",

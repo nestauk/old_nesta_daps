@@ -89,31 +89,8 @@ def run():
                 row['citation_count'] = 0
 
             # Extract field of study
-            fos_objs = row.pop('fields_of_study')
-            fos_ids = set(fos['id'] for fos in fos_objs)
-            for f in fos_objs:
-                if f["level"] > max_lvl:
-                    continue
-                key0 = f'fos_level_{f["level"]}'
-                if key0 not in row:
-                    row[key0] = []
-                for cid in split_ids(f['child_ids']):
-                    if cid not in fos_ids:
-                        continue                    
-                    key1 = f'fos_level_{f["level"]+1}'
-                    if key1 not in row:
-                        row[key1] = []
-                    try:
-                        fos = fos_lookup[(f['id'], cid)]
-                    except KeyError:
-                        continue
-                    row[key0].append(fos[0])
-                    row[key1].append(fos[1])
-            for k, v in row.items():
-                if not (type(v) is str 
-                        and v.startswith('fos_level')):
-                    continue
-                row[k] = list(set(v))
+            row['fields_of_study'] = make_fos_tree(row['fields_of_study'],
+                                                   fos_lookup)
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
