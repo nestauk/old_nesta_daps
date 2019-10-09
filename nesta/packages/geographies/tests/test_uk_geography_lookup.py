@@ -3,6 +3,7 @@ import pytest
 from nesta.packages.geographies.uk_geography_lookup import get_gss_codes
 from nesta.packages.geographies.uk_geography_lookup import get_children
 from nesta.packages.geographies.uk_geography_lookup import _get_children
+import unittest
 
 SPARQL_QUERY = '''
 PREFIX entity: <http://statistics.data.gov.uk/def/statistical-entity#>
@@ -16,7 +17,7 @@ WHERE {
     FILTER(SUBSTR(?area_code_type, 2, 2) > "01").
 }
 '''
-    
+
 
 @pytest.fixture
 def pars_for_get_children():
@@ -39,7 +40,7 @@ def test_get_gss_codes(mocked_open, mocked_find_filepath_from_pathstub):
 # @mock.patch("nesta.packages.geographies.uk_geography_lookup._get_children")
 # def test_get_children_max_out(mocked, pars_for_get_children):
 #     mocked.side_effect = ([], [], [], [], [])
-#     get_children(**pars_for_get_children)    
+#     get_children(**pars_for_get_children)
 #     assert mocked.call_count == pars_for_get_children["max_attempts"]
 
 
@@ -48,5 +49,3 @@ def test_get_gss_codes(mocked_open, mocked_find_filepath_from_pathstub):
 #     mocked.side_effect = side_effect_for_get_children
 #     children = get_children(**pars_for_get_children)
 #     assert len(children) == sum(len(x) for x in side_effect_for_get_children)
-
-
