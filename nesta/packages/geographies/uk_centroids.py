@@ -155,5 +155,7 @@ def get_oa_centroids(n_start=0, n_end=1000):
         polygon_string = polygon_string[0]['@value']
         # pass the WKT to shapely
         polygon = wkt.loads(polygon_string) #Polygon(polygon_list)
-        oa_centroids.append((oa_code, *polygon.centroid.coords))
+        coordinates = *polygon.centroid.coords # returned as LONG, LAT
+        # store it as LAT, LONG
+        oa_centroids.append((oa_code, coordinates[1], coordinates[0]))
     return oa_centroids
