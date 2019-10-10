@@ -1,5 +1,5 @@
 '''
-ESCO data collection
+ESCO data collection (dummy routine)
 ====================================
 Luigi routine to write ESCO data into the database
 '''
@@ -7,9 +7,9 @@ from datetime import datetime
 import luigi
 import logging
 
-from nesta.core.config import esco_loader
+from nesta.packages.reviews import esco_loader
 from nesta.packages.misc_utils.batches import BatchWriter
-from nesta.core.orms.esco_orm import Occupations, Skills, OccupationSkills
+from nesta.core.orms.esco_orm import Base, Occupations, Skills, OccupationSkills
 from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
@@ -68,7 +68,7 @@ class CollectESCOTask(luigi.Task):
 
     def run(self):
 
-        logging.info(f"Processing {self.name} task")
+        logging.info(f"Starting the CollectESCO task...")
 
         # database setup
         database = 'dev' if self.test else 'production'
@@ -76,6 +76,9 @@ class CollectESCOTask(luigi.Task):
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
         with db_session(self.engine) as session:
+
+            Base.metadata.create_all(self.engine)
+            logging.info(f"Created the tables")
 
             occupation_count = 0
             skill_count = 0

@@ -1,7 +1,7 @@
 import csv
 import requests
 import logging
-from esco_links_config import esco_links_dict as links
+from nesta.packages.reviews.esco_links_config import esco_links_dict as links
 
 def load_csv_as_dict(url):
     """
