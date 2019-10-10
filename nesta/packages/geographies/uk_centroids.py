@@ -3,6 +3,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 import requests
 from shapely.geometry import Polygon
 from shapely import wkt
+import numpy as np
 
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
 LSOA11_TTWA11_LU = 'https://opendata.arcgis.com/datasets/50ce6db9e3a24f16b3f63f07e6a069f0_0.geojson'
@@ -13,8 +14,10 @@ LSOA11_LIST = 'https://opendata.arcgis.com/datasets/3ce71e53d9254a73b3e887a506b8
 OA11_LSOA11_MSOA11_LU = 'https://opendata.arcgis.com/datasets/6ecda95a83304543bc8feedbd1a58303_0.geojson'
 OA11_REGION_LU = 'https://opendata.arcgis.com/datasets/1c2f7b13918d4e7286448bdc6458b415_0.geojson'
 #NSPL = 'https://opendata.arcgis.com/datasets/055c2d8135ca4297a85d624bb68aefdb_0.geojson'
-# NSPL query url: https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/MapServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json
-# https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/MapServer/0/query?where=1%3D1&outFields=objectid,pcd,pcd2,oa11,msoa11,lsoa11,ttwa&outSR=4326&f=json
+# NSPL query url: https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/
+#   MapServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json
+# https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/MapServer/0/
+#    query?where=1%3D1&outFields=objectid,pcd,pcd2,oa11,msoa11,lsoa11,ttwa&outSR=4326&f=json
 # one query will only return 33000 entries
 
 def get_ttwa_name_from_id(ttwa_id):
@@ -157,5 +160,6 @@ def get_oa_centroids(n_start=0, n_end=1000):
         polygon = wkt.loads(polygon_string) #Polygon(polygon_list)
         coordinates = *polygon.centroid.coords # returned as LONG, LAT
         # store it as LAT, LONG
-        oa_centroids.append((oa_code, coordinates[1], coordinates[0]))
+        oa_centroids.append((oa_code, np.around(coordinates[1],6),
+                                                np.around(coordinates[0],6)))
     return oa_centroids
