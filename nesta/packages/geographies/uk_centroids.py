@@ -5,10 +5,11 @@ import requests
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
 LSOA11_TTWA11_LU = 'https://opendata.arcgis.com/datasets/50ce6db9e3a24f16b3f63f07e6a069f0_0.geojson'
 TTWA11_LIST = 'https://opendata.arcgis.com/datasets/9ac894d3086641bebcbfa9960895db39_0.geojson'
-#TODO: move to services1.arcgis.com/ESMAR type links
-OA11_LSOA11_LU = ''.join(['https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/',
-'rest/services/OA11_LSOA11_MSOA11_LAD11_EW_LUv2/FeatureServer/0/query?where=1%3D1',
-'&outFields=OA11CD,LSOA11CD,ObjectId&resultOffset={}&resultRecordCount={}&outSR=4326&f=json'])
+LSOA11_LIST = 'https://opendata.arcgis.com/datasets/3ce71e53d9254a73b3e887a506b82f63_0.geojson'
+#ARCGIS_BASE = ''.join(['https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/',
+#    'services/{}/FeatureServer/0/query'])
+OA11_LSOA11_MSOA11_LU = 'https://opendata.arcgis.com/datasets/6ecda95a83304543bc8feedbd1a58303_0.geojson'
+
 
 
 def get_ttwa_name_from_id(ttwa_id):
@@ -29,7 +30,7 @@ def hit_odarcgis_api(api_code, test=False):
     '''
     Get the response from the given API URL (opendata.arcgis.com)
 
-    Returns the
+    Returns the list of dicts with the relevant features
     '''
     r = requests.get(api_code)
     assert r.status_code == 200
@@ -74,6 +75,19 @@ def get_ttwa11_codes(test=False):
     children = hit_odarcgis_api(TTWA11_LIST, test=test)
     return [child['properties']['TTWA11CD'] for child in children]
 
+def get_lsoa11_codes(test=False):
+    #TODO: a dict ID : NAME would be better but then it's incompatible with
+    #get_ttwa_codes
+    '''
+    Collect LSOA11 codes from fixed URI on ONS database.
+    It is specifically linked to LSOAs from 2011 Census.
+
+    Return:
+            A list of LSOA IDs.
+    '''
+    children = hit_odarcgis_api(LSOA11_LIST, test=test)
+    return [child['properties']['LSOA11CD'] for child in children]
+
 def ttwa11_to_lsoa11(test=False):
     '''
     Collects the lookup table between TTWAs and LSOAs (both from 2011 Census)
@@ -87,5 +101,19 @@ def ttwa11_to_lsoa11(test=False):
                             for child in children]
     return table_lu
 
-def lsoa_to_oa():
-    return False
+def lsoa11_to_oa11(test=False):
+    '''
+    Collects the lookup table between LSOAs and OAs (both from 2011 Census)
+    from the ONS website and parses it to return all possible pairs
+
+    Returns two lists of string pairs:
+     (OA ID, LSOA IDs) (both str)
+     (OA ID, MSOA IDs) (both str)
+
+    '''
+    children = hit_odarcgis_api(OA11_LSOA11_MSOA11_LU,test=test)
+    table_lu_lsoa = [(child['properties']['LSOA11CD'], child['properties']['OA11CD'])
+                            for child in children]
+    table_lu_msoa = [(child['properties']['MSOA11CD'], child['properties']['OA11CD'])
+                            for child in children]
+    return table_lu_lsoa, table_lu_msoa
