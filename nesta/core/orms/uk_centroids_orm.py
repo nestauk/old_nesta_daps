@@ -6,7 +6,9 @@ Lookups between UK geographies and their centroids (expressed as )
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, VARCHAR, ForeignKey, DECIMAL
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy.dialects.mysql import VARCHAR
+from sqlalchemy.types import DECIMAL
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
