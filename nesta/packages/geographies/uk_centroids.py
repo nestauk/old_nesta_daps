@@ -1,7 +1,8 @@
 from nesta.packages.misc_utils.sparql_query import sparql_query
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 import requests
-#from shapely.geometry import Polygon
+from shapely.geometry import Polygon
+from shapely import wkt
 
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
 LSOA11_TTWA11_LU = 'https://opendata.arcgis.com/datasets/50ce6db9e3a24f16b3f63f07e6a069f0_0.geojson'
@@ -11,7 +12,10 @@ LSOA11_LIST = 'https://opendata.arcgis.com/datasets/3ce71e53d9254a73b3e887a506b8
 #    'services/{}/FeatureServer/0/query'])
 OA11_LSOA11_MSOA11_LU = 'https://opendata.arcgis.com/datasets/6ecda95a83304543bc8feedbd1a58303_0.geojson'
 OA11_REGION_LU = 'https://opendata.arcgis.com/datasets/1c2f7b13918d4e7286448bdc6458b415_0.geojson'
-
+#NSPL = 'https://opendata.arcgis.com/datasets/055c2d8135ca4297a85d624bb68aefdb_0.geojson'
+# NSPL query url: https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/MapServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json
+# https://ons-inspire.esriuk.com/arcgis/rest/services/Postcodes/NSPL_Latest/MapServer/0/query?where=1%3D1&outFields=objectid,pcd,pcd2,oa11,msoa11,lsoa11,ttwa&outSR=4326&f=json
+# one query will only return 33000 entries
 
 def get_ttwa_name_from_id(ttwa_id):
     """
@@ -135,5 +139,21 @@ def lsoa11_to_oa11(test=False):
                             for child in children]
     return table_lu_lsoa, table_lu_msoa
 
-def get_oa_centroids():
-    pass
+def get_oa_centroids(n_start=0, n_end=1000):
+    # TODO: batch this
+    oa_codes, _ = get_oa11_codes()
+    oa_centroids = []
+    for oa_code in oa_codes[n_start:n_end]:
+        r = requests.get(''.join(['http://statistics.data.gov.uk/resource.json?',
+        'uri=http%3A%2F%2Fstatistics.data.gov.uk%2Fid%2Fstatistical-geography%2F',
+        '{}%2Fgeometry'.format(oa_code)]))
+        r = r.json()
+        # there are many assumptions here
+        assert('http://www.opengis.net/ont/geosparql#asWKT' in r[0])
+        polygon_string = r[0]['http://www.opengis.net/ont/geosparql#asWKT']
+        assert '@value' in polygon_string[0]
+        polygon_string = polygon_string[0]['@value']
+        # pass the WKT to shapely
+        polygon = wkt.loads(polygon_string) #Polygon(polygon_list)
+        oa_centroids.append((oa_code, *polygon.centroid.coords))
+    return oa_centroids

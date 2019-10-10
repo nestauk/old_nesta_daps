@@ -12,6 +12,7 @@ from nesta.packages.geographies.uk_centroids import get_ttwa11_codes
 from nesta.packages.geographies.uk_centroids import get_lsoa11_codes
 from nesta.packages.geographies.uk_centroids import get_oa11_codes
 from nesta.packages.geographies.uk_centroids import hit_odarcgis_api
+from nesta.packages.geographies.uk_centroids import get_oa_centroids
 from nesta.packages.geographies.uk_centroids import TTWA11_LIST,LSOA11_LIST
 
 SPARQL_QUERY = '''
@@ -138,8 +139,10 @@ def test_lsoa11_to_oa11():
     assert ('E02000001', 'E00000003') in out_msoa
 
 def test_get_oa_centroids():
-    oa_centroids  = get_oa_centroids()
-    assert 2==2
+    oa_centroids  = get_oa_centroids(n_start=0,n_end=100)
+    assert isinstance(oa_centroids,list)
+    assert(len(oa_centroids)==100)
+    assert all([isinstance(t, tuple) for t in oa_centroids])
 
 
 def test_compare_geographies():
