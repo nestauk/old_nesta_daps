@@ -2,6 +2,7 @@
 #sys.path.insert(1,'/Users/stefgarasto/Google Drive/Documents/scripts/193_ttwa_travel/nesta')
 from unittest import mock
 import pytest
+import time
 from nesta.packages.geographies.uk_centroids import get_ttwa_codes
 from nesta.packages.geographies.uk_centroids import ttwa11_to_lsoa11
 from nesta.packages.geographies.uk_centroids import lsoa11_to_oa11
@@ -9,10 +10,9 @@ from nesta.packages.geographies.uk_centroids import get_ttwa_name_from_id
 from nesta.packages.geographies.uk_centroids import get_ttwa_id_from_name
 from nesta.packages.geographies.uk_centroids import get_ttwa11_codes
 from nesta.packages.geographies.uk_centroids import get_lsoa11_codes
+from nesta.packages.geographies.uk_centroids import get_oa11_codes
 from nesta.packages.geographies.uk_centroids import hit_odarcgis_api
 from nesta.packages.geographies.uk_centroids import TTWA11_LIST,LSOA11_LIST
-import unittest
-import time
 
 SPARQL_QUERY = '''
 PREFIX entity: <http://statistics.data.gov.uk/def/statistical-entity#>
@@ -42,16 +42,20 @@ def test_hit_odarcgis_api():
 @mock.patch("nesta.packages.geographies.uk_centroids.find_filepath_from_pathstub",
             return_value=None)
 @mock.patch("builtins.open", new_callable=mock.mock_open, read_data=SPARQL_QUERY)
-@mock.patch("nesta.packages.geographies.uk_centroids.sparql_query",
-            return_value=QUERY_RESPONSE)
-def test_get_ttwa_codes(mocked_open, mocked_find_filepath_from_pathstub,
-                                                        mocked_sparql_query):
-    codes = get_ttwa_codes(test=True)
+#@mock.patch("nesta.packages.geographies.uk_centroids.sparql_query",
+#            return_value=QUERY_RESPONSE)
+def test_get_ttwa_codes(mocked_open, mocked_find_filepath_from_pathstub):#,
+                                                        #mocked_sparql_query):
+    codes = get_ttwa_codes(test=False)
     assert isinstance(codes, list)
     #this is because I hardcoded the QUERY_RESPONSE above and I want to make sure
     #it's getting all and only all of the relevant information
-    assert len(codes)==10
-    assert 'E30000198' in codes
+    #assert len(codes)==10
+    print(len(codes))
+    # uniqueness
+    assert len(set(codes))==len(codes)
+    # check one random TTWA that should be in there
+    assert 'E31000198' in codes
 
 def test_get_ttwa11_codes():
     # check there is not a more recent Census (2011 TTWAs are valid until 2021
@@ -77,24 +81,35 @@ def test_get_lsoa11_codes():
     # uniqueness
     assert len(set(out)) == len(out)
 
+def test_get_oa11_codes():
+    current_year = time.strftime("%Y")
+    assert int(current_year)<=2021
+
+    out, _  = get_oa11_codes()
+    assert isinstance(out,list)
+    assert 'E00000001' in out
+    assert len(out) == len(set(out)) == 181408
+
 def test_ttwa11_to_lsoa11():
     # check there is not a more recent Census (2011 TTWAs are valid until 2021
     # included
     current_year = time.strftime("%Y")
     assert int(current_year)<=2021
 
-    out = ttwa11_to_lsoa11(test=True)
+    out = ttwa11_to_lsoa11(test=False)
     # all should be strings
     assert all(isinstance(ttwa,str) & isinstance(lsoa,str) for ttwa,lsoa in out)
-    # all TTWA and LSOA codes should be of length 9
-    assert all(len(ttwa)==9 & len(lsoa)==9 for ttwa,lsoa in out)
+    # all TTWA codes should be of length 9 (Note: LSOAs in NI are not)
+    assert all(len(ttwa)==9 for ttwa,_ in out)
     # there should only be unique elements
     assert len(set(out)) == len(out)
-    #this is because in test mode I should only have 10 elements
-    assert len(out)==10
     # assert I'm only picking up good ttwas
     ttwa11_list = get_ttwa11_codes()
+    # check edimburgh is in there
+    assert('S22000059' in ttwa11_list)
     assert all(ttwa in ttwa11_list for ttwa,_ in out)
+    # hardcoded check - this should be a valid pair
+    assert(('S22000059','S01008272') in out)
 
 def test_lsoa11_to_oa11():
     # check there is not a more recent Census (2011 TTWAs are valid until 2021
@@ -102,7 +117,7 @@ def test_lsoa11_to_oa11():
     current_year = time.strftime("%Y")
     assert int(current_year)<=2021
 
-    out_lsoa, out_msoa = lsoa11_to_oa11(test=True)
+    out_lsoa, out_msoa = lsoa11_to_oa11(test=False)
     # all should be strings
     assert all(isinstance(lsoa,str) & isinstance(oa,str) for lsoa,oa in out_lsoa)
     assert all(isinstance(msoa,str) & isinstance(oa,str) for msoa,oa in out_msoa)
@@ -112,9 +127,22 @@ def test_lsoa11_to_oa11():
     # there should only be unique elements
     assert len(set(out_lsoa)) == len(out_lsoa)
     assert len(set(out_msoa)) == len(out_msoa)
-    #this is because in test mode I should only have 10 elements
-    assert len(out_lsoa)==10
-    assert len(out_msoa)==10
-    # assert I'm only picking up good ttwas
+    # length should be the same because they need to match all OAs
+    assert len(out_lsoa) == len(out_msoa)
+    # assert I'm only picking up good LSOAs
     lsoa11_list = get_lsoa11_codes()
     assert all(lsoa in lsoa11_list for lsoa,_ in out_lsoa)
+    # perhaps assert that I've got them all? i.e. all lsoa in lsoa11_list
+    # check random pairs
+    assert ('E01000001','E00000001') in out_lsoa
+    assert ('E02000001', 'E00000003') in out_msoa
+
+def test_get_oa_centroids():
+    oa_centroids  = get_oa_centroids()
+    assert 2==2
+
+
+def test_compare_geographies():
+    # ideally I would test that the LSOAs match between functions.
+    # TODO later. It will not work until I get LSOAs and OAs for all UK
+    assert 2==2

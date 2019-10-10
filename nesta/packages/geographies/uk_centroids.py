@@ -1,6 +1,7 @@
 from nesta.packages.misc_utils.sparql_query import sparql_query
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 import requests
+#from shapely.geometry import Polygon
 
 ENDPOINT = "http://statistics.data.gov.uk/sparql"
 LSOA11_TTWA11_LU = 'https://opendata.arcgis.com/datasets/50ce6db9e3a24f16b3f63f07e6a069f0_0.geojson'
@@ -9,7 +10,7 @@ LSOA11_LIST = 'https://opendata.arcgis.com/datasets/3ce71e53d9254a73b3e887a506b8
 #ARCGIS_BASE = ''.join(['https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/',
 #    'services/{}/FeatureServer/0/query'])
 OA11_LSOA11_MSOA11_LU = 'https://opendata.arcgis.com/datasets/6ecda95a83304543bc8feedbd1a58303_0.geojson'
-
+OA11_REGION_LU = 'https://opendata.arcgis.com/datasets/1c2f7b13918d4e7286448bdc6458b415_0.geojson'
 
 
 def get_ttwa_name_from_id(ttwa_id):
@@ -58,7 +59,8 @@ def get_ttwa_codes(test=False):
     with open(CONFIG) as f:
         query = f.read().replace("\n", " ")
     data = sparql_query(ENDPOINT, query, batch_limit=n)
-    print([row for batch in data for row in batch])
+    #out = [row["area_code"] for batch in data for row in batch]
+    #print(out)
     return [row["area_code"] for batch in data for row in batch]
 
 
@@ -66,7 +68,7 @@ def get_ttwa11_codes(test=False):
     #TODO: a dict ID : NAME would be better but then it's incompatible with
     #get_ttwa_codes
     '''
-    Collect TTWA11 codes from fixed URI on ONS database.
+    Collect TTWA11 codes for UK from fixed URI on ONS database.
     It is specifically linked to TTWA from 2011 Census.
 
     Return:
@@ -79,7 +81,7 @@ def get_lsoa11_codes(test=False):
     #TODO: a dict ID : NAME would be better but then it's incompatible with
     #get_ttwa_codes
     '''
-    Collect LSOA11 codes from fixed URI on ONS database.
+    Collect LSOA11 codes for ENGLAND and WALES from fixed URI on ONS database.
     It is specifically linked to LSOAs from 2011 Census.
 
     Return:
@@ -88,10 +90,24 @@ def get_lsoa11_codes(test=False):
     children = hit_odarcgis_api(LSOA11_LIST, test=test)
     return [child['properties']['LSOA11CD'] for child in children]
 
+def get_oa11_codes(test=False):
+    '''
+    Collect OA11 codes for ENGLAND and WALES and their respective region
+    from fixed URI on ONS database.
+    It is specifically linked to OAs from 2011 Census.
+
+    Return:
+            A list of OA IDs and an empty list.
+            [in future can be augmented with lookup to regions]
+    '''
+    children = hit_odarcgis_api(OA11_REGION_LU, test=test)
+    return [child['properties']['OA11CD'] for child in children], []
+
 def ttwa11_to_lsoa11(test=False):
     '''
     Collects the lookup table between TTWAs and LSOAs (both from 2011 Census)
     from the ONS website and parses it to return all possible pairs
+    (for the whole of UK)
 
     Returns a list of string pairs (TTWA ID, LSOA IDs) (both str)
 
@@ -105,6 +121,7 @@ def lsoa11_to_oa11(test=False):
     '''
     Collects the lookup table between LSOAs and OAs (both from 2011 Census)
     from the ONS website and parses it to return all possible pairs
+    (for ENGLAND and WALES only)
 
     Returns two lists of string pairs:
      (OA ID, LSOA IDs) (both str)
@@ -117,3 +134,6 @@ def lsoa11_to_oa11(test=False):
     table_lu_msoa = [(child['properties']['MSOA11CD'], child['properties']['OA11CD'])
                             for child in children]
     return table_lu_lsoa, table_lu_msoa
+
+def get_oa_centroids():
+    pass
