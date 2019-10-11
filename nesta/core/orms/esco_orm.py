@@ -19,8 +19,8 @@ class Occupations(Base):
     id = Column(INTEGER, primary_key=True, autoincrement=False, unique=True)
     preferred_label = Column(VARCHAR(80))
     alt_labels = Column(TEXT)
-    concept_type = Column(VARCHAR(10)
-    concept_uri = Column(VARCHAR(74)
+    concept_type = Column(VARCHAR(10))
+    concept_uri = Column(VARCHAR(74))
     isco_group = Column(INTEGER)
     description = Column(TEXT)
 
