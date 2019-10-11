@@ -94,7 +94,7 @@ class CollectESCOTask(luigi.Task):
                                     session)
 
             # load occupations
-            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'occupations.csv')
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path + 'occupations.csv'):
                 big_batch.append(Occupation(**row))
                 occupation_count += 1
                 if self.test and occupation_count == 10:
@@ -102,7 +102,7 @@ class CollectESCOTask(luigi.Task):
                     break
 
             # load skills
-            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'skills.csv')
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'skills.csv'):
                 big_batch.append(Skills(**row))
                 skill_count += 1
                 if self.test and skill_count == 10:
@@ -110,7 +110,7 @@ class CollectESCOTask(luigi.Task):
                     break
 
             # load table linking occupations to skills
-            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'occupations_skills_link')
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'occupations_skills_link'):
                 big_batch.append(OccupationSkills(**row))
                 links_count += 1
                 if self.test and links_count == 10:
