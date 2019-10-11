@@ -40,6 +40,7 @@ class OccupationSkills(Base):
     __tablename__ = 'esco_occupation_skills'
     __table_args__ = (PrimaryKeyConstraint('occupation_id', 'skill_id'),
                       {'mysql_collate': 'utf8_bin'})
+    id = Column(INTEGER, primary_key=True, autoincrement=True)
     occupation_id = Column(INTEGER, ForeignKey(Occupations.id))
     skill_id = Column(INTEGER, ForeignKey(Skills.id))
     importance = Column(VARCHAR(9))
@@ -47,6 +48,7 @@ class OccupationSkills(Base):
 class SkillCooccurrences(Base):
     __tablename__ = 'esco_skill_cooccurrences'
     __table_args__ = {'mysql_collate': 'utf8_bin'}
+    id = Column(INTEGER, primary_key=True, autoincrement=True)
     skill_1 = Column(INTEGER, ForeignKey(Skills.id))
     skill_2 = Column(INTEGER, ForeignKey(Skills.id))
     coocurrences = Column(INTEGER)
