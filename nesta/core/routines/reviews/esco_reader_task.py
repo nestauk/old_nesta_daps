@@ -6,6 +6,7 @@ Luigi routine to write ESCO data into the database
 from datetime import datetime
 import luigi
 import logging
+import os
 
 from nesta.packages.reviews import esco_loader
 from nesta.packages.misc_utils.batches import BatchWriter
