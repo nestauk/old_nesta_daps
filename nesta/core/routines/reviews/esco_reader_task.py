@@ -22,7 +22,7 @@ class RootTask(luigi.WrapperTask):
         name (str): name to search for in the swapi
         production (bool): test mode or production mode
     '''
-    date = luigi.DateParameter(default=datetime.datetime.today())
+    date = luigi.DateParameter(default=datetime.today())
     production = luigi.BoolParameter(default=False)
     name = luigi.Parameter(default=f"ESCO_dummy_task-{self.date}-{not self.production}")
     db_config_path = luigi.Parameter(default="mysqldb.config")
