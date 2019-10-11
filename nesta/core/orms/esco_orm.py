@@ -33,6 +33,7 @@ class Skills(Base):
     concept_type = Column(VARCHAR(24))
     concept_uri = Column(VARCHAR(69))
     skill_type = Column(VARCHAR(26))
+    reuse_level = Column(VARCHAR(19))
     description = Column(TEXT)
 
 class OccupationSkills(Base):
