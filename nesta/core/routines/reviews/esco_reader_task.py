@@ -24,7 +24,7 @@ class RootTask(luigi.WrapperTask):
     '''
     date = luigi.DateParameter(default=datetime.today())
     production = luigi.BoolParameter(default=False)
-    name = luigi.Parameter(default=f"ESCO_dummy_task-{self.date}-{not self.production}")
+    name = luigi.Parameter(default=f"ESCO_dummy_task-{date}-{not production}")
     db_config_path = luigi.Parameter(default="mysqldb.config")
     insert_batch_size = luigi.IntParameter(default=500)
     s3_bucket_path = luigi.Parameter(default="")
