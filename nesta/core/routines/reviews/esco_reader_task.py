@@ -111,7 +111,7 @@ class CollectESCOTask(luigi.Task):
                     break
 
             # load table linking occupations to skills
-            for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations_skills_link'):
+            for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations_skills_link.csv'):
                 big_batch.append(OccupationSkills(**row))
                 links_count += 1
                 if self.test and links_count == 10:
