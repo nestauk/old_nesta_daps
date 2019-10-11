@@ -99,25 +99,25 @@ class CollectESCOTask(luigi.Task):
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path + 'occupations.csv'):
                 big_batch.append(Occupations(**row))
                 occupation_count += 1
-                if self.test and occupation_count == 10:
-                    logging.warning("Limiting to 10 occupations while in test mode")
-                    break
+                # if self.test and occupation_count == 10:
+                #     logging.warning("Limiting to 10 occupations while in test mode")
+                #     break
 
             # load skills
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'skills.csv'):
                 big_batch.append(Skills(**row))
                 skill_count += 1
-                if self.test and skill_count == 10:
-                    logging.warning("Limiting to 10 skills while in test mode")
-                    break
+                # if self.test and skill_count == 10:
+                #     logging.warning("Limiting to 10 skills while in test mode")
+                #     break
 
             # load table linking occupations to skills
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations_skills_link.csv'):
                 big_batch.append(OccupationSkills(**row))
                 links_count += 1
-                if self.test and links_count == 10:
-                    logging.warning("Limiting to 10 links while in test mode")
-                    break
+                # if self.test and links_count == 10:
+                #     logging.warning("Limiting to 10 links while in test mode")
+                #     break
 
             # if any rows remaining in the batch, send them to the database
             if big_batch:
