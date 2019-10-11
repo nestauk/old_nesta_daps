@@ -96,7 +96,7 @@ class CollectESCOTask(luigi.Task):
 
             # load occupations
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path + 'occupations.csv'):
-                big_batch.append(Occupation(**row))
+                big_batch.append(Occupations(**row))
                 occupation_count += 1
                 if self.test and occupation_count == 10:
                     logging.warning("Limiting to 10 occupations while in test mode")
