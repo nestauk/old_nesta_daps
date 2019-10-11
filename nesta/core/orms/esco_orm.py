@@ -4,7 +4,7 @@ plus the number of co-occurrences of the skills
 ======
 '''
 
-from sqlalchemy import Table, Column, ForeignKey
+from sqlalchemy import Table, Column, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT
@@ -38,7 +38,8 @@ class Skills(Base):
 
 class OccupationSkills(Base):
     __tablename__ = 'esco_occupation_skills'
-    __table_args__ = {'mysql_collate': 'utf8_bin'}
+    __table_args__ = (PrimaryKeyConstraint('occupation_id', 'skill_id'),
+                      {'mysql_collate': 'utf8_bin'})
     occupation_id = Column(INTEGER, ForeignKey(Occupations.id))
     skill_id = Column(INTEGER, ForeignKey(Skills.id))
     importance = Column(VARCHAR(9))
