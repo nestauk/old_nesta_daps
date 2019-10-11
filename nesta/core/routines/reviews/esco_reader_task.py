@@ -27,6 +27,7 @@ class RootTask(luigi.WrapperTask):
     name = luigi.Parameter(default=f"ESCO_dummy_task-{self.date}-{not self.production}")
     db_config_path = luigi.Parameter(default="mysqldb.config")
     insert_batch_size = luigi.IntParameter(default=500)
+    s3_bucket_path = luigi.Parameter(default="")
 
     def requires(self):
         '''Call the task to run before this in the pipeline.'''
@@ -37,7 +38,8 @@ class RootTask(luigi.WrapperTask):
                                test=not self.production,
                                db_config_env='MYSQLDB',
                                db_config_path=self.db_config_path,
-                               insert_batch_size=self.insert_batch_size
+                               insert_batch_size=self.insert_batch_size,
+                               s3_bucket_path = self.s3_bucket_path
                                )
 
 class CollectESCOTask(luigi.Task):
@@ -57,6 +59,7 @@ class CollectESCOTask(luigi.Task):
     db_config_env = luigi.Parameter()
     db_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
+    s3_bucket_path = luigi.Parameter()
 
     def output(self):
         '''Points to the output database engine'''
@@ -91,7 +94,7 @@ class CollectESCOTask(luigi.Task):
                                     session)
 
             # load occupations
-            for row in esco_loader.load_csv_as_dict(esco_loader.links['occupations'])
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'occupations.csv')
                 big_batch.append(Occupation(**row))
                 occupation_count += 1
                 if self.test and occupation_count == 10:
@@ -99,7 +102,7 @@ class CollectESCOTask(luigi.Task):
                     break
 
             # load skills
-            for row in esco_loader.load_csv_as_dict(esco_loader.links['skills'])
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'skills.csv')
                 big_batch.append(Skills(**row))
                 skill_count += 1
                 if self.test and skill_count == 10:
@@ -107,7 +110,7 @@ class CollectESCOTask(luigi.Task):
                     break
 
             # load table linking occupations to skills
-            for row in esco_loader.load_csv_as_dict(esco_loader.links['occupation_skills'])
+            for row in esco_loader.load_csv_as_dict(s3_bucket_path+'occupations_skills_link')
                 big_batch.append(OccupationSkills(**row))
                 links_count += 1
                 if self.test and links_count == 10:
