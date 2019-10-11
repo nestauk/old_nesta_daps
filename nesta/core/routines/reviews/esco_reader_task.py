@@ -81,6 +81,7 @@ class CollectESCOTask(luigi.Task):
 
         with db_session(self.engine) as session:
 
+            Base.metadata.drop_all(self.engine)
             Base.metadata.create_all(self.engine)
             logging.info(f"Created the tables")
 
