@@ -70,7 +70,7 @@ class ArxivLolveltyRootTask(luigi.WrapperTask):
                   'fields': ['textBody_abstract_article']}
         test = not self.production
         routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
-        index = 'arxiv_v2' if self.production else 'arxiv_dev'
+        index = 'arxiv_v3' if self.production else 'arxiv_dev'
         return _ArxivElasticsearchTask(routine_id=routine_id,
                                        test=test,
                                        index=index,
