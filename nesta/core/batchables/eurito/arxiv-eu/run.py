@@ -92,7 +92,7 @@ def run():
                                                    fos_lookup)
             row['_fields_of_study'] = [f for fields in 
                                        row['fields_of_study']['nodes']
-                                       for f in fields]
+                                       for f in fields if f != []]
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
@@ -147,22 +147,21 @@ if __name__ == "__main__":
     if 'BATCHPAR_outinfo' not in os.environ:
         set_log_level(True)
         from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='arxiv-eu')
+        #es, es_config = setup_es('dev', True, True,
+        #                         dataset='arxiv-eu')
         environ = {'outinfo':('https://search-eurito-dev-'
                               'vq22tw6otqjpdh47u75bh2g7ba.'
                               'eu-west-2.es.amazonaws.com'),
                    'config':('/home/ec2-user/nesta-eu/'
                              'nesta/core/config/mysqldb.config'),
                    'bucket':'nesta-production-intermediate',
-                   'batch_file': ('ElasticsearchTask-2019-'
-                                  '09-17-True-'
-                                  '15687118121284823.json'),
+                   'batch_file': ('arxiv-eu_EURITO-ElasticsearchTask-'
+                                  '2019-10-13-False-15710457670168808.json'),
                    'out_port': '443',
                    'out_type': '_doc',
                    'db_name': 'dev',
                    'entity_type': 'article',
-                   'out_index': 'arxiv_dev',
+                   'out_index': 'arxiv_v0',
                    'test': 'True',
                    'aws_auth_region': 'eu-west-2'}
         for k, v in environ.items():
