@@ -68,7 +68,6 @@ def test_temp_tables_to_dfs(mocked_pd, df_groups, df_no_groups, dfs):
     df_iter = iter([df_groups, df_no_groups])
     def side_effect(*args, **kwargs):        
         yield next(df_iter)
-        raise StopIteration
     mocked_pd.read_sql.side_effect = side_effect
     mocked_pd.concat = pd.concat
     _dfs = temp_tables_to_dfs(engine=None, tables=dfs.keys()) 
@@ -85,7 +84,6 @@ def test_temp_tables_to_dfs_limit(mocked_pd, df_groups,
     def side_effect(*args, **kwargs):
         for df in next(df_iter):
             yield df
-        raise StopIteration
     mocked_pd.read_sql.side_effect = side_effect
     mocked_pd.concat = pd.concat
     
@@ -106,7 +104,6 @@ def test_temp_tables_to_dfs_no_limit(mocked_pd, df_groups,
     def side_effect(*args, **kwargs):
         for df in next(df_iter):
             yield df
-        raise StopIteration
     mocked_pd.read_sql.side_effect = side_effect
     mocked_pd.concat = pd.concat
 

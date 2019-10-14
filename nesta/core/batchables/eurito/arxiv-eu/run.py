@@ -91,8 +91,8 @@ def run():
             row['fields_of_study'] = make_fos_tree(row['fields_of_study'],
                                                    fos_lookup)
             row['_fields_of_study'] = [f for fields in 
-                                       row['fields_of_study']['nodes'].values()
-                                       for f in fields.values()]
+                                       row['fields_of_study']['nodes']
+                                       for f in fields]
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 

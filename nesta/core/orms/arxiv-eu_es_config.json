@@ -16,7 +16,7 @@
                 "id_digitalObjectIdentifier_article": {
                     "type": "keyword"
                 },
-                "json_fieldOfStudy_article": {
+                "json_fieldsOfStudy_article": {
                     "dynamic": true,
                     "properties": {}
                 },

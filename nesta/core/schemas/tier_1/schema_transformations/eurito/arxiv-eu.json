@@ -30,11 +30,11 @@
     },
     {
         "tier_0": "fields_of_study",
-        "tier_1": "json_fieldOfStudy_article"
+        "tier_1": "json_fieldsOfStudy_article"
     },
     {
         "tier_0": "_fields_of_study",
-        "tier_1": "terms_fieldOfStudy_article"
+        "tier_1": "terms_fieldsOfStudy_article"
     },
     {
         "tier_0": "categories",

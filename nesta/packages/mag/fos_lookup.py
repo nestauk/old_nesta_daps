@@ -90,8 +90,25 @@ def _make_fos_tree(fos_map):
                     links.append([[p_level, p_idx],
                                   [c_level, c_idx]])
             nodes[c_level][c_idx] = child
-    nodes = json.loads(json.dumps(nodes, sort_keys=True))
+    # Convert nodes to nested arrays
+    for level, node_collection in nodes.items():
+        nodes[level] = intdict_to_list(node_collection)
+    nodes = intdict_to_list(nodes)
     return {'nodes': nodes, 'links': sorted(links)}
+
+
+def intdict_to_list(_dict):
+    _list = list()
+    keys = sorted((int(k) for k in _dict.keys()))
+    if len(keys) == 0:
+        return _list
+    seqential_keys = range(max(keys)+1)
+    if not all(k in seqential_keys for k in keys):
+        raise ValueError('All keys in dict must be ints.')
+    for k in seqential_keys:
+        value = _dict[k] if k in keys else []
+        _list.append(value)
+    return _list
 
 
 def make_fos_tree(fos_rows, fos_lookup):

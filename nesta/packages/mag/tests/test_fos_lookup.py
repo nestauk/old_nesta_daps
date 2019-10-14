@@ -10,6 +10,7 @@ from nesta.packages.mag.fos_lookup import _UniqueList
 from nesta.packages.mag.fos_lookup import _make_fos_map
 from nesta.packages.mag.fos_lookup import _make_fos_tree
 from nesta.packages.mag.fos_lookup import make_fos_tree
+from nesta.packages.mag.fos_lookup import intdict_to_list
 
 
 @pytest.fixture
@@ -57,11 +58,11 @@ def fos_lookup():
 
 @pytest.fixture
 def fos_nodes():
-    return {'nodes': {'0': {'0': 'Physics'},
-                      '1': {'0': 'Particle physics',
-                            '1': 'Quantum electrodynamics'},
-                      '2': {'0': 'Elementary particle',
-                            '1': 'Higgs boson'}},
+    return {'nodes': [['Physics'],
+                      ['Particle physics',
+                       'Quantum electrodynamics'],
+                      ['Elementary particle',
+                       'Higgs boson']],
             'links': [[[0,0], [1,0]],
                       [[0,0], [1,1]],
                       [[1,0], [2,0]],
@@ -137,3 +138,17 @@ def test_make_fos_nodes(fos_map, fos_nodes):
 
 def test_make_fos_tree(fos_rows, fos_lookup, fos_nodes):
     assert make_fos_tree(fos_rows, fos_lookup) == fos_nodes
+
+
+def test_intdict_to_list_complete_values():
+    assert intdict_to_list({0:'a',1:'b', 2:'c'}) == ['a','b','c']
+    assert intdict_to_list({0:'c',1:'a', 2:'c'}) == ['c','a','c']
+    assert intdict_to_list({0:'c',1:'a', 2:'c', 3:'b'}) == ['c','a',
+                                                            'c','b']
+
+
+def test_intdict_to_list_missing_values():
+    assert intdict_to_list({1:'a',3:'b'}) == [[],'a',[],'b']
+    assert intdict_to_list({0:'a',3:'b'}) == ['a',[],[],'b']
+    assert intdict_to_list({0:'a',2:'b'}) == ['a',[],'b']
+    assert intdict_to_list({2:'a',4:'b'}) == [[],[],'a',[],'b']
