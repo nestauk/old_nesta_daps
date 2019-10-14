@@ -23,7 +23,7 @@ def term_counts(dct, row, binary=False):
     """
     return {dct[idx]: (count if not binary else 1)
             for idx, count in Counter(dct.doc2idx(row)).items()
-            if idx != -1}        
+            if idx != -1 and dct[idx] != 'id'}        
 
 
 def optional(name, default):
