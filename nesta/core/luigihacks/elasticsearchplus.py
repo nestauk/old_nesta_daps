@@ -92,7 +92,7 @@ def translate(text, translator, chunksize=2000):
     return '. '.join(texts), langs
 
 
-def _auto_translate(row, translator=None, min_len=150, chunksize=2000, urls=[]):
+def _auto_translate(row, translator=None, min_len=150, chunksize=2000, service_urls=[]):
     """Translate any text fields longer than min_len characters
     into English.
 
