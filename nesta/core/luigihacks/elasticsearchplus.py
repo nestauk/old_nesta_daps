@@ -559,7 +559,7 @@ class ElasticsearchPlus(Elasticsearch):
             urls = list(f"translate.google.{ext}"
                         for ext in ('com', 'co.uk', 'co.kr', 'at',
                                     'ru', 'fr', 'de', 'ch', 'es'))
-            self.transforms.append(lambda row: _auto_translate(row, translator,
+            self.transforms.append(lambda row: _auto_translate(row, translator=None,
                                                                service_urls=urls,
                                                                **auto_translate_kwargs))
 
