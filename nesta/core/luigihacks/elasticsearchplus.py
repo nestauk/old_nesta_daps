@@ -92,7 +92,7 @@ def translate(text, translator, chunksize=2000):
     return '. '.join(texts), langs
 
 
-def _auto_translate(row, translator, min_len=150, chunksize=2000):
+def _auto_translate(row, translator=None, min_len=150, chunksize=2000, urls=[]):
     """Translate any text fields longer than min_len characters
     into English.
 
@@ -101,6 +101,8 @@ def _auto_translate(row, translator, min_len=150, chunksize=2000):
     Returns:
         _row (dict): Modified row.
     """
+    if translator is None:
+        translator = Translator(service_urls=service_urls)
     _row = deepcopy(row)
     _row[TRANS_TAG] = False
     _row[LANGS_TAG] = set()
@@ -557,8 +559,8 @@ class ElasticsearchPlus(Elasticsearch):
             urls = list(f"translate.google.{ext}"
                         for ext in ('com', 'co.uk', 'co.kr', 'at',
                                     'ru', 'fr', 'de', 'ch', 'es'))
-            translator = Translator(service_urls=urls)
             self.transforms.append(lambda row: _auto_translate(row, translator,
+                                                               service_urls=urls,
                                                                **auto_translate_kwargs))
 
         # Clean up lists (dedup, remove None, empty lists are None)
