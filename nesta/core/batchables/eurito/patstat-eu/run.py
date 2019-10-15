@@ -105,7 +105,7 @@ def run():
             ctrys = list(set(p['person_ctry_code'] for p in persons))
             nuts = list(set(p['nuts'] for p in persons))
             
-            #
+            # Index the data
             row = dict(title=title, abstract=abstr, ipc=ipcs, nace2=nace2s,
                        tech=techs, ctry=ctrys, nuts=nuts, **row)
             uid = row.pop('docdb_family_id')

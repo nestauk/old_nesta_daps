@@ -117,7 +117,7 @@ def run():
             mag_authors = row.pop('mag_authors')
             if mag_authors is None:
                 row['authors'] = None
-                row['institutes'] = None
+                row['institutes'] = None 
             else:
                 if all('author_order' in a for a in mag_authors):
                     mag_authors = sorted(mag_authors,
@@ -132,6 +132,10 @@ def run():
                                      for g in gids
                                      if g in grid_institutes
                                      and g in good_institutes]
+            if row['institutes'] in (None, []):
+                row['institutes'] = [i['name'] for i in institutes
+                                     if i['matching_score'] > 0.9]
+
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)
