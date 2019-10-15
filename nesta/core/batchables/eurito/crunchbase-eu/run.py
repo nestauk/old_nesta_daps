@@ -149,27 +149,4 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # if 'BATCHPAR_outinfo' not in os.environ:
-    #     from nesta.core.orms.orm_utils import setup_es
-    #     es, es_config = setup_es('dev', True, True,
-    #                              dataset='crunchbase',
-    #                              aliases='health_scanner')
-
-    #     # environ = {"BATCHPAR_aws_auth_region": "eu-west-2",
-    #     #            "BATCHPAR_outinfo": ("search-health-scanner-"
-    #     #                                 "5cs7g52446h7qscocqmiky5dn4"
-    #     #                                 ".eu-west-2.es.amazonaws.com"),
-    #     #            "BATCHPAR_config":"/home/ec2-user/nesta/nesta/core/config/mysqldb.config",
-    #     #            "BATCHPAR_bucket":"nesta-production-intermediate",
-    #     #            "BATCHPAR_done":"False",
-    #     #            "BATCHPAR_batch_file":"crunchbase_to_es-1559658702669423.json",
-    #     #            "BATCHPAR_out_type": "_doc",
-    #     #            "BATCHPAR_out_port": "443",
-    #     #            "BATCHPAR_test":"True",
-    #     #            "BATCHPAR_db_name":"production",
-    #     #            "BATCHPAR_out_index":"companies_dev",
-    #     #            "BATCHPAR_entity_type":"company"}
-    #     for k, v in environ.items():
-    #         os.environ[k] = v
     run()
