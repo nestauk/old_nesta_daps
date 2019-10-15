@@ -77,16 +77,9 @@ def run():
     logging.info(f"{len(docdb_fam_ids)} patent family IDs "
                  "retrieved from s3")
 
-    # Get all grid countries
-    # and country: continent lookup
-    #logging.info('Doing country lookup')
-    #country_lookup = get_country_region_lookup()
-
-    #
     logging.info('Processing rows')
     _filter = ApplnFamily.docdb_family_id.in_(docdb_fam_ids)
     with db_session(engine) as session:
-        #session.query(Tls901TechnFieldIpc).all()
         for obj in session.query(ApplnFamily).filter(_filter).all():
             row = object_to_dict(obj)
             appln_ids = row.pop('appln_id')
