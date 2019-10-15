@@ -84,7 +84,7 @@ def translate(text, translator, chunksize=2000):
         {text, langs} ({str, set}): Translated text and set of
                                     detected languages.
     """
-    chunks = list(sentence_chunks(text, chunksize=chunksize))
+    chunks = [strip_tags(t) for t in sentence_chunks(text, chunksize=chunksize)]
     texts, langs = [], set()
     for t in translator.translate(chunks, dest='en'):
         texts.append(t.text.capitalize())  # GT uncapitalizes chunks
