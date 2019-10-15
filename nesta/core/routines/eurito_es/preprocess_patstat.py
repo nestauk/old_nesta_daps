@@ -1,3 +1,8 @@
+"""
+Select the EU subset of patstat, by doc family id.
+This is will significantly speed up transfer to ES.
+"""
+
 import luigi
 import logging
 from nesta.packages.patstat.fetch_appln_eu import extract_data

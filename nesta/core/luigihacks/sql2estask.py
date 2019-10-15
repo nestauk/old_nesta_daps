@@ -59,7 +59,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         if self.test:
-            self.process_batch_size = 100
+            self.process_batch_size = 1000
             logging.warning("Batch size restricted to "
                             f"{self.process_batch_size}"
                             " while in test mode")
