@@ -133,8 +133,8 @@ def run():
                                      if g in grid_institutes
                                      and g in good_institutes]
             if row['institutes'] in (None, []):
-                row['institutes'] = [i['name'] for i in institutes
-                                     if i['matching_score'] > 0.9]
+                row['institutes'] = [grid_institutes[g].title() 
+                                     for g in good_institutes]
 
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
