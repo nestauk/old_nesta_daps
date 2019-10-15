@@ -1,8 +1,8 @@
 '''
-UK geography lookup ORM
+Lookup ORMs between different UK geographies and centroids
 =======================
 
-Lookups between UK geographies and their centroids (expressed as )
+Lookups between UK geographies and their centroids (LAT, LONG)
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
