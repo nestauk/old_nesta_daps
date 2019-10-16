@@ -111,6 +111,10 @@ class CollectESCOTask(luigi.Task):
                 #     logging.warning("Limiting to 10 skills while in test mode")
                 #     break
 
+            # Make sure all occupations and skills are written
+            if big_batch:
+                big_batch.write()
+
             # load table linking occupations to skills
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations_skills_link.csv'):
                 big_batch.append(OccupationSkills(**row))
