@@ -12,7 +12,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 
-from datetime import datetime
+from datetime import datetime as dt
 import luigi
 import logging
 import os
@@ -73,7 +73,7 @@ class CooccurrenceTableNeo4jTask(luigi.Task):
 
 class RootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
-    date = luigi.DateParameter(default=datetime.today())
+    date = luigi.DateParameter(default=dt.now())
     graph_url = luigi.Parameter(default="")
 
     def requires(self):
