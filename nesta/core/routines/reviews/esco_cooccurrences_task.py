@@ -12,6 +12,7 @@ from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
+from nesta.core.orms.esco_orm import Base, SkillCooccurrences
 
 class RootTask(luigi.WrapperTask):
     '''The root task, which collects the supplied parameters and calls the ESCOSkillsCooccurrences.
@@ -68,21 +69,21 @@ class ESCOSkillsCooccurrences(luigi.Task):
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
+        # drop the existing table
+        Base.metadata.drop_all(bind=self.engine, tables=[SkillCooccurrences.__table__])
+
+        # create new table
+        Base.metadata.create_all(bind=self.engine, tables=[SkillCooccurrences.__table__])
+
         # run the co-occurrence calculation query
         filepath = f3p('esco_skills_cooc.sql')
         query = open(filepath).read()
         self.engine.execute(query)
 
-        # check that the table has been created
+        # check that the table has been populated
         query_check = 'SELECT COUNT(*) FROM esco_skill_cooccurrences;'
         result = self.engine.execute(query_check)
         logging.info(f"{result} connections between skills were detected")
-
-        # set the proper foreign keys
-        filepath = f3p('esco_skills_cooc_fkey.sql')
-        query = open(filepath).read()
-        self.engine.execute(query)
-        logging.info("Created foreign keys")
 
         # mark as done
         logging.warning("Task complete")

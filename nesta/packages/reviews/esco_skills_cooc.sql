@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS esco_skill_cooccurrences
-CREATE TABLE esco_skill_cooccurrences
+INSERT INTO esco_skill_cooccurrences (skill_1, skill_2, cooccurrences)
 SELECT
   t1.skill_id AS skill_1,
   t2.skill_id AS skill_2,
