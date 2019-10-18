@@ -73,7 +73,7 @@ class CooccurrenceTableNeo4jTask(luigi.Task):
 
 class RootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
-    date = luigi.DateParameter(default=datetime.datetime.today())
+    date = luigi.DateParameter(default=datetime.today())
     graph_url = luigi.Parameter(default="")
 
     def requires(self):
