@@ -1,4 +1,4 @@
-from py2neo import Node, Relationship, NodeSelector
+from py2neo import Node, Relationship, NodeMatcher
 from nesta.core.orms.orm_utils import object_to_dict
 import logging
 
@@ -28,7 +28,7 @@ def table_to_neo4j(engine, transaction,
     # Check that we have only two columns with a foreign key
     assert(len(fk_table_names)==2)
 
-    selector = NodeSelector(graph)
+    matcher = NodeSelector(graph)
 
     # Query table, iterate through rows and send to neo4j
     for db, orm_instance in db_session_query(query=table, engine=engine,
@@ -48,8 +48,8 @@ def table_to_neo4j(engine, transaction,
 
         # If adding an edge
         else:
-            first_node = selector.select(node_label, id=data_row[fk[0]]).first()
-            second_node = selector.select(node_label, id=data_row[fk[1]]).first()
+            first_node = matcher.match(node_label, id=data_row[fk[0]]).first()
+            second_node = matcher.match(node_label, id=data_row[fk[1]]).first()
 
             data_row.pop(fk[0])
             data_row.pop(fk[1])
