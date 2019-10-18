@@ -1,4 +1,4 @@
-from py2neo.data import Node, Relationship, NodeSelector
+from py2neo import Node, Relationship, NodeSelector
 from nesta.core.orms.orm_utils import object_to_dict
 import logging
 
