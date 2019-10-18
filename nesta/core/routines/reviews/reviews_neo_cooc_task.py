@@ -12,7 +12,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 
-from datetime import datetime as dt
+from datetime import datetime
 import luigi
 import logging
 import os
