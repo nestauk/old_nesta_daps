@@ -17,10 +17,28 @@ import luigi
 import logging
 import os
 
+class RootTask(luigi.WrapperTask):
+    production = luigi.BoolParameter(default=False)
+    date = luigi.DateParameter(default=dt.now())
+    name = luigi.Parameter(default=f"ESCO_dummy_task-{date}-{not production}")
+    db_config_path = luigi.Parameter(default="mysqldb.config")
+    graph_url = luigi.Parameter(default="")
+
+    def requires(self):
+        test = not self.production
+        return CooccurrenceTableNeo4jTask(test=test,
+                                          date=self.date,
+                                          name=self.name,
+                                          db_config_env='MYSQLDB',
+                                          db_config_path=self.db_config_path,
+                                          graph_url=self.graph_url)
 
 class CooccurrenceTableNeo4jTask(luigi.Task):
     test = luigi.BoolParameter(default=True)
     date = luigi.DateParameter(default=dt.now())
+    name = luigi.Parameter()
+    db_config_env = luigi.Parameter()
+    db_config_path = luigi.Parameter()
     graph_url = luigi.Parameter()
 
     def output(self):
@@ -69,15 +87,3 @@ class CooccurrenceTableNeo4jTask(luigi.Task):
         # Confirm the task is finished
         logging.warning("Task complete")
         self.output().touch()
-
-
-class RootTask(luigi.WrapperTask):
-    production = luigi.BoolParameter(default=False)
-    date = luigi.DateParameter(default=dt.now())
-    graph_url = luigi.Parameter(default="")
-
-    def requires(self):
-        test = not self.production
-        return CooccurrenceTableNeo4jTask(test=test,
-                                          date=self.date,
-                                          graph_url=self.graph_url)
