@@ -1,7 +1,7 @@
 '''
 ESCO data collection (dummy routine)
 ====================================
-Luigi routine to write ESCO data into the database
+Luigi routine to read ESCO data from csv and write it to the database
 '''
 from datetime import datetime
 import luigi
@@ -51,8 +51,7 @@ class CollectESCOTask(luigi.Task):
         db_config_env (str): environmental variable pointing to the db config file
         db_config_path (str): The output database configuration
         insert_batch_size (int): number of records to insert into the database at once
-        articles_from_date (str): new and updated articles from this date will be
-                                  retrieved. Must be in YYYY-MM-DD format
+        s3_bucket_path (str): location of the datasets
     '''
     date = luigi.DateParameter()
     name = luigi.Parameter()
@@ -96,22 +95,16 @@ class CollectESCOTask(luigi.Task):
                                     session)
 
             # load occupations
-            for row in esco_loader.load_csv_as_dict(self.s3_bucket_path + 'occupations.csv'):
+            for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations.csv'):
                 big_batch.append(Occupations(**row))
                 occupation_count += 1
-                # if self.test and occupation_count == 10:
-                #     logging.warning("Limiting to 10 occupations while in test mode")
-                #     break
 
             # load skills
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'skills.csv'):
                 big_batch.append(Skills(**row))
                 skill_count += 1
-                # if self.test and skill_count == 10:
-                #     logging.warning("Limiting to 10 skills while in test mode")
-                #     break
 
-            # Make sure all occupations and skills are written
+            #  make sure all occupations and skills are written
             if big_batch:
                 big_batch.write()
 
@@ -119,9 +112,9 @@ class CollectESCOTask(luigi.Task):
             for row in esco_loader.load_csv_as_dict(self.s3_bucket_path+'occupations_skills_link.csv'):
                 big_batch.append(OccupationSkills(**row))
                 links_count += 1
-                # if self.test and links_count == 10:
-                #     logging.warning("Limiting to 10 links while in test mode")
-                #     break
+                if self.test and links_count == 500:
+                    logging.warning("Limiting to 500 links while in test mode")
+                    break
 
             # if any rows remaining in the batch, send them to the database
             if big_batch:

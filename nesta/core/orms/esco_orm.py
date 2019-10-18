@@ -51,4 +51,4 @@ class SkillCooccurrences(Base):
     id = Column(INTEGER, primary_key=True, autoincrement=True)
     skill_1 = Column(INTEGER, ForeignKey(Skills.id))
     skill_2 = Column(INTEGER, ForeignKey(Skills.id))
-    coocurrences = Column(INTEGER)
+    cooccurrences = Column(INTEGER)
