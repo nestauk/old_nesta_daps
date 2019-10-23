@@ -3,6 +3,7 @@ import boto3
 import json
 import logging
 import os
+from nuts_finder import NutsFinder
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.luigihacks.luigi_logging import set_log_level
@@ -38,6 +39,8 @@ def run():
     logging.info('Building FOS lookup')
     fos_lookup = build_fos_lookup(engine, max_lvl=6)
 
+    nf = NutsFinder()
+    
     # es setup
     logging.info('Connecting to ES')
     strans_kwargs={'filename':'eurito/arxiv-eu.json',
@@ -79,6 +82,9 @@ def run():
                           if obj.country_code is not None}
         grid_institutes = {obj.id: obj.name
                            for obj in session.query(Inst).all()}
+        grid_latlon = {obj.id: (obj.latitude, obj.longitude)
+                       for obj in session.query(Inst).all()}
+
     #
     logging.info('Processing rows')
     with db_session(engine) as session:
@@ -108,6 +114,27 @@ def run():
             good_institutes = [i['institute_id'] 
                                for i in institutes
                                if i['matching_score'] > 0.9]
+
+            # Add NUTS regions
+            for inst_id in good_institutes:
+                if inst_id not in grid_latlon:
+                    continue
+                lat, lon = grid_latlon[inst_id]
+                nuts = nf.find(lat=lat, lon=lon)
+                for i in range(0, 4):
+                    name = f'nuts_{i}'
+                    if name not in row:
+                        row[name] = set()
+                    for nut in nuts:
+                        if n['LEVL_CODE'] != i:
+                            continue
+                        row[name].add(n['NUTS_ID'])
+            for i in range(0, 4):
+                name = f'nuts_{i}'
+                if name in row:
+                    row[name] = list(row[name])
+
+            # Add other geographies
             countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)

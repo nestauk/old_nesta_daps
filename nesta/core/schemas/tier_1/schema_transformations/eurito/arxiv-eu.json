@@ -57,6 +57,22 @@
         "tier_1": "metric_novelty_article"
     },
     {
+	"tier_0": "nuts_0",
+	"tier_1": "terms_nuts0_article"
+    },
+    {
+	"tier_0": "nuts_1",
+	"tier_1": "terms_nuts1_article"
+    },
+    {
+	"tier_0": "nuts_2",
+	"tier_1": "terms_nuts2_article"
+    },
+    {
+	"tier_0": "nuts_3",
+	"tier_1": "terms_nuts3_article"
+    },
+    {
         "tier_0": "countries",
         "tier_1": "terms_countries_article"
     },

@@ -122,6 +122,10 @@
             "tech",
             "personCountry",
             "personNuts",
+	    "nuts0",
+	    "nuts1",
+	    "nuts2",
+	    "nuts3",
             "authCountry"
         ]
     },

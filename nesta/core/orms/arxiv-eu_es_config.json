@@ -53,6 +53,42 @@
                     },
                     "type": "text"
                 },
+                "terms_nuts0_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_nuts1_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_nuts2_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_nuts3_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
                 "terms_fieldsOfStudy_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
