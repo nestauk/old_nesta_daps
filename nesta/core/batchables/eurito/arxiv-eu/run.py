@@ -15,6 +15,8 @@ from nesta.packages.arxiv.deepchange_analysis import is_multinational
 from nesta.packages.mag.fos_lookup import build_fos_lookup
 from nesta.packages.mag.fos_lookup import make_fos_tree
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
+from nesta.packages.geo_utils.lookup import get_eu_countries
+
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -51,7 +53,8 @@ def run():
                            null_empty_str=True,
                            coordinates_as_floats=True,
                            listify_terms=True,
-                           do_sort=False)
+                           do_sort=False,
+                           ngram_fields=['textBody_abstract_article'])
 
     # collect file
     logging.info('Retrieving article ids')
@@ -65,9 +68,13 @@ def run():
     # Get all grid countries
     # and country: continent lookup
     logging.info('Doing country lookup')
-    country_lookup = get_country_region_lookup()                
+    country_lookup = get_country_region_lookup()            
+    eu_countries = get_eu_countries()
     with db_session(engine) as session:
-        grid_countries = {obj.id: country_lookup[obj.country_code]
+        grid_regions = {obj.id: country_lookup[obj.country_code]
+                       for obj in session.query(Inst).all()
+                       if obj.country_code is not None}
+        grid_countries = {obj.id: obj.country_code
                           for obj in session.query(Inst).all()
                           if obj.country_code is not None}
         grid_institutes = {obj.id: obj.name
@@ -104,8 +111,13 @@ def run():
             countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
-            row['countries'] = [c for c, r in countries]
-            row['regions'] = [r for c, r in countries]
+            regions = set(grid_regions[inst_id]
+                          for inst_id in good_institutes
+                          if inst_id in grid_countries)
+            row['countries'] = list(countries) #[c for c, r in countries]
+            row['regions'] = [r for c, r in regions]
+            row['is_eu'] = any(c in eu_countries 
+                               for c in countries)
 
             # Pull out international institute info
             has_mn = any(is_multinational(inst, 
@@ -148,5 +160,28 @@ def run():
 
 if __name__ == "__main__":
     set_log_level()
+    if 'BATCHPAR_outinfo' not in os.environ:
+        from nesta.core.orms.orm_utils import setup_es
+        es, es_config = setup_es('dev', True, True,
+                                 dataset='arxiv-eu')
+        environ = {'config': ('/home/ec2-user/nesta-eu/nesta/'
+                              'core/config/mysqldb.config'),
+                   'batch_file' : ('arxiv-eu_EURITO-ElasticsearchTask-'
+                                   '2019-10-12-True-157124660046601.json'),
+                   'db_name': 'dev',
+                   'bucket': 'nesta-production-intermediate',
+                   'done': "False",
+                   'outinfo': ('https://search-eurito-dev-'
+                               'vq22tw6otqjpdh47u75bh2g7ba.'
+                               'eu-west-2.es.amazonaws.com'),
+                   'out_port': '443',
+                   'out_index': 'arxiv_dev',
+                   'out_type': '_doc',
+                   'aws_auth_region': 'eu-west-2',
+                   'entity_type': 'article',
+                   'test': "True"}
+        for k, v in environ.items():
+            os.environ[f'BATCHPAR_{k}'] = v
+
     logging.info('Starting...')
     run()

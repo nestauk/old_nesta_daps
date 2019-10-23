@@ -11,6 +11,8 @@ from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.patstat_eu_orm import ApplnFamily
 from nesta.core.orms.patstat_2019_05_13 import *
+from nesta.packages.geo_utils.lookup import get_eu_countries
+
 
 def select_text(objs, lang_field, text_field):
     if len(objs) == 0:
@@ -66,7 +68,8 @@ def run():
                            auto_translate_kwargs={'min_len':20},
                            null_empty_str=True,
                            coordinates_as_floats=True,
-                           do_sort=True)
+                           do_sort=True,
+                           ngram_fields=['textBody_abstract_patent'])
 
     # collect file
     logging.info('Retrieving patent family ids')
@@ -76,6 +79,8 @@ def run():
     docdb_fam_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(docdb_fam_ids)} patent family IDs "
                  "retrieved from s3")
+
+    eu_countries = get_eu_countries()
 
     logging.info('Processing rows')
     _filter = ApplnFamily.docdb_family_id.in_(docdb_fam_ids)
@@ -104,10 +109,11 @@ def run():
             techs = list(set(t['techn_field_nr'] for t in techs))
             ctrys = list(set(p['person_ctry_code'] for p in persons))
             nuts = list(set(p['nuts'] for p in persons))
+            is_eu = any(c in eu_countries for c in ctrys)
             
             # Index the data
             row = dict(title=title, abstract=abstr, ipc=ipcs, nace2=nace2s,
-                       tech=techs, ctry=ctrys, nuts=nuts, **row)
+                       tech=techs, ctry=ctrys, nuts=nuts, is_eu=is_eu, **row)
             uid = row.pop('docdb_family_id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)

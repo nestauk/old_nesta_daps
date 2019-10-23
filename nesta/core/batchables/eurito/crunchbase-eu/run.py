@@ -18,10 +18,10 @@ from nesta.core.orms.crunchbase_orm import OrganizationCategory
 from nesta.core.orms.crunchbase_orm import CategoryGroup
 from nesta.core.orms.crunchbase_orm import FundingRound
 from nesta.core.orms.geographic_orm import Geographic
+from nesta.packages.geo_utils.lookup import get_eu_countries
 
 
 def run():
-
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
@@ -50,6 +50,8 @@ def run():
     continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
     continent_lookup[None] = None
 
+    eu_countries = get_eu_countries()
+
     # es setup
     strans_kwargs={'filename':'eurito/crunchbase-eu.json',
                    'from_key':'tier_0',
@@ -66,7 +68,9 @@ def run():
                            country_detection=True,
                            listify_terms=True,
                            terms_delimiters=("|",),
-                           null_pairs={"currency_of_funding": "cost_of_funding"})
+                           null_pairs={"currency_of_funding": "cost_of_funding"},
+                           ngram_fields=['textBody_summary_organisation',
+                                         'textBody_descriptive_organisation'])
 
     # collect file
     nrows = 20 if test else None
@@ -110,6 +114,7 @@ def run():
             row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
                                  if k in geo_fields})
             row_combined['investor_names'] = list(set(investor_names[row_combined['id']]))
+            row_combined['is_eu'] = row_combined['country_alpha_2'] in eu_countries
 
             # reformat coordinates
             row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
@@ -134,7 +139,7 @@ def run():
             continent_code = row_combined['continent']
             row_combined['placeName_continent_organisation'] = continent_lookup[continent_code]
             row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d')
-
+            
             uid = row_combined.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row_combined)

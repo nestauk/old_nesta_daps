@@ -3,6 +3,9 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
+                "booleanFlag_eu_article": {
+                    "type": "boolean"
+                },
                 "booleanFlag_multinational_article": {
                     "type": "boolean"
                 },
@@ -76,6 +79,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
                 },
                 "textBody_abstract_article": {
                     "type": "text"

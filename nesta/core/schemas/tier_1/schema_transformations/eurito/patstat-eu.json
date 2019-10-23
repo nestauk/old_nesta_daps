@@ -5,6 +5,10 @@
         "unique": true
     },
     {
+        "tier_0": "is_eu",
+        "tier_1": "booleanFlag_eu_patent"
+    },
+    {
         "tier_0": "earliest_filing_date",
         "tier_1": "date_of_patent"
     },
@@ -34,7 +38,7 @@
     },
     {
         "tier_0": "tech",
-        "tier_1": "terms_tech_patent"
+        "tier_1": "terms_techFieldNumber_patent"
     },
     {
         "tier_0": "ctry",

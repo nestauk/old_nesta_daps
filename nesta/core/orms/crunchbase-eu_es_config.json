@@ -12,6 +12,9 @@
                 "address_of_organisation": {
                     "type": "keyword"
                 },
+                "booleanFlag_eu_organisation": {
+                    "type": "boolean"
+                },
                 "booleanFlag_health_organisation": {
                     "type": "boolean"
                 },
@@ -66,6 +69,9 @@
                 },
                 "id_state_organisation": {
                     "type": "keyword"
+                },
+                "metric_novelty_organisation": {
+                    "type": "float"
                 },
                 "name_of_organisation": {
                     "type": "text"
@@ -160,6 +166,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
                 },
                 "textBody_descriptive_organisation": {
                     "type": "text"

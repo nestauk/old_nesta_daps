@@ -4,6 +4,10 @@
         "tier_1": "name_of_organisation"
     },
     {
+        "tier_0": "is_eu",
+        "tier_1": "booleanFlag_eu_organisation"
+    },
+    {
         "tier_0": "roles",
         "tier_1": "terms_roles_organisation"
     },

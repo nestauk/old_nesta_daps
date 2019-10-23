@@ -49,6 +49,10 @@
         "tier_1": "terms_institutes_article"
     },
     {
+        "tier_0": "is_eu",
+        "tier_1": "booleanFlag_eu_article"
+    },
+    {
         "tier_0": "novelty_of_article",
         "tier_1": "metric_novelty_article"
     },

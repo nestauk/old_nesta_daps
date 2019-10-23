@@ -6,6 +6,9 @@
                 "booleanFlag_autotranslated_entity": {
                     "type": "boolean"
                 },
+                "booleanFlag_eu_patent": {
+                    "type": "boolean"
+                },
                 "count_citations_patent": {
                     "type": "integer"
                 },
@@ -70,7 +73,7 @@
                     },
                     "type": "text"
                 },
-                "terms_tech_patent": {
+                "terms_techFieldNumber_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -78,6 +81,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
                 },
                 "textBody_abstract_patent": {
                     "type": "text"

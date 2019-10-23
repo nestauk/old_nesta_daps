@@ -15,7 +15,9 @@ from copy import deepcopy
 import boto3
 from requests_aws4auth import AWS4Auth
 import time
+import os
 
+from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.decorators.schema_transform import schema_transformer
 from nesta.packages.decorators.ratelimit import ratelimit
 
@@ -25,7 +27,6 @@ COUNTRY_TAG = "terms_of_countryTags"
 TRANS_TAG = "booleanFlag_autotranslated_entity"
 LANGS_TAG = "terms_iso2lang_entity"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
-
 
 def sentence_chunks(text, chunksize=2000, delim='. '):
     """Split a string into chunks, but breaking only on
@@ -119,6 +120,22 @@ def _auto_translate(row, translator=None, min_len=150, chunksize=2000, service_u
         _row[TRANS_TAG] = True
     _row[LANGS_TAG] = list(_row[LANGS_TAG])
     return _row
+
+
+def _ngram_and_tokenize(row, ngrammer, ngram_fields):
+    tokens = []
+    _row = deepcopy(row)
+    for field in ngram_fields:
+        text = _row[field]
+        if type(text) is not str:
+            continue
+        processed_tokens = ngrammer.process_document(text)
+        tokens += [t.replace('_', ' ')
+                   for tokens in processed_tokens
+                   for t in tokens]    
+    _row['terms_tokens_entity'] = tokens
+    return _row
+    
 
 def _sanitize_html(row):
     """Strips out any html encoding. Note: nothing clever is done
@@ -505,6 +522,7 @@ class ElasticsearchPlus(Elasticsearch):
                  auto_translate=False,
                  do_sort=True,
                  auto_translate_kwargs={},
+                 ngram_fields=[],
                  *args, **kwargs):
 
         self.no_commit = no_commit
@@ -562,6 +580,15 @@ class ElasticsearchPlus(Elasticsearch):
             self.transforms.append(lambda row: _auto_translate(row, translator=None,
                                                                service_urls=urls,
                                                                **auto_translate_kwargs))
+
+        # Extract any ngrams and split into tokens
+        if len(ngram_fields) > 0:
+            # Setup ngrammer
+            if 'MYSQLDBCONF' not in os.environ:                
+                os.environ['MYSQLDBCONF'] = 'mysqldb.config'
+            ngrammer = Ngrammer(database="production") 
+            self.transforms.append(lambda row: _ngram_and_tokenize(row, ngrammer,
+                                                                   ngram_fields))
 
         # Clean up lists (dedup, remove None, empty lists are None)
         self.transforms.append(_sanitize_html)

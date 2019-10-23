@@ -30,6 +30,7 @@
     {
         "term": "middleName",
         "values": [
+            "techFieldNumber",
             "nace2",
             "abstract",
             "adminRegion",
@@ -56,6 +57,7 @@
             "duplicate",
             "employee",
             "end",
+            "eu",
             "facebook",
             "fieldOfStudy",
             "fieldsOfStudy",
