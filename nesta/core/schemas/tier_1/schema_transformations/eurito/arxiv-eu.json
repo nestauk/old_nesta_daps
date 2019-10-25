@@ -29,20 +29,12 @@
         "tier_1": "count_citations_article"
     },
     {
-        "tier_0": "fos_level_1",
-        "tier_1": "terms_fieldOfStudy1_article"
+        "tier_0": "fields_of_study",
+        "tier_1": "json_fieldsOfStudy_article"
     },
     {
-        "tier_0": "fos_level_2",
-        "tier_1": "terms_fieldOfStudy2_article"
-    },
-    {
-        "tier_0": "fos_level_3",
-        "tier_1": "terms_fieldOfStudy3_article"
-    },
-    {
-        "tier_0": "fos_level_4",
-        "tier_1": "terms_fieldOfStudy4_article"
+        "tier_0": "_fields_of_study",
+        "tier_1": "terms_fieldsOfStudy_article"
     },
     {
         "tier_0": "categories",
@@ -57,8 +49,28 @@
         "tier_1": "terms_institutes_article"
     },
     {
+        "tier_0": "is_eu",
+        "tier_1": "booleanFlag_eu_article"
+    },
+    {
         "tier_0": "novelty_of_article",
         "tier_1": "metric_novelty_article"
+    },
+    {
+	"tier_0": "nuts_0",
+	"tier_1": "terms_nuts0_article"
+    },
+    {
+	"tier_0": "nuts_1",
+	"tier_1": "terms_nuts1_article"
+    },
+    {
+	"tier_0": "nuts_2",
+	"tier_1": "terms_nuts2_article"
+    },
+    {
+	"tier_0": "nuts_3",
+	"tier_1": "terms_nuts3_article"
     },
     {
         "tier_0": "countries",

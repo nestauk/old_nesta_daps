@@ -1,6 +1,18 @@
 import requests
 import pandas as pd
 
+def get_eu_countries():
+    """
+    All EU ISO-2 codes
+    
+    Returns:
+        data (list): List of ISO-2 codes)
+    """
+    url = 'https://restcountries.eu/rest/v2/regionalbloc/eu'
+    r = requests.get(url)        
+    return [row['alpha2Code'] for row in r.json()]
+
+
 def get_continent_lookup():
     """
     Retrieves continent ISO2 code to continent name mapping from a static open URL.
