@@ -3,30 +3,23 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
-                "booleanFlag_eu_article": {
+                "booleanFlag_autotranslated_entity": {
                     "type": "boolean"
                 },
-                "booleanFlag_multinational_article": {
+                "booleanFlag_eu_patent": {
                     "type": "boolean"
                 },
-                "count_citations_article": {
+                "count_citations_patent": {
                     "type": "integer"
                 },
-                "date_created_article": {
+                "date_of_patent": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
-                "id_digitalObjectIdentifier_article": {
-                    "type": "keyword"
-                },
-                "json_fieldsOfStudy_article": {
-                    "dynamic": true,
-                    "properties": {}
-                },
-                "metric_novelty_article": {
+                "metric_novelty_patent": {
                     "type": "float"
                 },
-                "terms_authors_article": {
+                "terms_authCountry_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -35,7 +28,7 @@
                     },
                     "type": "text"
                 },
-                "terms_category_article": {
+                "terms_ipc_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -44,7 +37,7 @@
                     },
                     "type": "text"
                 },
-                "terms_countries_article": {
+                "terms_iso2lang_entity": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -53,7 +46,7 @@
                     },
                     "type": "text"
                 },
-                "terms_nuts0_article": {
+                "terms_nace2_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -62,7 +55,7 @@
                     },
                     "type": "text"
                 },
-                "terms_nuts1_article": {
+                "terms_personCountry_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -71,7 +64,7 @@
                     },
                     "type": "text"
                 },
-                "terms_nuts2_article": {
+                "terms_personNuts_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -80,34 +73,7 @@
                     },
                     "type": "text"
                 },
-                "terms_nuts3_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_fieldsOfStudy_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_institutes_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_regions_article": {
+                "terms_techFieldNumber_patent": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -119,19 +85,16 @@
                 "terms_tokens_entity": {
                     "type": "keyword"
                 },
-                "textBody_abstract_article": {
+                "textBody_abstract_patent": {
                     "type": "text"
                 },
-                "title_of_article": {
+                "title_of_patent": {
                     "type": "text"
                 },
                 "type_of_entity": {
                     "type": "keyword"
                 },
-                "url_of_article": {
-                    "type": "text"
-                },
-                "year_of_article": {
+                "year_of_patent": {
                     "type": "integer"
                 }
             }
