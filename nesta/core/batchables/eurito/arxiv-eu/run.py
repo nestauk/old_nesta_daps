@@ -120,15 +120,17 @@ def run():
                 if inst_id not in grid_latlon:
                     continue
                 lat, lon = grid_latlon[inst_id]
+                if lat is None or lon is None:
+                    continue
                 nuts = nf.find(lat=lat, lon=lon)
                 for i in range(0, 4):
                     name = f'nuts_{i}'
                     if name not in row:
                         row[name] = set()
                     for nut in nuts:
-                        if n['LEVL_CODE'] != i:
+                        if nut['LEVL_CODE'] != i:
                             continue
-                        row[name].add(n['NUTS_ID'])
+                        row[name].add(nut['NUTS_ID'])
             for i in range(0, 4):
                 name = f'nuts_{i}'
                 if name in row:

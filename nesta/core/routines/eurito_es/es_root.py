@@ -25,7 +25,7 @@ def kwarg_maker(dataset, routine_id):
 
 
 class RootTask(luigi.WrapperTask):
-    process_batch_size = luigi.IntParameter(default=10000)
+    process_batch_size = luigi.IntParameter(default=1000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
     drop_and_recreate = luigi.BoolParameter(default=False)
@@ -42,7 +42,7 @@ class RootTask(luigi.WrapperTask):
                               job_queue='HighPriority',
                               region_name='eu-west-2',
                               poll_time=10,
-                              max_live_jobs=30,
+                              max_live_jobs=300,
                               db_config_env='MYSQLDB',
                               test=test,
                               memory=2048,
