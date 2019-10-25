@@ -60,7 +60,7 @@ def run():
     
     # Setup ngrammer
     os.environ['MYSQLDBCONF'] = os.environ['BATCHPAR_config']
-    ngrammer = Ngrammer()
+    ngrammer = Ngrammer(database="production")
 
     # es setup
     strans_kwargs={'filename':'arxiv.json',

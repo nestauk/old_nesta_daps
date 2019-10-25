@@ -30,10 +30,13 @@
     {
         "term": "middleName",
         "values": [
+            "techFieldNumber",
+            "nace2",
             "abstract",
             "adminRegion",
             "ageDepRatioPercWorkAgePop",
             "alias",
+            "family",
             "arxivSubjectCategory",
             "authors",
             "birth",
@@ -54,8 +57,10 @@
             "duplicate",
             "employee",
             "end",
+            "eu",
             "facebook",
             "fieldOfStudy",
+            "fieldsOfStudy",
             "fieldOfStudy1",
             "fieldOfStudy2",
             "fieldOfStudy3",
@@ -104,7 +109,7 @@
             "state",
             "subcategory",
             "summary",
-	    "tokens",
+            "tokens",
             "topics",
             "total",
             "twitter",
@@ -112,7 +117,16 @@
             "updated",
             "usd2018",
             "worldRegion",
-            "zipcode"
+            "zipcode",
+            "ipc",
+            "tech",
+            "personCountry",
+            "personNuts",
+	    "nuts0",
+	    "nuts1",
+	    "nuts2",
+	    "nuts3",
+            "authCountry"
         ]
     },
     {
@@ -133,7 +147,8 @@
             "member",
             "organisation",
             "project",
-            "user"
+            "user",
+            "patent"
         ]
     }
 ]

@@ -3,6 +3,7 @@ import boto3
 import json
 import logging
 import os
+from nuts_finder import NutsFinder
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.luigihacks.luigi_logging import set_log_level
@@ -13,8 +14,10 @@ from nesta.core.orms.arxiv_orm import Article as Art
 from nesta.core.orms.grid_orm import Institute as Inst
 from nesta.packages.arxiv.deepchange_analysis import is_multinational
 from nesta.packages.mag.fos_lookup import build_fos_lookup
-from nesta.packages.mag.fos_lookup import split_ids
+from nesta.packages.mag.fos_lookup import make_fos_tree
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
+from nesta.packages.geo_utils.lookup import get_eu_countries
+
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -34,9 +37,10 @@ def run():
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", 
                               db_name)
     logging.info('Building FOS lookup')
-    max_lvl = 4  # used again later
-    fos_lookup = build_fos_lookup(engine, max_lvl=max_lvl)
+    fos_lookup = build_fos_lookup(engine, max_lvl=6)
 
+    nf = NutsFinder()
+    
     # es setup
     logging.info('Connecting to ES')
     strans_kwargs={'filename':'eurito/arxiv-eu.json',
@@ -52,7 +56,8 @@ def run():
                            null_empty_str=True,
                            coordinates_as_floats=True,
                            listify_terms=True,
-                           do_sort=False)
+                           do_sort=False,
+                           ngram_fields=['textBody_abstract_article'])
 
     # collect file
     logging.info('Retrieving article ids')
@@ -66,13 +71,20 @@ def run():
     # Get all grid countries
     # and country: continent lookup
     logging.info('Doing country lookup')
-    country_lookup = get_country_region_lookup()                
+    country_lookup = get_country_region_lookup()            
+    eu_countries = get_eu_countries()
     with db_session(engine) as session:
-        grid_countries = {obj.id: country_lookup[obj.country_code]
+        grid_regions = {obj.id: country_lookup[obj.country_code]
+                       for obj in session.query(Inst).all()
+                       if obj.country_code is not None}
+        grid_countries = {obj.id: obj.country_code
                           for obj in session.query(Inst).all()
                           if obj.country_code is not None}
         grid_institutes = {obj.id: obj.name
                            for obj in session.query(Inst).all()}
+        grid_latlon = {obj.id: (obj.latitude, obj.longitude)
+                       for obj in session.query(Inst).all()}
+
     #
     logging.info('Processing rows')
     with db_session(engine) as session:
@@ -89,31 +101,11 @@ def run():
                 row['citation_count'] = 0
 
             # Extract field of study
-            fos_objs = row.pop('fields_of_study')
-            fos_ids = set(fos['id'] for fos in fos_objs)
-            for f in fos_objs:
-                if f["level"] > max_lvl:
-                    continue
-                key0 = f'fos_level_{f["level"]}'
-                if key0 not in row:
-                    row[key0] = []
-                for cid in split_ids(f['child_ids']):
-                    if cid not in fos_ids:
-                        continue                    
-                    key1 = f'fos_level_{f["level"]+1}'
-                    if key1 not in row:
-                        row[key1] = []
-                    try:
-                        fos = fos_lookup[(f['id'], cid)]
-                    except KeyError:
-                        continue
-                    row[key0].append(fos[0])
-                    row[key1].append(fos[1])
-            for k, v in row.items():
-                if not (type(v) is str 
-                        and v.startswith('fos_level')):
-                    continue
-                row[k] = list(set(v))
+            row['fields_of_study'] = make_fos_tree(row['fields_of_study'],
+                                                   fos_lookup)
+            row['_fields_of_study'] = [f for fields in 
+                                       row['fields_of_study']['nodes']
+                                       for f in fields if f != []]
 
             # Format hierarchical fields as expected by searchkit
             row['categories'] = [cat['description'] 
@@ -122,11 +114,39 @@ def run():
             good_institutes = [i['institute_id'] 
                                for i in institutes
                                if i['matching_score'] > 0.9]
+
+            # Add NUTS regions
+            for inst_id in good_institutes:
+                if inst_id not in grid_latlon:
+                    continue
+                lat, lon = grid_latlon[inst_id]
+                if lat is None or lon is None:
+                    continue
+                nuts = nf.find(lat=lat, lon=lon)
+                for i in range(0, 4):
+                    name = f'nuts_{i}'
+                    if name not in row:
+                        row[name] = set()
+                    for nut in nuts:
+                        if nut['LEVL_CODE'] != i:
+                            continue
+                        row[name].add(nut['NUTS_ID'])
+            for i in range(0, 4):
+                name = f'nuts_{i}'
+                if name in row:
+                    row[name] = list(row[name])
+
+            # Add other geographies
             countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
-            row['countries'] = [c for c, r in countries]
-            row['regions'] = [r for c, r in countries]
+            regions = set(grid_regions[inst_id]
+                          for inst_id in good_institutes
+                          if inst_id in grid_countries)
+            row['countries'] = list(countries) #[c for c, r in countries]
+            row['regions'] = [r for c, r in regions]
+            row['is_eu'] = any(c in eu_countries 
+                               for c in countries)
 
             # Pull out international institute info
             has_mn = any(is_multinational(inst, 
@@ -138,7 +158,7 @@ def run():
             mag_authors = row.pop('mag_authors')
             if mag_authors is None:
                 row['authors'] = None
-                row['institutes'] = None
+                row['institutes'] = None 
             else:
                 if all('author_order' in a for a in mag_authors):
                     mag_authors = sorted(mag_authors,
@@ -153,6 +173,10 @@ def run():
                                      for g in gids
                                      if g in grid_institutes
                                      and g in good_institutes]
+            if row['institutes'] in (None, []):
+                row['institutes'] = [grid_institutes[g].title() 
+                                     for g in good_institutes]
+
             uid = row.pop('id')
             _row = es.index(index=es_index, doc_type=es_type,
                             id=uid, body=row)
@@ -166,27 +190,27 @@ def run():
 if __name__ == "__main__":
     set_log_level()
     if 'BATCHPAR_outinfo' not in os.environ:
-        set_log_level(True)
         from nesta.core.orms.orm_utils import setup_es
         es, es_config = setup_es('dev', True, True,
                                  dataset='arxiv-eu')
-        environ = {'outinfo':('https://search-eurito-dev-'
-                              'vq22tw6otqjpdh47u75bh2g7ba.'
-                              'eu-west-2.es.amazonaws.com'),
-                   'config':('/home/ec2-user/nesta-eu/'
-                             'nesta/core/config/mysqldb.config'),
-                   'bucket':'nesta-production-intermediate',
-                   'batch_file': ('ElasticsearchTask-2019-'
-                                  '09-17-True-'
-                                  '15687118121284823.json'),
-                   'out_port': '443',
-                   'out_type': '_doc',
+        environ = {'config': ('/home/ec2-user/nesta-eu/nesta/'
+                              'core/config/mysqldb.config'),
+                   'batch_file' : ('arxiv-eu_EURITO-ElasticsearchTask-'
+                                   '2019-10-12-True-157124660046601.json'),
                    'db_name': 'dev',
-                   'entity_type': 'article',
+                   'bucket': 'nesta-production-intermediate',
+                   'done': "False",
+                   'outinfo': ('https://search-eurito-dev-'
+                               'vq22tw6otqjpdh47u75bh2g7ba.'
+                               'eu-west-2.es.amazonaws.com'),
+                   'out_port': '443',
                    'out_index': 'arxiv_dev',
-                   'test': 'True',
-                   'aws_auth_region': 'eu-west-2'}
+                   'out_type': '_doc',
+                   'aws_auth_region': 'eu-west-2',
+                   'entity_type': 'article',
+                   'test': "True"}
         for k, v in environ.items():
             os.environ[f'BATCHPAR_{k}'] = v
+
     logging.info('Starting...')
     run()
