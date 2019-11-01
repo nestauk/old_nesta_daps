@@ -25,6 +25,5 @@ General-purpose batchables
 .. toctree::
 
     nesta.core.batchables.batchgeocode
-    nesta.core.batchables.embed_topics
     nesta.core.batchables.nlp
     nesta.core.batchables.novelty
