@@ -1,3 +1,10 @@
+"""
+run.py (arxiv_collect)
+----------------------
+
+Collect a portion of "raw" arXiv data from the bulk API, and parse to the MySQL database.
+"""
+
 import boto3
 import logging
 import os

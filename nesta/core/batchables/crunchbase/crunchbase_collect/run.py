@@ -1,8 +1,14 @@
+"""
+run.py (crunchbase_collect)
+===========================
+
+Collect Crunchbase data from the proprietary data dump and pipe into the MySQL database.
+"""
+
 from ast import literal_eval
 import boto3
 import logging
 import os
-# import pandas as pd
 from urllib.parse import urlsplit
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_non_orgs

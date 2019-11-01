@@ -5,8 +5,26 @@
     :undoc-members:
     :show-inheritance:
 
+Data / project specific batchables
+"""""""""""""""""""""""""""""""""""
+
 .. toctree::
 
     nesta.core.batchables.examples
-    nesta.core.batchables.meetup
+    nesta.core.batchables.arxiv
+    nesta.core.batchables.cordis
+    nesta.core.batchables.crunchbase
+    nesta.core.batchables.eurito
+    nesta.core.batchables.gtr
     nesta.core.batchables.health_data
+    nesta.core.batchables.meetup
+
+General-purpose batchables
+""""""""""""""""""""""""""
+
+.. toctree::
+
+    nesta.core.batchables.batchgeocode
+    nesta.core.batchables.embed_topics
+    nesta.core.batchables.nlp
+    nesta.core.batchables.novelty
