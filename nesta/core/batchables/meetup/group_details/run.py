@@ -1,3 +1,10 @@
+"""
+run.py (group_details)
+----------------------
+
+Batchable for expanding group details
+"""
+
 import logging
 from nesta.packages.meetup.group_details import get_group_details
 from nesta.packages.meetup.meetup_utils import flatten_data
@@ -22,7 +29,7 @@ def run():
     logging.getLogger().setLevel(logging.INFO)
 
     # Fetch the input parameters
-    group_urlnames = literal_eval(os.environ["BATCHPAR_group_urlnames"])    
+    group_urlnames = literal_eval(os.environ["BATCHPAR_group_urlnames"])
     group_urlnames = [x.decode("utf8") for x in group_urlnames]
     s3_path = os.environ["BATCHPAR_outinfo"]
     db = os.environ["BATCHPAR_db"]
@@ -36,7 +43,7 @@ def run():
         _output.append(_info)
     logging.info("Processed %s groups", len(_output))
 
-    # Flatten the output                                                 
+    # Flatten the output
     output = flatten_data(_output,
                           keys = [('category', 'name'),
                                   ('category', 'shortname'),

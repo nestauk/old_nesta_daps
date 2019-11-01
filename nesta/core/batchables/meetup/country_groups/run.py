@@ -1,3 +1,10 @@
+"""
+run.py (country_groups)
+-----------------------
+
+Batchable for expanding from countries to groups
+"""
+
 import logging
 import os
 from ast import literal_eval
