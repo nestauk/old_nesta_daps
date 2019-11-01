@@ -1,3 +1,10 @@
+"""
+run.py (groups_members)
+-------------------------------------------
+
+Batchable for expanding group members
+"""
+
 import logging
 from nesta.packages.meetup.groups_members import get_all_members
 from nesta.core.orms.orm_utils import insert_data
@@ -20,7 +27,7 @@ def parse_s3_path(path):
 
 def run():
     logging.getLogger().setLevel(logging.INFO)
-    
+
     # Fetch the input parameters
     group_urlname = os.environ["BATCHPAR_group_urlname"]
     group_id = os.environ["BATCHPAR_group_id"]
@@ -33,7 +40,7 @@ def run():
     logging.info("Got %s members", len(output))
 
     # Load connection to the db, and create the tables
-    objs = insert_data("BATCHPAR_config", "mysqldb", db, 
+    objs = insert_data("BATCHPAR_config", "mysqldb", db,
                        Base, GroupMember, output)
     # Mainly for testing
     return len(objs)

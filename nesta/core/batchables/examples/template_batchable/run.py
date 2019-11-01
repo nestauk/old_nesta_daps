@@ -1,3 +1,11 @@
+'''
+run.py (template_batchable)
+===========================
+
+This is a pretty generic example of how your run.py might look.
+It reads and writes from a table, and hits the S3 "checkpoint" at the end.
+'''
+
 from ast import literal_eval
 import boto3
 import logging
