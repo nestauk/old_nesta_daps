@@ -1,3 +1,10 @@
+"""
+run.py (nih_process_data)
+-------------------------
+
+Geocode NiH data (from MySQL) and pipe into Elasticsearch.
+"""
+
 import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
