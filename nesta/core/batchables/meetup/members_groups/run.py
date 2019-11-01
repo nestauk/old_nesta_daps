@@ -18,14 +18,7 @@ from urllib.parse import urlsplit
 import os
 from ast import literal_eval
 from sqlalchemy.exc import IntegrityError
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():

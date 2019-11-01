@@ -10,19 +10,12 @@ from nesta.packages.meetup.groups_members import get_all_members
 from nesta.core.orms.orm_utils import insert_data
 from nesta.core.orms.meetup_orm import Base
 from nesta.core.orms.meetup_orm import GroupMember
+from nesta.core.luigihacks.s3 import parse_s3_path
 from sqlalchemy import and_
 from sqlalchemy.orm import sessionmaker
 import boto3
 from urllib.parse import urlsplit
 import os
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
 
 
 def run():
