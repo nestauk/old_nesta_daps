@@ -14,6 +14,7 @@ Data / project specific batchables
     nesta.core.batchables.arxiv
     nesta.core.batchables.cordis
     nesta.core.batchables.crunchbase
+    nesta.core.batchables.embed_topics
     nesta.core.batchables.eurito
     nesta.core.batchables.gtr
     nesta.core.batchables.health_data

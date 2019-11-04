@@ -1,19 +1,13 @@
 Natural Language Processing
 ===========================
 
-Batchable utilities for NLP.
+Batchable utilities for NLP. Note that modules prefixed with :obj:`[AUTOML]` are
+designed to be launched by :obj:`AutoMLTask`, and those with the addition `*` (i.e.
+:obj:`[AUTOML*]`) are the designed to be the final task in an :obj:`AutoMLTask` chain
+(i.e. they provide a 'loss').
+
 
 .. automodule:: nesta.core.batchables.nlp.corex_topic_model.run
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. automodule:: nesta.core.batchables.nlp.embed_topics_model.run
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. automodule:: nesta.core.batchables.nlp.ngram_analyzer.run
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,12 +17,7 @@ Batchable utilities for NLP.
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: nesta.core.batchables.nlp.synonyms.run
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. automodule:: nesta.core.batchables.nlp.topic_model.run
+.. automodule:: nesta.core.batchables.nlp.tfidf.run
     :members:
     :undoc-members:
     :show-inheritance:
