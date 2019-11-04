@@ -79,7 +79,7 @@ class GtrOnlyRootTask(luigi.WrapperTask):
         logging.getLogger().setLevel(logging.INFO)        
         yield GtrTask(date=self.date,
                       page_size=self.page_size,
-                      batchable=find_filepath_from_pathstub("core/batchables/gtr/"),
+                      batchable=find_filepath_from_pathstub("core/batchables/gtr/collect_gtr"),
                       env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",
