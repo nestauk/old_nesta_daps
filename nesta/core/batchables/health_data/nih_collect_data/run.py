@@ -1,3 +1,12 @@
+"""
+run.py (nih_collect_data)
+-------------------------
+
+Collect NiH table from the official data dump,
+based on the name of the table. The data
+is piped into the MySQL database.
+"""
+
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
 
@@ -8,18 +17,11 @@ from nesta.core.orms.orm_utils import exists
 
 from nesta.core.orms.nih_orm import Base
 from nesta.packages.health_data.collect_nih import iterrows
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 import os
 import boto3
 from urllib.parse import urlsplit
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
 
 
 def run():
