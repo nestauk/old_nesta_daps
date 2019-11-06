@@ -1,8 +1,9 @@
 '''
-Deduplication of NiH data
-=========================
+Deduplication of near duplicates
+================================
 
-Luigi routine to load the deduplicate the NiH data.
+Remove nears duplicates of projects from the data. Numeric
+fields (such as funding) are aggregated together.
 '''
 
 import logging
@@ -17,7 +18,7 @@ from nesta.core.orms.orm_utils import get_es_ids
 from nesta.core.orms.orm_utils import setup_es
 from nesta.core.orms.orm_utils import get_config
 
-from nih_abstracts_mesh_task import AbstractsMeshTask
+from nesta.core.routines.health_data.nih_data.nih_abstracts_mesh_task import AbstractsMeshTask
 
 class DedupeTask(autobatch.AutoBatchTask):
     '''

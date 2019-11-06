@@ -1,6 +1,6 @@
 """
-Geocode GTR data
-================
+Geocode
+=======
 
 Apply geocoding to the collected GtR data.
 Add country name, iso codes and continent.
@@ -40,7 +40,7 @@ class GtrGeocode(luigi.Task):
         '''Collects the database configurations and executes the central task.'''
         yield GtrTask(date=self.date,
                       page_size=self.page_size,
-                      batchable=find_filepath_from_pathstub("core/batchables/gtr/"),
+                      batchable=find_filepath_from_pathstub("core/batchables/gtr/collect_gtr"),
                       env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",

@@ -1,16 +1,14 @@
 '''
-Crunchbase data collection and processing
-==================================
+Apply mesh terms
+================
 
-Luigi routine to collect Crunchbase data exports and load the data into MySQL.
-
-This task picks up the missed org_parents table and combines this with organizations.
+Collects and combines Mesh terms from S3 and descriptions from MySQL.
 '''
 
 import logging
 import luigi
 
-from crunchbase_parent_id_collect_task import ParentIdCollectTask
+from nesta.core.routines.crunchbase.crunchbase_parent_id_collect_task import ParentIdCollectTask
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms, format_mesh_terms
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks import misctools
@@ -20,8 +18,7 @@ from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 
 
 class DescriptionMeshTask(luigi.Task):
-    ''' Collects and combines Mesh terms from S3, Abstracts from MYSQL and projects in
-    Elasticsearch.
+    ''' Collects and combines Mesh terms from S3, and descriptions from MYSQL.
 
     Args:
         date (str): Date used to label the outputs

@@ -1,9 +1,10 @@
 """
-arXiv data collection and processing
-====================================
+arXiv enriched with MAG (SPARQL)
+================================
 
 Luigi routine to query the Microsoft Academic Graph for additional data and append it to
-the exiting data in the database.
+the exiting data in the database. This is to collect information which is 
+difficult to retrieve via the MAG API.
 """
 from datetime import date
 import luigi

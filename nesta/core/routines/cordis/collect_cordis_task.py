@@ -1,3 +1,11 @@
+"""
+H2020 and FP7 Data Collection
+=============================
+
+Collection of H2020 and FP7 projects, organisations, publications and topics
+from the unofficial API.
+"""
+
 from nesta.core.luigihacks.autobatch import AutoBatchTask
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import get_config

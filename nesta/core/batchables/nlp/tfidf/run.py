@@ -1,6 +1,6 @@
 """
-tfidf batchable
----------------
+[AutoML] run.py (tfidf)
+-----------------------
 
 Applies TFIDF cuts to a dataset via
 environmental variables lower_tfidf_percentile
@@ -73,7 +73,6 @@ def run():
     tfidf_values = _transformed[_transformed > 0]
     lower_cut = np.percentile(tfidf_values, lower_tfidf_percentile)
     upper_cut = np.percentile(tfidf_values, upper_tfidf_percentile)
-    print((_transformed > 0).sum(), lower_cut, upper_cut, tfidf_values.min(), tfidf_values.max())
     del tfidf_values
 
     # Generate the list of allowed terms for each document

@@ -1,11 +1,9 @@
 '''
-NIH data collection and processing
-==================================
+Data collection
+===============
 
 Luigi routine to collect NIH World RePORTER data
-via the World ExPORTER data dump. The routine
-transfers the data into the MySQL database before
-processing and indexing the data to ElasticSearch.
+via the World ExPORTER data dump.
 '''
 
 import luigi

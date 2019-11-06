@@ -3,7 +3,7 @@
 How to put code into production at nesta
 ----------------------------------------
 
-If you're completely new, check out our `training slides <https://docs.google.com/presentation/d/1hMaSa9kF81azZILx2_wQVmF5x1pPFKy3KRywh6r9PEM/edit?usp=sharing>` _. In short, the steps you should go through when building production code are to:
+If you're completely new, check out our `training slides <https://docs.google.com/presentation/d/1hMaSa9kF81azZILx2_wQVmF5x1pPFKy3KRywh6r9PEM/edit?usp=sharing>`_. In short, the steps you should go through when building production code are to:
 
 1. Audit the package code, required to pass all auditing tests
 2. Understand what environment is required

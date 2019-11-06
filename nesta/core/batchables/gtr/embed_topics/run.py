@@ -1,3 +1,12 @@
+"""
+run.py (embed_topics)
+---------------------
+
+Document embedding of GtR data. 
+Would be better if this was generalized (i.e. not GtR specific), 
+and migrated to batchables.nlp [see https://github.com/nestauk/nesta/issues/203]
+"""
+
 import os
 import json
 import logging
@@ -42,7 +51,6 @@ def run():
         batch_records = (session
                          .query(Projects.abstractText)
                          .filter(Projects.id.in_(ids))
-                         # .limit(limit)
                          .all())
 
     # Process and insert data
