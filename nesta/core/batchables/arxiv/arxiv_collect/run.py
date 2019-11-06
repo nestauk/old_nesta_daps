@@ -7,14 +7,7 @@ from urllib.parse import urlsplit
 from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 from nesta.core.orms.arxiv_orm import Base, Article, ArticleCategory, Category
 from nesta.packages.arxiv.collect_arxiv import request_token, load_arxiv_categories, retrieve_arxiv_batch_rows
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():

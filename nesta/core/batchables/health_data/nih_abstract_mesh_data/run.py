@@ -1,3 +1,13 @@
+"""
+run.py (nih_abstract_mesh_data)
+-------------------------------
+
+Retrieve NiH abstracts from MySQL, assign
+pre-calculated MeSH terms for each abstract,
+and pipe data into Elasticsearch. Exact abstract
+duplicates are removed at this stage.
+"""
+
 from ast import literal_eval
 from elasticsearch.exceptions import NotFoundError
 import logging
@@ -56,7 +66,7 @@ def run():
     # retrieve duplicate map
     dupes = retrieve_duplicate_map(bucket, dupe_file)
     dupes = format_duplicate_map(dupes)
-    
+
     # Set up elastic search connection
     field_null_mapping = load_json_from_pathstub("tier_1/"
                                                  "field_null_mappings/",
@@ -99,20 +109,20 @@ def run():
                          'textBody_abstract_project': clean_abstract_text,
                          'booleanFlag_duplicate_abstract': True
                          })
-            
+
     # output to elasticsearch
     logging.warning(f'Writing {len(docs)} documents to elasticsearch')
     for doc in docs:
         uid = doc.pop("doc_id")
         # Extract existing info
-        existing = es.get(es_config['index'], 
-                          doc_type=es_config['type'], 
+        existing = es.get(es_config['index'],
+                          doc_type=es_config['type'],
                           id=uid)['_source']
         # Merge existing info into new doc
         doc = {**existing, **doc}
-        es.index(index=es_config['index'], 
+        es.index(index=es_config['index'],
                  doc_type=es_config['type'], id=uid, body=doc)
-    
+
 
 if __name__ == '__main__':
     log_level = logging.INFO

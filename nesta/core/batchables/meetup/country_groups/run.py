@@ -16,18 +16,10 @@ from nesta.packages.meetup.meetup_utils import flatten_data
 from nesta.core.orms.orm_utils import insert_data
 from nesta.core.orms.meetup_orm import Base
 from nesta.core.orms.meetup_orm import Group
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
-
 
 def run():
     logging.getLogger().setLevel(logging.INFO)

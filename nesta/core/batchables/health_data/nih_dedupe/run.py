@@ -1,3 +1,15 @@
+"""
+run.py (nih_dedupe)
+-------------------
+
+Deduplicate NiH articles based on similarity scores
+using Elasticsearch's document similarity API. Similarity
+is calculated based on the description of the project, the
+project abstract and the title of the project.
+Funding information is aggregated (summed) across all deduplicated
+articles, for the total and annuals funds.
+"""
+
 import logging
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.orms.orm_utils import load_json_from_pathstub
@@ -48,7 +60,7 @@ def run():
     ids_obj = s3.Object(s3_bucket, batch_file)
     art_ids = json.loads(ids_obj.get()['Body']._raw_stream.read())
     logging.info(f'Processing {len(art_ids)} article ids')
-    
+
     field_null_mapping = load_json_from_pathstub(("tier_1/"
                                                   "field_null_mappings/"),
                                                  "health_scanner.json")
@@ -77,7 +89,7 @@ def run():
                                               "title_of_project",
                                               "textBody_abstract_project"]):
             # Extract key values
-            src = hit['_source']            
+            src = hit['_source']
             hit_id = hit['_id']
             # Record this hit
             processed_ids.add(hit_id)
