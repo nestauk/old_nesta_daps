@@ -1,3 +1,12 @@
+"""
+run.py (patstat_eu)
+-------------------
+
+Transfer pre-collected PATSTAT data from MySQL
+to Elasticsearch. Only EU patents since the year 2000 are considered.
+The patents are grouped by patent families.
+"""
+
 from ast import literal_eval
 import boto3
 import json
@@ -19,7 +28,7 @@ def select_text(objs, lang_field, text_field):
         return None
     _objs = [t for t in objs if t[lang_field] == 'en']
     if len(_objs) == 0:
-        _objs = objs    
+        _objs = objs
     obj = sorted(_objs, key=lambda x: len(x), reverse=True)[0]
     return obj[text_field]
 
@@ -110,7 +119,7 @@ def run():
             ctrys = list(set(p['person_ctry_code'] for p in persons))
             nuts = list(set(p['nuts'] for p in persons))
             is_eu = any(c in eu_countries for c in ctrys)
-            
+
             # Index the data
             row = dict(title=title, abstract=abstr, ipc=ipcs, nace2=nace2s,
                        tech=techs, ctry=ctrys, nuts=nuts, is_eu=is_eu, **row)

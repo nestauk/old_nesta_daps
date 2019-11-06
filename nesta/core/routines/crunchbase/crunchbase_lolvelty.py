@@ -1,8 +1,9 @@
 """
-CrunchbaseLolveltyRootTask
-==========================
+Novelty score (lolvelty)
+========================
 
-Apply Lolvelty score to crunchbase data.
+Apply "lolvelty" score to Crunchbase data (in Elasticsearch). Note: this is a slow
+procedure that is applied on a document-by-document basis.
 """
 
 

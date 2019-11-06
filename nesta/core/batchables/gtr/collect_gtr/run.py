@@ -1,3 +1,11 @@
+"""
+run.py (collect_gtr)
+--------------------
+
+Starting from GtR projects, iteratively and recursively
+discover all GtR entities by crawling the API.
+"""
+
 import os
 import boto3
 from urllib.parse import urlsplit

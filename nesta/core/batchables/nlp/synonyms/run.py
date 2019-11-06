@@ -1,6 +1,6 @@
 """
-synonyms batchable
-------------------
+[DUMMY, AutoML] run.py (synonyms)
+---------------------------------
 
 Dummy task to extract synonyms.
 """

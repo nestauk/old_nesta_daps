@@ -1,16 +1,14 @@
 '''
-Crunchbase data collection and processing
-==================================
+Merge in parent organisations
+=============================
 
-Luigi routine to collect Crunchbase data exports and load the data into MySQL.
-
-This task picks up the missed org_parents table and combines this with organizations.
+This task picks up the missed org_parents table from the Crumchbase data dump and combines this with organizations.
 '''
 import boto3
 import logging
 import luigi
 
-from crunchbase_health_label_task import HealthLabelTask
+from nesta.core.routines.crunchbase.crunchbase_health_label_task import HealthLabelTask
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks import misctools

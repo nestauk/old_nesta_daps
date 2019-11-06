@@ -1,3 +1,11 @@
+"""
+run.py (cordis_api)
+===================
+
+Transfer data on organisations, projects and outputs
+from the Cordis API on a project-by-project basis.
+"""
+
 from nesta.packages.cordis.cordis_api import fetch_data
 from nesta.core.orms.cordis_orm import Base
 from nesta.core.orms.orm_utils import get_mysql_engine
@@ -35,10 +43,12 @@ def extract_core_orgs(orgs, project_rcn):
 
 
 def prepare_data(items, rcn):
+    """Append the project code ('RCN') to each "row" (dict) of data (list)"""
     return [dict(project_rcn=rcn, **item) for item in items]
 
 
 def split_links(items, project_rcn):
+    """Generate link table items for each item (dict) in items (list) for the project"""
     for item in items:
         rcn = item['rcn']
         # Ignore objects without a good PK

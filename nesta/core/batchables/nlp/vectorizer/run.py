@@ -1,3 +1,11 @@
+"""
+[AutoML] vectorizer (run.py)
+----------------------------
+
+Vectorizes (counts or binary) text data, and applies
+basic filtering of extreme term/document frequencies.
+"""
+
 from gensim.corpora import Dictionary
 from collections import Counter
 import itertools  

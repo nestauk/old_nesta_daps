@@ -1,6 +1,6 @@
 """
-ngram_analyser batchable
-------------------------
+[DUMMY, AutoML] run.py (ngram_analyser)
+---------------------------------------
 
 Currently a dummy task, to be replaced with an ngram analyser.
 """

@@ -1,3 +1,13 @@
+"""
+Estimate novelty (lolvelty)
+---------------------------
+
+Estimate the novelty of each article via the :obj:`lolvelty` algorithm.
+This is performed on a document-by-document basis and is regrettably
+very slow since it is computationally very expensive for the Elasticsearch
+server.
+"""
+
 from nesta.core.luigihacks.estask import ElasticsearchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import luigi

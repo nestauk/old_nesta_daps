@@ -1,6 +1,6 @@
 '''
-Arxiv data to elasticsearch
-================================
+Pipe to elasticsearch
+=====================
 
 Luigi routine to load the Arxiv data from MYSQL into Elasticsearch.
 '''

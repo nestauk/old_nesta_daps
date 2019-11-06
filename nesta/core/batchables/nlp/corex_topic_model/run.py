@@ -1,3 +1,10 @@
+"""
+[AutoML*] run.py (corex_topic_model) 
+====================================
+
+Generate topics based on the CorEx algorithm. Loss is calculated from the total correlation explained.
+"""
+
 import pandas as pd
 import json
 from itertools import chain

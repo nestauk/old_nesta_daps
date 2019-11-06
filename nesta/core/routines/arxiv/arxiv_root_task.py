@@ -1,8 +1,10 @@
 '''
-arXiv data collection and processing
-==================================
+Root task (arXlive)
+===================
 
-Luigi routine to collect all data from the arXiv api and load it to MySQL.
+Luigi routine to collect all data from the arXiv api and load it to MySQL,
+pipe to Elasticsearch, perform topic modelling, generate plots and
+measure novelty.
 '''
 
 import luigi
