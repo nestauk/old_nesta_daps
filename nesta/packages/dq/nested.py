@@ -2,6 +2,18 @@ import pandas as pd
 import itertools
 from collections import Counter
 ##arrays
+
+def keep_lists(input):
+    '''keep_lists
+    Helps filter out instances which are not lists.
+
+    Args:
+        input (:obj: ``)
+
+    '''
+
+    return [i for i in input if type(i) == list]
+
 def array_length(input):
     '''array_length
     Calculates the lenth of arrays.
@@ -32,33 +44,32 @@ def word_arrays(input):
     '''
     #this only keeps the list values and ignore NaNs etc
     series = pd.Series(input)
-    output = [j for j in series if type(j) == list]
+    output = keep_lists(series)
 
     return output
 
-def word_array_calc(input, calculation_type):
+def word_array_calc(input, calculation_type == 'word_length'):
     '''word_array_calc
     Multifunctional function which calculates either the lengths of the list's tokens or the frequency of the  tokens that appears in a list.
 
     Args:
         input (:obj:`list`):
-        calculation_type (:obj:`str`): A string indicaing which type of calculation to perform.
+        calculation_type (:obj:`str`): A keyword argument which calculates word length ('word_length' by default) or count (frequencies) of tokens.
 
     Returns:
-        output1 (:obj:`list`): A list of array lengths.
-        output2 (:obj:`Counter`): Counter object of counts.
+        word_length_output (:obj:`list`): A list of array lengths.
+        count_output (:obj:`Counter`): Counter object of counts.
 
     '''
 
     if calculation_type == 'word_length':
-        list_input = [i for i in input if type(i) == list]
-        # print(list_input)
+        list_input = keep_lists(input)
         output = [len(j) for j in itertools.chain(*list_input)]
-        output1 = pd.Series(output)
-        return output1
+        word_length_output = pd.Series(output)
+        return word_length_output
 
     elif calculation_type == 'count':
-        list_input = [i for i in input if type(i) == list]
+        list_input = keep_lists(input)
         output = Counter(itertools.chain(*list_input))
-        output2 = pd.Series(output)
-        return output2
+        count_output = pd.Series(output)
+        return count_output
