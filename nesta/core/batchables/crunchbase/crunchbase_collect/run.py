@@ -11,14 +11,7 @@ from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.core.orms.orm_utils import get_class_by_tablename, db_session
 from nesta.core.orms.crunchbase_orm import Base
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():

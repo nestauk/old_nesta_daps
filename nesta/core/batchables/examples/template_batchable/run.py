@@ -1,3 +1,11 @@
+'''
+run.py (template_batchable)
+===========================
+
+This is a pretty generic example of how your run.py might look.
+It reads and writes from a table, and hits the S3 "checkpoint" at the end.
+'''
+
 from ast import literal_eval
 import boto3
 import logging
@@ -8,14 +16,7 @@ from nesta.packages.examples.example_package import some_func  # example package
 from nesta.core.orms.example_orm import Base, MyTable, MyOtherTable  # example orm
 from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.core.orms.orm_utils import insert_data, db_session
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():

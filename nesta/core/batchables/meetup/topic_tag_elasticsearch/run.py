@@ -1,3 +1,13 @@
+"""
+run.py (topic_tag_elasticsearch)
+--------------------------------
+
+Batchable for piping data to Elasticsearch,
+whilst implementing topic tags, and filtering groups with too
+few members (given by the 10th percentile of group size, to avoid
+"junk" groups).
+"""
+
 import logging
 import lxml  # To force pipreqs' hand
 
