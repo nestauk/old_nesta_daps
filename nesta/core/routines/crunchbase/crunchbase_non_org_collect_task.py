@@ -1,8 +1,8 @@
 '''
-Crunchbase data collection and processing
-==================================
+Non-organisation collection
+===========================
 
-Luigi routine to collect Crunchbase data exports and load the data into MySQL.
+Luigi routine to collect non-organisation Crunchbase data exports and load the data into MySQL.
 
 Organizations, category_groups, org_parents and organization_descriptions should have
 already been processed; this task picks up all other files to be imported.
@@ -15,7 +15,7 @@ import luigi
 from nesta.packages.crunchbase.crunchbase_collect import get_csv_list
 from nesta.core.luigihacks import autobatch, misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
-from crunchbase_org_collect_task import OrgCollectTask
+from nesta.core.routines.crunchbase.crunchbase_org_collect_task import OrgCollectTask
 
 
 S3 = boto3.resource('s3')

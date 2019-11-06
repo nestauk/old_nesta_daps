@@ -1,3 +1,11 @@
+"""
+Elasticsearch tokenize
+======================
+
+Tokenize arXiv field, which allows the search to leverage
+high quality n-grams, as provided by the :obj:`Ngrammer` module.
+"""
+
 from nesta.core.luigihacks.estask import ElasticsearchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import luigi

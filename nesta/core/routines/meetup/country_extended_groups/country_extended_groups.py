@@ -1,6 +1,6 @@
 '''
-Country :math:`\rightarrow` Extended groups
-===========================================
+Collect data
+============
 
 Starting with a seed country (and Meetup category),
 extract all groups in that country and subsequently

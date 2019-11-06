@@ -1,6 +1,6 @@
 """
-Geocode GTR data
-================
+Geocode
+=======
 
 Apply geocoding to the collected GtR data.
 Add country name, iso codes and continent.

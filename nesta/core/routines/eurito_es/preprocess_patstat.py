@@ -1,4 +1,7 @@
 """
+Preprocess PATSTAT data
+=======================
+
 Select the EU subset of patstat, by doc family id.
 This is will significantly speed up transfer to ES.
 """

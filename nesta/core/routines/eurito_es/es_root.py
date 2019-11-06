@@ -1,3 +1,10 @@
+"""
+Root Task (EURITO)
+==================
+
+Pipe data from MySQL to Elasticsearch, for use with :obj:`clio-lite`.
+"""
+
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p

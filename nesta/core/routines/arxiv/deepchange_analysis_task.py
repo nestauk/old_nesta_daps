@@ -1,11 +1,11 @@
 """
-arXlive analysis for arXlive
-============================
+"Deep learning, Deep Change" analysis
+=====================================
 
-Luigi routine to extract arXive data and perform the 
+Luigi routine to perform the 
 analysis from the Deep learning,
 deep change paper, placing the results in an 
-S3 bucket to be picked up by the arXlive front end.
+S3 bucket to be picked up by the `arXlive <https://arxlive.org>`_ front end.
 """
 import logging
 import luigi

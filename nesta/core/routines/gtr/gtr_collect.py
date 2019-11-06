@@ -1,6 +1,6 @@
 '''
-Gateway to research data collection
-===================================
+Data collection
+===============
 
 Discover all GtR data via the API.
 '''

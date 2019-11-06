@@ -1,6 +1,6 @@
 '''
-Crunchbase geocoding
-==================================
+Geocoding
+=========
 
 Luigi routines to geocode the Organization, FundingRound, Investor, Ipo and People tables.
 '''
@@ -9,7 +9,7 @@ import logging
 import luigi
 import os
 
-from crunchbase_non_org_collect_task import NonOrgCollectTask
+from nesta.core.routines.crunchbase.crunchbase_non_org_collect_task import NonOrgCollectTask
 from nesta.core.luigihacks.batchgeocode import GeocodeBatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub, get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
