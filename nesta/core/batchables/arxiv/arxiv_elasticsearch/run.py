@@ -1,3 +1,12 @@
+"""
+run.py (arxiv_elasticsearch)
+============================
+
+Transfer arXiv data from MySQL to elasticsearch, principally intended
+for the `arXlive <http://arxlive.org>`_ `hierarXy <https://arxlive.org/hierarxy/>`_ 
+searchkit front-end.
+"""
+
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from ast import literal_eval
 import boto3
@@ -22,6 +31,10 @@ from nesta.packages.arxiv.deepchange_analysis import is_multinational
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
 
 def hierarchy_field(row_data):
+    """
+    Generate hierarchical representation of fields of study,
+    which is required for the searchkit interface.
+    """
     new_column = []
     all_levels = set()
     count1, count2 = 0, 0

@@ -1,15 +1,16 @@
 '''
-Crunchbase data collection and processing
-==================================
+Root task (HealthMosaic)
+========================
 
-Luigi routine to collect Crunchbase data exports and load the data into MySQL.
+
+Luigi routine to collect all data from the Crunchbase data dump and load it to MySQL, pipe to Elasticsearch, label projects as being health-related, assign mesh terms and deduplicate.
 '''
 
 import luigi
 import datetime
 import logging
 
-from crunchbase_elasticsearch_task import CrunchbaseSql2EsTask
+from nesta.core.routines.crunchbase.crunchbase_elasticsearch_task import CrunchbaseSql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 

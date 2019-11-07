@@ -1,3 +1,13 @@
+"""
+run.py (lolvelty)
+-----------------
+
+Calculates the "lolvelty" novelty score to documents
+in Elasticsearch, on a document-by-document basis.
+Note that this is a slow procedure, and the bounds of 
+document "lolvelty" can't be known a priori.
+"""
+
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.packages.novelty.lolvelty import lolvelty
 from ast import literal_eval

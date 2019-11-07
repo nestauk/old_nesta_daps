@@ -1,7 +1,8 @@
 '''
-Gateway to Research data collection
-===================================
-Luigi routine to collect GtR data, geocode and load to MYSQL.
+Root Task (generic)
+===================
+
+Luigi routine to collect all GtR data, geocode and load to MYSQL.
 '''
 
 import datetime

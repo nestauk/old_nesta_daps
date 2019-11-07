@@ -1,8 +1,11 @@
 """
-ngrammer batchable
-------------------
+[AutoML] run.py (ngrammer)
+--------------------------
 
-Extracts ngrams on a chunk of data.
+Find and replace ngrams in a body of text, based on
+Wiktionary N-Grams. Whilst at it, the ngrammer
+also tokenizes and removes stop words (unless they
+occur within an n-gram)
 """
 
 import os

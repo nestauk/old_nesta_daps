@@ -1,3 +1,11 @@
+"""
+run.py (crunchbase_eu)
+----------------------
+
+Transfer pre-collected Crunchbase data from MySQL
+to Elasticsearch.
+"""
+
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 
 from ast import literal_eval

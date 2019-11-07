@@ -1,6 +1,6 @@
 """
-arXiv data collection and processing
-====================================
+arXiv enriched with MAG (API)
+=============================
 
 Luigi routine to query the Microsoft Academic Graph for additional data and append it to
 the exiting data in the database.
