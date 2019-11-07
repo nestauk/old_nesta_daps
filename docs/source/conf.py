@@ -24,9 +24,9 @@ try:
 except FileNotFoundError:
     config_dir = 'core/config'
     os.makedirs(config_dir)
-    with open(os.path.join(config_dir, 'luigi.cfg')) as f:
+    with open(os.path.join(config_dir, 'luigi.cfg'), 'w') as f:
         f.write('[worker]\nx=1')
-    with open(os.path.join(config_dir, 'mysqldb.config')) as f:
+    with open(os.path.join(config_dir, 'mysqldb.config'), 'w') as f:
         f.write('[mysqldb]\nx=1')
     print(os.listdir(config_dir))
 
