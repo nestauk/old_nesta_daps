@@ -18,6 +18,18 @@ sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../../nesta/'))
 sys.path.insert(0, os.path.abspath('../../nesta/core'))
 
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
+try:
+    find_filepath_from_pathstub('luigi.cfg')
+except FileNotFoundError:
+    config_dir = 'core/config'
+    os.makedirs(config_dir)
+    with open(os.path.join(config_dir, 'luigi.cfg')) as f:
+        f.write('[worker]\nx=1')
+    with open(os.path.join(config_dir, 'mysqldb.config')) as f:
+        f.write('[mysqldb]\nx=1')
+    print(os.listdir(config_dir))
+
 # -- Project information -----------------------------------------------------
 
 project = 'nesta'
