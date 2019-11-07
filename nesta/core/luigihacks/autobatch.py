@@ -16,7 +16,10 @@ import os
 
 # Define a global timeout, set to 95% of the timeout time
 # in order to give the Luigi worker some grace
-_config = get_config("luigi.cfg", "worker")
+try:
+    _config = get_config("luigi.cfg", "worker")
+except FileNotFoundError:
+    _config = None
 
 
 def command_line(command, verbose=False):

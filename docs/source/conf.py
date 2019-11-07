@@ -18,7 +18,6 @@ sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../../nesta/'))
 sys.path.insert(0, os.path.abspath('../../nesta/core'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'nesta'
@@ -78,7 +77,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 autodoc_default_flags = ['members', 'undoc-members']
-autodoc_mock_imports = ["tensorflow", "sentencepiece", "tensorflow_hub", "autobatch"]
+autodoc_mock_imports = ["tensorflow", "sentencepiece", "tensorflow_hub", "luigihacks"]
 autodoc_member_order = 'bysource'
 html_logo = 'nesta.png'
 
