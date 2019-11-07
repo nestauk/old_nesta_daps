@@ -1,11 +1,8 @@
 '''
-NIH data collection and processing
-==================================
+Assign MeSH terms to abstracts
+==============================
 
-Luigi routine to collect NIH World RePORTER data
-via the World ExPORTER data dump. The routine
-transfers the data into the MySQL database before
-processing and indexing the data to ElasticSearch.
+Assign MeSH terms to projects which have abstracts (note: not all projects have abstracts).
 '''
 
 import boto3

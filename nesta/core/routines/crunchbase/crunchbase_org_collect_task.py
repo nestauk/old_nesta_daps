@@ -1,8 +1,8 @@
 """
-Crunchbase data collection and processing
-==================================
+Get organisations
+=================
 
-Luigi routine to collect Crunchbase data exports and load the data into MySQL.
+Luigi routine to collect organisations from Crunchbase data exports and load the data into MySQL.
 """
 
 import luigi

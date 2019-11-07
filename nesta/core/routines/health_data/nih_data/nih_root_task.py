@@ -1,6 +1,6 @@
 '''
-NIH data collection and processing
-==================================
+Root Task (HealthMosaic)
+========================
 
 Luigi routine to collect NIH World RePORTER data
 via the World ExPORTER data dump. The routine
@@ -14,7 +14,7 @@ import logging
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import os
 
-from nih_dedupe_task import DedupeTask
+from nesta.core.routines.health_data.nih_data.nih_dedupe_task import DedupeTask
 
 
 class RootTask(luigi.WrapperTask):

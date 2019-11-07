@@ -1,11 +1,9 @@
 '''
-NIH data collection and processing
-==================================
+Pipe to Elasticsearch
+=====================
 
-Luigi routine to collect NIH World RePORTER data
-via the World ExPORTER data dump. The routine
-transfers the data into the MySQL database before
-processing and indexing the data to ElasticSearch.
+Transfers the data from the MySQL database to
+to ElasticSearch.
 '''
 
 import datetime

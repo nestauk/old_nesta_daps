@@ -1,6 +1,6 @@
 '''
-arXiv data collection and processing
-====================================
+Date task
+=========
 
 Luigi wrapper to identify the date since the last iterative data collection
 '''

@@ -1,3 +1,13 @@
+"""
+arXiv enriched with GRID
+========================
+
+Luigi routine to lookup arXiv author's institutes via the
+GRID data, in order to "geocode" arXiv articles. The
+matching of institute name to GRID data is done via smart(ish)
+fuzzy matching, which then gives a confidence score per match.
+"""
+
 from fuzzywuzzy import fuzz
 import luigi
 import logging
