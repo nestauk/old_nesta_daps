@@ -1,3 +1,11 @@
+"""
+run.py (collect_gtr)
+--------------------
+
+Starting from GtR projects, iteratively and recursively
+discover all GtR entities by crawling the API.
+"""
+
 import os
 import boto3
 from urllib.parse import urlsplit
@@ -13,15 +21,8 @@ from nesta.packages.gtr.get_gtr_data import TOP_URL
 from nesta.core.orms.orm_utils import insert_data
 from nesta.core.orms.orm_utils import get_class_by_tablename
 from nesta.core.orms.gtr_orm import Base
+from nesta.core.luigihacks.s3 import parse_s3_path
 from collections import defaultdict
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
 
 
 def run():

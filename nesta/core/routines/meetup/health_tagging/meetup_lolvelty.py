@@ -1,8 +1,8 @@
 """
-MeetupLolveltyRootTask
-======================
+Novelty score (lolvelty)
+========================
 
-Apply Lolvelty score to meetup data.
+Apply "lolvelty" score to Meetup data.
 """
 
 from nesta.core.luigihacks.estask import LazyElasticsearchTask

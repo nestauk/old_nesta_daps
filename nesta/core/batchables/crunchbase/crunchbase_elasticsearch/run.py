@@ -1,3 +1,10 @@
+"""
+run.py (crunchbase_elasticsearch)
+=================================
+
+Pipe Crunchbase data from MySQL to Elasticsearch.
+"""
+
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 
 from ast import literal_eval

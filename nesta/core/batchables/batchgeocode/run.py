@@ -1,3 +1,11 @@
+"""
+run.py (batch_geocode)
+======================
+
+Geocode any row-delimited json data, with columns corresponding 
+to a city/town/etc and country.
+"""
+
 import logging
 import os
 import pandas as pd

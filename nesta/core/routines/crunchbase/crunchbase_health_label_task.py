@@ -1,6 +1,6 @@
 """
-Crunchbase organisation health labeling
-=======================================
+Organisation health labeling
+============================
 
 Luigi routine to determine if crunchbase orgs are involved in health and apply a label
 to the data in MYSQL.
@@ -12,7 +12,7 @@ import logging
 import os
 import pickle
 
-from crunchbase_geocode_task import OrgGeocodeTask
+from nesta.core.routines.crunchbase.crunchbase_geocode_task import OrgGeocodeTask
 from nesta.packages.crunchbase.crunchbase_collect import predict_health_flag
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks.misctools import get_config, find_filepath_from_pathstub

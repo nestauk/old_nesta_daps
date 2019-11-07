@@ -1,8 +1,14 @@
+"""
+run.py (crunchbase_collect)
+===========================
+
+Collect Crunchbase data from the proprietary data dump and pipe into the MySQL database.
+"""
+
 from ast import literal_eval
 import boto3
 import logging
 import os
-# import pandas as pd
 from urllib.parse import urlsplit
 
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar, process_non_orgs
@@ -11,14 +17,7 @@ from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed
 from nesta.core.orms.orm_utils import get_class_by_tablename, db_session
 from nesta.core.orms.crunchbase_orm import Base
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():

@@ -1,6 +1,6 @@
 '''
-arXiv data collection and processing
-====================================
+Collection task
+===============
 
 Luigi routine to collect new data from the arXiv api and load it to MySQL.
 '''

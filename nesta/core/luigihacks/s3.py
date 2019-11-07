@@ -28,6 +28,7 @@ def merge_dicts(*dicts):
         merged.update(d)
     return merged
 
+
 def parse_s3_path(path):
     "For a given S3 path, return the bucket and key values"
     parsed_path = urlsplit(path)

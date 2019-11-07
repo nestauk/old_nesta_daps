@@ -1,6 +1,6 @@
 '''
-Meetup topic discovery task
-===========================
+Topic discovery
+===============
 
 Task to automatically discover relevant topics from meetup data,
 defined as the most frequently occurring from a set of categories.

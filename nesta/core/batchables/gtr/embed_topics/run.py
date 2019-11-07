@@ -1,3 +1,12 @@
+"""
+run.py (embed_topics)
+---------------------
+
+Document embedding of GtR data. 
+Would be better if this was generalized (i.e. not GtR specific), 
+and migrated to batchables.nlp [see https://github.com/nestauk/nesta/issues/203]
+"""
+
 import os
 import json
 import logging
@@ -10,14 +19,7 @@ from nesta.core.orms.gtr_orm import Projects
 from nesta.core.orms.orm_utils import db_session
 from nesta.packages.nlp_utils.text2vec import docs2vectors
 from nesta.core.orms.orm_utils import get_mysql_engine
-
-
-def parse_s3_path(path):
-    '''For a given S3 path, return the bucket and key values'''
-    parsed_path = urlsplit(path)
-    s3_bucket = parsed_path.netloc
-    s3_key = parsed_path.path.lstrip('/')
-    return (s3_bucket, s3_key)
+from nesta.core.luigihacks.s3 import parse_s3_path
 
 
 def run():
@@ -49,7 +51,6 @@ def run():
         batch_records = (session
                          .query(Projects.abstractText)
                          .filter(Projects.id.in_(ids))
-                         # .limit(limit)
                          .all())
 
     # Process and insert data

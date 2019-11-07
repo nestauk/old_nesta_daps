@@ -1,3 +1,10 @@
+"""
+Root Task (EURITO)
+==================
+
+Pipe data from MySQL to Elasticsearch, for use with :obj:`clio-lite`.
+"""
+
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
@@ -12,14 +19,13 @@ import luigi
 S3_BUCKET='nesta-production-intermediate'
 
 def kwarg_maker(dataset, routine_id):
-    dataset = f'{dataset}-eu'
     env_files=[f3p('config/mysqldb.config'),
                f3p('config/elasticsearch.config'),
                f3p('schema_transformations/eurito/'),
                f3p('nesta')]
-    batchable=f3p(f'batchables/eurito/{dataset}')
-    return dict(dataset=dataset,
-                routine_id=f'{dataset}_{routine_id}',
+    batchable=f3p(f'batchables/eurito/{dataset}_eu')
+    return dict(dataset=f'{dataset}-eu',
+                routine_id=f'{dataset}-eu_{routine_id}',
                 env_files=env_files,
                 batchable=batchable)
 

@@ -1,3 +1,14 @@
+"""
+[AutoML] Topic modelling (CorEx)
+================================
+
+Automated topic modelling of arXiv articles via the CorEx
+algorithm. See :obj:`topic_process_task_chain.json`
+for the full processing chain, but in brief:
+Vectorization is performed, followed by n-gramming
+(a lookup via Wiktionary) and then topics via CorEx.
+"""
+
 import luigi
 import os
 import datetime
@@ -33,7 +44,7 @@ class PrepareArxivS3Data(luigi.Task):
     chunksize = luigi.IntParameter(default=100000)
     test = luigi.BoolParameter(default=True)
     grid_task_kwargs = DictParameterPlus()
-    
+
     def requires(self):
         return GridTask(**self.grid_task_kwargs)
 
@@ -123,7 +134,7 @@ class WriteTopicTask(luigi.Task):
         CorExTopic.__table__.drop(engine)
 
         # Insert the topic names data
-        topics = [{'id':int(topic_name.split('_')[-1])+1, 
+        topics = [{'id':int(topic_name.split('_')[-1])+1,
                    'terms':terms}
                   for topic_name, terms in
                   data['data']['topic_names'].items()]
@@ -133,7 +144,7 @@ class WriteTopicTask(luigi.Task):
 
         # Insert article topic weight data
         topic_articles = []
-        done_ids = set()        
+        done_ids = set()
         for row in data['data']['rows']:
             article_id = row.pop('id')
             if article_id in done_ids:
