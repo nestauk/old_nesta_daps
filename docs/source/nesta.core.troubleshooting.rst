@@ -1,10 +1,10 @@
 AWS FAQ
 =======
 
-Where is the data?
-------------------
+Where `is <https://www.theguardian.com/news/datablog/2010/jul/16/data-plural-singular>`_ the data?
+--------------------------------------------------------------------------------------------------
 
-As a general rule-of-thumb, our data is always stored in the London region (:obj:`eu-west-2`), in either RDS (MySQL)
+As a general rule-of-thumb, our data is always stored in the London region (:obj:`eu-west-2`), in either RDS (tier-0, MySQL) or Elasticsearch (tier-1). For the EURITO project we also use Neo4j (tier-1), and in the distant future we will use Neo4j for tier-2 (i.e. a knowledge graph).
 
 Why don't you use Aurora rather than MySQL?
 -------------------------------------------
