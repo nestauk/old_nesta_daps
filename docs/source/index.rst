@@ -11,7 +11,7 @@
   
    nesta.packages
    nesta.core
-
+   nesta.core.troubleshooting
 
 	     
 .. include:: ../../nesta/packages/README.rst

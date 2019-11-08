@@ -1,3 +1,34 @@
+AWS FAQ
+=======
+
+Where `is <https://www.theguardian.com/news/datablog/2010/jul/16/data-plural-singular>`_ the data?
+--------------------------------------------------------------------------------------------------
+
+As a general rule-of-thumb, our data is always stored in the London region (:obj:`eu-west-2`), in either RDS (tier-0, MySQL) or Elasticsearch (tier-1). For the EURITO project we also use Neo4j (tier-1), and in the distant future we will use Neo4j for tier-2 (i.e. a knowledge graph).
+
+Why don't you use Aurora rather than MySQL?
+-------------------------------------------
+
+Aurora is definitely cheaper for stable production and business processes but not for research and development. You are charged for every byte of data you have *ever* consumed. This quickly spirals out-of-control for big-data development. Maybe one day we'll consider migrating back, once the situation stabilises.
+
+Where are the production machines?
+----------------------------------
+
+Production machines (EC2) run in Ohio (us-east-2).
+
+
+Where is the latest config?
+---------------------------
+
+One of our priorities is to implement a `decent config management system <https://github.com/nestauk/nesta/issues/196>`_. Our latest read-only config for accessing the tier-0 (rawish SQL data) can be found `here <s3://nesta-production-config/mysqldb_team.config>`_, and a fairly up-to-date config directory (which you can paste into :obj:`nesta/core/config`) can be found `here <https://s3.console.aws.amazon.com/s3/object/nesta-production-config/nesta-config.zip?region=eu-west-2&tab=overview>`_. If you want to use exactly what Joel has been using, feel free to :obj:`sudo cp` from :obj:`/home/ec2-user/nesta/nesta/core/config`. For example, you can find the latest Elasticsearch indexes and endpoints here.
+
+Where do I start with Elasticsearch?
+------------------------------------
+
+All Elasticsearch indexes (aka "databases" to the rest of the world), mappings (aka "schemas")  and whitelisting can be found `here <https://eu-west-2.console.aws.amazon.com/es/home?region=eu-west-2#>`_.
+
+I’d recommend using PostMan for spinning up and knocking down indexes. Practice this on a new cluster (which you can spin up from the above link), and then practice :obj:`PUT`, :obj:`POST` and :obj:`DELETE` requests to :obj:`PUT` an index (remember: "database") with a mapping ("schema"), inserting a "row" with :obj:`POST` and then deleting the index with :obj:`DELETE`. You will quickly learn that it's very easy to delete everything in Elasticsearch.
+
 Troubleshooting
 ===============
 
