@@ -73,7 +73,6 @@ def _geocode(q=None, **kwargs):
         raise ValueError("No query parameters supplied")
 
     query_kwargs = {'q': q} if q else kwargs
-
     try:
         geo_data = geocode(**query_kwargs)
     except ValueError:
@@ -103,6 +102,10 @@ def geocode_dataframe(df):
     _df = df[in_cols].drop_duplicates()
     _df.replace('', pd.np.nan, inplace=True)
     _df = _df.dropna()
+    if len(_df) == 0:        
+        df[out_col] = None
+        return df
+
     # Attempt to geocode with city and country
     _df[out_col] = _df[in_cols].apply(lambda row: _geocode(**row), axis=1)
     # Attempt to geocode with query for those which failed
@@ -138,7 +141,6 @@ def geocode_batch_dataframe(df, city='city', country='country',
     Returns:
         (:obj:`pandas.DataFrame`): original dataframe with lat and lon appended as floats
     """
-
     if query_method not in ['city_country_only', 'query_only', 'both']:
         raise ValueError("Invalid query method, must be 'city_country_only', 'query_only' or 'both'")
 

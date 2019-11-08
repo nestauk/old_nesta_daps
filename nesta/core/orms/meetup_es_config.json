@@ -1,0 +1,158 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "_id_state_group": {
+                    "type": "keyword"
+                },
+                "_placeName_state_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "_terms_memberOrigin_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "_terms_sdg_description": {
+                    "type": "keyword"
+                },
+                "booleanFlag_autotranslated_entity": {
+                    "type": "boolean"
+                },
+                "coordinate_of_group": {
+                    "type": "geo_point"
+                },
+                "count_member_group": {
+                    "type": "integer"
+                },
+                "date_start_group": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "id_continent_group": {
+                    "type": "keyword"
+                },
+                "id_country_group": {
+                    "type": "keyword"
+                },
+                "id_iso2_country": {
+                    "type": "keyword"
+                },
+                "id_iso3_country": {
+                    "type": "keyword"
+                },
+                "id_isoNumeric_country": {
+                    "type": "integer"
+                },
+                "id_of_group": {
+                    "type": "keyword"
+                },
+                "name_of_category": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "name_of_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "placeName_city_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "placeName_continent_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "placeName_country_group": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "rank_rhodonite_group": {
+                    "type": "float"
+                },
+                "terms_iso2lang_entity": {
+                    "type": "keyword"
+                },
+                "terms_mesh_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_of_countryTags": {
+                    "type": "keyword"
+                },
+                "terms_topics_group": {
+                    "analyzer": "mesh_terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "textBody_descriptive_group": {
+                    "type": "text"
+                },
+                "type_of_entity": {
+                    "type": "keyword"
+                },
+                "url_of_group": {
+                    "type": "keyword"
+                }
+            }
+        }
+    },
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "mesh_terms_analyzer": {
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                    ],
+                    "tokenizer": "standard",
+                    "type": "custom"
+                }
+            }
+        },
+        "index": {
+            "number_of_replicas": "1",
+            "number_of_shards": "5"
+        }
+    }
+}

@@ -65,17 +65,20 @@ def country_iso_code_dataframe(df, country='country'):
     return df
 
 
-def country_iso_code_to_name(code):
+def country_iso_code_to_name(code, iso2=False):
     """Converts country alpha_3 into name and catches error so this can be used with
        pd.apply.
 
     Args:
         code (str): iso alpha 3 code
-
+        iso2 (bool): use alpha 2 code instead
     Returns:
         str: name of the country or None if not valid
     """
-    try:
-        return pycountry.countries.get(alpha_3=code).name
-    except KeyError:
+    try:        
+        if iso2:
+            return pycountry.countries.get(alpha_2=code).name
+        else:
+            return pycountry.countries.get(alpha_3=code).name
+    except (KeyError, AttributeError):
         return None

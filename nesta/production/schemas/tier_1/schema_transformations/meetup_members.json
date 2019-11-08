@@ -1,4 +1,0 @@
-[
-    {"tier_0": "member_id", "tier_1": "id_of_member", "unique":true},
-    {"tier_0": "group_id", "tier_1": "id_of_group", "unique":true}
-]

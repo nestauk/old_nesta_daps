@@ -10,12 +10,12 @@
    :caption: Contents:
   
    nesta.packages
-   nesta.production
+   nesta.core
 
 
 	     
 .. include:: ../../nesta/packages/README.rst
-.. include:: ../../nesta/production/README.rst
+.. include:: ../../nesta/core/README.rst
 	   
 
 License

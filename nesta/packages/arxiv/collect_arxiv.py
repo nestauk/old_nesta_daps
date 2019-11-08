@@ -1,7 +1,9 @@
+from collections import defaultdict
 import datetime
 import json
 import logging
 import pandas as pd
+import re
 import requests
 from retrying import retry
 import s3fs  # required for pandas to use read_csv from s3
@@ -10,8 +12,10 @@ from sqlalchemy.orm.exc import NoResultFound
 import time
 import xml.etree.ElementTree as ET
 
-from nesta.production.orms.orm_utils import get_mysql_engine, try_until_allowed
-from nesta.production.orms.arxiv_orm import Base, Category
+from nesta.packages.mag.query_mag_api import prepare_title
+from nesta.packages.misc_utils.batches import split_batches
+from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.core.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
 ARXIV = "{http://arxiv.org/OAI/arXiv/}"
@@ -87,6 +91,7 @@ def _arxiv_request(url, delay=DELAY, **kwargs):
     """
     params = dict(verb='ListRecords', **kwargs)
     r = requests.get(url, params=params)
+    r.raise_for_status()
     time.sleep(delay)
     try:
         root = ET.fromstring(r.text)
@@ -146,20 +151,29 @@ def xml_to_json(element, tag, prefix=''):
     return json.dumps(all_data)
 
 
-def arxiv_batch(token, cursor):
-    """Retrieves a batch of data from the arXiv api (expect 1000).
+def arxiv_batch(resumption_token=None, **kwargs):
+    """Retrieves a batch of data from the arXiv api (expect up to 1000).
+    If a resumption token and cursor are not supplied then the first batch will be
+    requested. Additional keyword arguments are only sent with the first request (ie no
+    resumption_token)
 
     Args:
-        token (str): resumptionToken issued from a prevous request
-        cursor (int): record to start from
+        resumption_token (str): resumptionToken issued from a prevous request
+        kwargs: additonal paramaters to send with the initial api request
 
     Returns:
         (:obj:`list` of :obj:`dict`): retrieved records
+        (str or None): resumption token if present in results
     """
-    resumption_token = '|'.join([token, str(cursor)])
-    root = _arxiv_request(API_URL, resumptionToken=resumption_token)
+    if resumption_token is not None:
+        root = _arxiv_request(API_URL, resumptionToken=resumption_token)
+    else:
+        root = _arxiv_request(API_URL, metadataPrefix='arXiv', **kwargs)
     records = root.find(OAI+'ListRecords')
     output = []
+
+    if records is None:
+        raise ValueError('No new records to collect from arXiv')
 
     for record in records.findall(OAI+"record"):
         header = record.find(OAI+'header')
@@ -201,16 +215,253 @@ def arxiv_batch(token, cursor):
         output.append(row)
 
     # extract cursor for next batch
-    token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
-    if token.text is not None:
-        resumption_cursor = int(token.text.split("|")[1])
-        logging.info(f"next resumptionCursor: {resumption_cursor}")
+    new_token = root.find(OAI+'ListRecords').find(OAI+"resumptionToken")
+    if new_token is None or new_token.text is None:
+        resumption_token = None
+        logging.info(f"Hit end of arXiv data. {len(output)} records in this final batch.")
     else:
-        resumption_cursor = None
-        logging.info("End of data")
+        if resumption_token is None:  # first batch only
+            total_articles = new_token.attrib.get('completeListSize', 0)
+            logging.info(f"Total records to retrieve in batches: {total_articles}")
+        resumption_token = new_token.text
+        logging.info(f"next resumptionCursor: {resumption_token.split('|')[1]}")
 
-    return output, resumption_cursor
+    return output, resumption_token
 
+
+def retrieve_arxiv_batch_rows(start_cursor, end_cursor, token):
+    """Iterate through batches and yield single rows until the end_cursor or end of data
+    is reached.
+
+    Args:
+        start_cursor (int): first record to return
+        end_cursor (int): start of the next batch, ie stop when this cursor is returned
+        resumption_token (int): token to supply the api
+
+    Returns:
+        (dict): a single row of data
+    """
+    resumption_token = '|'.join([token, str(start_cursor)])
+    while resumption_token is not None and start_cursor < end_cursor:
+        batch, resumption_token = arxiv_batch(resumption_token)
+        if resumption_token is not None:
+            start_cursor = int(resumption_token.split("|")[1])
+        for row in batch:
+            yield row
+
+
+def retrieve_all_arxiv_rows(**kwargs):
+    """Iterate through batches and yield single rows through the whole dataset.
+
+    Args:
+        kwargs: any keyword arguments to send with the request
+
+    Returns:
+        (dict): a single row of data
+    """
+    resumption_token = None
+    while True:
+        try:
+            batch, resumption_token = arxiv_batch(resumption_token, **kwargs)
+        except ValueError as e:
+            logging.info(e)
+            # no records to collect
+            break
+
+        for row in batch:
+            yield row
+        if resumption_token is None:
+            break
+
+
+def extract_last_update_date(prefix, updates):
+    """Determine the latest valid date from a list of update_ids.
+    Args:
+        prefix (str): valid prefix in the update id
+        updates (list of str): update ids extracted from the luigi_table_updates
+
+    Returns:
+        (str): latest valid date from the supplied list
+    """
+    date_pattern = r'(\d{4}-\d{2}-\d{2})'
+    pattern = re.compile(f'^{prefix}_{date_pattern}$')
+    matches = [re.search(pattern, update) for update in updates]
+    dates = []
+    for match in matches:
+        try:
+            dates.append(datetime.datetime.strptime(match.group(1), '%Y-%m-%d'))
+        except (AttributeError, ValueError):  # no matches or strptime conversion fail
+            pass
+    try:
+        return sorted(dates)[-1]
+    except IndexError:
+        raise ValueError("Latest date could not be identified")
+
+
+class BatchedTitles():
+    def __init__(self, ids, batch_size, session):
+        """Extracts batches of titles from the database and yields titles for lookup
+        against the MAG api.
+
+        A lookup dict of {prepared title: [id, ...]} is generated for each batch:
+        self.title_id_lookup
+
+        Args:
+            ids (set): all article ids to be processed
+            batch_size (int): number of ids in each query to the database
+            session (:obj:`sqlalchemy.orm.session`): current session
+
+        Returns:
+            (generator): yields single prepared titles
+        """
+        self.ids = ids
+        self.batch_size = batch_size
+        self.session = session
+        self.title_articles_lookup = defaultdict(list)
+
+    def __getitem__(self, key):
+        """Get articles which match the provided title.
+        Args:
+            key (str): the title of the article
+
+        Returns
+            (:obj:`list` of `str`) article ids which matched the provided title before
+            the request to mag was made.
+        """
+        matching_articles = self.title_articles_lookup.get(key)
+        if matching_articles is None:
+            raise KeyError(f"Title not found in lookup {key}")
+        else:
+            return matching_articles
+
+    def __iter__(self):
+        for batch_of_ids in split_batches(self.ids, self.batch_size):
+            self.title_articles_lookup.clear()
+            for article in (self.session.query(Article)
+                                        .filter(Article.id.in_(batch_of_ids))
+                                        .all()):
+                self.title_articles_lookup[prepare_title(article.title)].append(article.id)
+
+            for title in self.title_articles_lookup:
+                yield title
+
+
+def add_new_articles(article_batch, session):
+    """Adds new articles to the session and commits them.
+    Args:
+        article_batch (:obj:`list` of `Article`): Articles to add to database
+        session (:obj:`sqlalchemy.orm.session`): active session to use
+    """
+    logging.info(f"Inserting a batch of {len(article_batch)} new Articles")
+    session.add_all(article_batch)
+    session.commit()
+
+
+def update_existing_articles(article_batch, engine):
+    """Updates existing articles from a list of dictionaries. Bulk method is used for
+    non relationship fields, with the relationship fields updated using the core orm
+    method.
+
+    Args:
+        article_batch (:obj:`list` of `dict`): articles to add to database
+        engine (:obj:`sqlalchemy.engine`): connection engine to use
+    """
+    Session = sessionmaker(engine)
+    session = Session()
+    logging.info(f"Updating a batch of {len(article_batch)} existing articles")
+
+    # look for any institutes in provided article_batch
+    for article in article_batch:
+        if article.get('institutes'):
+            raise ValueError("Institute links cannot be written using this method. Use add_article_institutes instead")
+
+    # convert lists of category ids into rows for association table
+    article_categories = [dict(article_id=article['id'], category_id=cat_id)
+                          for article in article_batch
+                          for cat_id in article.pop('categories', [])]
+
+    # convert lists of fos_ids into rows for association table
+    article_fields_of_study = [dict(article_id=article['id'], fos_id=fos_id)
+                               for article in article_batch
+                               for fos_id in article.pop('fields_of_study', [])]
+
+    # if not using this function to update match attempted flags, reset the flag to
+    # False so another attempt to match is made using this updated data
+    for row in article_batch:
+        if 'institute_match_attempted' not in row.keys():
+            row.update({'institute_match_attempted': False})
+
+    # update unlinked article data in bulk
+    logging.debug("bulk update mapping on articles")
+    session.bulk_update_mappings(Article, article_batch)
+
+    if article_categories:
+        # remove and re-create links
+        article_cats_table = Base.metadata.tables['arxiv_article_categories']
+        art_ids = {a['id'] for a in article_batch}
+        logging.debug("core orm delete on categories")
+        session.execute(article_cats_table.delete()
+                        .where(article_cats_table.columns['article_id'].in_(art_ids)))
+        logging.debug("core orm insert on categories")
+        session.execute(article_cats_table.insert(),
+                        article_categories)
+
+    if article_fields_of_study:
+        # remove and re-create links
+        article_fos_table = Base.metadata.tables['arxiv_article_fields_of_study']
+        art_ids = {a['id'] for a in article_batch}
+        logging.debug("core orm delete on fields of study")
+        session.execute(article_fos_table.delete()
+                        .where(article_fos_table.columns['article_id'].in_(art_ids)))
+        logging.debug("core orm insert on fields of study")
+        session.execute(Base.metadata.tables['arxiv_article_fields_of_study'].insert(),
+                        article_fields_of_study)
+
+    session.commit()
+    session.close()
+
+
+def add_article_institutes(article_institutes, engine):
+    """Writes to the association table for article/institute links using the core orm"""
+    logging.info(f"Inserting a batch of {len(article_institutes)} article institutes")
+    logging.debug(article_institutes)
+    engine.execute(Base.metadata.tables['arxiv_article_institutes'].insert(),
+                   article_institutes)
+
+
+def create_article_institute_links(article_id, institute_ids, score):
+    """Creates data for the article/institutes association table.
+    There will be multiple links if the institute is multinational, one for each country
+    entity.
+
+    Args:
+        article_id (str): arxiv id of the article
+        institute_ids (:obj:`list` of :obj:`str`): institute ids to link with the article
+        score (numpy.float64): score for the match
+
+    Returns:
+        (:obj:`list` of :obj:`dict`): article institute links ready to load to database
+    """
+    return [{'article_id': article_id,
+             'institute_id': institute_id,
+             'is_multinational': len(institute_ids) > 1,
+             'matching_score': float(score)}
+            for institute_id in institute_ids]
+
+
+def all_article_ids(engine, limit=None):
+    """Retrieve the id of every article from MYSQL.
+
+    Args:
+        engine (:obj:`sqlalchemy.engine.Base.Engine`): db connectable.
+        limit (int): row limit to apply to query (e.g. for testing)
+
+    Returns:
+        (set): all article ids
+    """
+    with db_session(engine) as session:
+        arts = session.query(Article.id).limit(limit)
+        return {art.id for art in arts}
 
 if __name__ == '__main__':
     log_stream_handler = logging.StreamHandler()
