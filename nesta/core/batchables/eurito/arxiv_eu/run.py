@@ -50,9 +50,8 @@ def run():
                               db_name)
     logging.info('Building FOS lookup')
     fos_lookup = build_fos_lookup(engine, max_lvl=6)
-
     nf = NutsFinder()
-
+    
     # es setup
     logging.info('Connecting to ES')
     strans_kwargs={'filename':'eurito/arxiv-eu.json',
@@ -83,7 +82,7 @@ def run():
     # Get all grid countries
     # and country: continent lookup
     logging.info('Doing country lookup')
-    country_lookup = get_country_region_lookup()
+    country_lookup = get_country_region_lookup()            
     eu_countries = get_eu_countries()
     with db_session(engine) as session:
         grid_regions = {obj.id: country_lookup[obj.country_code]
@@ -170,7 +169,7 @@ def run():
             mag_authors = row.pop('mag_authors')
             if mag_authors is None:
                 row['authors'] = None
-                row['institutes'] = None
+                row['institutes'] = None 
             else:
                 if all('author_order' in a for a in mag_authors):
                     mag_authors = sorted(mag_authors,

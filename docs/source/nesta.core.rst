@@ -33,4 +33,4 @@ Code and scripts
     nesta.core.scripts
     nesta.core.elasticsearch
     nesta.core.containers
-    nesta.core.troubleshooting
+
