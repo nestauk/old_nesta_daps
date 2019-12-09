@@ -48,7 +48,7 @@ def word_arrays(input):
 
     return output
 
-def word_array_calc(input, calculation_type == 'word_length'):
+def word_array_calc(input, calculation_type = 'word_length'):
     '''word_array_calc
     Multifunctional function which calculates either the lengths of the list's tokens or the frequency of the  tokens that appears in a list.
 
