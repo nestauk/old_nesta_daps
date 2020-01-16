@@ -47,6 +47,8 @@ echo "Added $DEPCOUNTER objects to the environment"
 pip install pipreqs &> /dev/null
 #pipreqs --use-local --ignore scripts,schemas,docs,.travis,.git run
 pipreqs --ignore scripts,schemas,docs,.travis,.git run
+sed -i '/nuts_finder/d' run/requirements.txt
+echo "REMOVED nuts_finder FROM requirements.txt"
 echo $(cat run/requirements.txt)
 
 # Zip it up and copy to s3
