@@ -58,7 +58,7 @@ class RootTask(luigi.WrapperTask):
                        f'.min_df_0-001.NGRAM.TEST_False.json')
         if not self.production:
             cherry_picked=(f'automl/{self.date}/COREX_TOPIC_MODEL'
-                           '.n_hidden_36-0.VECTORIZER.binary_True'
+                           '.n_hidden_33-0.VECTORIZER.binary_True'
                            '.min_df_0-001.NGRAM.TEST_True.json')
 
         kwargs = {'score_field': 'metric_novelty_article',
