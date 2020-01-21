@@ -132,7 +132,7 @@ def query_fields_of_study(subscription_key,
                      'FL': 'level',
                      'FP': 'parent_ids',
                      'FC': 'child_ids'}
-    fields_to_drop = ['logprob', 'prob', 'E']
+    fields_to_drop = ['logprob', 'prob']
     fields_to_compact = ['parent_ids', 'child_ids']
 
     for expr in build_expr(*expr_args):

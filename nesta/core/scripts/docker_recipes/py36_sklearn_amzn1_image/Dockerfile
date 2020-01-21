@@ -6,6 +6,7 @@ RUN du -cxh --threshold=5M --max-depth=3 /
 RUN mkdir /root/.conda
 ENV PYTHONDONTWRITEBYTECODE=true
 ENV PYTHONIOENCODING=utf8
+ENV LANG=en_US.UTF-8
 
 # Install common dependencies
 RUN rm -rf /var/cache/yum/x86_64/latest
