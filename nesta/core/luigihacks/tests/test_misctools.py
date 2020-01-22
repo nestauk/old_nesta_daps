@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, main
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 
@@ -15,3 +15,7 @@ class TestMiscTools(TestCase):
         find_filepath_from_pathstub("nesta/packages")
         with self.assertRaises(FileNotFoundError):
             find_filepath_from_pathstub("nesta/package")
+
+
+if __name__ == "__main__":
+    main()
