@@ -1,0 +1,167 @@
+{
+    "type_of_entity": {
+        "crunchbase": "company",
+        "meetup": "meetup",
+        "nih": "project"
+    },
+    "id": {
+        "meetup": "id_of_group",
+        "nih": "id_of_project"
+    },
+    "name": {
+        "crunchbase": "name_parent_organisation",
+        "meetup": "name_of_group",
+        "nih": "name_of_project"
+    },
+    "description": {
+        "crunchbase": "textBody_descriptive_organisation",
+        "meetup": "textBody_descriptive_group",
+        "nih": "textBody_descriptive_project"
+    },
+    "brief": {
+        "crunchbase": "textBody_summary_organisation",
+        "meetup": "textBody_abstract_project"
+    },
+    "title": {
+        "nih": "title_of_project"
+    },
+    "start_date": {
+        "crunchbase": "date_birth_organisation",
+        "meetup": "date_start_group",
+        "nih": "date_start_project"
+    },
+    "end_date": {
+        "crunchbase": "date_death_organisation",
+        "nih": "date_end_project"
+    },
+    "update_date": {
+        "crunchbase": "datetime_updated_organisation"
+    },
+    "continent": {
+        "crunchbase": "placeName_continent_organisation",
+        "meetup": "placeName_continent_group",
+        "nih": "placeName_continent_organisation"
+    },
+    "continent_id": {
+        "crunchbase": "id_continent_organisation",
+        "meetup": "id_continent_group",
+        "nih": "id_of_continent"
+    },
+    "country_name": {
+        "crunchbase": "placeName_country_organisation",
+        "meetup": "placeName_country_group",
+        "nih": "placeName_country_organisation"
+    },
+    "country_id": {
+        TODO: iso2, iso3 or isoNumeric. Pick one?
+        "crunchbase": "id_iso2_country",
+        "meetup": "id_iso2_country",
+        "nih": "id_iso2_country"
+    },
+    "state_name": {
+        "crunchbase": "placeName_state_organisation",
+        "nih": "placeName_state_organisation"
+    },
+    "state_id": {
+        "crunchbase": "id_state_organisation",
+        "nih": "id_state_organisation"
+    },
+    "region_name": {
+        "crunchbase": "placeName_region_organisation"
+    },
+    "city": {
+        "crunchbase": "placeName_city_organisation",
+        "meetup": "placeName_city_group",
+        "nih": "placeName_city_organisation"
+    },
+    "zipcode": {
+        "nih": "placeName_zipcode_organisation"
+    },
+    "address": {
+        "crunchbase": "address_of_organisation"
+    },
+    "location": {
+        "crunchbase": "coordinate_of_city",
+        "meetup": "coordinate_of_group",
+        "nih": "coordinate_of_organisation"
+    },
+    "novelty": {
+        "crunchbase": "rank_rhodonite_organisation",
+        "meetup": "rank_rhodonite_group",
+        "nih": "rank_rhodonite_abstract"
+    },
+    "size": {
+        "crunchbase": "count_employee_organisation",
+        "mu": "count_member_group"
+    }
+    "is_duplicate": {
+        "nih": "booleanFlag_duplicate_abstract"
+    },
+    "is_autotranslated": {
+        "meetup": "booleanFlag_autotranslated_entity"
+    },
+    "is_health": {
+        "crunchbase": "booleanFlag_health_organisation"
+    },
+    "terms_mesh": {
+        "crunchbase": "terms_mesh_description",
+        "meetup": "terms_mesh_group",
+        "nih": "terms_mesh_abstract"
+    },
+    "sdg_labels": {
+        "nih": "terms_sdg_abstract"
+    },
+    "terms_place": {
+        "crunchbase": "terms_of_countryTags",
+        "meetup": "terms_of_countryTags",
+        "nih": "terms_of_countryTags"
+    },
+    "terms_topics": {
+        "meetup": "terms_topics_group",
+        "nih": "terms_descriptive_project"
+    },
+    "terms_funders": {
+        "crunchbase": "terms_of_funders",
+        "nih": "terms_of_funders"
+    },
+    "terms_language": {
+        "meetup": "terms_iso2lang_entity"
+    },
+    "url_cb": {
+        "crunchbase": "url_crunchBase_organisation"
+    },
+    "url_fb": {
+        "crunchbase": "url_facebook_organisation"
+    },
+    "url_li": {
+        "crunchbase": "url_linkedIn_organisation"
+    },
+    "url_site": {
+        "crunchbase": "url_of_organisation",
+        "meetup": "url_of_group"
+    },
+    "url_tw": {
+        "crunchbase": "url_twitter_organisation"
+    },
+    "funding_cost": {
+        "crunchbase": "cost_of_funding",
+        "nih": "cost_total_project"
+    },
+    "funding_rounds": {
+        "crunchbase": "count_rounds_funding",
+        "nih": "json_funding_project"
+    },
+    "funding_currency": {
+        "crunchbase": "currency_of_funding",
+        "nih": "currency_total_cost"
+    },
+    "funding_last_date": {
+        "crunchbase": "date_last_funding"
+    }
+    "funding_year": {
+        "nih": "year_fiscal_funding"
+    },
+    "funding_entity": {
+        "nih": "title_of_funder"
+    },
+}
