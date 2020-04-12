@@ -12,6 +12,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.crunchbase_orm import Organization
 from nesta.core.orms.patstat_eu_orm import ApplnFamily
+from nesta.core.orms.cordis_orm import Project
 
 from datetime import datetime as dt
 import luigi
@@ -58,7 +59,8 @@ class RootTask(luigi.WrapperTask):
         #          ('crunchbase', 'company', Organization.id),
         #          ('patstat', 'patent', ApplnFamily.docdb_family_id))
         #params = (('crunchbase', 'company', Organization.id),)
-        params = (('arxiv', 'article', Article.id),)
+        #params = (('arxiv', 'article', Article.id),)
+        params = (('cordis', 'project', Project.rcn),)
         #params = (('patstat', 'patent', ApplnFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             print(dataset, entity_type, id_field)

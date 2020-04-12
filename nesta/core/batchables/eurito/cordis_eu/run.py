@@ -11,6 +11,7 @@ import boto3
 import json
 import logging
 import os
+from datetime import datetime as dt
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.luigihacks.luigi_logging import set_log_level
@@ -18,6 +19,18 @@ from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.cordis_orm import Project
+
+def validate_date(row, label):
+    key = f'{label}_date_code'
+    year = None
+    try:
+        year = dt.strptime(row[key], '%Y-%m-%dT00:00:00').year
+    except ValueError:
+        row[key] = None
+    else:
+        row[key] = row[key][0:10]
+    finally:
+        return year
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -73,9 +86,11 @@ def run():
             row = object_to_dict(obj)
             
             # Extract year from date
-            if row['start_date_code'] is not None:
-                row['year'] = row['start_date_code'].year
-
+            start_year = validate_date(row, 'start')
+            end_year = validate_date(row, 'end')
+            row['year'] = start_year if start_year is not None else end_year
+            
+            
             _desc = row.pop('project_description')
             _obj = row.pop('objective')
             row['description'] = f'Description:\n{_desc}\n\nObjective:\n{_obj}'
@@ -93,28 +108,27 @@ def run():
 
 if __name__ == "__main__":
     set_log_level()
-    # if 'BATCHPAR_outinfo' not in os.environ:
-    #     from nesta.core.orms.orm_utils import setup_es
-    #     es, es_config = setup_es('dev', True, True,
-    #                              dataset='cordis-eu')
-    #     environ = {'config': ('/home/ec2-user/nesta-cordis2es/nesta/'
-    #                           'core/config/mysqldb.config'),
-    #                'batch_file' : ('arxiv-eu_EURITO-ElasticsearchTask-'
-    #                                '2019-10-12-True-157124660046601.json'),
-    #                'db_name': 'dev',
-    #                'bucket': 'nesta-production-intermediate',
-    #                'done': "False",
-    #                'outinfo': ('https://search-eurito-dev-'
-    #                            'vq22tw6otqjpdh47u75bh2g7ba.'
-    #                            'eu-west-2.es.amazonaws.com'),
-    #                'out_port': '443',
-    #                'out_index': 'arxiv_dev',
-    #                'out_type': '_doc',
-    #                'aws_auth_region': 'eu-west-2',
-    #                'entity_type': 'article',
-    #                'test': "True"}
-    #     for k, v in environ.items():
-    #         os.environ[f'BATCHPAR_{k}'] = v
+    if 'BATCHPAR_outinfo' not in os.environ:
+        from nesta.core.orms.orm_utils import setup_es
+        es, es_config = setup_es('dev', True, True,
+                                 dataset='cordis-eu')
+        environ = {'config': ('/home/ec2-user/nesta-cordis2es/nesta/'
+                              'core/config/mysqldb.config'),
+                   'batch_file' : ('cordis-eu_EURITO-ElasticsearchTask-2020-04-10-True-15865345336407135.json'),
+                   'db_name': 'dev',
+                   'bucket': 'nesta-production-intermediate',
+                   'done': "False",
+                   'outinfo': ('https://search-eurito-dev-'
+                               'vq22tw6otqjpdh47u75bh2g7ba.'
+                               'eu-west-2.es.amazonaws.com'),
+                   'out_port': '443',
+                   'out_index': 'cordis_dev',
+                   'out_type': '_doc',
+                   'aws_auth_region': 'eu-west-2',
+                   'entity_type': 'project',
+                   'test': "True"}
+        for k, v in environ.items():
+            os.environ[f'BATCHPAR_{k}'] = v
 
     logging.info('Starting...')
     run()
