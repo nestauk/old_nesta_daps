@@ -72,7 +72,11 @@ def hit_api(api='', rcn=None, content_type=None):
     r = requests.get(url, params={'lang': 'en',
                                   'rcn': rcn,
                                   'paramType': 'rcn',
-                                  'contenttype': content_type})
+                                  'contenttype': content_type},
+                     headers={'User-Agent':('Mozilla/5.0 (Linux; Android 6.0; '
+                                            'Nexus 5 Build/MRA58N) AppleWebKit/537.36 '
+                                            '(KHTML, like Gecko) Chrome/81.0.4044.92 '
+                                            'Mobile Safari/537.36')})
     if (r.status_code == 500 and 
         r.json()['payload']['errorType'] == 'ica'):
         return None
