@@ -24,7 +24,7 @@
                     "type": "text"
                 },
                 "status_of_project": {
-                    "type": "text"
+                    "type": "keyword"
                 },
                 "terms_tokens_entity": {
                     "type": "keyword"
