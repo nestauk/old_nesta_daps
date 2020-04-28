@@ -17,6 +17,9 @@
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
+                "metric_novelty_project": {
+                    "type": "float"
+                },
                 "name_framework_project": {
                     "type": "text"
                 },
