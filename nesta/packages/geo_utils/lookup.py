@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+from io import StringIO
 
 def get_eu_countries():
     """
@@ -41,8 +42,11 @@ def get_country_region_lookup():
     """
     url = ("https://datahub.io/core/country-codes"
            "/r/country-codes.csv")
-    df = pd.read_csv(url, usecols=['official_name_en', 'ISO3166-1-Alpha-2',
-                                   'Sub-region Name'])
+    r = requests.get(url)
+    r.raise_for_status()
+    with StringIO(r.text) as csv:        
+        df = pd.read_csv(csv, usecols=['official_name_en', 'ISO3166-1-Alpha-2',
+                                       'Sub-region Name'])
     data = {row['ISO3166-1-Alpha-2']: (row['official_name_en'],
                                        row['Sub-region Name'])
             for _, row in df.iterrows()
