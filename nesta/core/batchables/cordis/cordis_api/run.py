@@ -109,11 +109,10 @@ if __name__ == "__main__":
 
     set_log_level(True)    
     if 'BATCHPAR_config' not in os.environ:
+        from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
         os.environ['BATCHPAR_batch_file'] = ('Cordis-2020-04-12-True-1586709686976328.json')
         os.environ['BATCHPAR_db_name'] = 'production'
-        os.environ["BATCHPAR_config"] = ('/home/ec2-user/'
-                                         'nesta/nesta/core/config/'
-                                         'mysqldb.config')
+        os.environ["BATCHPAR_config"] = find_filepath_from_pathstub('mysqldb.config'),
         os.environ["BATCHPAR_bucket"] = ('nesta-production'
                                          '-intermediate')
     run()
