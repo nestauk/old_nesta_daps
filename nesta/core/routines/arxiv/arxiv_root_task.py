@@ -73,7 +73,7 @@ class RootTask(luigi.WrapperTask):
                                 self.drop_and_recreate,
                                 dataset=dataset)
         yield ArxivElasticsearchTask(date=self.date,
-                                     process_batch_size=2500,
+                                     process_batch_size=1000,
                                      routine_id=routine_id,
                                      grid_task_kwargs=grid_task_kwargs,
                                      test=not self.production,
