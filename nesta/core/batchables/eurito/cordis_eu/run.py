@@ -21,6 +21,20 @@ from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.cordis_orm import Project
 
 def validate_date(row, label):
+    """Reformat dates so they are as expected on ingestion to ES
+
+    If the date is invalid or null, the corresponding date field on
+    the input row will be transformed to None, otherwise the
+    date will be stripped from the first 10 chars. The year of the
+    date will be returned, as this is used in another field.
+
+    Args:
+        row (dict): Row of data (NB: will be changed in place)
+        label (str): One of 'start' or 'end', corresponding to 
+                     project date fields in Cordis data.
+    Returns:
+        year (int): Reformatted row of data
+    """
     key = f'{label}_date_code'
     year = None
     try:
@@ -31,6 +45,28 @@ def validate_date(row, label):
         row[key] = row[key][0:10]
     finally:
         return year
+
+
+def reformat_row(row):
+    """Prepare raw data for ingestion to ES.
+
+    Args:
+        row (dict): Row of data.
+    Returns:
+        row (dict): Reformatted row of data
+    """
+    # Extract year from date
+    start_year = validate_date(row, 'start')
+    end_year = validate_date(row, 'end')
+    # Preference of start, then end, and otherwise None
+    row['year'] = start_year if start_year is not None else end_year
+
+    # Combine text fields, since they are of variable length and quality
+    _desc = row.pop('project_description')
+    _obj = row.pop('objective')
+    row['description'] = f'Description:\n{_desc}\n\nObjective:\n{_obj}'
+    row['link'] = f'https://cordis.europa.eu/project/id/{row["rcn"]}'
+    return row
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -49,7 +85,7 @@ def run():
     logging.info('Retrieving engine connection')
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb",
                               db_name)
-    
+
     # es setup
     logging.info('Connecting to ES')
     strans_kwargs={'filename':'eurito/cordis-eu.json',
@@ -83,21 +119,9 @@ def run():
                                      .filter(Project.rcn.in_(project_ids))
                                      .all())):
             row = object_to_dict(obj)
-            
-            # Extract year from date
-            start_year = validate_date(row, 'start')
-            end_year = validate_date(row, 'end')
-            row['year'] = start_year if start_year is not None else end_year
-            
-            
-            _desc = row.pop('project_description')
-            _obj = row.pop('objective')
-            row['description'] = f'Description:\n{_desc}\n\nObjective:\n{_obj}'
-            row['link'] = f'https://cordis.europa.eu/project/id/{row["rcn"]}'
-
-            uid = row.pop('rcn')
+            row = reformat_row(row)
             _row = es.index(index=es_index, doc_type=es_type,
-                            id=uid, body=row)
+                            id=row.pop('rcn'), body=row)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to "
                              "elasticsearch")
