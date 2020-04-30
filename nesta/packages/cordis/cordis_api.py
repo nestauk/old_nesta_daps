@@ -79,6 +79,7 @@ def hit_api(api='', rcn=None, content_type=None):
                                   'paramType': 'rcn',
                                   'contenttype': content_type},
                      headers={'User-Agent':USER_AGENT})
+    # Not all projects have data, so this is not an error
     if (r.status_code == 500 and 
         r.json()['payload']['errorType'] == 'ica'):
         return None
