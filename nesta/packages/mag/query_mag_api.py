@@ -5,6 +5,11 @@ import pandas as pd
 import requests
 from retrying import retry
 
+from dateutil import rrule
+from datetime import datetime, timedelta
+from pandas import Timestamp
+
+
 from nesta.core.luigihacks import misctools
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.mag_orm import FieldOfStudy
@@ -271,3 +276,70 @@ if __name__ == "__main__":
     #     count = 1000
     #     data = query_mag_api(expr, fos_level_fields, query_count=count)
     #     print(data)
+
+
+def build_composite_expr(query_values, entity_name, date):
+    """Builds a composite expression with ANDs in OR to be used as MAG query.
+    Args:
+        query_values (:obj:`list` of :obj:`str`): Phrases to query MAG with.
+        entity_name (str): MAG attribute that will be used in query.
+        date (:obj:`tuple` of :obj:`str`): Time period of the data collection.
+    Returns:
+        (str) MAG expression.
+
+    """
+    query_prefix_format = "expr=OR({})"
+    and_queries = [
+        "".join(
+            [
+                f"AND(Composite({entity_name}='{query_value}'), D=['{date[0]}', '{date[1]}'])"
+            ]
+        )
+        for query_value in query_values
+    ]
+    if len(and_queries) == 1:
+        return f"expr={and_queries[0]}"
+    return query_prefix_format.format(", ".join(and_queries))
+
+
+def weekchunks(start, until=None, date_format='%Y-%m-%d'):
+    '''Generate date strings in weekly chunks between two dates.
+    Args:
+        start (str): Sensibly formatted datestring (format to be guessed by pd)
+        until (str): Another datestring. Default=today.
+    Returns:
+        chunk_pairs (list): List of pairs of string, representing the start and end of weeks.
+    '''
+    if until is None:
+        until = datetime.now()
+    start = Timestamp(start).to_pydatetime()
+    chunks = [datetime.strftime(_date, date_format)
+              for _date in rrule.rrule(rrule.WEEKLY, dtstart=start,
+                                       until=until)]
+    if len(chunks) == 1:  # the less-than-one-week case
+        _until = datetime.strftime(until, date_format)
+        chunks.append(_until)
+    chunk_pairs = []
+    for i in range(len(chunks)-1):
+        chunk_pairs.append((chunks[i], chunks[i+1]))
+    return chunk_pairs
+
+
+def specific_journal(journal_name, start_date,
+                     until_date=None, api_key=None,
+                     fields=STANDARD_FIELDS):
+    for weekchunk in weekchunks(start_date, until_date):
+        expr = build_composite_expr([journal_name], 
+                                    'J.JN', weekchunk)
+        n, offset = None, 0
+        while n != 0:
+            data = query_mag_api(expr, fields, api_key,
+                                 offset=offset)
+            for article in data['entities']:
+                yield article
+            n = len(data['entities'])
+            offset += n
+
+#articles = []
+#for article in specific_journal('biorxiv', '2020-04-10'):
+#    articles.append(article)
