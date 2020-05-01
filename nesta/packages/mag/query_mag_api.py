@@ -5,17 +5,17 @@ import pandas as pd
 import requests
 from retrying import retry
 
-from dateutil import rrule
-from datetime import datetime, timedelta
-from pandas import Timestamp
-
-
 from nesta.core.luigihacks import misctools
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.mag_orm import FieldOfStudy
-
+from nesta.packages.date_utils.date_utils import weekchunks
 
 ENDPOINT = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
+STANDARD_FIELDS = ["Id", "Ti", "AA.AfId", "AA.AfN", "AA.AuId", 
+                   "AA.DAuN", "AA.S", "CC", "D", "F.DFN", 
+                   "F.FId", "J.JId", "J.JN", "Pt", "RId", 
+                   "Y", "DOI", "PB", "BT", "IA", "C.CN", 
+                   "C.CId", "DN", "S"] 
 
 
 def prepare_title(title):
@@ -77,7 +77,7 @@ def build_expr(query_items, entity_name, max_length=16000):
         yield query_prefix_format.format(','.join(expr))
 
 
-@retry(stop_max_attempt_number=10)
+#@retry(stop_max_attempt_number=10)
 def query_mag_api(expr, fields, subscription_key, query_count=1000, offset=0):
     """Posts a query to the Microsoft Academic Graph Evaluate API.
 
@@ -214,70 +214,6 @@ def update_field_of_study_ids(mag_subscription_key, session, fos_ids):
     logging.info("Added new fields of study to database")
 
 
-if __name__ == "__main__":
-    log_stream_handler = logging.StreamHandler()
-    logging.basicConfig(handlers=[log_stream_handler, ],
-                        level=logging.INFO,
-                        format="%(asctime)s:%(levelname)s:%(message)s")
-
-    # collect api key from config
-    mag_config = misctools.get_config('mag.config', 'mag')
-    subscription_key = mag_config['subscription_key']
-
-    # setup database connectors
-    engine = get_mysql_engine("MYSQLDB", "mysqldb", "dev")
-
-    # *** query papers from arxiv titles
-    df = pd.read_csv("/Users/russellwinch/Documents/data/arxiv_2017.csv", nrows=1000)
-
-    author_mapping = {'AuN': 'author_name',
-                      'AuId': 'author_id',
-                      'AfN': 'author_affiliation',
-                      'AfId': 'author_affiliation_id',
-                      'S': 'author_order'}
-
-    field_mapping = {"Id": 'id',
-                     "Ti": 'title',  # not needed
-                     "F": 'fields_of_study',
-                     "AA": 'authors',
-                     "CC": 'citation_count'}
-    # query papers
-    paper_fields = ["Id", "Ti", "F.FId", "CC", "AA.AuN", "AA.AuId",
-                    "AA.AfN", "AA.AfId", "AA.S"]
-    for expr in build_expr(list(df.title.apply(prepare_title)), 'Ti', max_length=16000):  # this .apply will take forever on the whole dataset. move to a generator
-        # print(expr)
-        data = query_mag_api(expr, paper_fields, subscription_key)
-        # print(json.dumps(data['entities'][0], indent=4))
-        print(f"query length: {len(expr)}")
-        print(f"titles in query: {len(expr.split(','))}")
-        print(f"entities returned from api: {len(data['entities'])}")
-
-        break
-
-    # *** extract field ids from papers
-    # fids = set()
-    # for entity in data['entities']:
-    #     for f in entity['F']:
-    #         fids.add(f['FId'])
-    # print(fids)
-
-    # query field ids
-    # fos_fields = ['Id', 'DFN', 'FL', 'FP.FN']
-    # for expr in build_expr(fids, 'Id'):
-    #     # print(expr)
-    #     fos_data = query_mag_api(expr, fos_fields)
-    #     print(fos_data)
-    #     break
-
-    # *** extract list of ids
-    # fos_level_fields = ['Id', 'DFN', 'FL', 'FP.FId', 'FC.FId']  # id, display_name, level, parent_ids, children_ids
-    # for expr in build_expr([2909385909, 2911099694], 'Id'):
-    #     print(expr)
-    #     count = 1000
-    #     data = query_mag_api(expr, fos_level_fields, query_count=count)
-    #     print(data)
-
-
 def build_composite_expr(query_values, entity_name, date):
     """Builds a composite expression with ANDs in OR to be used as MAG query.
     Args:
@@ -302,33 +238,10 @@ def build_composite_expr(query_values, entity_name, date):
     return query_prefix_format.format(", ".join(and_queries))
 
 
-def weekchunks(start, until=None, date_format='%Y-%m-%d'):
-    '''Generate date strings in weekly chunks between two dates.
-    Args:
-        start (str): Sensibly formatted datestring (format to be guessed by pd)
-        until (str): Another datestring. Default=today.
-    Returns:
-        chunk_pairs (list): List of pairs of string, representing the start and end of weeks.
-    '''
-    if until is None:
-        until = datetime.now()
-    start = Timestamp(start).to_pydatetime()
-    chunks = [datetime.strftime(_date, date_format)
-              for _date in rrule.rrule(rrule.WEEKLY, dtstart=start,
-                                       until=until)]
-    if len(chunks) == 1:  # the less-than-one-week case
-        _until = datetime.strftime(until, date_format)
-        chunks.append(_until)
-    chunk_pairs = []
-    for i in range(len(chunks)-1):
-        chunk_pairs.append((chunks[i], chunks[i+1]))
-    return chunk_pairs
-
-
-def specific_journal(journal_name, start_date,
-                     until_date=None, api_key=None,
-                     fields=STANDARD_FIELDS):
-    for weekchunk in weekchunks(start_date, until_date):
+def get_journal_articles(journal_name, start_date,
+                         until_date=None, until_days_ago=0, 
+                         api_key=None, fields=STANDARD_FIELDS):
+    for weekchunk in weekchunks(start_date, until_date, until_days_ago):
         expr = build_composite_expr([journal_name], 
                                     'J.JN', weekchunk)
         n, offset = None, 0
@@ -339,7 +252,4 @@ def specific_journal(journal_name, start_date,
                 yield article
             n = len(data['entities'])
             offset += n
-
-#articles = []
-#for article in specific_journal('biorxiv', '2020-04-10'):
-#    articles.append(article)
+            break
