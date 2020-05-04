@@ -1,0 +1,47 @@
+[
+    {
+        "tier_0": "rcn",
+        "tier_1": "id_of_project",
+        "unique": true
+    },
+    {
+        "tier_0": "start_date_code",
+        "tier_1": "date_started_project"
+    },
+    {
+        "tier_0": "end_date_code",
+        "tier_1": "date_ended_project"
+    },
+    {
+        "tier_0": "title",
+        "tier_1": "title_of_project"
+    },
+    {
+        "tier_0": "description",
+        "tier_1": "textBody_description_project"
+    },
+    {
+        "tier_0": "ec_contribution",
+        "tier_1": "cost_ecFunding_project"
+    },
+    {
+        "tier_0": "framework",
+        "tier_1": "name_framework_project"
+    },
+    {
+        "tier_0": "status",
+        "tier_1": "status_of_project"
+    },
+    {
+        "tier_0": "total_cost",
+        "tier_1": "cost_total_project"
+    },
+    {
+        "tier_0": "year",
+        "tier_1": "year_of_project"
+    },
+    {
+        "tier_0": "link",
+        "tier_1": "url_of_project"
+    }
+]
