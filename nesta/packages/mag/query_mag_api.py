@@ -11,11 +11,11 @@ from nesta.core.orms.mag_orm import FieldOfStudy
 from nesta.packages.date_utils.date_utils import weekchunks
 
 ENDPOINT = "https://api.labs.cognitive.microsoft.com/academic/v1.0/evaluate"
-STANDARD_FIELDS = ["Id", "Ti", "AA.AfId", "AA.AfN", "AA.AuId", 
-                   "AA.DAuN", "AA.S", "CC", "D", "F.DFN", 
-                   "F.FId", "J.JId", "J.JN", "Pt", "RId", 
-                   "Y", "DOI", "PB", "BT", "IA", "C.CN", 
-                   "C.CId", "DN", "S"] 
+STANDARD_FIELDS = ["Id", "Ti", "AA.AfId", "AA.AfN", "AA.AuId",
+                   "AA.DAuN", "AA.S", "CC", "D", "F.DFN",
+                   "F.FId", "J.JId", "J.JN", "Pt", "RId",
+                   "Y", "DOI", "PB", "BT", "IA", "C.CN",
+                   "C.CId", "DN", "S"]
 
 
 def prepare_title(title):
@@ -222,9 +222,7 @@ def build_composite_expr(query_values, entity_name, date):
         date (:obj:`tuple` of :obj:`str`): Time period of the data collection.
     Returns:
         (str) MAG expression.
-
     """
-    query_prefix_format = "expr=OR({})"
     and_queries = [
         "".join(
             [
@@ -233,16 +231,30 @@ def build_composite_expr(query_values, entity_name, date):
         )
         for query_value in query_values
     ]
+    # MAG "OR" does not work for single expressions
     if len(and_queries) == 1:
         return f"expr={and_queries[0]}"
-    return query_prefix_format.format(", ".join(and_queries))
+    # Join into a MAG "OR" query
+    return "expr=OR({})".format(", ".join(and_queries))
 
 
 def get_journal_articles(journal_name, start_date,
-                         until_date=None, until_days_ago=0, 
+                         until_date=None, until_days_ago=0,
                          api_key=None, fields=STANDARD_FIELDS):
+    """Get all articles for a given journal, between two dates.
+
+    Args:
+        journal_name (str): The name of the journal to query.
+        start (str): Sensibly formatted datestring (format to be guessed by pd)
+        until (str): Another datestring. Default=today.
+        until_days_ago (str): if until is not specified, this indicates how many days ago to consider. Default=0.
+        api_key (str): MAG API key.
+        fields (list): List of MAG fields to return from the query.
+    Yields:
+        article (dict): An article object from MAG.
+    """
     for weekchunk in weekchunks(start_date, until_date, until_days_ago):
-        expr = build_composite_expr([journal_name], 
+        expr = build_composite_expr([journal_name],
                                     'J.JN', weekchunk)
         n, offset = None, 0
         while n != 0:
@@ -252,4 +264,3 @@ def get_journal_articles(journal_name, start_date,
                 yield article
             n = len(data['entities'])
             offset += n
-            break

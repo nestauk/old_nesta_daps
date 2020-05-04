@@ -5,6 +5,8 @@ from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.mag.query_mag_api import build_expr
 from nesta.packages.mag.query_mag_api import query_mag_api
 from nesta.packages.mag.query_mag_api import dedupe_entities
+from nesta.packages.mag.query_mag_api import get_journal_articles
+from nesta.packages.mag.query_mag_api import build_composite_expr
 from nesta.packages.mag.query_mag_sparql import extract_entity_id
 from nesta.packages.mag.query_mag_sparql import query_articles_by_doi
 from nesta.packages.mag.query_mag_sparql import _batch_query_sparql
@@ -276,3 +278,42 @@ def test_get_eu_countries_returns_countries(mocked_requests):
     mocked_requests.return_value = mocked_response
 
     assert get_eu_countries() == ['Austria', 'Italy', 'Belgium', 'Latvia']
+
+
+def test_build_composite_expr_multiple():
+    query_values = ['Journal 1', 'Journal 2']
+    entity_name = 'journal name'
+    date = ('Date 1', 'Date 2')
+    expr_1 = "AND(Composite(journal name='Journal 1'), D=['Date 1', 'Date 2'])"
+    expr_2 = "AND(Composite(journal name='Journal 2'), D=['Date 1', 'Date 2'])"
+    expr = f'expr=OR({expr_1}, {expr_2})'
+    assert build_composite_expr(query_values, entity_name, date) == expr
+
+
+def test_build_composite_expr_single():
+    query_values = ['Journal 1']
+    entity_name = 'journal name'
+    date = ('Date 1', 'Date 2')
+    expr = "expr=AND(Composite(journal name='Journal 1'), D=['Date 1', 'Date 2'])"
+    assert build_composite_expr(query_values, entity_name, date) == expr
+
+
+@mock.patch('nesta.packages.mag.query_mag_api.weekchunks')
+@mock.patch('nesta.packages.mag.query_mag_api.build_composite_expr')
+@mock.patch('nesta.packages.mag.query_mag_api.query_mag_api')
+def test_get_journal_articles(mocked_api, mocked_expr, mocked_chunks):
+    n_weeks = 13
+    mocked_chunks.return_value = iter([None]*n_weeks)
+    # Mirror MAG behaviour
+    n_article_per_chunk = 1000  # constant number of streamed articles
+    n_article_second_final_chunk = 261 # any number less than n_article_per_chunk
+    n_iter = 10 # so a total of 10261 articles per week
+    entities = n_iter*[{'entities': [None]*n_article_per_chunk}] 
+    entities += [{'entities': [None]*n_article_second_final_chunk}]
+    entities += [{'entities': []}] # final chunk is empty
+    n_total_per_week = n_iter*n_article_per_chunk + n_article_second_final_chunk
+    mocked_api.side_effect = entities*n_weeks
+    for i, article in enumerate(get_journal_articles(journal_name='journal_name', 
+                                                     start_date='start_date')):
+        assert i < n_total_per_week*n_weeks  # asserts no infinite loops!
+    assert i == n_total_per_week*n_weeks - 1  # Final count, including one empty final iteration per week
