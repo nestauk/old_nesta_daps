@@ -81,6 +81,7 @@ class Article(Base):
     institutes = relationship('ArticleInstitute')
     corex_topics = relationship('CorExTopic',
                                 secondary='arxiv_article_corex_topics')
+    article_source = Column(VARCHAR(7))
 
 
 class Category(Base):
@@ -106,11 +107,13 @@ class Category(Base):
 #     id = Column(VARCHAR(40), ForeignKey('arxiv_article_msc.msc_id'), primary_key=True)
 #     description = Column(VARCHAR(100))
 
+
 class CorExTopic(Base):
     """CorEx topics derived from arXiv data"""
     __tablename__ = 'arxiv_corex_topics'
     id = Column(INTEGER, primary_key=True, autoincrement=False)
     terms = Column(JSON)
+
 
 class ArticleTopic(Base):
     """Association table to CorEx topics."""
