@@ -12,6 +12,14 @@ ARXIV_MAG = {'id':'DOI',
              'citation_count': 'CC'}
 
 def get_biorxiv_articles(api_key, start_date='1 Jan, 2000'):
+    """Get all biorxiv articles from the MAG API.
+    
+    Args:
+        api_key (str): MAG API key
+        start_date (str): Sensibly formatted date string (interpretted by pd)
+    Yields:
+        article (dict): article object ready for insertion via nesta's arxiv ORM
+    """
     for article in get_journal_articles('biorxiv', start_date=start_date, 
                                         api_key=api_key):        
         # Convert to arxiv format for insertion to database
@@ -20,6 +28,3 @@ def get_biorxiv_articles(api_key, start_date='1 Jan, 2000'):
         article['abstract'] = uninvert_abstract(article['abstract'])
         article['id'] = f"biorxiv-{article['id']}"  # just to be sure
         yield article
-
-
-# tests: assert all ARXIV_MAG in arxiv orm
