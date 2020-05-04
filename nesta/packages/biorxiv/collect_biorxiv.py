@@ -1,6 +1,10 @@
 from nesta.packages.mag.query_mag_api import get_journal_articles 
 from nesta.packages.mag.parse_abstract import uninvert_abstract
 
+"""
+Schema transformation of arviv ORM from MAG raw data,
+so that biorxiv data from MAG can slot into arxiv pipelines.
+"""
 ARXIV_MAG = {'id':'DOI',
              'datestamp': 'D',
              'created': 'D',
@@ -10,6 +14,7 @@ ARXIV_MAG = {'id':'DOI',
              'abstract': 'IA',
              'authors' : 'AA',
              'citation_count': 'CC'}
+
 
 def get_biorxiv_articles(api_key, start_date='1 Jan, 2000'):
     """Get all biorxiv articles from the MAG API.
