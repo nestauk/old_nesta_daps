@@ -10,6 +10,7 @@ def weekchunks(start, until=None, until_days_ago=0,
         start (str): Sensibly formatted datestring (format to be guessed by pd)
         until (str): Another datestring. Default=today.
         until_days_ago (str): if until is not specified, this indicates how many days ago to consider. Default=0.
+                              if until is specified, this indicates an offset of days before the until date.
     Returns:
         chunk_pairs (list): List of pairs of string, representing the start and end of weeks.
     '''
