@@ -106,7 +106,6 @@ def run():
 
     # collect file
     logging.info('Retrieving project ids')
-
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     project_ids = json.loads(obj.get()['Body']._raw_stream.read())
