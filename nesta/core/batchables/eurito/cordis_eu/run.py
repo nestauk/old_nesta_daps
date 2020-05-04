@@ -46,6 +46,7 @@ def validate_date(row, label):
     finally:
         return year
 
+
 def reformat_row(row):
     """Prepare raw data for ingestion to ES.
 
