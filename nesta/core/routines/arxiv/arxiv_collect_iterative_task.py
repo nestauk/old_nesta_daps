@@ -55,14 +55,16 @@ class CollectNewTask(luigi.Task):
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
 
+        xiv_filter = Article.article_source == 'arxiv'
         with db_session(self.engine) as session:
             # create lookup for categories (less than 200) and set of article ids
             all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
             logging.info(f"{len(all_categories_lookup)} existing categories")
-            all_article_ids = {article.id for article in session.query(Article.id).all()}
+            all_article_ids = {article.id for article in session.query(Article.id).filter(xiv_filter).all()}
             logging.info(f"{len(all_article_ids)} existing articles")
             already_updated = {article.id: article.updated for article
                                in (session.query(Article)
+                                   .filter(xiv_filter)
                                    .filter(Article.updated >= self.articles_from_date)
                                    .all())}
             logging.info(f"{len(already_updated)} records exist in the database with a date on or after the update date.")
