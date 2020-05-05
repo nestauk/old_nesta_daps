@@ -11,6 +11,7 @@ import logging
 import pprint
 
 from nesta.core.routines.arxiv.arxiv_iterative_date_task import DateTask
+from nesta.core.routines.arxiv.magrxiv_collect_iterative_task import CollectMagrxivTask
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.packages.mag.query_mag_api import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
@@ -62,6 +63,14 @@ class QueryMagTask(luigi.Task):
                        test=self.test,
                        articles_from_date=self.articles_from_date,
                        insert_batch_size=self.insert_batch_size)
+        yield CollectMagrxivTask(date=self.date,
+                                 routine_id=self._routine_id,
+                                 db_config_path=self.db_config_path,
+                                 db_config_env=self.db_config_env,
+                                 test=self.test,
+                                 articles_from_date=self.articles_from_date,
+                                 insert_batch_size=self.insert_batch_size)
+
 
     def run(self):
         pp = pprint.PrettyPrinter(indent=4, width=100)

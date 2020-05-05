@@ -113,8 +113,8 @@ class CollectNewTask(luigi.Task):
                 count = new_count + existing_count
                 if not count % 1000:
                     logging.info(f"Processed {count} articles")
-                if self.test and count == 1600:
-                    logging.warning("Limiting to 1600 rows while in test mode")
+                if self.test and count == 2000:
+                    logging.warning("Limiting to 2000 rows while in test mode")
                     break
 
             # insert any remaining new and existing articles

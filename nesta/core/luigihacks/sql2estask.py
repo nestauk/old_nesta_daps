@@ -45,6 +45,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
     id_field = luigi.Parameter()
+    filter = luigi.Parameter(default=None)
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
@@ -84,7 +85,10 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
         # Get set of all organisations from mysql
         with db_session(engine) as session:
-            result = session.query(self.id_field).all()
+            query = session.query(self.id_field)
+            if self.filter is not None:
+                query = query.filter(self.filter)
+            result = query.all()
             all_ids = {r[0] for r in result}
         logging.info(f"{len(all_ids)} organisations in MySQL")
 

@@ -160,7 +160,7 @@ class MagSparqlTask(luigi.Task):
 
                 if not count % 1000:
                     logging.info(f"{count} done. {total_arxiv_ids_to_process - count} articles left to process")
-                if self.test and count == 150:
+                if self.test and count == 100000:
                     logging.warning("Exiting after 150 rows in test mode")
                     break
 
