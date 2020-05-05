@@ -78,6 +78,8 @@ class CollectNewTask(luigi.Task):
 
             # retrieve and process, while inserting any missing categories
             for row in retrieve_all_arxiv_rows(**{'from': self.articles_from_date}):
+                row['article_source'] = 'arxiv']
+
                 try:
                     # update only newer data
                     if row['updated'] <= already_updated[row['id']]:
