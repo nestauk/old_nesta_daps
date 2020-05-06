@@ -81,6 +81,7 @@ class Article(Base):
     institutes = relationship('ArticleInstitute')
     corex_topics = relationship('CorExTopic',
                                 secondary='arxiv_article_corex_topics')
+    article_source = Column(VARCHAR(7), index=True, default=None)
 
 
 class Category(Base):
