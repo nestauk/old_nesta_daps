@@ -127,14 +127,14 @@ class TestArxivBatch:
         mocked_request.return_value = ET.fromstring(mock_response)
         batch, _ = arxiv_batch()
         expected_fields = {'datestamp', 'id', 'created', 'updated', 'title', 'categories',
-                           'journal_ref', 'doi', 'msc_class', 'abstract', 'authors'}
+                           'article_source', 'journal_ref', 'doi', 'msc_class', 'abstract', 'authors'}
         assert set(batch[0]) == expected_fields
 
     @mock.patch(_ARXIV_REQUEST, autospec=True)
     def test_arxiv_batch_handles_missing_fields(self, mocked_request, mock_response):
         mocked_request.return_value = ET.fromstring(mock_response)
         batch, _ = arxiv_batch()
-        expected_fields = {'datestamp', 'id', 'title', 'categories', 'abstract', 'authors'}
+        expected_fields = {'datestamp', 'id', 'title', 'categories', 'abstract', 'authors', 'article_source'}
         assert set(batch[1]) == expected_fields
 
     @mock.patch(_ARXIV_REQUEST, autospec=True)
