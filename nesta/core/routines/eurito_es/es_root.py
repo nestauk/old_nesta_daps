@@ -59,12 +59,7 @@ class RootTask(luigi.WrapperTask):
                   ('crunchbase', 'company', Organization.id),
                   ('patstat', 'patent', ApplnFamily.docdb_family_id),
                   ('cordis', 'project', Project.rcn),)
-        #params = (('arxiv', 'article', Article.id),)
-        #params = (('crunchbase', 'company', Organization.id),)
-        #params = (('patstat', 'patent', ApplnFamily.docdb_family_id),)
-        #params = (('cordis', 'project', Project.rcn),)
         for dataset, entity_type, id_field in params:
-            print(dataset, entity_type, id_field)
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
                              **kwarg_maker(dataset, 
