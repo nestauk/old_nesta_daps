@@ -68,7 +68,6 @@ def reformat_row(row):
     row['link'] = f'https://cordis.europa.eu/project/id/{row["rcn"]}'
     return row
 
-
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']

@@ -4,6 +4,7 @@ from datetime import timedelta
 from pandas import Timestamp
 from toolz.itertoolz import sliding_window
 
+
 def weekchunks(start, until=None, until_days_ago=0, 
                date_format='%Y-%m-%d'):
     '''Generate date strings in weekly chunks between two dates.
