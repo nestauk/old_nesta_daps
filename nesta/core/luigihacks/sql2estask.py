@@ -32,6 +32,9 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
         dataset (str): Name of the elasticsearch dataset.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
+        filter (SqlAlchemy conditional statement): A conditional statement, to be passed
+                                                   to query.filter(). This allows for
+                                                   subsets of the data to be processed.
         entity_type (str): Name of the entity type to label this task with.
         kwargs (dict): Any other job parameters to pass to the batchable.
     '''
