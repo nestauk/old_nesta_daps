@@ -29,6 +29,11 @@ ORGS_FIELDS = ['activityType', 'address', 'contribution',
                'country', 'name', 'organizationId',
                'type', 'website']
 
+USER_AGENT = ('Mozilla/5.0 (Linux; Android 6.0; '
+              'Nexus 5 Build/MRA58N) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/81.0.4044.92 '
+              'Mobile Safari/537.36')
+
 
 def generate_id(text):
     """Deterministically generates an ID from a given text.
@@ -73,10 +78,8 @@ def hit_api(api='', rcn=None, content_type=None):
                                   'rcn': rcn,
                                   'paramType': 'rcn',
                                   'contenttype': content_type},
-                     headers={'User-Agent':('Mozilla/5.0 (Linux; Android 6.0; '
-                                            'Nexus 5 Build/MRA58N) AppleWebKit/537.36 '
-                                            '(KHTML, like Gecko) Chrome/81.0.4044.92 '
-                                            'Mobile Safari/537.36')})
+                     headers={'User-Agent':USER_AGENT})
+    # Not all projects have data, so this is not an error
     if (r.status_code == 500 and 
         r.json()['payload']['errorType'] == 'ica'):
         return None
