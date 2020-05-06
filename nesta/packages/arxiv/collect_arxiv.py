@@ -212,6 +212,7 @@ def arxiv_batch(resumption_token=None, **kwargs):
             except KeyError:
                 pass  # field not in this row
 
+        row['article_source'] = 'arxiv'  # to differentiate from other xivs
         output.append(row)
 
     # extract cursor for next batch
