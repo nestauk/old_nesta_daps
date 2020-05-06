@@ -2,6 +2,8 @@ from dateutil import rrule
 from datetime import datetime as dt
 from datetime import timedelta
 from pandas import Timestamp
+from toolz.itertoolz import sliding_window
+
 
 def weekchunks(start, until=None, until_days_ago=0, 
                date_format='%Y-%m-%d'):
@@ -23,7 +25,5 @@ def weekchunks(start, until=None, until_days_ago=0,
     if len(chunks) == 1:  # the less-than-one-week case
         _until = dt.strftime(until, date_format)
         chunks.append(_until)
-    chunk_pairs = []
-    for i in range(len(chunks)-1):
-        chunk_pairs.append((chunks[i], chunks[i+1]))
+    chunk_pairs = list(sliding_window(2, chunks))
     return chunk_pairs
