@@ -10,7 +10,7 @@ import logging
 
 from nesta.packages.arxiv.collect_arxiv import add_new_articles, retrieve_all_arxiv_rows, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
-from nesta.core.orms.arxiv_orm import Article, Category
+from nesta.core.orms.arxiv_orm import Article, Category, Base
 from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
@@ -54,6 +54,7 @@ class CollectNewTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        Base.metadata.create_all(self.engine)
 
         xiv_filter = Article.article_source == 'arxiv'
         with db_session(self.engine) as session:

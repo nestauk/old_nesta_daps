@@ -34,6 +34,8 @@ def get_magrxiv_articles(xiv, api_key, start_date='1 Jan, 2000'):
         article= {arxiv_field: article[mag_field]
                   for arxiv_field, mag_field in ARXIV_MAG.items()
                   if mag_field in article}
+        if 'id' not in article:
+            continue
         if 'abstract' in article:
             article['abstract'] = uninvert_abstract(article['abstract'])
         else:

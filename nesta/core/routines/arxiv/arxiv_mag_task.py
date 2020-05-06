@@ -68,7 +68,7 @@ class QueryMagTask(luigi.Task):
                                  db_config_path=self.db_config_path,
                                  db_config_env=self.db_config_env,
                                  test=self.test,
-                                 articles_from_date=self.articles_from_date,
+                                 articles_from_date='1 April 2020' if self.test else '1 January 2010',
                                  insert_batch_size=self.insert_batch_size)
 
 
@@ -198,8 +198,8 @@ class QueryMagTask(luigi.Task):
                 all_articles_to_update.extend(batch_article_data)
 
                 logging.info(f"Batch {count} done. {total_arxiv_ids_to_process} articles left to process")
-                if self.test and count == 2:
-                    logging.warning("Exiting after 2 batches in test mode")
+                if self.test and count == 10:
+                    logging.warning("Exiting after 10 batches in test mode")
                     break
 
             # pick up any left over in the batch
