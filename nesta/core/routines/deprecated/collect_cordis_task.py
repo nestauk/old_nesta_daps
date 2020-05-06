@@ -2,27 +2,25 @@
 Cordis H2020/FP7 data collection
 ================================
 '''
-import luigi
 import datetime
-import boto3
 import logging
+
+import boto3
+import luigi
 import pandas as pd
 
-from nesta.packages.cordis.get_cordis import fetch_and_clean
-from nesta.packages.cordis.get_cordis import pop_and_split_programmes
-from nesta.packages.cordis.get_cordis import TOP_URL
-from nesta.packages.cordis.get_cordis import ENTITIES
+from nesta.packages.cordis.get_cordis import (ENTITIES, TOP_URL,
+                                              fetch_and_clean,
+                                              pop_and_split_programmes)
 from nesta.packages.misc_utils.camel_to_snake import camel_to_snake
-
+from nesta.production.luigihacks.misctools import (find_filepath_from_pathstub,
+                                                   get_config)
 from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks.misctools import get_config
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
-
 from nesta.production.orms.cordis_h2020_orm import Base as Base_h2020
 #from nesta.production.orms.cordis_fp7_orm import Base as Base_fp7
-from nesta.production.orms.orm_utils import get_class_by_tablename
-from nesta.production.orms.orm_utils import insert_data
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.production.orms.orm_utils import (get_class_by_tablename,
+                                             get_mysql_engine, insert_data)
+
 
 class CordisTask(luigi.Task):
     '''Get all Cordis H2020/FP7 data'''
