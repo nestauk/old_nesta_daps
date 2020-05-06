@@ -86,11 +86,7 @@ def run():
     logging.info('Retrieving engine connection')
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb",
                               db_name)
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> dev
     # es setup
     logging.info('Connecting to ES')
     strans_kwargs={'filename':'eurito/cordis-eu.json',
@@ -111,10 +107,6 @@ def run():
 
     # collect file
     logging.info('Retrieving project ids')
-<<<<<<< HEAD
-    nrows = 20 if test else None
-=======
->>>>>>> dev
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     project_ids = json.loads(obj.get()['Body']._raw_stream.read())
@@ -128,57 +120,18 @@ def run():
                                      .filter(Project.rcn.in_(project_ids))
                                      .all())):
             row = object_to_dict(obj)
-<<<<<<< HEAD
-            
-            # Extract year from date
-            start_year = validate_date(row, 'start')
-            end_year = validate_date(row, 'end')
-            row['year'] = start_year if start_year is not None else end_year
-            
-            
-            _desc = row.pop('project_description')
-            _obj = row.pop('objective')
-            row['description'] = f'Description:\n{_desc}\n\nObjective:\n{_obj}'
-            row['link'] = f'https://cordis.europa.eu/project/id/{row["rcn"]}'
-
-            uid = row.pop('rcn')
-            _row = es.index(index=es_index, doc_type=es_type,
-                            id=uid, body=row)
-=======
             row = reformat_row(row)
             es.index(index=es_index, doc_type=es_type,
                      id=row.pop('rcn'), body=row)
->>>>>>> dev
             if not count % 1000:
                 logging.info(f"{count} rows loaded to "
                              "elasticsearch")
 
-<<<<<<< HEAD
-    logging.warning("Batch job complete.")
-
-=======
->>>>>>> dev
 
 if __name__ == "__main__":
     set_log_level()
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
-<<<<<<< HEAD
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='cordis-eu')
-        environ = {'config': ('/home/ec2-user/nesta-cordis2es/nesta/'
-                              'core/config/mysqldb.config'),
-                   'batch_file' : ('cordis-eu_EURITO-ElasticsearchTask-2020-04-10-True-15865345336407135.json'),
-                   'db_name': 'dev',
-                   'bucket': 'nesta-production-intermediate',
-                   'done': "False",
-                   'outinfo': ('https://search-eurito-dev-'
-                               'vq22tw6otqjpdh47u75bh2g7ba.'
-                               'eu-west-2.es.amazonaws.com'),
-                   'out_port': '443',
-                   'out_index': 'cordis_dev',
-                   'out_type': '_doc',
-=======
         from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
         es, es_config = setup_es('dev', True, True,
                                  dataset='cordis-eu')
@@ -191,7 +144,6 @@ if __name__ == "__main__":
                    'out_port': es_config['port'],
                    'out_index': es_config['index'],
                    'out_type': es_config['type'],
->>>>>>> dev
                    'aws_auth_region': 'eu-west-2',
                    'entity_type': 'project',
                    'test': "True"}

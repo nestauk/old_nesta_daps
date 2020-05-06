@@ -87,10 +87,7 @@ def insert_full_stops(terms):
 
 def uninvert_abstract(inverted_abstract):
     """Uninvert a MAG inverted abstract, and impute missing full-stops.
-<<<<<<< HEAD
-=======
     See https://docs.microsoft.com/en-us/academic-services/project-academic-knowledge/reference-paper-entity-attributes#invertedabstract
->>>>>>> dev
     
     Args:
         inverted_abstract (dict): The "IA" field from a MAG article.
