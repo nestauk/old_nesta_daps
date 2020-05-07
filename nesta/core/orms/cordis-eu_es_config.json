@@ -1,0 +1,69 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "cost_ecFunding_project": {
+                    "type": "integer"
+                },
+                "cost_total_project": {
+                    "type": "integer"
+                },
+                "date_ended_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "date_started_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "metric_novelty_project": {
+                    "type": "float"
+                },
+                "name_framework_project": {
+                    "type": "text"
+                },
+                "status_of_project": {
+                    "type": "keyword"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
+                },
+                "textBody_description_project": {
+                    "type": "text"
+                },
+                "title_of_project": {
+                    "type": "text"
+                },
+                "type_of_entity": {
+                    "type": "keyword"
+                },
+                "url_of_project": {
+                    "type": "text"
+                },
+                "year_of_project": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "terms_analyzer": {
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                    ],
+                    "tokenizer": "standard",
+                    "type": "custom"
+                }
+            }
+        },
+        "index": {
+            "number_of_replicas": "1",
+            "number_of_shards": "5"
+        }
+    }
+}

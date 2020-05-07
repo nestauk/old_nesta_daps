@@ -53,6 +53,24 @@
                     },
                     "type": "text"
                 },
+                "terms_fieldsOfStudy_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_institutes_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
                 "terms_nuts0_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
@@ -81,24 +99,6 @@
                     "type": "text"
                 },
                 "terms_nuts3_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_fieldsOfStudy_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_institutes_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
