@@ -80,7 +80,7 @@ class GtrOnlyRootTask(luigi.WrapperTask):
         yield GtrTask(date=self.date,
                       page_size=self.page_size,
                       batchable=find_filepath_from_pathstub("core/batchables/gtr/collect_gtr"),
-                      env_files=[find_filepath_from_pathstub("/nesta/nesta"),
+                      env_files=[find_filepath_from_pathstub("/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
                       job_def="py36_amzn1_image",
                       job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
@@ -90,5 +90,5 @@ class GtrOnlyRootTask(luigi.WrapperTask):
                       vcpus=2,
                       poll_time=10,
                       memory=2048,
-                      max_live_jobs=50,
+                      max_live_jobs=10,
                       test=(not self.production))
