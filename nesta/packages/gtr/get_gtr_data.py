@@ -436,7 +436,7 @@ def add_country_details(org_details):
 if __name__ == "__main__":
 
     # Local constants
-    PAGE_SIZE=10
+    PAGE_SIZE=100
 
     # Assertain the total number of pages first
     projects = read_xml_from_url(TOP_URL, p=1, s=PAGE_SIZE)
@@ -449,8 +449,6 @@ if __name__ == "__main__":
 
     # Iterate through all pages
     for page in range(1, total_pages+1):
-        if page != 2690:
-            continue
         # Get all projects on this page
         projects = read_xml_from_url(TOP_URL, p=page, s=PAGE_SIZE)
         for project in projects.getchildren():
@@ -463,7 +461,7 @@ if __name__ == "__main__":
             row.pop('identifiers')
             # Append the row
             data[row.pop('entity')].append(row)
-#            break
+            break
         break
 
     # The 'participant' data is near duplicate
@@ -471,10 +469,7 @@ if __name__ == "__main__":
     if 'participant' in data:
         deduplicate_participants(data)
 
-    # # Finally, extract links between entities and the core projects
-    # extract_link_table(data)
-
     for k, v in data.items():
-         print(k)
-         print(v)
-         print()
+        print(k)
+        print(v)
+        print()
