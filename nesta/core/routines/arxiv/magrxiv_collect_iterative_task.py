@@ -4,7 +4,8 @@ Collection task
 
 Luigi routine to collect new data from the arXiv api and load it to MySQL.
 '''
-from datetime import datetime
+from datetime import datetime as dt
+from datetime import timedelta
 import luigi
 import logging
 import pandas as pd
@@ -144,7 +145,7 @@ class MagrxivRootTask(luigi.WrapperTask):
         drop_and_recreate (bool): If in test mode, allows dropping the dev index from the ES database.
 
     '''
-    date = luigi.DateParameter(default=datetime.today())
+    date = luigi.DateParameter(default=dt.today())
     db_config_path = luigi.Parameter(default="mysqldb.config")
     production = luigi.BoolParameter(default=False)
     drop_and_recreate = luigi.BoolParameter(default=False)
@@ -154,9 +155,12 @@ class MagrxivRootTask(luigi.WrapperTask):
     def requires(self):
         routine_id = "{}-{}".format(self.date, self.production)
         logging.getLogger().setLevel(logging.INFO)
+        articles_from_date = dt.strftime(dt.now() - timedelta(days=11), '%d %B %Y')
+        if self.production:
+            articles_from_date = '1 January 2010'
         yield CollectMagrxivTask(date=self.date,
                                  routine_id=routine_id,
                                  test=not self.production,
                                  db_config_env='MYSQLDB',
                                  db_config_path=self.db_config_path,
-                                 articles_from_date='1 April 2020')
+                                 articles_from_date=articles_from_date)

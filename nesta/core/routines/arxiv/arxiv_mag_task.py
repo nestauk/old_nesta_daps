@@ -6,6 +6,8 @@ Luigi routine to query the Microsoft Academic Graph for additional data and appe
 the exiting data in the database.
 """
 from datetime import date
+from datetime import datetime as dt
+from datetime import timedelta
 import luigi
 import logging
 import pprint
@@ -63,12 +65,16 @@ class QueryMagTask(luigi.Task):
                        test=self.test,
                        articles_from_date=self.articles_from_date,
                        insert_batch_size=self.insert_batch_size)
+        # Start collection from Jan 2010 unless in test mode
+        articles_from_date = '1 January 2010'        
+        if self.test:  # 11 days ago for test
+            articles_from_date = dt.strftime(dt.now() - timedelta(days=11), '%d %B %Y')
         yield CollectMagrxivTask(date=self.date,
                                  routine_id=self._routine_id,
                                  db_config_path=self.db_config_path,
                                  db_config_env=self.db_config_env,
                                  test=self.test,
-                                 articles_from_date='1 April 2020' if self.test else '1 January 2010',
+                                 articles_from_date=articles_from_date,
                                  insert_batch_size=self.insert_batch_size)
 
 
