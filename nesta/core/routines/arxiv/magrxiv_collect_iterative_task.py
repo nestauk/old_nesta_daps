@@ -15,6 +15,74 @@ from nesta.core.orms.orm_utils import get_mysql_engine, db_session, insert_data
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 
+def get_article_ids(session, xivs):
+    """Get the set of all article IDs in the current database.
+
+    Args:
+        session (SqlAlchemy connectable): SqlAlchemy db session for querying
+        xivs (list): List of valid 'article_source' values to include in the filtering.
+    Returns:
+        ids (set): set of all article IDs in the current database for these article_sources.
+    """
+    xiv_filter = Article.article_source.in_(xivs)
+    return {article.id for article in
+            session.query(Article.id).filter(xiv_filter).all()}
+
+
+def get_articles(xivs, api_key, start_date, article_ids, test, flush_every=1000):
+    """Get all articles from MAG from specified 'Journals' (xivs).
+
+    Args:
+        xivs (list): List of valid MAG 'Journals' to query.
+        api_key (str): MAG API key
+        start_date (str): Sensibly formatted date string (interpretted by pd)
+        article_ids (set): Set of article IDs to skip. NB: the set will be updated.
+        test (bool): Running in test mode?
+        flush_every (int): Sets the number of articles retrieved between log messages,
+                           and also related to the maximum number of articles acquired
+                           in test mode (NB: in test mode at most 2 x flush_every will be collected).
+    Returns:
+        articles (:obj:`list` of :obj:`dict`): List of articles from MAG, formatted a-la-arxiv.
+    """
+    logging.info(f"{len(article_ids)} existing articles will not be recollected")
+    articles = []
+    for xiv in xivs:
+        articles += _get_articles(xiv, api_key, start_date, article_ids, test, flush_every)
+        # Note ">" rather than ">=" so that more than one xiv can be guaranteed to be in the test
+        if test and len(articles) > flush_every:
+            logging.info(f"Limiting to {len(articles)} rows while in test mode")
+            break
+        logging.info(f"Retrieved {len(articles)} articles so far")
+    return articles
+
+
+def _get_articles(xiv, api_key, start_date, article_ids, test, flush_every):
+    """Get all articles from MAG from one specified 'Journal' (xiv).
+
+    Args:
+        xiv (str): A valid MAG 'Journal' to query.
+        api_key (str): MAG API key
+        start_date (str): Sensibly formatted date string (interpretted by pd)
+        article_ids (set): Set of article IDs to skip. NB: the set will be updated.
+        test (bool): Running in test mode?
+        flush_every (int): Sets the number of articles retrieved between log messages.
+    Returns:
+        articles (:obj:`list` of :obj:`dict`): List of articles from MAG, formatted a-la-arxiv.
+    """
+    logging.info(f"Getting MAG data for '{xiv}'")
+    articles = []
+    for row in get_magrxiv_articles(xiv, api_key, start_date=start_date):
+        # Don't recollect if already specified
+        if row['id'] in article_ids:
+            continue
+        article_ids.add(row['id'])
+        articles.append(row)
+        # Log and break (test-mode) if hit the flush threshold
+        if not len(articles) % flush_every:
+            logging.info(f"Processed {len(articles)} articles")
+            if test:
+                break
+    return articles
 
 class CollectMagrxivTask(luigi.Task):
     '''Collect bio/medrxiv articles from MAG and dump the
@@ -26,8 +94,10 @@ class CollectMagrxivTask(luigi.Task):
         db_config_path (str): The output database configuration
         insert_batch_size (int): Number of records to insert into the database at once
         articles_from_date (str): Earliest possible date considered to collect articles.
+        dont_recollect (bool): If True, article which are already in the DB will not be recollected.
     '''
     date = luigi.DateParameter()
+    dont_recollect = luigi.BoolParameter(default=False)
     routine_id = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
     xivs = luigi.ListParameter(default=['medrxiv', 'biorxiv'])
@@ -45,48 +115,20 @@ class CollectMagrxivTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        # database setup
-        database = 'dev' if self.test else 'production'
-        logging.warning(f"Using {database} database")
-        self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
-
-        mag_config = misctools.get_config('mag.config', "mag")
-        api_key = mag_config['subscription_key']
-
+        # Variable preparation
+        api_key = misctools.get_config('mag.config', "mag")['subscription_key']
         articles_from_date = pd.Timestamp(self.articles_from_date).to_pydatetime()
-        xiv_filter = Article.article_source.in_(self.xivs)
-        with db_session(self.engine) as session:
-            all_article_ids = {article.id for article in
-                               session.query(Article.id).filter(xiv_filter).all()}
-            logging.info(f"{len(all_article_ids)} existing articles")
-
-            # retrieve and process, while inserting any missing categories
-            articles = []
-            for xiv in self.xivs:
-                logging.info(f"Getting MAG data for '{xiv}'")
-                for row in get_magrxiv_articles(xiv, api_key, start_date=articles_from_date):
-                    if row['id'] in all_article_ids:
-                        continue
-                    all_article_ids.add(row['id'])
-                    articles.append(row)
-                    if not len(articles) % 1000:
-                        logging.info(f"Processed {len(articles)} articles")
-                        if self.test:
-                            break
-                if self.test and len(articles) > 1000:
-                    logging.warning(f"Limiting to {len(articles)} rows while in test mode")
-                    break
-                logging.info(f"Retrieved {len(articles)} articles so far")
-                    
-            # insert any remaining new and existing articles            
-            logging.info("Inserting data")    
-            print(len(articles), len(set((row['id'] for row in articles))))
-            objs = insert_data(self.db_config_env, "mysqldb", database,
-                               Base, Article, articles, low_memory=True)
-            logging.info(f"\t\tInserted {len(objs)}")
-
-        # mark as done
-        logging.warning("Task complete")
+        # Database setup and connection
+        database = 'dev' if self.test else 'production'
+        logging.info(f"Using {database} database")
+        engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        with db_session(engine) as session:
+            article_ids = set() if not self.dont_recollect else get_article_ids(session, self.xivs)
+            articles = get_articles(self.xivs, api_key, articles_from_date,
+                                    article_ids, self.test)
+            insert_data(self.db_config_env, "mysqldb", database, Base, Article,
+                        articles, low_memory=True)
+        # Mark as done
         self.output().touch()
 
 
@@ -108,7 +150,7 @@ class MagrxivRootTask(luigi.WrapperTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     articles_from_date = luigi.Parameter(default=None)
     insert_batch_size = luigi.IntParameter(default=500)
-    
+
     def requires(self):
         routine_id = "{}-{}".format(self.date, self.production)
         logging.getLogger().setLevel(logging.INFO)
