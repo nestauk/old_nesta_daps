@@ -37,7 +37,7 @@ def get_articles(xivs, api_key, start_date, article_ids, test, flush_every=1000)
         xivs (list): List of valid MAG 'Journals' to query.
         api_key (str): MAG API key
         start_date (str): Sensibly formatted date string (interpretted by pd)
-        article_ids (set): Set of article IDs to skip. NB: the set will be updated.
+        article_ids (set): Set of article IDs to skip.
         test (bool): Running in test mode?
         flush_every (int): Sets the number of articles retrieved between log messages,
                            and also related to the maximum number of articles acquired
@@ -46,9 +46,12 @@ def get_articles(xivs, api_key, start_date, article_ids, test, flush_every=1000)
         articles (:obj:`list` of :obj:`dict`): List of articles from MAG, formatted a-la-arxiv.
     """
     logging.info(f"{len(article_ids)} existing articles will not be recollected")
+    article_ids = article_ids.copy()
     articles = []
     for xiv in xivs:
-        articles += _get_articles(xiv, api_key, start_date, article_ids, test, flush_every)
+        _articles = _get_articles(xiv, api_key, start_date, article_ids, test, flush_every)
+        article_ids.update([row['id'] for row in _articles])
+        articles += _articles
         # Note ">" rather than ">=" so that more than one xiv can be guaranteed to be in the test
         if test and len(articles) > flush_every:
             logging.info(f"Limiting to {len(articles)} rows while in test mode")
@@ -64,7 +67,7 @@ def _get_articles(xiv, api_key, start_date, article_ids, test, flush_every):
         xiv (str): A valid MAG 'Journal' to query.
         api_key (str): MAG API key
         start_date (str): Sensibly formatted date string (interpretted by pd)
-        article_ids (set): Set of article IDs to skip. NB: the set will be updated.
+        article_ids (set): Set of article IDs to skip.
         test (bool): Running in test mode?
         flush_every (int): Sets the number of articles retrieved between log messages.
     Returns:
@@ -72,6 +75,7 @@ def _get_articles(xiv, api_key, start_date, article_ids, test, flush_every):
     """
     logging.info(f"Getting MAG data for '{xiv}'")
     articles = []
+    article_ids = article_ids.copy()
     for row in get_magrxiv_articles(xiv, api_key, start_date=start_date):
         # Don't recollect if already specified
         if row['id'] in article_ids:

@@ -26,7 +26,7 @@ def test_get_article_ids_returns_set(Article):
 @mock.patch(PATH.format('_get_articles'))
 def test_get_articles_test_flush(mocked_get_articles, dummy_kwargs):
     xiv = dummy_kwargs.pop('xiv')
-    _articles = ['a','b','c']
+    _articles = [{'id': 1}, {'id': 2}, {'id': 4}]
     for n_xivs in range(2, 10):
         dummy_kwargs['xivs'] = [xiv]*n_xivs
         for flush_every in range(1, len(_articles)+1):
