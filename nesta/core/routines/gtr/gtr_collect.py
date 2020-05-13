@@ -26,10 +26,20 @@ _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
+def divide_range_by_weekday(total_pages):
+    weekday = datetime.date.today().weekday()
+    pages_per_day = total_pages // 7
+    remainder = total_pages % 7 if weekday == 6 else 0
+    first_page = weekday*pages_per_day + 1 # NB: weekday is zero-indexed                                                  
+    last_page = first_page + pages_per_day + remainder
+    return first_page, last_page
+
+
 class GtrTask(autobatch.AutoBatchTask):
     '''Get all GtR data'''
     date = luigi.DateParameter(default=datetime.date.today())
     page_size = luigi.IntParameter(default=10)
+    split_collection = luigi.BoolParameter(default=False)
 
     def output(self):
         '''Points to the input database target'''
@@ -40,12 +50,16 @@ class GtrTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        # Assertain the total number of pages first
+        # Ascertain the total number of pages fiarst
         projects = read_xml_from_url(TOP_URL, p=1, s=self.page_size)
         total_pages = int(projects.attrib[TOTALPAGES_KEY])
+        if self.split_collection:  # Split data into weekdays
+            first_page, last_page = divide_range_by_weekday(total_pages)
+        else:
+            first_page, last_page = (1, total_pages)
 
         job_params = []
-        for page in range(1, total_pages+1):
+        for page in range(first_page, last_page+1):
             # Check whether the job has been done already
             s3_key = f"{self.job_name}-{page}"
             s3_path = "s3://nesta-production-intermediate/%s" % s3_key
