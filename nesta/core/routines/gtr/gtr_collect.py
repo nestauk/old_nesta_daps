@@ -69,15 +69,12 @@ class GtrTask(autobatch.AutoBatchTask):
     def prepare(self):
         '''Prepare the batch job parameters'''
         # Ascertain the total number of pages fiarst
-        assert False
         projects = read_xml_from_url(TOP_URL, p=1, s=self.page_size)
         total_pages = int(projects.attrib[TOTALPAGES_KEY])
         if self.split_collection:  # Split data into weekdays
             first_page, last_page = get_range_by_weekday(total_pages)
         else:
             first_page, last_page = (1, total_pages+1)
-        print("-->", first_page, last_page, total_pages)
-        assert False
 
         job_params = []
         for page in range(first_page, last_page):
