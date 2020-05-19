@@ -101,6 +101,8 @@ class GtrOnlyRootTask(luigi.WrapperTask):
 
     Args:
         date (datetime): Date used to label the outputs
+        page_size (int): Number of pages per batch task.
+        split_collection (bool): Automatically split the collection into a daily (n/7th{ish}) chunk?
     '''
     date = luigi.DateParameter(default=datetime.date.today())
     page_size = luigi.IntParameter(default=10)
