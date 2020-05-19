@@ -22,6 +22,7 @@ ls
 #aws iam list-roles
 sed -i '/tensorflow/d' requirements.txt  # rm TF from reqs since it's huge
 pip install -r requirements.txt
+pip install --upgrade git+https://github.com/nestauk/corex_topic.git@master#egg=corextopic
 #pip freeze
 conda clean -afy
 
