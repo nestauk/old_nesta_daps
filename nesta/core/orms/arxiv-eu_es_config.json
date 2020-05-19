@@ -17,7 +17,12 @@
                     "type": "date"
                 },
                 "id_digitalObjectIdentifier_article": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "json_fieldsOfStudy_article": {
                     "dynamic": true,
@@ -120,15 +125,30 @@
                     "type": "keyword"
                 },
                 "textBody_abstract_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "title_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "type_of_entity": {
                     "type": "keyword"
                 },
                 "url_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "year_of_article": {
