@@ -17,12 +17,7 @@
                     "type": "date"
                 },
                 "id_digitalObjectIdentifier_article": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                    "type": "keyword"
                 },
                 "json_fieldsOfStudy_article": {
                     "dynamic": true,
