@@ -10,7 +10,7 @@ import logging
 
 from nesta.packages.arxiv.collect_arxiv import add_new_articles, retrieve_all_arxiv_rows, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
-from nesta.core.orms.arxiv_orm import Article, Category
+from nesta.core.orms.arxiv_orm import Article, Category, Base
 from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
@@ -54,15 +54,18 @@ class CollectNewTask(luigi.Task):
         database = 'dev' if self.test else 'production'
         logging.warning(f"Using {database} database")
         self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        Base.metadata.create_all(self.engine)
 
+        xiv_filter = Article.article_source == 'arxiv'
         with db_session(self.engine) as session:
             # create lookup for categories (less than 200) and set of article ids
             all_categories_lookup = {cat.id: cat for cat in session.query(Category).all()}
             logging.info(f"{len(all_categories_lookup)} existing categories")
-            all_article_ids = {article.id for article in session.query(Article.id).all()}
+            all_article_ids = {article.id for article in session.query(Article.id).filter(xiv_filter).all()}
             logging.info(f"{len(all_article_ids)} existing articles")
             already_updated = {article.id: article.updated for article
                                in (session.query(Article)
+                                   .filter(xiv_filter)
                                    .filter(Article.updated >= self.articles_from_date)
                                    .all())}
             logging.info(f"{len(already_updated)} records exist in the database with a date on or after the update date.")
@@ -111,8 +114,8 @@ class CollectNewTask(luigi.Task):
                 count = new_count + existing_count
                 if not count % 1000:
                     logging.info(f"Processed {count} articles")
-                if self.test and count == 1600:
-                    logging.warning("Limiting to 1600 rows while in test mode")
+                if self.test and count == 2000:
+                    logging.warning("Limiting to 2000 rows while in test mode")
                     break
 
             # insert any remaining new and existing articles

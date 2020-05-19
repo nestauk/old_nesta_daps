@@ -22,7 +22,7 @@ merge_metadata(Base, MagBase, GridBase)
 """Association table for Arxiv articles and their categories."""
 article_categories = Table('arxiv_article_categories', Base.metadata,
                            Column('article_id',
-                                  VARCHAR(20),
+                                  VARCHAR(40),
                                   ForeignKey('arxiv_articles.id'),
                                   primary_key=True),
                            Column('category_id',
@@ -34,7 +34,7 @@ article_categories = Table('arxiv_article_categories', Base.metadata,
 """Association table to Microsoft Academic Graph fields of study."""
 article_fields_of_study = Table('arxiv_article_fields_of_study', Base.metadata,
                                 Column('article_id',
-                                       VARCHAR(20),
+                                       VARCHAR(40),
                                        ForeignKey('arxiv_articles.id'),
                                        primary_key=True),
                                 Column('fos_id',
@@ -47,7 +47,7 @@ class ArticleInstitute(Base):
     """Association table to GRID institutes."""
     __tablename__ = 'arxiv_article_institutes'
 
-    article_id = Column(VARCHAR(20), ForeignKey('arxiv_articles.id'), primary_key=True)
+    article_id = Column(VARCHAR(40), ForeignKey('arxiv_articles.id'), primary_key=True)
     institute_id = Column(VARCHAR(20), ForeignKey(Institute.id), primary_key=True)
     is_multinational = Column(BOOLEAN)
     matching_score = Column(FLOAT)
@@ -58,7 +58,7 @@ class Article(Base):
     """Arxiv articles and metadata."""
     __tablename__ = 'arxiv_articles'
 
-    id = Column(VARCHAR(20), primary_key=True, autoincrement=False)
+    id = Column(VARCHAR(40), primary_key=True, autoincrement=False)
     datestamp = Column(DATE)
     created = Column(DATE)
     updated = Column(DATE)
@@ -81,6 +81,7 @@ class Article(Base):
     institutes = relationship('ArticleInstitute')
     corex_topics = relationship('CorExTopic',
                                 secondary='arxiv_article_corex_topics')
+    article_source = Column(VARCHAR(7), index=True, default=None)
 
 
 class Category(Base):
@@ -115,7 +116,7 @@ class CorExTopic(Base):
 class ArticleTopic(Base):
     """Association table to CorEx topics."""
     __tablename__ = 'arxiv_article_corex_topics'
-    article_id = Column(VARCHAR(20), 
+    article_id = Column(VARCHAR(40), 
                         ForeignKey(Article.id), 
                         primary_key=True)
     topic_id = Column(INTEGER, 
