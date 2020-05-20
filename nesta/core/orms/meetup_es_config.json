@@ -136,7 +136,12 @@
                     "type": "keyword"
                 },
                 "url_of_group": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 }
             }
         }

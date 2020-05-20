@@ -198,19 +198,44 @@
                     "type": "keyword"
                 },
                 "url_crunchBase_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_facebook_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_linkedIn_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_of_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_twitter_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 }
             }
         }
