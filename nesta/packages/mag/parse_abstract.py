@@ -13,8 +13,7 @@ def _uninvert_abstract(inverted_abstract):
     for term, idxs in inverted_abstract['InvertedIndex'].items():
         for idx in idxs:
             terms[idx] = term
-    if None in terms:
-        raise ValueError('Inverted abstract is incomplete')
+    terms = list(filter((None).__ne__, terms))  # Filter missing terms
     return terms
 
 

@@ -11,6 +11,7 @@ fuzzy matching, which then gives a confidence score per match.
 from fuzzywuzzy import fuzz
 import luigi
 import logging
+from datetime import datetime
 
 from nesta.core.routines.arxiv.arxiv_mag_sparql_task import MagSparqlTask
 from nesta.packages.arxiv.collect_arxiv import add_article_institutes, create_article_institute_links, update_existing_articles
@@ -171,8 +172,8 @@ class GridTask(luigi.Task):
             if not count % 100:
                 logging.info(f"{count} processed articles from {total} : {(count / total) * 100:.1f}%")
 
-            if self.test and count == 50:
-                logging.warning("Exiting after 50 articles in test mode")
+            if self.test and count == 5000:
+                logging.warning("Exiting after 5000 articles in test mode")
                 logging.debug(article_institute_batcher)
                 break
 
@@ -189,3 +190,30 @@ class GridTask(luigi.Task):
         # mark as done
         logging.info("Task complete")
         self.output().touch()
+
+
+class GridRootTask(luigi.WrapperTask):
+    date = luigi.DateParameter(default=datetime.today())
+    db_config_path = luigi.Parameter(default="mysqldb.config")
+    production = luigi.BoolParameter(default=False)
+    drop_and_recreate = luigi.BoolParameter(default=False)
+    articles_from_date = luigi.Parameter(default=None)
+    insert_batch_size = luigi.IntParameter(default=500)
+    debug = luigi.BoolParameter(default=False)
+
+    def requires(self):
+        '''Collects the database configurations
+        and executes the central task.'''
+        logging.getLogger().setLevel(logging.INFO)
+        _routine_id = "{}-{}".format(self.date, self.production)
+        grid_task_kwargs = {
+            '_routine_id':_routine_id,
+            'db_config_path':self.db_config_path,
+            'db_config_env':'MYSQLDB',
+            'mag_config_path':'mag.config',
+            'test':not self.production,
+            'insert_batch_size':self.insert_batch_size,
+            'articles_from_date':self.articles_from_date,
+            'date':self.date,
+        }
+        yield GridTask(**grid_task_kwargs)

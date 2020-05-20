@@ -66,6 +66,7 @@ class PrepareArxivS3Data(luigi.Task):
             # Make the query
             result = (session
                       .query(Article.id, Article.abstract)
+                      .filter(Article.article_source = 'arxiv')
                       .join(ArtCat)
                       .filter(or_(ArtCat.c.category_id.like("cs.%"),
                                   ArtCat.c.category_id == "stat.ML")))
