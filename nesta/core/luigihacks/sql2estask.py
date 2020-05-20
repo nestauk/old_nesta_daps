@@ -32,6 +32,9 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
         dataset (str): Name of the elasticsearch dataset.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
+        filter (SqlAlchemy conditional statement): A conditional statement, to be passed
+                                                   to query.filter(). This allows for
+                                                   subsets of the data to be processed.
         entity_type (str): Name of the entity type to label this task with.
         kwargs (dict): Any other job parameters to pass to the batchable.
     '''
@@ -45,6 +48,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
     id_field = luigi.Parameter()
+    filter = luigi.Parameter(default=None)
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
@@ -84,7 +88,10 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
         # Get set of all organisations from mysql
         with db_session(engine) as session:
-            result = session.query(self.id_field).all()
+            query = session.query(self.id_field)
+            if self.filter is not None:
+                query = query.filter(self.filter)
+            result = query.all()
             all_ids = {r[0] for r in result}
         logging.info(f"{len(all_ids)} organisations in MySQL")
 

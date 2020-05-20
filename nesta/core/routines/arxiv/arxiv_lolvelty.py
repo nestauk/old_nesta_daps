@@ -43,6 +43,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                           drop_and_recreate=self.drop_and_recreate,
                           dataset='arxiv',
                           id_field=Article.id,
+                          filter=Article.article_source == 'arxiv',
                           entity_type='article',
                           db_config_env='MYSQLDB',
                           test=self.test,

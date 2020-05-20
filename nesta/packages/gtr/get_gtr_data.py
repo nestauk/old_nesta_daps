@@ -118,7 +118,7 @@ class TypeDict(dict):
         return True
 
     def __setitem__(self, k, v):
-        if v == {'nil': 'true'}:
+        if v == {'nil': 'true'} or v == float('inf'):
             return super().__setitem__(k, None)
         # Don't bother if not a string
         # or if all characters are letters

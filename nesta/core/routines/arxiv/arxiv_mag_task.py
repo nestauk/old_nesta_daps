@@ -6,11 +6,14 @@ Luigi routine to query the Microsoft Academic Graph for additional data and appe
 the exiting data in the database.
 """
 from datetime import date
+from datetime import datetime as dt
+from datetime import timedelta
 import luigi
 import logging
 import pprint
 
 from nesta.core.routines.arxiv.arxiv_iterative_date_task import DateTask
+from nesta.core.routines.arxiv.magrxiv_collect_iterative_task import CollectMagrxivTask
 from nesta.packages.arxiv.collect_arxiv import BatchedTitles, update_existing_articles
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.packages.mag.query_mag_api import build_expr, query_mag_api, dedupe_entities, update_field_of_study_ids
@@ -62,6 +65,18 @@ class QueryMagTask(luigi.Task):
                        test=self.test,
                        articles_from_date=self.articles_from_date,
                        insert_batch_size=self.insert_batch_size)
+        # Start collection from Jan 2010 unless in test mode
+        articles_from_date = '1 January 2010'        
+        if self.test:  # 11 days ago for test
+            articles_from_date = dt.strftime(dt.now() - timedelta(days=11), '%d %B %Y')
+        yield CollectMagrxivTask(date=self.date,
+                                 routine_id=self._routine_id,
+                                 db_config_path=self.db_config_path,
+                                 db_config_env=self.db_config_env,
+                                 test=self.test,
+                                 articles_from_date=articles_from_date,
+                                 insert_batch_size=self.insert_batch_size)
+
 
     def run(self):
         pp = pprint.PrettyPrinter(indent=4, width=100)
@@ -189,8 +204,8 @@ class QueryMagTask(luigi.Task):
                 all_articles_to_update.extend(batch_article_data)
 
                 logging.info(f"Batch {count} done. {total_arxiv_ids_to_process} articles left to process")
-                if self.test and count == 2:
-                    logging.warning("Exiting after 2 batches in test mode")
+                if self.test and count == 10:
+                    logging.warning("Exiting after 10 batches in test mode")
                     break
 
             # pick up any left over in the batch
