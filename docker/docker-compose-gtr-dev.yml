@@ -1,0 +1,6 @@
+version: '3'
+services:
+  luigi:
+    image: gtr:latest
+    volumes: 
+      - ~/.aws:/root/.aws:ro
