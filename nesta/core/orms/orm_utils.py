@@ -224,6 +224,23 @@ def get_es_mapping(dataset, aliases):
     return mapping
 
 
+def cast_as_sql_python_type(field, data):
+    """Cast the data to ensure that it is the python type expected by SQL
+    
+    Args:
+        field (SqlAlchemy field): SqlAlchemy field, to cast the data
+        data: A data field to be cast
+    Returns:
+        _data: The data field, cast as the native python equivalent of the field.
+    """
+    _data = field.type.python_type(data)
+    if field.type.python_type is str:
+        # Include the VARCHAR(n) case
+        n = field.type.length if field.type.length < len(_data) else None
+        _data = _data[:n]
+    return _data
+
+
 def filter_out_duplicates(db_env, section, database, 
                           Base, _class, data,
                           low_memory=False):
@@ -278,7 +295,7 @@ def filter_out_duplicates(db_env, section, database,
 
         # Generate the pkey for this row
         if not is_auto_pkey:
-            pk = tuple([pkey.type.python_type(row[pkey.name])
+            pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
                         for pkey in pkey_cols])
             # The row mustn't aleady exist in the input data
             if pk in all_pks and not is_auto_pkey:

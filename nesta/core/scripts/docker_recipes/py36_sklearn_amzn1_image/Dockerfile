@@ -17,6 +17,7 @@ RUN yum install which -y
 RUN yum install findutils -y
 RUN yum install wget -y
 RUN yum install gcc -y
+RUN yum install git -y
 RUN yum clean all -y
 
 # Install base conda env
