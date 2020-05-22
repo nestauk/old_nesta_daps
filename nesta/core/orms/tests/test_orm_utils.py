@@ -24,6 +24,7 @@ from nesta.core.orms.orm_utils import get_es_ids
 from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import db_session_query
+from nesta.core.orms.orm_utils import cast_as_sql_python_type
 
 @pytest.fixture
 def alias_lookup():
@@ -397,3 +398,33 @@ def test_merge_metadata_with_three_bases(primary_base, secondary_base, tertiary_
 def test_get_es_ids(mocked_scan):
     ids = get_es_ids(mock.MagicMock(), mock.MagicMock())
     assert ids == {1, 22.3, 3.3}
+
+
+def test_cast_as_sql_python_type_varchar():
+    field = mock.Mock()
+    field.type.python_type = str
+    data = 123243
+    raw_data = str(data)
+    raw_len = len(raw_data)
+    for length in range(2, 20):
+        field.type.length = length
+        cast_data = cast_as_sql_python_type(field, data)
+        cast_len = len(cast_data)
+        # Test that the data is not truncated
+        if raw_len <= length:
+            assert cast_data == raw_data
+        # Test that the data is truncated
+        else:
+            assert cast_data != raw_data
+            assert cast_data in raw_data
+            assert cast_len < raw_len
+            assert cast_len == length
+
+def test_cast_as_sql_python_type_other():
+    field = mock.Mock()
+    field.type.length = 1000  # don't test varchar truncation here
+    for data in ('0', '1', '2'):
+        for _type in (int, float, bool, str):
+            field.type.python_type = _type
+            _data = cast_as_sql_python_type(field, data)
+            assert _data == _type(data)
