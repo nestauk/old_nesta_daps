@@ -86,9 +86,19 @@
                     "type": "keyword"
                 },
                 "textBody_abstract_patent": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "title_of_patent": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "type_of_entity": {

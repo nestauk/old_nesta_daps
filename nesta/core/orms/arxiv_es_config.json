@@ -13,7 +13,7 @@
                     "type": "date"
                 },
                 "id_digitalObjectIdentifier_article": {
-                    "type": "text"
+                    "type": "keyword"
                 },
                 "json_category_article": {
                     "properties": {
@@ -94,15 +94,35 @@
                     "type": "keyword"
                 },
                 "textBody_abstract_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "title_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "type_of_entity": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "url_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "year_of_article": {

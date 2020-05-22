@@ -110,7 +110,7 @@ class AnalysisTask(luigi.Task):
 
     def run(self):
         # Threshold for testing
-        year_threshold = 2008 if self.test else YEAR_THRESHOLD
+        #YEAR_THRESHOLD = 2008 if self.test else YEAR_THRESHOLD  # remove if becomes stable
         test_label = 'test' if self.test else ''
 
         # database setup
@@ -158,7 +158,7 @@ class AnalysisTask(luigi.Task):
         df['year'] = df.date.apply(lambda date: date.year)
         df = dc.add_before_date_flag(df,
                                      date_column='date',
-                                     before_year=year_threshold)
+                                     before_year=YEAR_THRESHOLD)
 
         # first plot - dl/non dl distribution by country (top n)
         pivot_by_country = (pd.pivot_table(df.groupby(['institute_country', 'is_dl'])
@@ -224,14 +224,14 @@ class AnalysisTask(luigi.Task):
         condition = (df_all_cats.id.str.startswith('cs.') |
                      (df_all_cats.id.str == 'stat.ML'))
         all_categories = list(df_all_cats.loc[condition].description)
-        _before = f'Before {year_threshold}'
-        _after = f'After {year_threshold}'
+        _before = f'Before {YEAR_THRESHOLD}'
+        _after = f'After {YEAR_THRESHOLD}'
 
         cat_period_container = []
         for cat in all_categories:
             subset = df.loc[[cat in x
                              for x in df['arxiv_category_descs']], :]
-            subset_ct = pd.crosstab(subset[f'before_{year_threshold}'],
+            subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
                                     subset.is_dl,
                                     normalize=0)
             # This is true for some categories in dev mode
@@ -304,7 +304,7 @@ class AnalysisTask(luigi.Task):
                      'Breakdown (ctry, cite, yr) = '
                      f'{sum(top_countries)}, '
                      f'{sum(highly_cited)}, {sum(min_year)}')
-        before_year = top_df[f'before_{year_threshold}']
+        before_year = top_df[f'before_{YEAR_THRESHOLD}']
         logging.info("Before is DL = "
                      f"{sum(top_df.loc[before_year].is_dl)}")
         logging.info("After is DL = "
@@ -312,11 +312,11 @@ class AnalysisTask(luigi.Task):
 
         # Calculate revealed comparative advantage
         pre_threshold_rca = dc.calculate_rca_by_country(
-            top_df[top_df[f'before_{year_threshold}']],
+            top_df[top_df[f'before_{YEAR_THRESHOLD}']],
             country_column='institute_country',
             commodity_column='is_dl')
         post_threshold_rca = dc.calculate_rca_by_country(
-            top_df[~top_df[f'before_{year_threshold}']],
+            top_df[~top_df[f'before_{YEAR_THRESHOLD}']],
             country_column='institute_country',
             commodity_column='is_dl')
         rca_combined = (pd.merge(pre_threshold_rca, post_threshold_rca,

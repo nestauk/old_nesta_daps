@@ -120,15 +120,30 @@
                     "type": "keyword"
                 },
                 "textBody_abstract_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "title_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "type_of_entity": {
                     "type": "keyword"
                 },
                 "url_of_article": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "year_of_article": {
