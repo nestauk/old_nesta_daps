@@ -74,6 +74,11 @@
                     "type": "float"
                 },
                 "name_of_organisation": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "placeName_city_organisation": {
@@ -171,9 +176,19 @@
                     "type": "keyword"
                 },
                 "textBody_descriptive_organisation": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "textBody_summary_organisation": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
                     "type": "text"
                 },
                 "type_of_entity": {
@@ -183,19 +198,44 @@
                     "type": "keyword"
                 },
                 "url_crunchBase_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_facebook_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_linkedIn_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_of_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 },
                 "url_twitter_organisation": {
-                    "type": "keyword"
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
                 }
             }
         }
