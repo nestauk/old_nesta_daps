@@ -24,7 +24,7 @@ def crunchbase_tar():
     """
     crunchbase_config = misctools.get_config('crunchbase.config', 'crunchbase')
     user_key = crunchbase_config['user_key']
-    url = 'https://api.crunchbase.com/v3.1/csv_export/csv_export.tar.gz?user_key='
+    url = 'https://api.crunchbase.com/bulk/v4/bulk_export.tar.gz?user_key='
     with NamedTemporaryFile() as tmp_file:
         r = requests.get(''.join([url, user_key]))
         tmp_file.write(r.content)
