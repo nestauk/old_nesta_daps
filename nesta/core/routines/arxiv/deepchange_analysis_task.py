@@ -234,7 +234,6 @@ class AnalysisTask(luigi.Task):
             subset_ct = pd.crosstab(subset[f'before_{YEAR_THRESHOLD}'],
                                     subset.is_dl,
                                     normalize=0)
-            print(cat, subset[[f'before_{YEAR_THRESHOLD}', 'is_dl']])
             # This is true for some categories in dev mode
             # due to a smaller dataset
             if list(subset_ct.index) != [False, True]:

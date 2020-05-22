@@ -1,0 +1,11 @@
+[21-05-2020]
+	(full pipelines)
+	    NiH (health)
+	    Crunchbase (health)
+	(partial pipelines)
+	    Meetup (health): Sql2ES stage only
+	    arXiv (EURITO): Sql2ES stage only
+	    arXiv (arXlive): Sql2ES stage only
+	    Crunchbase (EURITO): Sql2ES stage only
+	    Cordis (EURITO): Sql2ES stage only
+	    Patstat (EURITO): Sql2ES stage only
