@@ -26,10 +26,38 @@ _BUCKET = S3.Bucket("nesta-production-intermediate")
 DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
 
 
+def get_range_by_weekday(total_pages):
+    """The range of pages that should be queried today.
+    The reason for implementing this is that the GtR server is
+    very sensitive to heavy loading, so we distribute the requests
+    evenly across the week.
+
+    Args:
+        total_pages (int): The total number of pages on GtR to be queried.
+    Returns:
+        {first_page, last_page} (int,int): Corresponding page range (a, b+1) that should be queried
+
+    """
+    weekday = datetime.date.today().weekday()  # values in {0 ... 6}
+    pages_per_day = total_pages // 7  # Don't worry about the remainder yet
+    first_page = weekday*pages_per_day + 1
+    last_page = (total_pages + 1 if weekday == 6  # On Sundays include the remainder
+                 else first_page + pages_per_day)
+    return first_page, last_page
+
+
 class GtrTask(autobatch.AutoBatchTask):
-    '''Get all GtR data'''
+    '''
+    Get all GtR data
+    
+    Args:
+        date (datetime.datetime): Date for labelling the task.
+        page_size (int): Number of pages per batch task.
+        split_collection (bool): Automatically split the collection into a daily (n/7th{ish}) chunk?
+    '''    
     date = luigi.DateParameter(default=datetime.date.today())
     page_size = luigi.IntParameter(default=10)
+    split_collection = luigi.BoolParameter(default=False)
 
     def output(self):
         '''Points to the input database target'''
@@ -40,12 +68,16 @@ class GtrTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        # Assertain the total number of pages first
+        # Ascertain the total number of pages first
         projects = read_xml_from_url(TOP_URL, p=1, s=self.page_size)
         total_pages = int(projects.attrib[TOTALPAGES_KEY])
+        if self.split_collection:  # Split data into weekdays
+            first_page, last_page = get_range_by_weekday(total_pages)
+        else:
+            first_page, last_page = (1, total_pages+1)
 
         job_params = []
-        for page in range(1, total_pages+1):
+        for page in range(first_page, last_page):
             # Check whether the job has been done already
             s3_key = f"{self.job_name}-{page}"
             s3_path = "s3://nesta-production-intermediate/%s" % s3_key
@@ -65,20 +97,24 @@ class GtrTask(autobatch.AutoBatchTask):
 
 class GtrOnlyRootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
-    and executes the central task. 
+    and executes the central task.
 
     Args:
         date (datetime): Date used to label the outputs
+        page_size (int): Number of pages per batch task.
+        split_collection (bool): Automatically split the collection into a daily (n/7th{ish}) chunk?
     '''
     date = luigi.DateParameter(default=datetime.date.today())
     page_size = luigi.IntParameter(default=10)
+    split_collection = luigi.BoolParameter(default=False)
     production = luigi.BoolParameter(default=False)
-    
+
     def requires(self):
         '''Collects the database configurations and executes the central task.'''
-        logging.getLogger().setLevel(logging.INFO)        
+        logging.getLogger().setLevel(logging.INFO)
         yield GtrTask(date=self.date,
                       page_size=self.page_size,
+                      split_collection=self.split_collection,
                       batchable=find_filepath_from_pathstub("core/batchables/gtr/collect_gtr"),
                       env_files=[find_filepath_from_pathstub("/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
