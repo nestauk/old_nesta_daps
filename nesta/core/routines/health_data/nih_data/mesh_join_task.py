@@ -66,6 +66,11 @@ class MeshJoinTask(luigi.Task):
         s3bucket = s3.Bucket(bucket)
         return {o.key for o in s3bucket.objects.filter(Prefix=key_prefix)}
 
+    @staticmethod
+    def chunks(l, n):
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
     def output(self):
         db_config = get_config(os.environ[self.db_config_env], "mysqldb")
         db_config['database'] = 'dev' if self.test else 'production'
@@ -81,31 +86,33 @@ class MeshJoinTask(luigi.Task):
         engine = get_mysql_engine(self.db_config_env, 'mysqldb', db)
         with db_session(engine) as session:
             
-            if self.test:
-                existing_projects = set()
-                projects = session.query(Projects.application_id).distinct()
-                for p in projects:
-                    existing_projects.update(int(p.application_id))
+            existing_projects = set()
+            projects = session.query(Projects.application_id).distinct()
+            for p in projects:
+                existing_projects.update({int(p.application_id)})
             
             projects_done = set()
             projects_mesh = session.query(ProjectMeshTerms.project_id).distinct()
             for p in projects_mesh:
-                projects_done.update(int(p.project_id))
+                projects_done.update({int(p.project_id)})
             
             mesh_term_ids = {int(m.id) for m in session.query(MeshTerms.id).all()}
 
         logging.info('Inserting associations')
         
         for key_count, key in enumerate(keys):
+            mesh_term_objs = []
+            rows = []
             if self.test and (key_count > 2):
                 continue
             # collect mesh results from s3 file and groups by project id
             # each project id has set of mesh terms and corresponding term ids
             df_mesh = retrieve_mesh_terms(bucket, key)
+            n_terms = df_mesh.shape[0]
+            logging.info(f'Found {n_terms} MeSH terms.')
             project_terms = self.format_mesh_terms(df_mesh)
             # go through documents
             for project_count, (project_id, terms) in enumerate(project_terms.items()):
-                rows = []
                 if self.test and (project_count > 2):
                     continue
                 if (project_id in projects_done) or (project_id not in existing_projects):
@@ -115,14 +122,21 @@ class MeshJoinTask(luigi.Task):
                     term_id = int(term_id)
                     # add term to mesh term table if not present
                     if term_id not in mesh_term_ids:
-                        objs = insert_data(
-                                self.db_config_env, 'mysqldb', db, Base, MeshTerms, 
-                                [{'id': term_id, 'term': term}], low_memory=True)
+                        mesh_term_objs.append({'id': term_id, 'term': term})
                         mesh_term_ids.update({term_id})
                     # prepare row to be added to project-mesh_term link table
                     rows.append({'project_id': project_id, 'mesh_term_id': term_id})
-                # inesrt rows to link table
-                insert_data(self.db_config_env, 'mysqldb', db, Base, 
-                        ProjectMeshTerms, rows, low_memory=True)
+            # insert all missing mesh labels
+            mesh_objs = insert_data(self.db_config_env, 'mysqldb', db, Base, MeshTerms, 
+                    mesh_term_objs, low_memory=True)
+            # inesrt rows to link table
+            chunk_size = 10000
+            for i, chunk in enumerate(self.chunks(rows, chunk_size)):
+                start = i * chunk_size
+                end = start + chunk_size - 1
+                d = datetime.datetime.utcnow().strftime('%H:%M:%S %d-%m-%Y')
+                logging.info(f'{d}: Inserting terms {start} to {end}')
+                insert_data(self.db_config_env, 'mysqldb', db, Base, ProjectMeshTerms, 
+                        chunk, low_memory=True)
         self.output().touch() # populate project-mesh_term link table
 

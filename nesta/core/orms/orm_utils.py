@@ -298,7 +298,7 @@ def filter_out_duplicates(db_env, section, database,
             pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
                         for pkey in pkey_cols])
             # The row mustn't aleady exist in the input data
-            if pk in all_pks and not is_auto_pkey:
+            if pk in all_pks:
                 existing_objs.append(row)
                 continue
             all_pks.add(pk)
