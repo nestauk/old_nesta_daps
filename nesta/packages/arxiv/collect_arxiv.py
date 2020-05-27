@@ -351,7 +351,6 @@ class BatchedTitles():
 def add_new_articles(article_batch, session):
     """Adds new articles to the session and commits them.
     Args:
-        #article_batch (:obj:`list` of `Article`): Articles to add to database
         article_batch (:obj:`list` of `dict`): Articles to add to database
         session (:obj:`sqlalchemy.orm.session`): active session to use
     """
