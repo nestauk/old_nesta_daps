@@ -80,7 +80,8 @@ class CollectNewTask(luigi.Task):
                                                   self.engine)
 
             # retrieve and process, while inserting any missing categories
-            for row in retrieve_all_arxiv_rows(**{'from': self.articles_from_date}):
+            kwargs = {'from': self.articles_from_date}  # use kwargs to avoid reserved term 'from'
+            for row in retrieve_all_arxiv_rows(**kwargs):
                 try:
                     # update only newer data
                     if row['updated'] <= already_updated[row['id']]:
@@ -104,7 +105,8 @@ class CollectNewTask(luigi.Task):
                     # convert category ids to Category objects
                     row['categories'] = [all_categories_lookup[cat]
                                          for cat in row.get('categories', [])]
-                    new_articles_batch.append(Article(**row))
+                    #new_articles_batch.append(Article(**row))
+                    new_articles_batch.append(row)
                     new_count += 1
                 else:
                     # append to existing articles batch
