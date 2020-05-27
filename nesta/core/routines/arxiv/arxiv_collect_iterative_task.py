@@ -105,7 +105,6 @@ class CollectNewTask(luigi.Task):
                     # convert category ids to Category objects
                     row['categories'] = [all_categories_lookup[cat]
                                          for cat in row.get('categories', [])]
-                    #new_articles_batch.append(Article(**row))
                     new_articles_batch.append(row)
                     new_count += 1
                 else:
