@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-
-if ! [ -x "$(command -v git-crypt)" ]; then
-    echo 'Error: git-crypt must be installed.' >&2
-    exit 1
-fi
