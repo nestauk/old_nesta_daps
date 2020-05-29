@@ -1,5 +1,5 @@
-AWS FAQ
-=======
+FAQ
+===
 
 Where `is <https://www.theguardian.com/news/datablog/2010/jul/16/data-plural-singular>`_ the data?
 --------------------------------------------------------------------------------------------------
@@ -20,7 +20,8 @@ Production machines (EC2) run in Ohio (us-east-2).
 Where is the latest config?
 ---------------------------
 
-One of our priorities is to implement a `decent config management system <https://github.com/nestauk/nesta/issues/196>`_. Our latest read-only config for accessing the tier-0 (rawish SQL data) can be found `here <s3://nesta-production-config/mysqldb_team.config>`_, and a fairly up-to-date config directory (which you can paste into :obj:`nesta/core/config`) can be found `here <https://s3.console.aws.amazon.com/s3/object/nesta-production-config/nesta-config.zip?region=eu-west-2&tab=overview>`_. If you want to use exactly what Joel has been using, feel free to :obj:`sudo cp` from :obj:`/home/ec2-user/nesta/nesta/core/config`. For example, you can find the latest Elasticsearch indexes and endpoints here.
+We use :obj:`git-crypt` to encrypt our configuration files whilst allowing them to be versioned in git (meaning that we can also rollback configuration). To unlock the configuration encryption, you should install :obj:`git-crypt`, then run :obj:`bash install.sh` from the project root, and finally unlock the configuration using the key found `here <s3://nesta-production-config/config.key>`_.
+
 
 Where do I start with Elasticsearch?
 ------------------------------------
@@ -31,6 +32,14 @@ I’d recommend using PostMan for spinning up and knocking down indexes. Practic
 
 Troubleshooting
 ===============
+
+
+I'm having problems using the config files!
+-------------------------------------------
+
+We use :obj:`git-crypt` to encrypt our configuration files whilst allowing them to be versioned in git (meaning that we can also rollback configuration). To unlock the configuration encryption, you should install :obj:`git-crypt`, then run :obj:`bash install.sh` from the project root, and finally unlock the configuration using the `key <s3://nesta-production-config/config.key>`_.
+
+
 
 How do I restart the apache server after downtime?
 --------------------------------------------------

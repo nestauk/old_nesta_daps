@@ -1,0 +1,2 @@
+.gitattributes !filter !diff
+nesta/core/config/** filter=git-crypt diff=git-crypt
