@@ -1,12 +1,20 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+function mustBeInstalled {
+    if ! [ -x "$(command -v $1)" ]; then
+	echo 'Error: $1 must be installed.' >&2
+	exit 1
+    fi    
+}
 
 function forbidCommitTo {
     branch="$(git rev-parse --abbrev-ref HEAD)"
     if [ "$branch" == "$1" ]; then
-	echo "You can't commit directly to $1 branch"
-	exit 1
+        echo "You can't commit directly to $1 branch"
+        exit 1
     fi
 }
 
 forbidCommitTo "dev"
 forbidCommitTo "master"
+mustBeInstalled "git-crypt"

@@ -1,4 +1,4 @@
 #!/bin/bash
 make clean
-make html && sudo rm -r /var/www/html/nesta-docs/* && sudo cp -r ~/nesta/docs/_build/html/* /var/www/html/nesta-docs
+make html && sudo rm -r /var/www/html/nesta-docs/* && sudo cp -r $PWD/_build/html/* /var/www/html/nesta-docs
 
