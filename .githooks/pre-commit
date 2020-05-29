@@ -4,7 +4,7 @@ function mustBeInstalled {
     if ! [ -x "$(command -v $1)" ]; then
 	echo 'Error: $1 must be installed.' >&2
 	exit 1
-    fi
+    fi    
 }
 
 function forbidCommitTo {
