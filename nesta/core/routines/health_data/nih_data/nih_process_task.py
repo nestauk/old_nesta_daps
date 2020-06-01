@@ -103,8 +103,10 @@ class ProcessTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
+        es, es_config = setup_es(es_mode=es_mode, 
                                  dataset='nih',
+                                 endpoint='health-scanner',
+                                 drop_and_recreate=self.drop_and_recreate,
                                  aliases='health_scanner')
 
         batches = self.batch_limits(project_query, BATCH_SIZE)

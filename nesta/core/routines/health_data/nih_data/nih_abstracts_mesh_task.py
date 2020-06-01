@@ -135,9 +135,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
 
         # elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, 
-                                 drop_and_recreate=False,
+        es, es_config = setup_es(es_mode=es_mode
+                                 endpoint='health-scanner',
                                  dataset='nih',
+                                 drop_and_recreate=False,
                                  aliases='health_scanner')
 
         # s3 setup and file key collection

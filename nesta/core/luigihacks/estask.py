@@ -17,6 +17,7 @@ class ElasticsearchTask(AutoBatchTask):
     Args:
         routine_id (str): Label for this routine.
         db_config_path (str): Database config path.
+        endpoint (str): AWS domain name of the ES endpoint.
         dataset (str): Name of the ES dataset.
         entity_type (str): Entity type, for :obj:`ElasticsearchPlus`.
         kwargs (dict): Any extra parameters to pass to the batchables.
@@ -27,6 +28,7 @@ class ElasticsearchTask(AutoBatchTask):
     '''
     routine_id = luigi.Parameter()
     db_config_path = luigi.Parameter('mysqldb.config')
+    endpoint = luigi.Parameter()
     dataset = luigi.Parameter()
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
@@ -73,9 +75,10 @@ class ElasticsearchTask(AutoBatchTask):
 
         # Setup elasticsearch and extract all ids
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test,
-                                 drop_and_recreate=False,
+        es, es_config = setup_es(es_mode=es_mode,
                                  dataset=self.dataset,
+                                 endpoint=self.endpoint,
+                                 drop_and_recreate=False,
                                  increment_version=False)
         ids = get_es_ids(es, es_config, size=10000)  # All ids in this index
         ids = ids - self._done_ids  # Don't repeat done ids

@@ -125,15 +125,17 @@ def parse_es_config(increment_version):
     return config
 
 
-def setup_es(es_mode, drop_and_recreate,
-             dataset, aliases=None, increment_version=False):
+def setup_es(es_mode, endpoint, dataset, 
+             drop_and_recreate=False, aliases=None,
+             increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
     Args:
         es_mode (str): One of "prod" or "dev".
-        drop_and_recreate (bool): Drop and recreate ES index?
+        endpoint (str): Name of the AWS ES endpoint.
         dataset (str): Name of the dataset for the ES mapping.
+        drop_and_recreate (bool): Drop and recreate ES index?
         aliases (str): Name of the aliases for the ES mapping.
         increment_version (bool): Move one version up?
     Returns:
@@ -210,7 +212,7 @@ def load_yaml_from_pathstub(pathstub, filename):
     _path = find_filepath_from_pathstub(pathstub)
     _path = os.path.join(_path, filename)
     with open(_path) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 
 def get_es_mapping(dataset, aliases):

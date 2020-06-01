@@ -31,6 +31,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         process_batch_size (int): Number of rows to process in a batch.
         drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
         dataset (str): Name of the elasticsearch dataset.
+        endpoint (str): Name of the AWS ES domain endpoint.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
         filter (SqlAlchemy conditional statement): A conditional statement, to be passed
                                                    to query.filter(). This allows for
@@ -47,6 +48,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
+    endpoint = luigi.Parameter()
     id_field = luigi.Parameter()
     filter = luigi.Parameter(default=None)
     entity_type = luigi.Parameter()
@@ -76,9 +78,10 @@ class Sql2EsTask(autobatch.AutoBatchTask):
 
         # Elasticsearch setup
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test,
-                                 self.drop_and_recreate,
+        es, es_config = setup_es(es_mode=es_mode,
                                  dataset=self.dataset,
+                                 endpoint=self.endpoint,                                 
+                                 drop_and_recreate=self.drop_and_recreate,
                                  aliases=self.aliases)
 
         # Get set of existing ids from elasticsearch via scroll

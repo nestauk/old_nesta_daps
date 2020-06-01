@@ -69,10 +69,11 @@ class DedupeTask(autobatch.AutoBatchTask):
                             " while in test mode")
 
         es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test,
-                                 self.drop_and_recreate,
+        es, es_config = setup_es(es_mode=es_mode,
                                  dataset='nih',
+                                 endpoint='health-scanner',
                                  aliases='health_scanner',
+                                 drop_and_recreate=self.drop_and_recreate,
                                  increment_version=True)
 
         # Count articles from the old index
