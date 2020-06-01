@@ -12,7 +12,7 @@ install:
   - pip install lxml
   - python -c "import sys; print(sys.path)"
 before_script:
-  - mkdir nesta/core/config/
+  - rm nesta/core/config/*
   - echo -e "[mysqldb]\nx=1" > nesta/core/config/mysqldb.config  # create dummy file with just the config x=1
   - echo -e "[worker]\nx=1" > nesta/core/config/luigi.cfg  # create dummy file for luigi
   - echo -e "[crunchbase]\nuser_key=1" > nesta/core/config/crunchbase.config  # create dummy file for crunchbase
