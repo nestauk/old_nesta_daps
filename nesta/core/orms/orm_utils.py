@@ -18,8 +18,10 @@ import re
 import pymysql
 import os
 import json
+import yaml
 import logging
 import time
+from collections import defaultdict
 
 
 def _get_key_value(obj, key):
@@ -94,14 +96,42 @@ def assert_correct_config(test, config, key):
                          "must end with '_dev'")
 
 
-def setup_es(es_mode, test_mode, drop_and_recreate,
+def parse_es_config(increment_version):
+    """Retrieve the ES config for all endpoints and indexes, 
+    including auto-version-incrementing if required.
+
+    Args:
+        increment_version (bool): Move one version up? (NB: no changes to config file on disk)
+    Returns:
+        config: Elasticsearch config dict, for all endpoints and indexes.
+    """
+    raw_config = load_yaml_from_pathstub('config', 'elasticsearch.yaml')
+    config = defaultdict(lambda: defaultdict(dict))
+    for endpoint, endpoint_config in raw_config['endpoints'].items():
+        # Build the base configuration for this endpoint
+        indexes = endpoint_config.pop('indexes')
+        base_config = raw_config['defaults'].copy()  # use defaults as the base...
+        base_config.update(endpoint_config)          # then override with endpoint settings
+        # Add the host to the config
+        scheme = base_config.pop('scheme')
+        _id = base_config.pop('id')
+        rgn = base_config['region']
+        base_config['host'] = f'{scheme}://search-{endpoint}-{_id}.{rgn}.es.amazonaws.com'
+        for dataset, version in indexes.items():
+            prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
+            dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
+            config[endpoint][dataset]['prod'] = {'index': prod_idx, **base_config}
+            config[endpoint][dataset]['dev'] = {'index': dev_idx, **base_config}
+    return config
+
+
+def setup_es(es_mode, drop_and_recreate,
              dataset, aliases=None, increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
     Args:
         es_mode (str): One of "prod" or "dev".
-        test_mode (bool): Running in test mode?
         drop_and_recreate (bool): Drop and recreate ES index?
         dataset (str): Name of the dataset for the ES mapping.
         aliases (str): Name of the aliases for the ES mapping.
@@ -112,49 +142,28 @@ def setup_es(es_mode, test_mode, drop_and_recreate,
     if es_mode not in ("prod", "dev"):
         raise ValueError("es_mode required to be one of "
                          f"'prod' or 'dev', but '{es_mode}' provided.")
-
-    # Get and check the config
-    key = f"{dataset}_{es_mode}"
-    es_config = get_config('elasticsearch.config', key)
-    assert_correct_config(test_mode, es_config, key)
-
-    # If required, create new index from the old one
-    if increment_version:
-        old_index = es_config['index']
-        if es_mode == 'prod':
-            tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
-            new_index = f'{tag}{int(version)+1}'
-        else:
-            tag = old_index
-            new_index = f'{old_index}0'
-        es_config['index'] = new_index
-        es_config['old_index'] = old_index
-        if any((new_index == old_index,
-                not old_index.startswith(tag),
-                not new_index.startswith(tag),
-                len(new_index) - len(old_index) > 1)):
-            raise ValueError('Could not create a new valid '
-                             f'index from {old_index}. Tried, '
-                             f'but got {new_index}.')
-
+    es_master_config = parse_es_config(increment_version)
+    es_config = es_master_config[endpoint][dataset][es_mode]
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True, send_get_body_as='POST')
-    # Drop the index if required (must be in test mode to do this)
-    _index = es_config['index']
-    exists = es.indices.exists(index=_index)
-    if drop_and_recreate and test_mode and exists:
-        es.indices.delete(index=_index)
+    # Does the index already exist?
+    index = es_config['index']
+    exists = es.indices.exists(index=index)
+    # Drop index for fresh recreation (if in test mode)
+    if drop_and_recreate and (es_mode == 'dev') and exists:
+        es.indices.delete(index=index)
         exists = False
     # Create the index if required
     if not exists:
         mapping = get_es_mapping(dataset, aliases=aliases)
-        es.indices.create(index=_index, body=mapping)
+        es.indices.create(index=index, body=mapping)
     return es, es_config
+
 
 def get_es_ids(es, es_config, size=1000, query={}):
     '''Get all existing ES document ids for a given config
-    
+
     Args:
         es: Elasticsearch connection.
         es_config (dict): Elasticsearch configuration.
@@ -186,6 +195,22 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         _js = json.dumps(js, sort_keys=True)
         js = json.loads(_js)
     return js
+
+
+def load_yaml_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be yaml).
+
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
+    Returns:
+        The file contents as a json-like object.
+    """
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        return yaml.load(f)
 
 
 def get_es_mapping(dataset, aliases):
@@ -226,7 +251,7 @@ def get_es_mapping(dataset, aliases):
 
 def cast_as_sql_python_type(field, data):
     """Cast the data to ensure that it is the python type expected by SQL
-    
+
     Args:
         field (SqlAlchemy field): SqlAlchemy field, to cast the data
         data: A data field to be cast
@@ -241,7 +266,7 @@ def cast_as_sql_python_type(field, data):
     return _data
 
 
-def filter_out_duplicates(db_env, section, database, 
+def filter_out_duplicates(db_env, section, database,
                           Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
@@ -281,7 +306,7 @@ def filter_out_duplicates(db_env, section, database,
 
     # Read all pks if in low_memory mode
     if low_memory and not is_auto_pkey:
-        fields = [getattr(_class, pkey.name) 
+        fields = [getattr(_class, pkey.name)
                   for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
@@ -337,11 +362,11 @@ def insert_data(db_env, section, database, Base,
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    response = filter_out_duplicates(db_env=db_env, 
+    response = filter_out_duplicates(db_env=db_env,
                                      section=section,
                                      database=database,
-                                     Base=Base, 
-                                     _class=_class, 
+                                     Base=Base,
+                                     _class=_class,
                                      data=data,
                                      low_memory=low_memory)
     objs, existing_objs, failed_objs = response
