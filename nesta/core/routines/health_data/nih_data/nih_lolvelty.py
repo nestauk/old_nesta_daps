@@ -24,6 +24,7 @@ class NiHLolveltyRootTask(luigi.WrapperTask):
                                      test=test,
                                      index=index,
                                      dataset='nih',
+                                     endpoint='health-scanner',
                                      entity_type='paper',
                                      kwargs=kwargs,
                                      batchable=f3p("batchables/novelty/lolvelty"),

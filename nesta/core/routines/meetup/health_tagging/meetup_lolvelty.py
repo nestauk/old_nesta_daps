@@ -35,6 +35,7 @@ class MeetupLolveltyRootTask(luigi.WrapperTask):
                                      test=test,
                                      index=index,
                                      dataset='meetup',
+                                     endpoint='health-scanner',
                                      entity_type='meetup',
                                      kwargs=kwargs,
                                      batchable=f3p("batchables/novelty/lolvelty"),

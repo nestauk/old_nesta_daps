@@ -66,18 +66,14 @@ class RootTask(luigi.WrapperTask):
         test = not self.production
         routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
 
-        # Elasticsearch setup
-        _, es_config = setup_es(endpoint='arxlive',
-                                dataset='arxiv',
-                                production=self.production,
-                                drop_and_recreate=self.drop_and_recreate)
         yield ArxivElasticsearchTask(date=self.date,
                                      process_batch_size=1000,
                                      routine_id=routine_id,
                                      grid_task_kwargs=grid_task_kwargs,
                                      test=not self.production,
-                                     index=es_config['index'],
+                                     drop_and_recreate=self.drop_and_recreate,
                                      dataset='arxiv',
+                                     endpoint='arxlive',
                                      entity_type='article',
                                      kwargs=kwargs,
                                      batchable=f3p("batchables/novelty"

@@ -86,6 +86,7 @@ class ArxivLolveltyRootTask(luigi.WrapperTask):
                                        test=test,
                                        index=index,
                                        dataset='arxiv',
+                                       endpoint='arxlive',
                                        entity_type='article',
                                        kwargs=kwargs,
                                        batchable=f3p("batchables/novelty"
