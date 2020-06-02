@@ -97,7 +97,7 @@ def assert_correct_config(test, config, key):
 
 
 def parse_es_config(increment_version):
-    """Retrieve the ES config for all endpoints and indexes, 
+    """Retrieve the ES config for all endpoints and indexes,
     including auto-version-incrementing if required.
 
     Args:
@@ -126,8 +126,7 @@ def parse_es_config(increment_version):
 
 
 def setup_es(endpoint, dataset, production,
-             drop_and_recreate=False, aliases=None,
-             increment_version=False):
+             drop_and_recreate=False, increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
@@ -136,7 +135,6 @@ def setup_es(endpoint, dataset, production,
         dataset (str): Name of the dataset for the ES mapping.
         production (bool): Running in production mode?
         drop_and_recreate (bool): Drop and recreate ES index?
-        aliases (str): Name of the aliases for the ES mapping.
         increment_version (bool): Move one version up?
     Returns:
         {es, es_config}: Elasticsearch connection and config dict.
@@ -155,7 +153,7 @@ def setup_es(endpoint, dataset, production,
         exists = False
     # Create the index if required
     if not exists:
-        mapping = get_es_mapping(dataset, aliases=aliases)
+        mapping = get_es_mapping(dataset, endpoint)
         es.indices.create(index=index, body=mapping)
     return es, es_config
 
@@ -212,25 +210,25 @@ def load_yaml_from_pathstub(pathstub, filename):
         return yaml.safe_load(f)
 
 
-def get_es_mapping(dataset, aliases):
-    '''Get the configuration from a file in the luigi config path
-    directory, and convert the key-value pairs under the config :code:`header`
-    into a `dict`.
+def get_es_mapping(dataset, endpoint):
+    '''Load the ES mapping for this dataset and endpoint,
+    including aliases.
 
-    Parameters:
-        file_name (str): The configuation file name.
-        header (str): The header key in the config file.
-
+    Args:
+        dataset (str): Name of the dataset for the ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
     Returns:
         :obj:`dict`
     '''
     # Get the mapping and lookup
     mapping = load_json_from_pathstub("core/orms/",
                                       f"{dataset}_es_config.json")
-    alias_lookup = {}
-    if aliases is not None:
+    try:
         alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                               f"{aliases}.json")
+                                               f"{endpoint}.json")
+    except FileNotFoundError:
+        alias_lookup = {}
+
     # Get a list of valid fields for verification
     fields = mapping["mappings"]["_doc"]["properties"].keys()
     # Add any aliases to the mapping

@@ -264,7 +264,7 @@ def test_setup_es_true_test_delete_called(mock_get_es_mapping,
                                           mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
     setup_es(endpoint='arxlive', dataset='arxiv', production=False,
-             drop_and_recreate=True, aliases=None)
+             drop_and_recreate=True)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
@@ -278,8 +278,7 @@ def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping,
                                                          mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(drop_and_recreate=True, production=False,
-             endpoint='arxlive', dataset='arxiv',
-             aliases=None)
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
@@ -293,8 +292,7 @@ def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
                                                mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(drop_and_recreate=True, production=False,
-             endpoint='arxlive', dataset='arxiv',
-             aliases=None)
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
@@ -308,8 +306,7 @@ def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
                                                   mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
     setup_es(drop_and_recreate=False, production=False,
-             endpoint='arxlive', dataset='arxiv',
-             aliases=None)
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
@@ -323,8 +320,7 @@ def test_setup_es_no_create_if_exists(mock_get_es_mapping,
                                       mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
     setup_es(drop_and_recreate=False, production=False,
-             endpoint='arxlive', dataset='arxiv',
-             aliases=None)
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 0
 

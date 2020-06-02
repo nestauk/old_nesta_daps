@@ -46,7 +46,6 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     db_section = luigi.Parameter(default="mysqldb")
     process_batch_size = luigi.IntParameter(default=10000)
     drop_and_recreate = luigi.BoolParameter(default=False)
-    aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
     endpoint = luigi.Parameter()
     id_field = luigi.Parameter()
@@ -80,8 +79,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
                                  production=not self.test,
-                                 drop_and_recreate=self.drop_and_recreate,
-                                 aliases=self.aliases)
+                                 drop_and_recreate=self.drop_and_recreate)
 
         # Get set of existing ids from elasticsearch via scroll
         existing_ids = get_es_ids(es, es_config)
