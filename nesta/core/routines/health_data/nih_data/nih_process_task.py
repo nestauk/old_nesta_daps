@@ -105,8 +105,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',
                                  production=not self.test,
-                                 drop_and_recreate=self.drop_and_recreate,
-                                 aliases='health_scanner')
+                                 drop_and_recreate=self.drop_and_recreate)
 
         batches = self.batch_limits(project_query, BATCH_SIZE)
         job_params = []

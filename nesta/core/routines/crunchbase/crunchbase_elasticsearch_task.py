@@ -78,11 +78,10 @@ class CrunchbaseSql2EsTask(autobatch.AutoBatchTask):
                                   self.database)
 
         # Elasticsearch setup
-        es, es_config = setup_es(endpoint='health_scanner',
+        es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='companies',
                                  production=not self.test,
-                                 drop_and_recreate=self.drop_and_recreate,
-                                 aliases='health_scanner')
+                                 drop_and_recreate=self.drop_and_recreate)
 
         # Get set of existing ids from elasticsearch via scroll
         scanner = scan(es, query={"_source": False},

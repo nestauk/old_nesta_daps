@@ -72,7 +72,6 @@ class RootTask(luigi.WrapperTask):
                                      date=self.date,
                                      process_batch_size=100,
                                      drop_and_recreate=self.drop_and_recreate,
-                                     aliases='health_scanner',
                                      dataset='meetup',
                                      id_field=Group.id,
                                      entity_type='meetup',

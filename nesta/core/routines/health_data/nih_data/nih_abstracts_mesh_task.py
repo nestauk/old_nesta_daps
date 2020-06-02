@@ -137,8 +137,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',
                                  production=not self.test,
-                                 drop_and_recreate=False,
-                                 aliases='health_scanner')
+                                 drop_and_recreate=False)
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'

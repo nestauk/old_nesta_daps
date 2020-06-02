@@ -163,7 +163,7 @@ if __name__ == "__main__":
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
         es, es_config = setup_es(production=False, endpoint='health-scanner',
-                                 dataset='companies', aliases='health_scanner'
+                                 dataset='companies',
                                  drop_and_recreate=True)
 
         environ = {"AWSBATCHTEST": "",

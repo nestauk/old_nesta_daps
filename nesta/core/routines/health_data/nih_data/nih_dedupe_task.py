@@ -71,7 +71,6 @@ class DedupeTask(autobatch.AutoBatchTask):
         es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',                                 
                                  production=not self.test,
-                                 aliases='health_scanner',
                                  drop_and_recreate=self.drop_and_recreate,
                                  increment_version=True)
 
