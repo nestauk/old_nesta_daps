@@ -132,7 +132,7 @@ if __name__ == "__main__":
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
         from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
-        es, es_config = setup_es(es_mode='dev', endpoint='eurito', 
+        es, es_config = setup_es(production=False, endpoint='eurito', 
                                  dataset='cordis', drop_and_recreate=True)
         environ = {'config': find_filepath_from_pathstub('mysqldb.config'),
                    'batch_file' : ('cordis-eu_EURITO-ElasticsearchTask-'

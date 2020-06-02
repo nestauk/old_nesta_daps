@@ -74,10 +74,9 @@ class ElasticsearchTask(AutoBatchTask):
                             " while in test mode")
 
         # Setup elasticsearch and extract all ids
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode,
+        es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
-                                 endpoint=self.endpoint,
+                                 production=not self.test,
                                  drop_and_recreate=False,
                                  increment_version=False)
         ids = get_es_ids(es, es_config, size=10000)  # All ids in this index

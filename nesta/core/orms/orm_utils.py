@@ -120,32 +120,29 @@ def parse_es_config(increment_version):
         for dataset, version in indexes.items():
             prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
             dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
-            config[endpoint][dataset]['prod'] = {'index': prod_idx, **base_config}
-            config[endpoint][dataset]['dev'] = {'index': dev_idx, **base_config}
+            config[endpoint][dataset][True] = {'index': prod_idx, **base_config}  # production mode
+            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode
     return config
 
 
-def setup_es(es_mode, endpoint, dataset, 
+def setup_es(endpoint, dataset, production,
              drop_and_recreate=False, aliases=None,
              increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
     Args:
-        es_mode (str): One of "prod" or "dev".
         endpoint (str): Name of the AWS ES endpoint.
         dataset (str): Name of the dataset for the ES mapping.
+        production (bool): Running in production mode?
         drop_and_recreate (bool): Drop and recreate ES index?
         aliases (str): Name of the aliases for the ES mapping.
         increment_version (bool): Move one version up?
     Returns:
         {es, es_config}: Elasticsearch connection and config dict.
     """
-    if es_mode not in ("prod", "dev"):
-        raise ValueError("es_mode required to be one of "
-                         f"'prod' or 'dev', but '{es_mode}' provided.")
     es_master_config = parse_es_config(increment_version)
-    es_config = es_master_config[endpoint][dataset][es_mode]
+    es_config = es_master_config[endpoint][dataset][production]
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True, send_get_body_as='POST')
@@ -153,7 +150,7 @@ def setup_es(es_mode, endpoint, dataset,
     index = es_config['index']
     exists = es.indices.exists(index=index)
     # Drop index for fresh recreation (if in test mode)
-    if drop_and_recreate and (es_mode == 'dev') and exists:
+    if drop_and_recreate and (not production) and exists:
         es.indices.delete(index=index)
         exists = False
     # Create the index if required

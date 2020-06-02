@@ -25,10 +25,9 @@ class ArxivElasticsearchTask(ElasticsearchTask):
     grid_task_kwargs = DictParameterPlus(default={})
 
     def done_ids(self):
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode,
-                                 endpoint=self.endpoint,
+        es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
+                                 production=not self.test,
                                  drop_and_recreate=False,
                                  increment_version=False)
         field =  "metric_novelty_article"

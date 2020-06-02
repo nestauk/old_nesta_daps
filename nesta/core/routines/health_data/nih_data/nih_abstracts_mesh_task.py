@@ -134,10 +134,9 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         db = 'production' if not self.test else 'dev'
 
         # elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode
-                                 endpoint='health-scanner',
+        es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',
+                                 production=not self.test,
                                  drop_and_recreate=False,
                                  aliases='health_scanner')
 

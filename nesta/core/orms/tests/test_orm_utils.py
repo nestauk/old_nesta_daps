@@ -258,23 +258,12 @@ def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub,
 @mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
 @mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
 @mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_bad_es_mode(mock_get_es_mapping, mock_Elasticsearch,
-                              mock_assert_correct_config, mock_get_config):
-    with pytest.raises(ValueError):
-        setup_es(es_mode="dave", endpoint='arxlive', dataset='arxiv',
-                 drop_and_recreate=False, aliases=None)
-
-
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
 def test_setup_es_true_test_delete_called(mock_get_es_mapping,
                                           mock_Elasticsearch,
                                           mock_assert_correct_config,
                                           mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
-    setup_es(es_mode="dev", endpoint='arxlive', dataset='arxiv',
+    setup_es(endpoint='arxlive', dataset='arxiv', production=False,
              drop_and_recreate=True, aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
@@ -288,7 +277,7 @@ def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping,
                                                          mock_assert_correct_config,
                                                          mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", drop_and_recreate=True,
+    setup_es(drop_and_recreate=True, production=False,
              endpoint='arxlive', dataset='arxiv',
              aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
@@ -303,7 +292,7 @@ def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
                                                mock_assert_correct_config,
                                                mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", drop_and_recreate=True,
+    setup_es(drop_and_recreate=True, production=False,
              endpoint='arxlive', dataset='arxiv',
              aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
@@ -318,7 +307,7 @@ def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
                                                   mock_assert_correct_config,
                                                   mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", drop_and_recreate=False,
+    setup_es(drop_and_recreate=False, production=False,
              endpoint='arxlive', dataset='arxiv',
              aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
@@ -333,7 +322,7 @@ def test_setup_es_no_create_if_exists(mock_get_es_mapping,
                                       mock_assert_correct_config,
                                       mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
-    setup_es(es_mode="dev", drop_and_recreate=False,
+    setup_es(drop_and_recreate=False, production=False,
              endpoint='arxlive', dataset='arxiv',
              aliases=None)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0

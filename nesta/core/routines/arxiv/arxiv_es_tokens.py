@@ -16,10 +16,10 @@ from nesta.core.orms.orm_utils import setup_es, get_es_ids
 
 class ArxivESTokenTask(ElasticsearchTask):
     def done_ids(self):
-        es_mode = 'dev' if self.test else 'prod'
         es, es_config = setup_es(es_mode=es_mode,
                                  endpoint=self.dataset,
                                  dataset=self.dataset,
+                                 production=not self.test,
                                  drop_and_recreate=False,
                                  increment_version=False)
         field =  "terms_tokens_article"

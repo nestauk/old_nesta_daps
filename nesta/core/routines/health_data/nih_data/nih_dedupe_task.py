@@ -68,10 +68,9 @@ class DedupeTask(autobatch.AutoBatchTask):
                             f"{self.process_batch_size}"
                             " while in test mode")
 
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode,
-                                 dataset='nih',
-                                 endpoint='health-scanner',
+        es, es_config = setup_es(endpoint='health-scanner',
+                                 dataset='nih',                                 
+                                 production=not self.test,
                                  aliases='health_scanner',
                                  drop_and_recreate=self.drop_and_recreate,
                                  increment_version=True)

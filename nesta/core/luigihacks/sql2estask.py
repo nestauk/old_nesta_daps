@@ -77,10 +77,9 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                                   database)
 
         # Elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode,
+        es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
-                                 endpoint=self.endpoint,                                 
+                                 production=not self.test,
                                  drop_and_recreate=self.drop_and_recreate,
                                  aliases=self.aliases)
 
@@ -125,7 +124,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                 'routine_id': self.routine_id
             }
             params.update(self.kwargs)
-            
+
             logging.info(params)
             job_params.append(params)
             if self.test and count > 1:

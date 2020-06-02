@@ -216,8 +216,8 @@ if __name__ == "__main__":
 
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='arxiv')
+        es, es_config = setup_es(endpoint='arxlive', dataset='arxiv',
+                                 production=False, drop_and_recreate=True)                                 
         environ = {'batch_file': ('ArxivESTask-2019-09-19-'
                                   'False-1568888970724721.json'),
                    'config': ('/home/ec2-user/nesta-eu/nesta/'

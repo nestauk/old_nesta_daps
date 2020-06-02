@@ -102,10 +102,9 @@ class ProcessTask(autobatch.AutoBatchTask):
         project_query = session.query(Projects)
 
         # elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode=es_mode, 
+        es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',
-                                 endpoint='health-scanner',
+                                 production=not self.test,
                                  drop_and_recreate=self.drop_and_recreate,
                                  aliases='health_scanner')
 

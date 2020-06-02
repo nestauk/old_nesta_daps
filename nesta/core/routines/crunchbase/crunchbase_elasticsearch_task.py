@@ -78,9 +78,10 @@ class CrunchbaseSql2EsTask(autobatch.AutoBatchTask):
                                   self.database)
 
         # Elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, self.drop_and_recreate,
-                                 dataset='crunchbase',
+        es, es_config = setup_es(endpoint='health_scanner',
+                                 dataset='companies',
+                                 production=not self.test,
+                                 drop_and_recreate=self.drop_and_recreate,
                                  aliases='health_scanner')
 
         # Get set of existing ids from elasticsearch via scroll
