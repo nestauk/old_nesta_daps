@@ -25,7 +25,8 @@ def kwarg_maker(dataset, routine_id):
                f3p('schema_transformations/eurito/'),
                f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}_eu')
-    return dict(dataset=f'{dataset}-eu',
+    return dict(dataset=dataset,
+                endpoint='eurito',
                 routine_id=f'{dataset}-eu_{routine_id}',
                 env_files=env_files,
                 batchable=batchable)

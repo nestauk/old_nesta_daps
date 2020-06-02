@@ -129,6 +129,7 @@ class EsOnlyRootTask(luigi.WrapperTask):
                          process_batch_size=10000,
                          drop_and_recreate=self.drop_and_recreate,
                          dataset='arxiv',
+                         endpoint='arxlive',
                          id_field=Article.id,
                          entity_type='article',
                          db_config_env='MYSQLDB',

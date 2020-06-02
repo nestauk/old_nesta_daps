@@ -42,6 +42,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                           process_batch_size=10000,
                           drop_and_recreate=self.drop_and_recreate,
                           dataset='arxiv',
+                          endpoint='arxlive',
                           id_field=Article.id,
                           filter=Article.article_source == 'arxiv',
                           entity_type='article',
