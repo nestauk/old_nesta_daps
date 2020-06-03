@@ -148,5 +148,5 @@ Features in DAPS2
 -----------------
 
 - The index version (e.g. :code:`'arxiv': 4` in :code:`elasticsearch.yaml`) will be automatically generated from semantic versioning and the git hash in DAPS2, therefore the :code:`indexes` field will consolidate to an itemised list of indexes. 
-- The mappings under :code:`datasets` will be automatically generated from the open ontology which will be baked into the tier-0 schemas.
+- The mappings under :code:`datasets` will be automatically generated from the open ontology which will be baked into the tier-0 schemas. This will render :code:`schema_transformations` redundant.
 - Elasticsearch components will be factored out of :code:`orm_utils`.
