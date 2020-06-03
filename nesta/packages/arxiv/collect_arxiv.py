@@ -14,7 +14,8 @@ import xml.etree.ElementTree as ET
 
 from nesta.packages.mag.query_mag_api import prepare_title
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, db_session
+from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed
+from nesta.core.orms.orm_utils import db_session, _filter_out_duplicates
 from nesta.core.orms.arxiv_orm import Base, Article, Category
 
 OAI = "{http://www.openarchives.org/OAI/2.0/}"
@@ -350,11 +351,13 @@ class BatchedTitles():
 def add_new_articles(article_batch, session):
     """Adds new articles to the session and commits them.
     Args:
-        article_batch (:obj:`list` of `Article`): Articles to add to database
+        article_batch (:obj:`list` of `dict`): Articles to add to database
         session (:obj:`sqlalchemy.orm.session`): active session to use
     """
     logging.info(f"Inserting a batch of {len(article_batch)} new Articles")
-    session.add_all(article_batch)
+    objs, existing_objs, failed_objs =  _filter_out_duplicates(session, Base, Article,
+                                                               article_batch, low_memory=True)
+    session.add_all(objs)
     session.commit()
 
 
