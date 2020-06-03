@@ -1,0 +1,10 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "placeName_zipcode_organisation": null
+            }
+        }
+    }
+}

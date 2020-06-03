@@ -22,6 +22,7 @@ import yaml
 import logging
 import time
 from collections import defaultdict
+from collections.abc import Mapping
 
 
 def _get_key_value(obj, key):
@@ -210,6 +211,77 @@ def load_yaml_from_pathstub(pathstub, filename):
         return yaml.safe_load(f)
 
 
+def update_nested(original_dict, update_dict):
+    """Update a nested dictionary with another nested dictionary.
+    Has equivalent behaviour to :obj:`dict.update(self, update_dict)`.
+
+    Args:
+        original_dict (dict): The original dictionary to update.
+        update_dict (dict): The dictionary from which to extract updates.
+    """
+    for k, v in update_dict.items():
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like object
+            original_dict[k] = update_nested(original_dict.get(k, {}), v)
+        else:
+            original_dict[k] = v
+    return original_dict
+
+
+def _get_es_mapping(dataset, endpoint):
+    mapping = {}
+    for _path, _prefix in [('defaults', 'index'),
+                           ('defaults', 'settings'),
+                           ('datasets', f'{dataset}_mapping'),
+                           (f'endpoints/{endpoint}', f'{dataset}_mapping')]:
+        try:
+            _mapping = load_json_from_pathstub(f"mappings/{_path}", f"{_prefix}.json")
+        except json.JSONDecodeError as exc:
+            raise ValueError(f'Could not decode "mappings/{_path}/{_prefix}.json"') from exc
+        except FileNotFoundError:
+            continue
+        update_nested(mapping, _mapping)
+    return mapping
+
+
+def _apply_alias(mapping, dataset, endpoint):
+    ep_path = f"mappings/endpoints/{endpoint}"
+    # Load an alias, if it exists
+    try:
+        alias_lookup = load_json_from_pathstub(ep_path, "aliases.json")
+    except FileNotFoundError:
+        return
+    # Check whether this is a soft or hard alias
+    try:
+        config = load_yaml_from_pathstub(ep_path, "config.yaml")
+        hard_alias = config['hard-alias']
+    except (FileNotFoundError, KeyError):
+        hard_alias = False
+
+    # Apply the aliases to the mapping properties
+    propts = mapping["mappings"]["_doc"]["properties"]
+    _fields = set()
+    for alias, lookup in alias_lookup.items():
+        if dataset not in lookup:
+            continue
+        field = lookup[dataset]
+        propts[alias] = (propts[field] if hard_alias   # New field same as old for 'hard-alias'
+                         else {"type": "alias", "path": field})  # Otherwise use an ES alias
+        _fields.add(field)
+    # Remove old fields if 'hard alias'
+    if hard_alias:
+        for f in _fields:
+            propts.pop(f)
+
+
+def _prune_nested(mapping): 
+    for k in list(mapping.keys()): 
+        v = mapping[k] 
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like
+            _prune_nested(v) 
+        elif v is None: 
+            mapping.pop(k) 
+
+
 def get_es_mapping(dataset, endpoint):
     '''Load the ES mapping for this dataset and endpoint,
     including aliases.
@@ -220,29 +292,9 @@ def get_es_mapping(dataset, endpoint):
     Returns:
         :obj:`dict`
     '''
-    # Get the mapping and lookup
-    mapping = load_json_from_pathstub("core/orms/",
-                                      f"{dataset}_es_config.json")
-    try:
-        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                               f"{endpoint}.json")
-    except FileNotFoundError:
-        alias_lookup = {}
-
-    # Get a list of valid fields for verification
-    fields = mapping["mappings"]["_doc"]["properties"].keys()
-    # Add any aliases to the mapping
-    for alias, lookup in alias_lookup.items():
-        if dataset not in lookup:
-            continue
-        # Validate the field
-        field = lookup[dataset]
-        if field not in fields:
-            raise ValueError(f"Alias '{alias}' to '{field}' but '{field}'"
-                             "does not exist in the mapping.")
-        # Add the alias to the mapping
-        value = {"type": "alias", "path": lookup[dataset]}
-        mapping["mappings"]["_doc"]["properties"][alias] = value
+    mapping = _get_es_mapping(dataset, endpoint)
+    _apply_alias(mapping, dataset, endpoint)
+    _prune_nested(mapping)
     return mapping
 
 
