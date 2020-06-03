@@ -1,0 +1,70 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "cost_ecFunding_project": {
+                    "type": "integer"
+                },
+                "cost_total_project": {
+                    "type": "integer"
+                },
+                "date_ended_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "date_started_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "metric_novelty_project": {
+                    "type": "float"
+                },
+                "name_framework_project": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "status_of_project": {
+                    "type": "keyword"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
+                },
+                "textBody_description_project": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "title_of_project": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "type_of_entity": {
+                    "type": "keyword"
+                },
+                "url_of_project": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "year_of_project": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

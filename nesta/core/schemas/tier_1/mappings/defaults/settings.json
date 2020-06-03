@@ -1,0 +1,17 @@
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "terms_analyzer": {
+                    "filter": [
+                        "standard",
+                        "lowercase",
+                        "stop"
+                    ],
+                    "tokenizer": "standard",
+                    "type": "custom"
+                }
+            }
+        }
+    }
+}

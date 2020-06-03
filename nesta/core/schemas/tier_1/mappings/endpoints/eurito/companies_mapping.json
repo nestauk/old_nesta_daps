@@ -1,0 +1,14 @@
+{
+    "mappings": {
+        "_doc": {
+            "properties": {
+                "booleanFlag_eu_organisation": {
+                    "type": "boolean"
+                },
+                "metric_novelty_organisation": {
+                    "type": "float"
+                }
+            }
+        }
+    }
+}

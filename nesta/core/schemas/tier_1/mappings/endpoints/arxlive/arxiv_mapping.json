@@ -1,0 +1,76 @@
+{
+    "mappings": {
+        "_doc": {
+            "properties": {
+                "date_created_article": {
+                    "type": "date"
+                },
+                "json_category_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
+                },
+                "json_fieldOfStudy_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
+                },
+                "json_location_article": {
+                    "properties": {
+                        "ancestors": {
+                            "type": "keyword"
+                        },
+                        "level": {
+                            "type": "integer"
+                        },
+                        "order": {
+                            "type": "integer"
+                        },
+                        "value": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "nested"
+                },
+                "metric_citations_article": {
+                    "type": "float"
+                },
+                "terms_tokens_article": {
+                    "type": "keyword"
+                },
+                "type_of_entity": {
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "mappings": {
+        "_doc": {
+            "dynamic": "strict",
+            "properties": {
+                "booleanFlag_eu_patent": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}
