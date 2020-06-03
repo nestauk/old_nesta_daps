@@ -294,7 +294,7 @@ def get_es_mapping(dataset, endpoint):
     '''
     mapping = _get_es_mapping(dataset, endpoint)
     _apply_alias(mapping, dataset, endpoint)
-    _prune_nested(mapping)
+    _prune_nested(mapping)  # prunes any nested keys with null values
     return mapping
 
 
