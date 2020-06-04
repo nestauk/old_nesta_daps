@@ -61,7 +61,7 @@ def run():
     eu_countries = get_eu_countries()
 
     # es setup
-    strans_kwargs={'filename':'eurito/crunchbase-eu.json',
+    strans_kwargs={'filename':'companies.json',
                    'from_key':'tier_0',
                    'to_key':'tier_1',
                    'ignore':['id']}

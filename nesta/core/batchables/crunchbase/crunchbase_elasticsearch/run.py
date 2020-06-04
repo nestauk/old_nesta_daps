@@ -60,7 +60,7 @@ def run():
     # es setup
     field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
                                                  "health_scanner.json")
-    strans_kwargs={'filename':'crunchbase_organisation_members.json',
+    strans_kwargs={'filename':'companies.json',
                    'from_key':'tier_0',
                    'to_key':'tier_1',
                    'ignore':['id']}
