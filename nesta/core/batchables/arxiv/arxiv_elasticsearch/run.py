@@ -165,7 +165,7 @@ def run():
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
             row['categories'], _, _ = hierarchy_field(cats)
-            row['fos'], _, _ = hierarchy_field(fos)
+            row['fields_of_study'], _, _ = hierarchy_field(fos)
             row['countries'], _, _ = hierarchy_field(countries)
 
             # Pull out international institute info
