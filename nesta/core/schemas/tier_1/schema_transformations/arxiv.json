@@ -33,7 +33,11 @@
         "tier_1": "metric_citations_article"
     },
     {
-        "tier_0": "fos",
+        "tier_0": "fields_of_study",
+        "tier_1": "json_fieldOfStudy_article"
+    },
+    {
+        "tier_0": "terms_of_study",
         "tier_1": "json_fieldOfStudy_article"
     },
     {
@@ -49,6 +53,10 @@
         "tier_1": "terms_institutes_article"
     },
     {
+        "tier_0": "is_eu",
+        "tier_1": "booleanFlag_eu_article"
+    },
+    {
         "tier_0": "tokens",
         "tier_1": "terms_tokens_article"
     },
@@ -57,8 +65,28 @@
         "tier_1": "metric_novelty_article"
     },
     {
+        "tier_0": "nuts_0",
+        "tier_1": "terms_nuts0_article"
+    },
+    {
+        "tier_0": "nuts_1",
+        "tier_1": "terms_nuts1_article"
+    },
+    {
+        "tier_0": "nuts_2",
+        "tier_1": "terms_nuts2_article"
+    },
+    {
+        "tier_0": "nuts_3",
+        "tier_1": "terms_nuts3_article"
+    },
+    {
         "tier_0": "countries",
-        "tier_1": "json_location_article"
+        "tier_1": "terms_countries_article"
+    },
+    {
+        "tier_0": "regions",
+        "tier_1": "terms_regions_article"
     },
     {
         "tier_0": "year",
