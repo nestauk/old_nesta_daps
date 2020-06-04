@@ -142,7 +142,7 @@ Integrated tests
 The following :code:`pytest` tests are made (and triggered on PR via travis):
 
 - :code:`aliases.json` files are checked for consistency with available :code:`datasets`.
-- All mappings for each in :code:`datasets` and :code:`endpoints` are fully generated, and tested for compatibility with :code:`schema_transformations` (which is, in turn, checked against the valid ontology in :code:`tier_1.json`).
+- All mappings for each in :code:`datasets` and :code:`endpoints` are fully generated, and tested for compatibility with the schema transformations (which are, in turn, checked against the valid ontology in :code:`ontology.json`).
 
 Features in DAPS2
 -----------------
