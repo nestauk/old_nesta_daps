@@ -75,6 +75,11 @@
         "meetup": "name_of_group",
         "nih": "title_of_organisation"
     },
+    "novelty": {
+        "companies": "rank_rhodonite_organisation",
+        "meetup": "rank_rhodonite_group",
+        "nih": "rank_rhodonite_abstract"
+    },
     "region": {
         "companies": "placeName_region_organisation"
     },

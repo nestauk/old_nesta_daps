@@ -3,6 +3,7 @@
     "tier0_to_tier1": {
         "_booleanFlag_autotranslated_entity": "booleanFlag_autotranslated_entity",
         "_placeName_state_group": "_placeName_state_group",
+        "_rank_rhodonite_group": "rank_rhodonite_group",
         "_terms_iso2lang_entity": "terms_iso2lang_entity",
         "_terms_of_countryTags": "terms_of_countryTags",
         "category_name": "name_of_category",
