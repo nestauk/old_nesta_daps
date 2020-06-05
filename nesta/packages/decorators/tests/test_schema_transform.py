@@ -22,7 +22,7 @@ class TestSchemaTransform():
     def test_dataframe_transform(self, mocked_loader, test_transformer, test_data):
         mocked_loader.return_value = test_transformer
         dummy_func = lambda : pd.DataFrame(test_data)
-        wrapper = schema_transform("dummy", "dummy", "dummy")
+        wrapper = schema_transform("dummy")
         wrapped = wrapper(dummy_func)
         transformed = wrapped()
 
@@ -34,7 +34,7 @@ class TestSchemaTransform():
     def test_list_of_dict_transform(self, mocked_loader, test_transformer, test_data):
         mocked_loader.return_value = test_transformer
         dummy_func = lambda : test_data
-        wrapper = schema_transform("dummy", "dummy", "dummy")
+        wrapper = schema_transform("dummy")
         wrapped = wrapper(dummy_func)
         transformed = wrapped()
         transformed = pd.DataFrame(transformed)
@@ -46,7 +46,7 @@ class TestSchemaTransform():
     def test_invalid_type_transform(self, mocked_loader, test_transformer):
         mocked_loader.return_value = test_transformer
         dummy_func = lambda : None
-        wrapper = schema_transform("dummy", "dummy", "dummy")
+        wrapper = schema_transform("dummy")
         wrapped = wrapper(dummy_func)
         with pytest.raises(ValueError) as e:
             wrapped()
@@ -57,6 +57,5 @@ class TestSchemaTransform():
         mocked_loader.return_value = test_transformer
         test_data = {'bad_col': 111, 'another_bad_col': 222, 'stuff': 333}
 
-        transformed = schema_transformer(test_data, filename='dummy',
-                                         from_key='dummy', to_key='dummy')
+        transformed = schema_transformer(test_data, filename='dummy')
         assert transformed == {'good_col': 111, 'another_good_col': 222}

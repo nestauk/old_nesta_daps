@@ -76,10 +76,7 @@ def run():
     ngrammer = Ngrammer(database="production")
 
     # es setup
-    strans_kwargs={'filename':'arxiv.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs={'filename':'arxiv.json', 'ignore':['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
