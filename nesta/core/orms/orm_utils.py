@@ -242,8 +242,7 @@ def _get_es_mapping(dataset, endpoint):
         :obj:`dict`: The constructed mapping.
     """
     mapping = {}
-    for _path, _prefix in [('defaults', 'index'),
-                           ('defaults', 'settings'),
+    for _path, _prefix in [('defaults', 'defaults'),
                            ('datasets', f'{dataset}_mapping'),
                            (f'endpoints/{endpoint}', f'{dataset}_mapping')]:
         try:
