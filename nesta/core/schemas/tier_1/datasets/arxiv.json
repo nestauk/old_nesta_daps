@@ -1,95 +1,28 @@
-[
-    {
-        "tier_0": "id",
-        "tier_1": "id_of_article",
-        "unique": true
-    },
-    {
-        "tier_0": "created",
-        "tier_1": "date_created_article"
-    },
-    {
-        "tier_0": "title",
-        "tier_1": "title_of_article"
-    },
-    {
-        "tier_0": "doi",
-        "tier_1": "id_digitalObjectIdentifier_article"
-    },
-    {
-        "tier_0": "abstract",
-        "tier_1": "textBody_abstract_article"
-    },
-    {
-        "tier_0": "authors",
-        "tier_1": "terms_authors_article"
-    },
-    {
-        "tier_0": "citation_count",
-        "tier_1": "count_citations_article"
-    },
-    {
-        "tier_0": "normalised_citation",
-        "tier_1": "metric_citations_article"
-    },
-    {
-        "tier_0": "fields_of_study",
-        "tier_1": "json_fieldOfStudy_article"
-    },
-    {
-        "tier_0": "terms_of_study",
-        "tier_1": "json_fieldOfStudy_article"
-    },
-    {
-        "tier_0": "categories",
-        "tier_1": "json_category_article"
-    },
-    {
-        "tier_0": "has_multinational",
-        "tier_1": "booleanFlag_multinational_article"
-    },
-    {
-        "tier_0": "institutes",
-        "tier_1": "terms_institutes_article"
-    },
-    {
-        "tier_0": "is_eu",
-        "tier_1": "booleanFlag_eu_article"
-    },
-    {
-        "tier_0": "tokens",
-        "tier_1": "terms_tokens_article"
-    },
-    {
-        "tier_0": "novelty_of_article",
-        "tier_1": "metric_novelty_article"
-    },
-    {
-        "tier_0": "nuts_0",
-        "tier_1": "terms_nuts0_article"
-    },
-    {
-        "tier_0": "nuts_1",
-        "tier_1": "terms_nuts1_article"
-    },
-    {
-        "tier_0": "nuts_2",
-        "tier_1": "terms_nuts2_article"
-    },
-    {
-        "tier_0": "nuts_3",
-        "tier_1": "terms_nuts3_article"
-    },
-    {
-        "tier_0": "countries",
-        "tier_1": "terms_countries_article"
-    },
-    {
-        "tier_0": "regions",
-        "tier_1": "terms_regions_article"
-    },
-    {
-        "tier_0": "year",
-        "tier_1": "year_of_article"
+{
+    "entity_type": "article",
+    "tier0_to_tier1": {
+        "id": "id_of_article",
+        "created": "date_created_article",
+        "title": "title_of_article",
+        "doi": "id_digitalObjectIdentifier_article",
+        "abstract": "textBody_abstract_article",
+        "authors": "terms_authors_article",
+        "citation_count": "count_citations_article",
+        "normalised_citation": "metric_citations_article",
+        "fields_of_study": "json_fieldOfStudy_article",
+        "_fields_of_study": "terms_fieldOfStudy_article",
+        "categories": "json_category_article",
+        "has_multinational": "booleanFlag_multinational_article",
+        "institutes": "terms_institutes_article",
+        "is_eu": "booleanFlag_eu_article",
+        "tokens": "terms_tokens_article",
+        "novelty_of_article": "metric_novelty_article",
+        "nuts_0": "terms_nuts0_article",
+        "nuts_1": "terms_nuts1_article",
+        "nuts_2": "terms_nuts2_article",
+        "nuts_3": "terms_nuts3_article",
+        "countries": "terms_countries_article",
+        "regions": "terms_regions_article",
+        "year": "year_of_article"
     }
-]
+}

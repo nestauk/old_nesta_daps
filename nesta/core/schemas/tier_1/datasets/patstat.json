@@ -1,55 +1,18 @@
-[
-    {
-        "tier_0": "id",
-        "tier_1": "id_family_patent",
-        "unique": true
-    },
-    {
-        "tier_0": "is_eu",
-        "tier_1": "booleanFlag_eu_patent"
-    },
-    {
-        "tier_0": "earliest_filing_date",
-        "tier_1": "date_of_patent"
-    },
-    {
-        "tier_0": "earliest_filing_year",
-        "tier_1": "year_of_patent"
-    },
-    {
-        "tier_0": "title",
-        "tier_1": "title_of_patent"
-    },
-    {
-        "tier_0": "abstract",
-        "tier_1": "textBody_abstract_patent"
-    },
-    {
-        "tier_0": "nb_citing_docdb_fam",
-        "tier_1": "count_citations_patent"
-    },
-    {
-        "tier_0": "ipc",
-        "tier_1": "terms_ipc_patent"
-    },
-    {
-        "tier_0": "nace2",
-        "tier_1": "terms_nace2_patent"
-    },
-    {
-        "tier_0": "tech",
-        "tier_1": "terms_techFieldNumber_patent"
-    },
-    {
-        "tier_0": "ctry",
-        "tier_1": "terms_personCountry_patent"
-    },
-    {
-        "tier_0": "nuts",
-        "tier_1": "terms_personNuts_patent"
-    },
-    {
-        "tier_0": "appln_auth",
-        "tier_1": "terms_authCountry_patent"
+{
+    "entity_type": "patent",
+    "tier0_to_tier1": {
+        "id": "id_family_patent",
+        "is_eu": "booleanFlag_eu_patent",
+        "earliest_filing_date": "date_of_patent",
+        "earliest_filing_year": "year_of_patent",
+        "title": "title_of_patent",
+        "abstract": "textBody_abstract_patent",
+        "nb_citing_docdb_fam": "count_citations_patent",
+        "ipc": "terms_ipc_patent",
+        "nace2": "terms_nace2_patent",
+        "tech": "terms_techFieldNumber_patent",
+        "ctry": "terms_personCountry_patent",
+        "nuts": "terms_personNuts_patent",
+        "appln_auth": "terms_authCountry_patent"
     }
-]
+}

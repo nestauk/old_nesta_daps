@@ -1,103 +1,30 @@
-[
-    {
-        "tier_0": "full_project_num",
-        "tier_1": "id_of_project",
-        "unique": true
-    },
-    {
-        "tier_0": "fy",
-        "tier_1": "year_fiscal_funding"
-    },
-    {
-        "tier_0": "city",
-        "tier_1": "placeName_city_organisation"
-    },
-    {
-        "tier_0": "country",
-        "tier_1": "placeName_country_organisation"
-    },
-    {
-        "tier_0": "org_state",
-        "tier_1": "id_state_organisation"
-    },
-    {
-        "tier_0": "org_zipcode",
-        "tier_1": "placeName_zipcode_organisation"
-    },
-    {
-        "tier_0": "org_name",
-        "tier_1": "title_of_organisation"
-    },
-    {
-        "tier_0": "phr",
-        "tier_1": "textBody_descriptive_project"
-    },
-    {
-        "tier_0": "project_start",
-        "tier_1": "date_start_project"
-    },
-    {
-        "tier_0": "project_end",
-        "tier_1": "date_end_project"
-    },
-    {
-        "tier_0": "project_terms",
-        "tier_1": "terms_descriptive_project"
-    },
-    {
-        "tier_0": "project_title",
-        "tier_1": "title_of_project"
-    },
-    {
-        "tier_0": "total_cost",
-        "tier_1": "cost_total_project"
-    },
-    {
-        "tier_0": "abstract_text",
-        "tier_1": "textBody_abstract_project"
-    },
-    {
-        "tier_0": "coordinates",
-        "tier_1": "coordinate_of_organisation"
-    },
-    {
-        "tier_0": "country_alpha_2",
-        "tier_1": "id_iso2_country"
-    },
-    {
-        "tier_0": "country_alpha_3",
-        "tier_1": "id_iso3_country"
-    },
-    {
-        "tier_0": "country_numeric",
-        "tier_1": "id_isoNumeric_country"
-    },
-    {
-        "tier_0": "continent",
-        "tier_1": "id_of_continent"
-    },
-    {
-        "tier_0": "total_cost_currency",
-        "tier_1": "currency_total_cost"
-    },
-    {
-        "tier_0": "_total_cost_usd2018",
-        "tier_1": "_cost_usd2018_project"
-    },
-    {
-        "tier_0": "mesh_terms",
-        "tier_1": "terms_mesh_abstract"
-    },
-    {
-        "tier_0": "duplicate_abstract",
-        "tier_1": "booleanFlag_duplicate_abstract"
-    },
-    {
-        "tier_0": "placeName_state_organisation",
-        "tier_1": "placeName_state_organisation"
-    },
-    {
-        "tier_0": "placeName_continent_organisation",
-        "tier_1": "placeName_continent_organisation"
+{
+    "entity_type": "paper",
+    "tier0_to_tier1": {
+        "full_project_num": "id_of_project",
+        "fy": "year_fiscal_funding",
+        "city": "placeName_city_organisation",
+        "country": "placeName_country_organisation",
+        "org_state": "id_state_organisation",
+        "org_zipcode": "placeName_zipcode_organisation",
+        "org_name": "title_of_organisation",
+        "phr": "textBody_descriptive_project",
+        "project_start": "date_start_project",
+        "project_end": "date_end_project",
+        "project_terms": "terms_descriptive_project",
+        "project_title": "title_of_project",
+        "total_cost": "cost_total_project",
+        "abstract_text": "textBody_abstract_project",
+        "coordinates": "coordinate_of_organisation",
+        "country_alpha_2": "id_iso2_country",
+        "country_alpha_3": "id_iso3_country",
+        "country_numeric": "id_isoNumeric_country",
+        "continent": "id_of_continent",
+        "total_cost_currency": "currency_total_cost",
+        "_total_cost_usd2018": "_cost_usd2018_project",
+        "mesh_terms": "terms_mesh_abstract",
+        "duplicate_abstract": "booleanFlag_duplicate_abstract",
+        "placeName_state_organisation": "placeName_state_organisation",
+        "placeName_continent_organisation": "placeName_continent_organisation"
     }
-]
+}
