@@ -58,8 +58,7 @@ def run():
     continent_lookup[None] = None
 
     # es setup
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
-                                                 "health_scanner.json")
+    field_null_mapping = load_json_from_pathstub("health-scanner/nulls.json")
     strans_kwargs = {'filename': 'companies.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
