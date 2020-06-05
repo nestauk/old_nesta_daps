@@ -218,6 +218,8 @@ def update_nested(original_dict, update_dict):
     Args:
         original_dict (dict): The original dictionary to update.
         update_dict (dict): The dictionary from which to extract updates.
+    Returns:
+        original_dict (dict): The original dictionary after updates.
     """
     for k, v in update_dict.items():
         if isinstance(v, Mapping):  # Mapping ~= any dict-like object
@@ -228,6 +230,17 @@ def update_nested(original_dict, update_dict):
 
 
 def _get_es_mapping(dataset, endpoint):
+    """Sequentially apply the mappings from index, settings, the
+    dataset and finally the endpoint. None of these files is strictly
+    required to exist, so an endpoint could conceivably have a dataset
+    unique to itself.
+
+    Args:
+        dataset (str): Name of the dataset for the ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    Returns:
+        :obj:`dict`: The constructed mapping.
+    """
     mapping = {}
     for _path, _prefix in [('defaults', 'index'),
                            ('defaults', 'settings'),
@@ -244,6 +257,14 @@ def _get_es_mapping(dataset, endpoint):
 
 
 def _apply_alias(mapping, dataset, endpoint):
+    """Dynamically apply aliases to an Elasticsearch mapping. Note that
+    the mapping is changed in-place.
+
+    Args:
+        mapping (dict): An ES mapping.
+        dataset (str): Name of the dataset for this ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    """
     ep_path = f"mappings/endpoints/{endpoint}"
     # Load an alias, if it exists
     try:
@@ -256,7 +277,6 @@ def _apply_alias(mapping, dataset, endpoint):
         hard_alias = config['hard-alias']
     except (FileNotFoundError, KeyError):
         hard_alias = False
-
     # Apply the aliases to the mapping properties
     propts = mapping["mappings"]["_doc"]["properties"]
     _fields = set()
@@ -273,13 +293,19 @@ def _apply_alias(mapping, dataset, endpoint):
             propts.pop(f)
 
 
-def _prune_nested(mapping): 
-    for k in list(mapping.keys()): 
-        v = mapping[k] 
+def _prune_nested(mapping):
+    """Recursively remove any fields with null values from
+    a nested dictionary. The input is changed in-place.
+
+    Args:
+        mapping (dict): The dictionary to prune.
+    """
+    for k in list(mapping.keys()):
+        v = mapping[k]
         if isinstance(v, Mapping):  # Mapping ~= any dict-like
-            _prune_nested(v) 
-        elif v is None: 
-            mapping.pop(k) 
+            _prune_nested(v)
+        elif v is None:
+            mapping.pop(k)
 
 
 def get_es_mapping(dataset, endpoint):
@@ -294,7 +320,7 @@ def get_es_mapping(dataset, endpoint):
     '''
     mapping = _get_es_mapping(dataset, endpoint)
     _apply_alias(mapping, dataset, endpoint)
-    _prune_nested(mapping)
+    _prune_nested(mapping)  # prunes any nested keys with null values
     return mapping
 
 
