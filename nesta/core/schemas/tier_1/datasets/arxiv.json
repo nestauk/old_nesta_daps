@@ -1,7 +1,7 @@
 {
     "entity_type": "article",
     "tier0_to_tier1": {
-        "_fields_of_study": "terms_fieldOfStudy_article",
+        "_fields_of_study": "terms_fieldsOfStudy_article",
         "abstract": "textBody_abstract_article",
         "authors": "terms_authors_article",
         "categories": "json_category_article",
