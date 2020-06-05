@@ -22,7 +22,7 @@
                     },
                     "type": "nested"
                 },
-                "json_fieldOfStudy_article": {
+                "json_fieldsOfStudy_article": {
                     "properties": {
                         "ancestors": {
                             "type": "keyword"

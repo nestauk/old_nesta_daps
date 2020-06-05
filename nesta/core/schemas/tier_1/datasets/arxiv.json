@@ -9,7 +9,7 @@
         "countries": "terms_countries_article",
         "created": "date_created_article",
         "doi": "id_digitalObjectIdentifier_article",
-        "fields_of_study": "json_fieldOfStudy_article",
+        "fields_of_study": "json_fieldsOfStudy_article",
         "has_multinational": "booleanFlag_multinational_article",
         "id": "id_of_article",
         "institutes": "terms_institutes_article",
