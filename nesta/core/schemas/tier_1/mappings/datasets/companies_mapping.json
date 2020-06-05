@@ -43,7 +43,8 @@
                 },
                 "date_updated_organisation": {
                     "format": "yyyy-MM-dd",
-		},
+                    "type": "date"
+                },
                 "id_continent_organisation": {
                     "type": "keyword"
                 },
