@@ -1,24 +1,24 @@
 {
     "entity_type": "meetup",
     "tier0_to_tier1": {
-        "id": "id_of_group",
-        "name": "name_of_group",
-        "urlname": "url_of_group",
         "category_name": "name_of_category",
-        "country": "id_iso2_country",
-        "iso3": "id_iso3_country",
-        "isoNumeric": "id_isoNumeric_country",
-        "country_name": "placeName_country_group",
-        "continent": "placeName_continent_group",
         "city": "placeName_city_group",
+        "continent": "placeName_continent_group",
+        "continent_id": "id_continent_group",
+        "coordinate": "coordinate_of_group",
+        "country": "id_iso2_country",
+        "country_id": "id_country_group",
+        "country_name": "placeName_country_group",
         "created": "date_start_group",
         "description": "textBody_descriptive_group",
-        "coordinate": "coordinate_of_group",
-        "members": "count_member_group",
-        "topics": "terms_topics_group",
-        "mesh_terms": "terms_mesh_group",
+        "id": "id_of_group",
+        "iso3": "id_iso3_country",
+        "isoNumeric": "id_isoNumeric_country",
         "member_origins": "terms_memberOrigin_group",
-        "continent_id": "id_continent_group",
-        "country_id": "id_country_group"
+        "members": "count_member_group",
+        "mesh_terms": "terms_mesh_group",
+        "name": "name_of_group",
+        "topics": "terms_topics_group",
+        "urlname": "url_of_group"
     }
 }
