@@ -26,7 +26,7 @@ def test_is_tidy(json_files):
                                                                  'avoid this test failure.\n\n')
 
 def test_mappings_build(json_files):
-    endpoints, datasets = set(['dummy']), set()
+    endpoints, datasets = set(), set()
     for filename in json_files:
         if not filename.endswith('mapping.json'):
             continue
@@ -41,3 +41,4 @@ def test_mappings_build(json_files):
     for endpoint in endpoints:
         for dataset in datasets:
             get_es_mapping(dataset, endpoint)
+    get_es_mapping(dataset[0], 'dummy') # <--- also test on non-existent endpoint

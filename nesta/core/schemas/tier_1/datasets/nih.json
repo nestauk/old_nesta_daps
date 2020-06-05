@@ -1,6 +1,9 @@
 {
     "entity_type": "paper",
     "tier0_to_tier1": {
+        "_booleanFlag_autotranslated_entity": "booleanFlag_autotranslated_entity",
+        "_terms_iso2lang_entity": "terms_iso2lang_entity",
+        "_terms_of_countryTags": "terms_of_countryTags",
         "_total_cost_usd2018": "_cost_usd2018_project",
         "abstract_text": "textBody_abstract_project",
         "city": "placeName_city_organisation",
