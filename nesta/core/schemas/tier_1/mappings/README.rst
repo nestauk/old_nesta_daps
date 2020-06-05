@@ -15,8 +15,7 @@ Our methodology for constructing Elasticsearch mappings is described here. It is
     │   ├── nih_mapping.json
     │   └── patstat_mapping.json
     ├── defaults
-    │   ├── index.json
-    │   └── settings.json
+    │   └── defaults.json
     └── endpoints
 	├── arxlive
 	│   └── arxiv_mapping.json
@@ -30,10 +29,7 @@ Our methodology for constructing Elasticsearch mappings is described here. It is
 	    ├── nih_mapping.json
 	    └── nulls.json
 
-Firstly, consider the contents of the :code:`defaults` subdirectory:
-
-- :code:`index.json` should contain default :code:`settings.index` information for all mappings. At time of writing, this is actually just a blank file, since we seldom override default shard sizes, and such like.
-- :code:`settings.json` should contain all other default :code:`settings` fields for all mappings - for example analyzers.
+Firstly we consider :code:`defaults/defaults.json` which should contain all default fields for all mappings - for example standard analyzers and dynamic strictness. We might also consider putting global fields there.
 
 Next consider the :code:`datasets` subdirectory. Each mapping file in here should contain the complete :code:`mappings` field for the respective dataset. The naming convention :code:`<dataset>_mapping.json` is a hard requirement, as :code:`<dataset>` will map to the index for this :code:`dataset` at any given :code:`endpoint`.
 

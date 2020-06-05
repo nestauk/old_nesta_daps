@@ -1,0 +1,24 @@
+{
+    "mappings":{
+	"_doc":{
+	    "dynamic": "strict"
+	}
+    },
+    "settings": {
+	"index": {
+            "analysis": {
+		"analyzer": {
+                    "terms_analyzer": {
+			"filter": [
+                            "standard",
+                            "lowercase",
+                            "stop"
+			],
+			"tokenizer": "standard",
+			"type": "custom"
+                    }
+		}
+            }
+	}
+    }
+}
