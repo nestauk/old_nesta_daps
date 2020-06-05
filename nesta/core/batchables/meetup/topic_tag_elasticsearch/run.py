@@ -74,10 +74,7 @@ def run():
     field_null_mapping = load_json_from_pathstub(("tier_1/"
                                                   "field_null_mappings/"),
                                                  "health_scanner.json")
-    strans_kwargs={'filename':'meetup.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':[]}
+    strans_kwargs = {'filename': 'meetup.json'}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,

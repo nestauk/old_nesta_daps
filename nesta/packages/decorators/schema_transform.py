@@ -63,8 +63,6 @@ def schema_transformer(data, *, filename, ignore=[]):
     Args:
         data (dataframe OR list of dicts): the data requiring the schama transformation
         filename (str): the path to the schema json file
-        from_key (str): tier level of the data
-        to_key (str): tier level to be applied to the data
         ignore (list): optional list of fields, eg ids or keys which shouldn't be dropped
 
     Returns:

@@ -61,10 +61,7 @@ def run():
     eu_countries = get_eu_countries()
 
     # es setup
-    strans_kwargs={'filename':'companies.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs = {'filename': 'companies.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
