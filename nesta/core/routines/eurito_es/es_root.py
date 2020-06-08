@@ -26,7 +26,7 @@ def kwarg_maker(dataset, routine_id):
                f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}_eu')
     return dict(dataset=dataset,
-                endpoint='eurito_dev',
+                endpoint='eurito-dev',
                 routine_id=f'{dataset}-eu_{routine_id}',
                 env_files=env_files,
                 batchable=batchable)
@@ -57,7 +57,7 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('arxiv', 'article', Article.id),
-                  ('crunchbase', 'company', Organization.id),
+                  ('companies', 'company', Organization.id),
                   ('patstat', 'patent', ApplnFamily.docdb_family_id),)
                   #('cordis', 'project', Project.rcn),)  # Keep commented out until ES7 integration
         for dataset, entity_type, id_field in params:
