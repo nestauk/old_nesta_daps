@@ -161,9 +161,9 @@ def run():
             countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
-            row['categories'], _, _ = hierarchy_field(cats)
+            row['nested_categories'], _, _ = hierarchy_field(cats)
             row['fields_of_study'], _, _ = hierarchy_field(fos)
-            row['countries'], _, _ = hierarchy_field(countries)
+            row['nested_location'], _, _ = hierarchy_field(countries)
 
             # Pull out international institute info
             has_mn = any(is_multinational(inst,
