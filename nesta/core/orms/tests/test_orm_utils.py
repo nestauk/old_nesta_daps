@@ -234,7 +234,8 @@ def test_load_json_from_pathstub():
                                      f"{ds}_es_config.json")
         assert len(js) > 0
 
-@mock.patch("nesta.core.orms.orm_utils.load_json_from_pathstub")
+PATH = "nesta.core.orms.orm_utils.{}"
+@mock.patch(PATH.format("load_json_from_pathstub"))
 def test_get_es_mapping(mocked_load_json_from_pathstub, alias_lookup,
                         mapping):
     mocked_load_json_from_pathstub.side_effect = (mapping,
@@ -246,7 +247,7 @@ def test_get_es_mapping(mocked_load_json_from_pathstub, alias_lookup,
     assert alias1 == {'type': 'alias', 'path': 'field1a'}
     assert alias2 == {'type': 'alias', 'path': 'field2a'}
 
-@mock.patch("nesta.core.orms.orm_utils.load_json_from_pathstub")
+@mock.patch(PATH.format("load_json_from_pathstub"))
 def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub,
                                   alias_lookup, mapping):
     mocked_load_json_from_pathstub.side_effect = (mapping,
@@ -254,11 +255,13 @@ def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub,
     with pytest.raises(ValueError):
         get_es_mapping("dataset2", "blah")
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_true_test_delete_called(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_true_test_delete_called(mock_parse_es_config,
+                                          mock_get_es_mapping,
                                           mock_Elasticsearch,
                                           mock_assert_correct_config,
                                           mock_get_config):
@@ -268,11 +271,13 @@ def test_setup_es_true_test_delete_called(mock_get_es_mapping,
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_true_test_delete_not_called_not_exists(mock_parse_es_config,
+                                                         mock_get_es_mapping,
                                                          mock_Elasticsearch,
                                                          mock_assert_correct_config,
                                                          mock_get_config):
@@ -282,11 +287,13 @@ def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping,
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_false_test_delete_not_called(mock_parse_es_config,
+                                               mock_get_es_mapping,
                                                mock_Elasticsearch,
                                                mock_assert_correct_config,
                                                mock_get_config):
@@ -296,11 +303,13 @@ def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_false_reindex_delete_not_called(mock_parse_es_config,
+                                                  mock_get_es_mapping,
                                                   mock_Elasticsearch,
                                                   mock_assert_correct_config,
                                                   mock_get_config):
@@ -310,11 +319,13 @@ def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_no_create_if_exists(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_no_create_if_exists(mock_parse_es_config,
+                                      mock_get_es_mapping,
                                       mock_Elasticsearch,
                                       mock_assert_correct_config,
                                       mock_get_config):
@@ -381,9 +392,8 @@ def test_merge_metadata_with_three_bases(primary_base, secondary_base, tertiary_
                                                          'second_table',
                                                          'third_table']
 
-@mock.patch("nesta.core.orms.orm_utils.scan",
-            return_value=[{'_id':1},{'_id':1},
-                          {'_id':22.3},{'_id':3.3}]*134)
+@mock.patch(PATH.format("scan"), return_value=[{'_id':1},{'_id':1},
+                                               {'_id':22.3},{'_id':3.3}]*134)
 def test_get_es_ids(mocked_scan):
     ids = get_es_ids(mock.MagicMock(), mock.MagicMock())
     assert ids == {1, 22.3, 3.3}
