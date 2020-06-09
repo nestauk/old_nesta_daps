@@ -134,11 +134,10 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
         db = 'production' if not self.test else 'dev'
 
         # elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test, 
-                                 drop_and_recreate=False,
+        es, es_config = setup_es(endpoint='health-scanner',
                                  dataset='nih',
-                                 aliases='health_scanner')
+                                 production=not self.test,
+                                 drop_and_recreate=False)
 
         # s3 setup and file key collection
         bucket = 'innovation-mapping-general'

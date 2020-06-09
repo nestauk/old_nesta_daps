@@ -25,10 +25,10 @@ class ArxivElasticsearchTask(ElasticsearchTask):
     grid_task_kwargs = DictParameterPlus(default={})
 
     def done_ids(self):
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test,
-                                 drop_and_recreate=False,
+        es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
+                                 production=not self.test,
+                                 drop_and_recreate=False,
                                  increment_version=False)
         field =  "metric_novelty_article"
         ids = get_es_ids(es, es_config, size=10000,
@@ -42,6 +42,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                           process_batch_size=10000,
                           drop_and_recreate=self.drop_and_recreate,
                           dataset='arxiv',
+                          endpoint='arxlive',
                           id_field=Article.id,
                           filter=Article.article_source == 'arxiv',
                           entity_type='article',
@@ -54,8 +55,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                           env_files=[f3p('nesta/'),
                                      f3p('config/'
                                          'mysqldb.config'),
-                                     f3p('schema_transformations/'
-                                         'arxiv.json'),
+                                     f3p('datasets/arxiv.json'),
                                      f3p('config/'
                                          'elasticsearch.config')],
                           job_def='py36_amzn1_image',
@@ -86,6 +86,7 @@ class ArxivLolveltyRootTask(luigi.WrapperTask):
                                        test=test,
                                        index=index,
                                        dataset='arxiv',
+                                       endpoint='arxlive',
                                        entity_type='article',
                                        kwargs=kwargs,
                                        batchable=f3p("batchables/novelty"

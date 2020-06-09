@@ -58,12 +58,8 @@ def run():
     continent_lookup[None] = None
 
     # es setup
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
-                                                 "health_scanner.json")
-    strans_kwargs={'filename':'crunchbase_organisation_members.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['id']}
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
+    strans_kwargs = {'filename': 'companies.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -162,9 +158,9 @@ if __name__ == "__main__":
 
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='crunchbase',
-                                 aliases='health_scanner')
+        es, es_config = setup_es(production=False, endpoint='health-scanner',
+                                 dataset='companies',
+                                 drop_and_recreate=True)
 
         environ = {"AWSBATCHTEST": "",
                    'BATCHPAR_batch_file': 'crunchbase_to_es-15597291977144725.json', 

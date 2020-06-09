@@ -54,9 +54,7 @@ def run():
     
     # es setup
     logging.info('Connecting to ES')
-    strans_kwargs={'filename':'eurito/arxiv-eu.json',
-                   'from_key':'tier_0', 'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs = {'filename': 'arxiv.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -202,8 +200,8 @@ if __name__ == "__main__":
     set_log_level()
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='arxiv-eu')
+        es, es_config = setup_es(production=False, endpoint='eurito', 
+                                 dataset='arxiv', drop_and_recreate=True)
         environ = {'config': ('/home/ec2-user/nesta-eu/nesta/'
                               'core/config/mysqldb.config'),
                    'batch_file' : ('arxiv-eu_EURITO-ElasticsearchTask-'

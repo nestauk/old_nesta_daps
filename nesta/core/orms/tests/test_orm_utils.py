@@ -26,36 +26,8 @@ from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import db_session_query
 from nesta.core.orms.orm_utils import cast_as_sql_python_type
 
-@pytest.fixture
-def alias_lookup():
-    return {
-        "alias1": {
-            "dataset1": "field1a",
-            "dataset2": "field1b"
-        },
-        "alias2": {
-            "dataset1": "field2a",
-            "dataset2": "field2b"
-        }
-    }
-
-@pytest.fixture
-def mapping():
-    return {
-        'mappings': {
-            '_doc': {
-                'properties': {
-                    'field1a': {'type': 'keyword'},
-                    'field2a': {'type': 'text'},
-                }
-            }
-        }
-    }
-
 
 Base = declarative_base()
-
-
 class DummyModel(Base):
     __tablename__ = 'dummy_model'
 
@@ -229,109 +201,89 @@ class TestDBSession(TestDB):
         assert n_rows == len(parents) == 1000
 
 def test_load_json_from_pathstub():
-    for ds in ["nih", "crunchbase"]:
-        js = load_json_from_pathstub("core/orms/",
-                                     f"{ds}_es_config.json")
+    for ds in ["nih", "companies"]:
+        js = load_json_from_pathstub("datasets/",
+                                     f"{ds}.json")
         assert len(js) > 0
 
-@mock.patch("nesta.core.orms.orm_utils.load_json_from_pathstub")
-def test_get_es_mapping(mocked_load_json_from_pathstub, alias_lookup,
-                        mapping):
-    mocked_load_json_from_pathstub.side_effect = (mapping,
-                                                  alias_lookup)
-    _mapping = get_es_mapping("dataset1", "blah")
-    alias1 = _mapping["mappings"]["_doc"]["properties"].pop("alias1")
-    alias2 = _mapping["mappings"]["_doc"]["properties"].pop("alias2")
-    assert mapping == _mapping
-    assert alias1 == {'type': 'alias', 'path': 'field1a'}
-    assert alias2 == {'type': 'alias', 'path': 'field2a'}
-
-@mock.patch("nesta.core.orms.orm_utils.load_json_from_pathstub")
-def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub,
-                                  alias_lookup, mapping):
-    mocked_load_json_from_pathstub.side_effect = (mapping,
-                                                  alias_lookup)
-    with pytest.raises(ValueError):
-        get_es_mapping("dataset2", "blah")
-
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_bad_es_mode(mock_get_es_mapping, mock_Elasticsearch,
-                              mock_assert_correct_config, mock_get_config):
-    with pytest.raises(ValueError):
-        setup_es(es_mode="dave", test_mode=False, drop_and_recreate=False,
-                 dataset=None, aliases=None)
-
-
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_true_test_delete_called(mock_get_es_mapping,
+PATH = "nesta.core.orms.orm_utils.{}"
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_true_test_delete_called(mock_parse_es_config,
+                                          mock_get_es_mapping,
                                           mock_Elasticsearch,
                                           mock_assert_correct_config,
                                           mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
-    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=True,
-             dataset=None, aliases=None)
+    setup_es(endpoint='arxlive', dataset='arxiv', production=False,
+             drop_and_recreate=True)
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 1
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_true_test_delete_not_called_not_exists(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_true_test_delete_not_called_not_exists(mock_parse_es_config,
+                                                         mock_get_es_mapping,
                                                          mock_Elasticsearch,
                                                          mock_assert_correct_config,
                                                          mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=True,
-             dataset=None, aliases=None)
+    setup_es(drop_and_recreate=True, production=False,
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_false_test_delete_not_called(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_false_test_delete_not_called(mock_parse_es_config,
+                                               mock_get_es_mapping,
                                                mock_Elasticsearch,
                                                mock_assert_correct_config,
                                                mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", test_mode=False, drop_and_recreate=True,
-             dataset=None, aliases=None)
+    setup_es(drop_and_recreate=True, production=False,
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_false_reindex_delete_not_called(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_false_reindex_delete_not_called(mock_parse_es_config,
+                                                  mock_get_es_mapping,
                                                   mock_Elasticsearch,
                                                   mock_assert_correct_config,
                                                   mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = False
-    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=False,
-             dataset=None, aliases=None)
+    setup_es(drop_and_recreate=False, production=False,
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 1
 
-@mock.patch("nesta.core.orms.orm_utils.get_config")
-@mock.patch("nesta.core.orms.orm_utils.assert_correct_config")
-@mock.patch("nesta.core.orms.orm_utils.Elasticsearch")
-@mock.patch("nesta.core.orms.orm_utils.get_es_mapping")
-def test_setup_es_no_create_if_exists(mock_get_es_mapping,
+@mock.patch(PATH.format("get_config"))
+@mock.patch(PATH.format("assert_correct_config"))
+@mock.patch(PATH.format("Elasticsearch"))
+@mock.patch(PATH.format("get_es_mapping"))
+@mock.patch(PATH.format("parse_es_config"))
+def test_setup_es_no_create_if_exists(mock_parse_es_config,
+                                      mock_get_es_mapping,
                                       mock_Elasticsearch,
                                       mock_assert_correct_config,
                                       mock_get_config):
     mock_Elasticsearch.return_value.indices.exists.return_value = True
-    setup_es(es_mode="dev", test_mode=True, drop_and_recreate=False,
-             dataset=None, aliases=None)
+    setup_es(drop_and_recreate=False, production=False,
+             endpoint='arxlive', dataset='arxiv')
     assert mock_Elasticsearch.return_value.indices.delete.call_count == 0
     assert mock_Elasticsearch.return_value.indices.create.call_count == 0
 
@@ -392,9 +344,8 @@ def test_merge_metadata_with_three_bases(primary_base, secondary_base, tertiary_
                                                          'second_table',
                                                          'third_table']
 
-@mock.patch("nesta.core.orms.orm_utils.scan",
-            return_value=[{'_id':1},{'_id':1},
-                          {'_id':22.3},{'_id':3.3}]*134)
+@mock.patch(PATH.format("scan"), return_value=[{'_id':1},{'_id':1},
+                                               {'_id':22.3},{'_id':3.3}]*134)
 def test_get_es_ids(mocked_scan):
     ids = get_es_ids(mock.MagicMock(), mock.MagicMock())
     assert ids == {1, 22.3, 3.3}

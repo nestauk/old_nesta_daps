@@ -88,9 +88,7 @@ def run():
 
     # es setup
     logging.info('Connecting to ES')
-    strans_kwargs={'filename':'eurito/cordis-eu.json',
-                   'from_key':'tier_0', 'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs = {'filename': 'cordis.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -132,8 +130,8 @@ if __name__ == "__main__":
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
         from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='cordis-eu')
+        es, es_config = setup_es(production=False, endpoint='eurito', 
+                                 dataset='cordis', drop_and_recreate=True)
         environ = {'config': find_filepath_from_pathstub('mysqldb.config'),
                    'batch_file' : ('cordis-eu_EURITO-ElasticsearchTask-'
                                    '2020-04-10-True-15865345336407135.json'),

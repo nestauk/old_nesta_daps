@@ -66,19 +66,14 @@ class RootTask(luigi.WrapperTask):
         test = not self.production
         routine_id = f"ArxivLolveltyTask-{self.date}-{test}"
 
-        # Elasticsearch setup
-        dataset = 'arxiv'
-        _, es_config = setup_es('prod' if self.production else 'dev', 
-                                not self.production,
-                                self.drop_and_recreate,
-                                dataset=dataset)
         yield ArxivElasticsearchTask(date=self.date,
                                      process_batch_size=1000,
                                      routine_id=routine_id,
                                      grid_task_kwargs=grid_task_kwargs,
                                      test=not self.production,
-                                     index=es_config['index'],
+                                     drop_and_recreate=self.drop_and_recreate,
                                      dataset='arxiv',
+                                     endpoint='arxlive',
                                      entity_type='article',
                                      kwargs=kwargs,
                                      batchable=f3p("batchables/novelty"
@@ -134,6 +129,7 @@ class EsOnlyRootTask(luigi.WrapperTask):
                          process_batch_size=10000,
                          drop_and_recreate=self.drop_and_recreate,
                          dataset='arxiv',
+                         endpoint='arxlive',
                          id_field=Article.id,
                          entity_type='article',
                          db_config_env='MYSQLDB',
@@ -145,8 +141,7 @@ class EsOnlyRootTask(luigi.WrapperTask):
                          env_files=[f3p('nesta/'),
                                     f3p('config/'
                                         'mysqldb.config'),
-                                    f3p('schema_transformations/'
-                                        'arxiv.json'),
+                                    f3p('datasets/arxiv.json'),
                                     f3p('config/'
                                         'elasticsearch.config')],
                          job_def='py36_amzn1_image',
