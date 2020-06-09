@@ -68,7 +68,7 @@ def run():
     dupes = format_duplicate_map(dupes)
 
     # Set up elastic search connection
-    field_null_mapping = load_json_from_pathstub("health-scanner/nulls.json")
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
     es = ElasticsearchPlus(hosts=es_config['host'],
                            port=es_config['port'],
                            aws_auth_region=es_config['region'],

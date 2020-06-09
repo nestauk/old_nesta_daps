@@ -71,7 +71,7 @@ def run():
     mesh_terms = format_mesh_terms(df_mesh)
 
     # Setup ES+
-    field_null_mapping = load_json_from_pathstub("health-scanner/nulls.json")
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
     strans_kwargs = {'filename': 'meetup.json'}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,

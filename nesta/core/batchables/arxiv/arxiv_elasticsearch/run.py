@@ -20,7 +20,6 @@ import numpy as np
 from datetime import datetime as dt
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.grid_orm import Institute

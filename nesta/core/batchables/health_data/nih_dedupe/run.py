@@ -61,7 +61,7 @@ def run():
     art_ids = json.loads(ids_obj.get()['Body']._raw_stream.read())
     logging.info(f'Processing {len(art_ids)} article ids')
 
-    field_null_mapping = load_json_from_pathstub("health-scanner/nulls.json")
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
