@@ -32,7 +32,7 @@ class DedupeTask(autobatch.AutoBatchTask):
 
     def output(self):
         '''Points to the output database engine'''
-        db_config = get_config(self.db_config_path, 
+        db_config = get_config(self.db_config_path,
                                "mysqldb")
         db_config["database"] = ('dev' if self.test
                                  else 'production')
@@ -68,32 +68,30 @@ class DedupeTask(autobatch.AutoBatchTask):
                             f"{self.process_batch_size}"
                             " while in test mode")
 
-        es, es_config = setup_es(endpoint='health-scanner',
-                                 dataset='nih',                                 
-                                 production=not self.test,
-                                 drop_and_recreate=self.drop_and_recreate,
-                                 increment_version=True)
+        es_kwargs = dict(endpoint='health-scanner',
+                         dataset='nih', production=not self.test)
+        _, _old_config = setup_es(**es_kwargs)
+        es, es_config = setup_es(drop_and_recreate=self.drop_and_recreate,
+                                 increment_version=True, **es_kwargs)
 
         # Count articles from the old index
-        _old_config = es_config.copy()
-        _old_config['index'] = es_config['old_index']
         logging.info(f"Collected article IDs...")
         _ids = get_es_ids(es, _old_config, size=10000)
         logging.info(f"Collected {len(_ids)} IDs")
         done_ids = get_es_ids(es, es_config, size=10000)
 
         # Generate the job params
-        job_params = []        
+        job_params = []
         batches = split_batches(_ids, self.process_batch_size)
         for count, batch in enumerate(batches, 1):
             # Magical '0.3' is the lower end of the deduplication
             # fraction found by inspection
-            done = sum(_id in done_ids 
+            done = sum(_id in done_ids
                        for _id in batch) / len(batch) > 0.3
             # write batch of ids to s3
             batch_file = ''
             if not done:
-                batch_file = put_s3_batch(batch, 
+                batch_file = put_s3_batch(batch,
                                           self.intermediate_bucket,
                                           self.routine_id)
             params = {
@@ -104,13 +102,13 @@ class DedupeTask(autobatch.AutoBatchTask):
                 'outinfo': es_config['host'],
                 'out_port': es_config['port'],
                 'out_index': es_config['index'],
-                'in_index': es_config['old_index'],
+                'in_index': _old_config['index'],
                 'out_type': es_config['type'],
                 'aws_auth_region': es_config['region'],
                 'entity_type': 'paper',
                 'test': self.test,
                 'routine_id': self.routine_id
-            }            
+            }
 
             job_params.append(params)
             if self.test and count > 1:
