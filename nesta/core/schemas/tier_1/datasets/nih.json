@@ -5,6 +5,7 @@
         "_rank_rhodonite_abstract": "rank_rhodonite_abstract",
         "_terms_iso2lang_entity": "terms_iso2lang_entity",
         "_terms_of_countryTags": "terms_of_countryTags",
+        "_terms_of_funders": "terms_of_funders",
         "_total_cost_usd2018": "_cost_usd2018_project",
         "abstract_text": "textBody_abstract_project",
         "city": "placeName_city_organisation",
