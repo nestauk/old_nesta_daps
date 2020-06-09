@@ -96,6 +96,20 @@ def assert_correct_config(test, config, key):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
 
+def default_to_regular(d):
+    """Convert nested defaultdicts to nested dicts. 
+    This is useful when you want to throw KeyErrors, which
+    would be dynamically accepted otherwise.
+    
+    Args:
+        d (nested defaultdict): A nested defaultdict object.
+    Returns:
+        _d (nested dict): A nested dict object.
+    """
+    if isinstance(d, defaultdict):
+        d = {k: default_to_regular(v) for k, v in d.items()}
+    return d
+
 
 def parse_es_config(increment_version):
     """Retrieve the ES config for all endpoints and indexes,
@@ -122,8 +136,8 @@ def parse_es_config(increment_version):
             prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
             dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
             config[endpoint][dataset][True] = {'index': prod_idx, **base_config}  # production mode
-            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode
-    return config
+            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode    
+    return default_to_regular(config)
 
 
 def setup_es(endpoint, dataset, production,

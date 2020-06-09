@@ -38,7 +38,7 @@ class CrunchbaseLolveltyRootTask(luigi.WrapperTask):
                                      test=test,
                                      index=index,
                                      dataset='companies',
-                                     endpoint='health-scanner'
+                                     endpoint='health-scanner',
                                      entity_type='company',
                                      kwargs=kwargs,
                                      batchable=f3p("batchables/novelty/lolvelty"),

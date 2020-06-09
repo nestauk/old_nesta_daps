@@ -51,7 +51,8 @@
         "nih": "date_end_project"
     },
     "funders": {
-        "companies": "terms_of_funders"
+        "companies": "terms_of_funders",
+	"nih": "terms_of_funders"
     },
     "is_duplicate": {
         "nih": "booleanFlag_duplicate_abstract"

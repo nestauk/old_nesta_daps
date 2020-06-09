@@ -22,11 +22,11 @@ S3_BUCKET='nesta-production-intermediate'
 def kwarg_maker(dataset, routine_id):
     env_files=[f3p('config/mysqldb.config'),
                f3p('config/elasticsearch.config'),
-               f3p('tier_1/datasets/'),
+               f3p(f'tier_1/datasets/{dataset}.json'),
                f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}_eu')
     return dict(dataset=dataset,
-                endpoint='eurito',
+                endpoint='eurito-dev',
                 routine_id=f'{dataset}-eu_{routine_id}',
                 env_files=env_files,
                 batchable=batchable)
@@ -57,7 +57,7 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('arxiv', 'article', Article.id),
-                  ('crunchbase', 'company', Organization.id),
+                  ('companies', 'company', Organization.id),
                   ('patstat', 'patent', ApplnFamily.docdb_family_id),
                   ('cordis', 'project', Project.rcn),)
         for dataset, entity_type, id_field in params:
