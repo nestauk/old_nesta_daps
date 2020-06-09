@@ -1,25 +1,19 @@
 {
     "mappings": {
         "_doc": {
-            "dynamic": "strict",
             "properties": {
-                "booleanFlag_autotranslated_entity": {
+                "booleanFlag_eu_article": {
                     "type": "boolean"
                 },
-                "booleanFlag_eu_patent": {
-                    "type": "boolean"
-                },
-                "count_citations_patent": {
-                    "type": "integer"
-                },
-                "date_of_patent": {
+                "date_created_article": {
                     "format": "yyyy-MM-dd",
                     "type": "date"
                 },
-                "metric_novelty_patent": {
-                    "type": "float"
+                "json_fieldsOfStudy_article": {
+                    "dynamic": true,
+                    "properties": {}
                 },
-                "terms_authCountry_patent": {
+                "terms_category_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -28,7 +22,7 @@
                     },
                     "type": "text"
                 },
-                "terms_ipc_patent": {
+                "terms_countries_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -37,7 +31,7 @@
                     },
                     "type": "text"
                 },
-                "terms_iso2lang_entity": {
+                "terms_fieldsOfStudy_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -46,7 +40,7 @@
                     },
                     "type": "text"
                 },
-                "terms_nace2_patent": {
+                "terms_nuts0_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -55,7 +49,7 @@
                     },
                     "type": "text"
                 },
-                "terms_personCountry_patent": {
+                "terms_nuts1_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -64,7 +58,7 @@
                     },
                     "type": "text"
                 },
-                "terms_personNuts_patent": {
+                "terms_nuts2_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -73,7 +67,16 @@
                     },
                     "type": "text"
                 },
-                "terms_techFieldNumber_patent": {
+                "terms_nuts3_article": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_regions_article": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -85,48 +88,10 @@
                 "terms_tokens_entity": {
                     "type": "keyword"
                 },
-                "textBody_abstract_patent": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "title_of_patent": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
                 "type_of_entity": {
                     "type": "keyword"
-                },
-                "year_of_patent": {
-                    "type": "integer"
                 }
             }
-        }
-    },
-    "settings": {
-        "analysis": {
-            "analyzer": {
-                "terms_analyzer": {
-                    "filter": [
-                        "standard",
-                        "lowercase",
-                        "stop"
-                    ],
-                    "tokenizer": "standard",
-                    "type": "custom"
-                }
-            }
-        },
-        "index": {
-            "number_of_replicas": "1",
-            "number_of_shards": "5"
         }
     }
 }

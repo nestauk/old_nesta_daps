@@ -7,7 +7,7 @@ Useful to do this to avoid Git conflicts.
 """
 
 import json
-FILENAME="tier_1.json"
+FILENAME="../ontology.json"
 
 # Load
 with open(FILENAME) as f:

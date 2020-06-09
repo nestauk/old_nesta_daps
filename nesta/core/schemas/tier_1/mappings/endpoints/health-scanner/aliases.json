@@ -15,7 +15,7 @@
         "nih": "placeName_continent_organisation"
     },
     "continent_id": {
-        "companies": "id_continent_organisation",
+        "companies": "id_of_continent",
         "meetup": "id_continent_group",
         "nih": "id_of_continent"
     },
@@ -52,7 +52,7 @@
     },
     "funders": {
         "companies": "terms_of_funders",
-        "nih": "terms_of_funders"
+	"nih": "terms_of_funders"
     },
     "is_duplicate": {
         "nih": "booleanFlag_duplicate_abstract"
@@ -83,11 +83,6 @@
     },
     "region": {
         "companies": "placeName_region_organisation"
-    },
-    "sdg_labels": {
-        "companies": "_terms_sdg_summary",
-        "meetup": "_terms_sdg_description",
-        "nih": "terms_sdg_abstract"
     },
     "start": {
         "companies": "date_birth_organisation",

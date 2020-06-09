@@ -65,25 +65,8 @@
                     "type": "integer"
                 }
             }
-        }
-    },
-    "settings": {
-        "analysis": {
-            "analyzer": {
-                "terms_analyzer": {
-                    "filter": [
-                        "standard",
-                        "lowercase",
-                        "stop"
-                    ],
-                    "tokenizer": "standard",
-                    "type": "custom"
-                }
-            }
         },
-        "index": {
-            "number_of_replicas": "1",
-            "number_of_shards": "5"
-        }
+        "dynamic": null,
+        "properties": null
     }
 }

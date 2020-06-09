@@ -3,7 +3,9 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
-                "placeName_zipcode_organisation": null
+                "booleanFlag_eu_patent": {
+                    "type": "boolean"
+                }
             }
         }
     }

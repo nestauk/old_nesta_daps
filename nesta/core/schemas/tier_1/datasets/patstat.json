@@ -1,0 +1,18 @@
+{
+    "entity_type": "patent",
+    "tier0_to_tier1": {
+        "abstract": "textBody_abstract_patent",
+        "appln_auth": "terms_authCountry_patent",
+        "ctry": "terms_personCountry_patent",
+        "earliest_filing_date": "date_of_patent",
+        "earliest_filing_year": "year_of_patent",
+        "id": "id_family_patent",
+        "ipc": "terms_ipc_patent",
+        "is_eu": "booleanFlag_eu_patent",
+        "nace2": "terms_nace2_patent",
+        "nb_citing_docdb_fam": "count_citations_patent",
+        "nuts": "terms_personNuts_patent",
+        "tech": "terms_techFieldNumber_patent",
+        "title": "title_of_patent"
+    }
+}

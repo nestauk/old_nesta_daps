@@ -58,12 +58,8 @@ def run():
     continent_lookup[None] = None
 
     # es setup
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
-                                                 "health_scanner.json")
-    strans_kwargs={'filename':'crunchbase_organisation_members.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['id']}
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
+    strans_kwargs = {'filename': 'companies.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
