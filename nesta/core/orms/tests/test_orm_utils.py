@@ -26,36 +26,8 @@ from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import db_session_query
 from nesta.core.orms.orm_utils import cast_as_sql_python_type
 
-@pytest.fixture
-def alias_lookup():
-    return {
-        "alias1": {
-            "dataset1": "field1a",
-            "dataset2": "field1b"
-        },
-        "alias2": {
-            "dataset1": "field2a",
-            "dataset2": "field2b"
-        }
-    }
-
-@pytest.fixture
-def mapping():
-    return {
-        'mappings': {
-            '_doc': {
-                'properties': {
-                    'field1a': {'type': 'keyword'},
-                    'field2a': {'type': 'text'},
-                }
-            }
-        }
-    }
-
 
 Base = declarative_base()
-
-
 class DummyModel(Base):
     __tablename__ = 'dummy_model'
 
@@ -229,32 +201,12 @@ class TestDBSession(TestDB):
         assert n_rows == len(parents) == 1000
 
 def test_load_json_from_pathstub():
-    for ds in ["nih", "crunchbase"]:
-        js = load_json_from_pathstub("core/orms/",
-                                     f"{ds}_es_config.json")
+    for ds in ["nih", "companies"]:
+        js = load_json_from_pathstub("datasets/",
+                                     f"{ds}.json")
         assert len(js) > 0
 
 PATH = "nesta.core.orms.orm_utils.{}"
-@mock.patch(PATH.format("load_json_from_pathstub"))
-def test_get_es_mapping(mocked_load_json_from_pathstub, alias_lookup,
-                        mapping):
-    mocked_load_json_from_pathstub.side_effect = (mapping,
-                                                  alias_lookup)
-    _mapping = get_es_mapping("dataset1", "blah")
-    alias1 = _mapping["mappings"]["_doc"]["properties"].pop("alias1")
-    alias2 = _mapping["mappings"]["_doc"]["properties"].pop("alias2")
-    assert mapping == _mapping
-    assert alias1 == {'type': 'alias', 'path': 'field1a'}
-    assert alias2 == {'type': 'alias', 'path': 'field2a'}
-
-@mock.patch(PATH.format("load_json_from_pathstub"))
-def test_get_es_mapping_bad_alias(mocked_load_json_from_pathstub,
-                                  alias_lookup, mapping):
-    mocked_load_json_from_pathstub.side_effect = (mapping,
-                                                  alias_lookup)
-    with pytest.raises(ValueError):
-        get_es_mapping("dataset2", "blah")
-
 @mock.patch(PATH.format("get_config"))
 @mock.patch(PATH.format("assert_correct_config"))
 @mock.patch(PATH.format("Elasticsearch"))
