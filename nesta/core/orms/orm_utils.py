@@ -381,7 +381,29 @@ def filter_out_duplicates(db_env, section, database,
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
+    return _filter_out_duplicates(session, Base, _class, data, low_memory)
 
+
+def _filter_out_duplicates(session, Base, _class, data,
+                           low_memory=False):
+    """Produce a filtered list of data, exluding duplicates and entries that
+    already exist in the data.
+
+    Args:
+        session (:obj:`sqlalchemy.orm.session.Session`): SqlAlchemy session object.
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): If the pkeys are few or small types (i.e. they won't
+                           occupy lots of memory) then set this to True.
+                           This will speed things up significantly (like x 100),
+                           but will blow up for heavy pkeys or large tables.
+        return_non_inserted (bool): Flag that when set will also return a lists of rows that
+                                    were in the supplied data but not imported (for checks)
+
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+    """
     # Add the data
     all_pks = set()
     objs = []

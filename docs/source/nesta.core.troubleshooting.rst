@@ -72,6 +72,11 @@ In AWS SES the sender and receiver email addresses need to be verified
 - The config files need to be accessible and the PATH and LUIGI_CONFIG_PATH
   need to be amended accordingly
 
+How can I send/receive emails from Luigi?
+-----------------------------------------
+
+You should set the environmental variable :code:`export LUIGI_EMAIL="<your.email@something>"` in your :code:`.bashrc`. You can test this with :code:`luigi TestNotificationsTask --local-scheduler --email-force-send`. Make sure your email address has been registered under AWS SES.
+
 How do I add a new user to the server?
 --------------------------------------
 
