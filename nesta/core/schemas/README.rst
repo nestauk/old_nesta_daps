@@ -21,6 +21,7 @@ Valid examples are :code:`date_start_project` and :code:`title_of_project`.
 
 Tier 0 fields are implictly excluded from tier 1 if they are missing from the :code:`schema_transformation` file. Tier 1 schema field names are applied via `nesta.packages.decorator.schema_transform`
 
+
 Tier 2
 ------
 

@@ -22,6 +22,7 @@ import yaml
 import logging
 import time
 from collections import defaultdict
+from collections.abc import Mapping
 
 
 def _get_key_value(obj, key):
@@ -95,6 +96,20 @@ def assert_correct_config(test, config, key):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
 
+def default_to_regular(d):
+    """Convert nested defaultdicts to nested dicts. 
+    This is useful when you want to throw KeyErrors, which
+    would be dynamically accepted otherwise.
+    
+    Args:
+        d (nested defaultdict): A nested defaultdict object.
+    Returns:
+        _d (nested dict): A nested dict object.
+    """
+    if isinstance(d, defaultdict):
+        d = {k: default_to_regular(v) for k, v in d.items()}
+    return d
+
 
 def parse_es_config(increment_version):
     """Retrieve the ES config for all endpoints and indexes,
@@ -121,8 +136,8 @@ def parse_es_config(increment_version):
             prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
             dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
             config[endpoint][dataset][True] = {'index': prod_idx, **base_config}  # production mode
-            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode
-    return config
+            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode    
+    return default_to_regular(config)
 
 
 def setup_es(endpoint, dataset, production,
@@ -210,6 +225,102 @@ def load_yaml_from_pathstub(pathstub, filename):
         return yaml.safe_load(f)
 
 
+def update_nested(original_dict, update_dict):
+    """Update a nested dictionary with another nested dictionary.
+    Has equivalent behaviour to :obj:`dict.update(self, update_dict)`.
+
+    Args:
+        original_dict (dict): The original dictionary to update.
+        update_dict (dict): The dictionary from which to extract updates.
+    Returns:
+        original_dict (dict): The original dictionary after updates.
+    """
+    for k, v in update_dict.items():
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like object
+            original_dict[k] = update_nested(original_dict.get(k, {}), v)
+        else:
+            original_dict[k] = v
+    return original_dict
+
+
+def _get_es_mapping(dataset, endpoint):
+    """Sequentially apply the mappings from index, settings, the
+    dataset and finally the endpoint. None of these files is strictly
+    required to exist, so an endpoint could conceivably have a dataset
+    unique to itself.
+
+    Args:
+        dataset (str): Name of the dataset for the ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    Returns:
+        :obj:`dict`: The constructed mapping.
+    """
+    mapping = {}
+    for _path, _prefix in [('defaults', 'defaults'),
+                           ('datasets', f'{dataset}_mapping'),
+                           (f'endpoints/{endpoint}', f'{dataset}_mapping')]:
+        try:
+            _mapping = load_json_from_pathstub(f"mappings/{_path}", f"{_prefix}.json")
+        except json.JSONDecodeError as exc:
+            raise ValueError(f'Could not decode "mappings/{_path}/{_prefix}.json"') from exc
+        except FileNotFoundError:
+            continue
+        update_nested(mapping, _mapping)
+    return mapping
+
+
+def _apply_alias(mapping, dataset, endpoint):
+    """Dynamically apply aliases to an Elasticsearch mapping. Note that
+    the mapping is changed in-place.
+
+    Args:
+        mapping (dict): An ES mapping.
+        dataset (str): Name of the dataset for this ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    """
+    ep_path = f"mappings/endpoints/{endpoint}"
+    # Load an alias, if it exists
+    try:
+        alias_lookup = load_json_from_pathstub(ep_path, "aliases.json")
+    except FileNotFoundError:
+        return
+    # Check whether this is a soft or hard alias
+    try:
+        config = load_yaml_from_pathstub(ep_path, "config.yaml")
+        hard_alias = config['hard-alias']
+    except (FileNotFoundError, KeyError):
+        hard_alias = False
+    # Apply the aliases to the mapping properties
+    propts = mapping["mappings"]["_doc"]["properties"]
+    _fields = set()
+    for alias, lookup in alias_lookup.items():
+        if dataset not in lookup:
+            continue
+        field = lookup[dataset]
+        propts[alias] = (propts[field] if hard_alias   # New field same as old for 'hard-alias'
+                         else {"type": "alias", "path": field})  # Otherwise use an ES alias
+        _fields.add(field)
+    # Remove old fields if 'hard alias'
+    if hard_alias:
+        for f in _fields:
+            propts.pop(f)
+
+
+def _prune_nested(mapping):
+    """Recursively remove any fields with null values from
+    a nested dictionary. The input is changed in-place.
+
+    Args:
+        mapping (dict): The dictionary to prune.
+    """
+    for k in list(mapping.keys()):
+        v = mapping[k]
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like
+            _prune_nested(v)
+        elif v is None:
+            mapping.pop(k)
+
+
 def get_es_mapping(dataset, endpoint):
     '''Load the ES mapping for this dataset and endpoint,
     including aliases.
@@ -220,29 +331,9 @@ def get_es_mapping(dataset, endpoint):
     Returns:
         :obj:`dict`
     '''
-    # Get the mapping and lookup
-    mapping = load_json_from_pathstub("core/orms/",
-                                      f"{dataset}_es_config.json")
-    try:
-        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                               f"{endpoint}.json")
-    except FileNotFoundError:
-        alias_lookup = {}
-
-    # Get a list of valid fields for verification
-    fields = mapping["mappings"]["_doc"]["properties"].keys()
-    # Add any aliases to the mapping
-    for alias, lookup in alias_lookup.items():
-        if dataset not in lookup:
-            continue
-        # Validate the field
-        field = lookup[dataset]
-        if field not in fields:
-            raise ValueError(f"Alias '{alias}' to '{field}' but '{field}'"
-                             "does not exist in the mapping.")
-        # Add the alias to the mapping
-        value = {"type": "alias", "path": lookup[dataset]}
-        mapping["mappings"]["_doc"]["properties"][alias] = value
+    mapping = _get_es_mapping(dataset, endpoint)
+    _apply_alias(mapping, dataset, endpoint)
+    _prune_nested(mapping)  # prunes any nested keys with null values
     return mapping
 
 

@@ -54,9 +54,7 @@ def run():
     
     # es setup
     logging.info('Connecting to ES')
-    strans_kwargs={'filename':'eurito/arxiv-eu.json',
-                   'from_key':'tier_0', 'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs = {'filename': 'arxiv.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,

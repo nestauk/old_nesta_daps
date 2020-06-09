@@ -63,9 +63,7 @@ def run():
 
     # es setup
     logging.info('Connecting to ES')
-    strans_kwargs={'filename':'eurito/patstat-eu.json',
-                   'from_key':'tier_0', 'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs = {'filename': 'patstat.json', 'ignore': ['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,

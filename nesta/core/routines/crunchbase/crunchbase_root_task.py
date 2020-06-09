@@ -45,7 +45,7 @@ class RootTask(luigi.WrapperTask):
                                    batchable=f3p("core/batchables/crunchbase/crunchbase_elasticsearch"),
                                    env_files=[f3p("nesta/"),
                                               f3p("config/mysqldb.config"),
-                                              f3p("schema_transformations/crunchbase_organisation_members.json"),
+                                              f3p("datasets/companies.json"),
                                               f3p("config/elasticsearch.config")],
                                    job_def="py36_amzn1_image",
                                    job_name=f"CrunchBaseElasticsearchTask-{_routine_id}",

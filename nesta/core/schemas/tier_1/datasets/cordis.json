@@ -1,0 +1,16 @@
+{
+    "entity_type": "project",
+    "tier0_to_tier1": {
+        "description": "textBody_description_project",
+        "ec_contribution": "cost_ecFunding_project",
+        "end_date_code": "date_ended_project",
+        "framework": "name_framework_project",
+        "link": "url_of_project",
+        "rcn": "id_of_project",
+        "start_date_code": "date_started_project",
+        "status": "status_of_project",
+        "title": "title_of_project",
+        "total_cost": "cost_total_project",
+        "year": "year_of_project"
+    }
+}

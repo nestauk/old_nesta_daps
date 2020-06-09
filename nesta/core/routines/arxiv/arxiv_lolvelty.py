@@ -55,8 +55,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                           env_files=[f3p('nesta/'),
                                      f3p('config/'
                                          'mysqldb.config'),
-                                     f3p('schema_transformations/'
-                                         'arxiv.json'),
+                                     f3p('datasets/arxiv.json'),
                                      f3p('config/'
                                          'elasticsearch.config')],
                           job_def='py36_amzn1_image',
