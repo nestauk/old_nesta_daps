@@ -292,7 +292,7 @@ class SoftwareAndTechnicalProducts(Base):
 
 
 class DocumentClusters(Base):
-    __tablename__ = 'grt_doc_clusters'
+    __tablename__ = 'gtr_doc_clusters'
 
     doc_id = Column(VARCHAR(36), ForeignKey('gtr_projects.id'), primary_key=True)
     cluster_id = Column(INT, primary_key=True, index=True)
