@@ -18,8 +18,11 @@ import re
 import pymysql
 import os
 import json
+import yaml
 import logging
 import time
+from collections import defaultdict
+from collections.abc import Mapping
 
 
 def _get_key_value(obj, key):
@@ -93,68 +96,86 @@ def assert_correct_config(test, config, key):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
 
+def default_to_regular(d):
+    """Convert nested defaultdicts to nested dicts. 
+    This is useful when you want to throw KeyErrors, which
+    would be dynamically accepted otherwise.
+    
+    Args:
+        d (nested defaultdict): A nested defaultdict object.
+    Returns:
+        _d (nested dict): A nested dict object.
+    """
+    if isinstance(d, defaultdict):
+        d = {k: default_to_regular(v) for k, v in d.items()}
+    return d
 
-def setup_es(es_mode, test_mode, drop_and_recreate,
-             dataset, aliases=None, increment_version=False):
+
+def parse_es_config(increment_version):
+    """Retrieve the ES config for all endpoints and indexes,
+    including auto-version-incrementing if required.
+
+    Args:
+        increment_version (bool): Move one version up? (NB: no changes to config file on disk)
+    Returns:
+        config: Elasticsearch config dict, for all endpoints and indexes.
+    """
+    raw_config = load_yaml_from_pathstub('config', 'elasticsearch.yaml')
+    config = defaultdict(lambda: defaultdict(dict))
+    for endpoint, endpoint_config in raw_config['endpoints'].items():
+        # Build the base configuration for this endpoint
+        indexes = endpoint_config.pop('indexes')
+        base_config = raw_config['defaults'].copy()  # use defaults as the base...
+        base_config.update(endpoint_config)          # then override with endpoint settings
+        # Add the host to the config
+        scheme = base_config.pop('scheme')
+        _id = base_config.pop('id')
+        rgn = base_config['region']
+        base_config['host'] = f'{scheme}://search-{endpoint}-{_id}.{rgn}.es.amazonaws.com'
+        for dataset, version in indexes.items():
+            prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
+            dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
+            config[endpoint][dataset][True] = {'index': prod_idx, **base_config}  # production mode
+            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode    
+    return default_to_regular(config)
+
+
+def setup_es(endpoint, dataset, production,
+             drop_and_recreate=False, increment_version=False):
     """Retrieve the ES connection, ES config and setup the index
     if required.
 
     Args:
-        es_mode (str): One of "prod" or "dev".
-        test_mode (bool): Running in test mode?
-        drop_and_recreate (bool): Drop and recreate ES index?
+        endpoint (str): Name of the AWS ES endpoint.
         dataset (str): Name of the dataset for the ES mapping.
-        aliases (str): Name of the aliases for the ES mapping.
+        production (bool): Running in production mode?
+        drop_and_recreate (bool): Drop and recreate ES index?
         increment_version (bool): Move one version up?
     Returns:
         {es, es_config}: Elasticsearch connection and config dict.
     """
-    if es_mode not in ("prod", "dev"):
-        raise ValueError("es_mode required to be one of "
-                         f"'prod' or 'dev', but '{es_mode}' provided.")
-
-    # Get and check the config
-    key = f"{dataset}_{es_mode}"
-    es_config = get_config('elasticsearch.config', key)
-    assert_correct_config(test_mode, es_config, key)
-
-    # If required, create new index from the old one
-    if increment_version:
-        old_index = es_config['index']
-        if es_mode == 'prod':
-            tag, version = re.findall(r'(\w+)(\d+)', old_index)[0]
-            new_index = f'{tag}{int(version)+1}'
-        else:
-            tag = old_index
-            new_index = f'{old_index}0'
-        es_config['index'] = new_index
-        es_config['old_index'] = old_index
-        if any((new_index == old_index,
-                not old_index.startswith(tag),
-                not new_index.startswith(tag),
-                len(new_index) - len(old_index) > 1)):
-            raise ValueError('Could not create a new valid '
-                             f'index from {old_index}. Tried, '
-                             f'but got {new_index}.')
-
+    es_master_config = parse_es_config(increment_version)
+    es_config = es_master_config[endpoint][dataset][production]
     # Make the ES connection
     es = Elasticsearch(es_config['host'], port=es_config['port'],
                        use_ssl=True, send_get_body_as='POST')
-    # Drop the index if required (must be in test mode to do this)
-    _index = es_config['index']
-    exists = es.indices.exists(index=_index)
-    if drop_and_recreate and test_mode and exists:
-        es.indices.delete(index=_index)
+    # Does the index already exist?
+    index = es_config['index']
+    exists = es.indices.exists(index=index)
+    # Drop index for fresh recreation (if in test mode)
+    if drop_and_recreate and (not production) and exists:
+        es.indices.delete(index=index)
         exists = False
     # Create the index if required
     if not exists:
-        mapping = get_es_mapping(dataset, aliases=aliases)
-        es.indices.create(index=_index, body=mapping)
+        mapping = get_es_mapping(dataset, endpoint)
+        es.indices.create(index=index, body=mapping)
     return es, es_config
+
 
 def get_es_ids(es, es_config, size=1000, query={}):
     '''Get all existing ES document ids for a given config
-    
+
     Args:
         es: Elasticsearch connection.
         es_config (dict): Elasticsearch configuration.
@@ -188,45 +209,137 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
     return js
 
 
-def get_es_mapping(dataset, aliases):
-    '''Get the configuration from a file in the luigi config path
-    directory, and convert the key-value pairs under the config :code:`header`
-    into a `dict`.
+def load_yaml_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be yaml).
 
-    Parameters:
-        file_name (str): The configuation file name.
-        header (str): The header key in the config file.
-
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
     Returns:
-        :obj:`dict`
-    '''
-    # Get the mapping and lookup
-    mapping = load_json_from_pathstub("core/orms/",
-                                      f"{dataset}_es_config.json")
-    alias_lookup = {}
-    if aliases is not None:
-        alias_lookup = load_json_from_pathstub("tier_1/aliases/",
-                                               f"{aliases}.json")
-    # Get a list of valid fields for verification
-    fields = mapping["mappings"]["_doc"]["properties"].keys()
-    # Add any aliases to the mapping
+        The file contents as a json-like object.
+    """
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        return yaml.safe_load(f)
+
+
+def update_nested(original_dict, update_dict):
+    """Update a nested dictionary with another nested dictionary.
+    Has equivalent behaviour to :obj:`dict.update(self, update_dict)`.
+
+    Args:
+        original_dict (dict): The original dictionary to update.
+        update_dict (dict): The dictionary from which to extract updates.
+    Returns:
+        original_dict (dict): The original dictionary after updates.
+    """
+    for k, v in update_dict.items():
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like object
+            original_dict[k] = update_nested(original_dict.get(k, {}), v)
+        else:
+            original_dict[k] = v
+    return original_dict
+
+
+def _get_es_mapping(dataset, endpoint):
+    """Sequentially apply the mappings from index, settings, the
+    dataset and finally the endpoint. None of these files is strictly
+    required to exist, so an endpoint could conceivably have a dataset
+    unique to itself.
+
+    Args:
+        dataset (str): Name of the dataset for the ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    Returns:
+        :obj:`dict`: The constructed mapping.
+    """
+    mapping = {}
+    for _path, _prefix in [('defaults', 'defaults'),
+                           ('datasets', f'{dataset}_mapping'),
+                           (f'endpoints/{endpoint}', f'{dataset}_mapping')]:
+        try:
+            _mapping = load_json_from_pathstub(f"mappings/{_path}", f"{_prefix}.json")
+        except json.JSONDecodeError as exc:
+            raise ValueError(f'Could not decode "mappings/{_path}/{_prefix}.json"') from exc
+        except FileNotFoundError:
+            continue
+        update_nested(mapping, _mapping)
+    return mapping
+
+
+def _apply_alias(mapping, dataset, endpoint):
+    """Dynamically apply aliases to an Elasticsearch mapping. Note that
+    the mapping is changed in-place.
+
+    Args:
+        mapping (dict): An ES mapping.
+        dataset (str): Name of the dataset for this ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    """
+    ep_path = f"mappings/endpoints/{endpoint}"
+    # Load an alias, if it exists
+    try:
+        alias_lookup = load_json_from_pathstub(ep_path, "aliases.json")
+    except FileNotFoundError:
+        return
+    # Check whether this is a soft or hard alias
+    try:
+        config = load_yaml_from_pathstub(ep_path, "config.yaml")
+        hard_alias = config['hard-alias']
+    except (FileNotFoundError, KeyError):
+        hard_alias = False
+    # Apply the aliases to the mapping properties
+    propts = mapping["mappings"]["_doc"]["properties"]
+    _fields = set()
     for alias, lookup in alias_lookup.items():
         if dataset not in lookup:
             continue
-        # Validate the field
         field = lookup[dataset]
-        if field not in fields:
-            raise ValueError(f"Alias '{alias}' to '{field}' but '{field}'"
-                             "does not exist in the mapping.")
-        # Add the alias to the mapping
-        value = {"type": "alias", "path": lookup[dataset]}
-        mapping["mappings"]["_doc"]["properties"][alias] = value
+        propts[alias] = (propts[field] if hard_alias   # New field same as old for 'hard-alias'
+                         else {"type": "alias", "path": field})  # Otherwise use an ES alias
+        _fields.add(field)
+    # Remove old fields if 'hard alias'
+    if hard_alias:
+        for f in _fields:
+            propts.pop(f)
+
+
+def _prune_nested(mapping):
+    """Recursively remove any fields with null values from
+    a nested dictionary. The input is changed in-place.
+
+    Args:
+        mapping (dict): The dictionary to prune.
+    """
+    for k in list(mapping.keys()):
+        v = mapping[k]
+        if isinstance(v, Mapping):  # Mapping ~= any dict-like
+            _prune_nested(v)
+        elif v is None:
+            mapping.pop(k)
+
+
+def get_es_mapping(dataset, endpoint):
+    '''Load the ES mapping for this dataset and endpoint,
+    including aliases.
+
+    Args:
+        dataset (str): Name of the dataset for the ES mapping.
+        endpoint (str): Name of the AWS ES endpoint.
+    Returns:
+        :obj:`dict`
+    '''
+    mapping = _get_es_mapping(dataset, endpoint)
+    _apply_alias(mapping, dataset, endpoint)
+    _prune_nested(mapping)  # prunes any nested keys with null values
     return mapping
 
 
 def cast_as_sql_python_type(field, data):
     """Cast the data to ensure that it is the python type expected by SQL
-    
+
     Args:
         field (SqlAlchemy field): SqlAlchemy field, to cast the data
         data: A data field to be cast
@@ -241,7 +354,7 @@ def cast_as_sql_python_type(field, data):
     return _data
 
 
-def filter_out_duplicates(db_env, section, database, 
+def filter_out_duplicates(db_env, section, database,
                           Base, _class, data,
                           low_memory=False):
     """Produce a filtered list of data, exluding duplicates and entries that
@@ -303,7 +416,7 @@ def _filter_out_duplicates(session, Base, _class, data,
 
     # Read all pks if in low_memory mode
     if low_memory and not is_auto_pkey:
-        fields = [getattr(_class, pkey.name) 
+        fields = [getattr(_class, pkey.name)
                   for pkey in pkey_cols]
         all_pks = set(session.query(*fields).all())
 
@@ -359,11 +472,11 @@ def insert_data(db_env, section, database, Base,
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
 
-    response = filter_out_duplicates(db_env=db_env, 
+    response = filter_out_duplicates(db_env=db_env,
                                      section=section,
                                      database=database,
-                                     Base=Base, 
-                                     _class=_class, 
+                                     Base=Base,
+                                     _class=_class,
                                      data=data,
                                      low_memory=low_memory)
     objs, existing_objs, failed_objs = response

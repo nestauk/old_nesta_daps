@@ -20,7 +20,6 @@ import numpy as np
 from datetime import datetime as dt
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.grid_orm import Institute
@@ -76,10 +75,7 @@ def run():
     ngrammer = Ngrammer(database="production")
 
     # es setup
-    strans_kwargs={'filename':'arxiv.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['id']}
+    strans_kwargs={'filename':'arxiv.json', 'ignore':['id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -164,9 +160,9 @@ def run():
             countries = set(grid_countries[inst_id]
                             for inst_id in good_institutes
                             if inst_id in grid_countries)
-            row['categories'], _, _ = hierarchy_field(cats)
-            row['fos'], _, _ = hierarchy_field(fos)
-            row['countries'], _, _ = hierarchy_field(countries)
+            row['nested_categories'], _, _ = hierarchy_field(cats)
+            row['fields_of_study'], _, _ = hierarchy_field(fos)
+            row['nested_location'], _, _ = hierarchy_field(countries)
 
             # Pull out international institute info
             has_mn = any(is_multinational(inst,
@@ -216,8 +212,8 @@ if __name__ == "__main__":
 
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es('dev', True, True,
-                                 dataset='arxiv')
+        es, es_config = setup_es(endpoint='arxlive', dataset='arxiv',
+                                 production=False, drop_and_recreate=True)                                 
         environ = {'batch_file': ('ArxivESTask-2019-09-19-'
                                   'False-1568888970724721.json'),
                    'config': ('/home/ec2-user/nesta-eu/nesta/'

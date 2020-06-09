@@ -25,7 +25,6 @@ from nesta.core.orms.nih_orm import Projects
 def run():
     start_index = os.environ["BATCHPAR_start_index"]
     end_index = os.environ["BATCHPAR_end_index"]
-    #mysqldb_config = os.environ["BATCHPAR_config"]
     es_host = os.environ["BATCHPAR_outinfo"]
     es_port = os.environ["BATCHPAR_out_port"]
     es_index = os.environ["BATCHPAR_out_index"]
@@ -87,13 +86,8 @@ def run():
     df['total_cost_currency'] = 'USD'
 
     # output to elasticsearch
-    field_null_mapping = load_json_from_pathstub("tier_1/field_null_mappings/",
-                                                 "health_scanner.json")
-    strans_kwargs={'filename':'nih.json',
-                   'from_key':'tier_0',
-                   'to_key':'tier_1',
-                   'ignore':['application_id']}
-
+    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
+    strans_kwargs = {'filename': 'nih.json', 'ignore': ['application_id']}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -143,15 +137,15 @@ if __name__ == '__main__':
         pars = {'start_index': '2001360',
                 'end_index': '2003940',
                 'db': 'dev',
+                'done': 'False',
                 'config': (f'{os.environ["HOME"]}/nesta/nesta/'
                            'core/config/mysqldb.config'),
-                'done': 'False',
                 'outinfo': ('https://search-health-scanner-'
                             '5cs7g52446h7qscocqmiky5dn4.'
                             'eu-west-2.es.amazonaws.com'),
                 'out_index': 'nih_dev',
                 'out_type': '_doc',
-                'out_port': '_doc',
+                'out_port': '_443',
                 'aws_auth_region': 'eu-west-2',
                 'entity_type': 'paper',
                 'test': 'False'}

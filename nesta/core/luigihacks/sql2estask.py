@@ -31,6 +31,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         process_batch_size (int): Number of rows to process in a batch.
         drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
         dataset (str): Name of the elasticsearch dataset.
+        endpoint (str): Name of the AWS ES domain endpoint.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
         filter (SqlAlchemy conditional statement): A conditional statement, to be passed
                                                    to query.filter(). This allows for
@@ -45,8 +46,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     db_section = luigi.Parameter(default="mysqldb")
     process_batch_size = luigi.IntParameter(default=10000)
     drop_and_recreate = luigi.BoolParameter(default=False)
-    aliases = luigi.Parameter(default=None)
     dataset = luigi.Parameter()
+    endpoint = luigi.Parameter()
     id_field = luigi.Parameter()
     filter = luigi.Parameter(default=None)
     entity_type = luigi.Parameter()
@@ -75,11 +76,10 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                                   database)
 
         # Elasticsearch setup
-        es_mode = 'dev' if self.test else 'prod'
-        es, es_config = setup_es(es_mode, self.test,
-                                 self.drop_and_recreate,
+        es, es_config = setup_es(endpoint=self.endpoint,
                                  dataset=self.dataset,
-                                 aliases=self.aliases)
+                                 production=not self.test,
+                                 drop_and_recreate=self.drop_and_recreate)
 
         # Get set of existing ids from elasticsearch via scroll
         existing_ids = get_es_ids(es, es_config)
@@ -122,7 +122,7 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                 'routine_id': self.routine_id
             }
             params.update(self.kwargs)
-            
+
             logging.info(params)
             job_params.append(params)
             if self.test and count > 1:
