@@ -2,24 +2,45 @@
     "mappings": {
         "dynamic": "strict",
         "properties": {
-            "cost_ecFunding_project": {
-                "type": "integer"
-            },
-            "cost_total_project": {
-                "type": "integer"
-            },
-            "date_ended_project": {
-                "format": "yyyy-MM-dd",
+            "date_end_project": {
                 "type": "date"
             },
-            "date_started_project": {
-                "format": "yyyy-MM-dd",
+            "date_start_project": {
                 "type": "date"
             },
-            "metric_novelty_project": {
-                "type": "float"
+            "json_funding_project": {
+                "properties": {
+                    "amount": {
+                        "type": "integer"
+                    },
+                    "category": {
+                        "type": "keyword"
+                    },
+                    "currencyCode": {
+                        "type": "keyword"
+                    },
+                    "end": {
+                        "type": "date"
+                    },
+                    "start": {
+                        "type": "date"
+                    }
+                },
+                "type": "nested"
             },
-            "name_framework_project": {
+            "json_outcomes_project": {
+                "dynamic": true,
+                "type": "nested"
+            },
+            "name_leadOrgDepartment_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "name_of_funder": {
                 "fields": {
                     "keyword": {
                         "type": "keyword"
@@ -30,10 +51,47 @@
             "status_of_project": {
                 "type": "keyword"
             },
-            "terms_tokens_entity": {
+            "terms_continent_project": {
                 "type": "keyword"
             },
-            "textBody_description_project": {
+            "terms_countries_project": {
+                "type": "keyword"
+            },
+            "terms_instituteIds_project": {
+                "type": "keyword"
+            },
+            "terms_institutes_project": {
+                "type": "keyword"
+            },
+            "terms_iso2_project": {
+                "type": "keyword"
+            },
+            "terms_topics_project": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_abstract_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_potentialImpact_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_techAbstract_project": {
                 "fields": {
                     "keyword": {
                         "type": "keyword"
@@ -49,19 +107,8 @@
                 },
                 "type": "text"
             },
-            "type_of_entity": {
+            "type_category_funding": {
                 "type": "keyword"
-            },
-            "url_of_project": {
-                "fields": {
-                    "keyword": {
-                        "type": "keyword"
-                    }
-                },
-                "type": "text"
-            },
-            "year_of_project": {
-                "type": "integer"
             }
         }
     }
