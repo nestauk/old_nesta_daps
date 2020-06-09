@@ -56,10 +56,7 @@
             "fieldsOfStudy",
             "fiscal",
             "framework",
-<<<<<<< HEAD:nesta/core/schemas/tier_1/ontology.json
             "funding",
-=======
->>>>>>> dev:nesta/core/schemas/tier_1/ontology.json
             "health",
             "institutes",
             "instituteIds",
@@ -69,10 +66,7 @@
             "iso3",
             "isoNumeric",
             "last",
-<<<<<<< HEAD:nesta/core/schemas/tier_1/ontology.json
             "leadOrgDepartment",
-=======
->>>>>>> dev:nesta/core/schemas/tier_1/ontology.json
             "linkedIn",
             "location",
             "member",
@@ -86,17 +80,11 @@
             "nuts2",
             "nuts3",
             "of",
-<<<<<<< HEAD:nesta/core/schemas/tier_1/ontology.json
             "outcomes",
             "parent",
             "personCountry",
             "personNuts",
             "potentialImpact",
-=======
-            "parent",
-            "personCountry",
-            "personNuts",
->>>>>>> dev:nesta/core/schemas/tier_1/ontology.json
             "region",
             "regions",
             "rhodonite",
@@ -107,10 +95,7 @@
             "state",
             "subcategory",
             "summary",
-<<<<<<< HEAD:nesta/core/schemas/tier_1/ontology.json
             "techAbstract",
-=======
->>>>>>> dev:nesta/core/schemas/tier_1/ontology.json
             "techFieldNumber",
             "tokens",
             "topics",
@@ -134,10 +119,7 @@
             "country",
             "description",
             "entity",
-<<<<<<< HEAD:nesta/core/schemas/tier_1/ontology.json
             "funder",
-=======
->>>>>>> dev:nesta/core/schemas/tier_1/ontology.json
             "funders",
             "funding",
             "group",
