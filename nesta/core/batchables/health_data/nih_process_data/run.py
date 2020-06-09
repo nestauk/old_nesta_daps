@@ -25,7 +25,6 @@ from nesta.core.orms.nih_orm import Projects
 def run():
     start_index = os.environ["BATCHPAR_start_index"]
     end_index = os.environ["BATCHPAR_end_index"]
-    #mysqldb_config = os.environ["BATCHPAR_config"]
     es_host = os.environ["BATCHPAR_outinfo"]
     es_port = os.environ["BATCHPAR_out_port"]
     es_index = os.environ["BATCHPAR_out_index"]
@@ -138,15 +137,15 @@ if __name__ == '__main__':
         pars = {'start_index': '2001360',
                 'end_index': '2003940',
                 'db': 'dev',
+                'done': 'False',
                 'config': (f'{os.environ["HOME"]}/nesta/nesta/'
                            'core/config/mysqldb.config'),
-                'done': 'False',
                 'outinfo': ('https://search-health-scanner-'
                             '5cs7g52446h7qscocqmiky5dn4.'
                             'eu-west-2.es.amazonaws.com'),
                 'out_index': 'nih_dev',
                 'out_type': '_doc',
-                'out_port': '_doc',
+                'out_port': '_443',
                 'aws_auth_region': 'eu-west-2',
                 'entity_type': 'paper',
                 'test': 'False'}

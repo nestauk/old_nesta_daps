@@ -56,11 +56,11 @@ def country_iso_code_dataframe(df, country='country'):
         except KeyError:
             # some fallback method could go here
             pass
-        else:
-            df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
-            df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
-            df.at[idx, 'country_numeric'] = country_codes.numeric
-            df.at[idx, 'continent'] = continents.get(country_codes.alpha_2)
+    if country_codes is not None:
+        df.at[idx, 'country_alpha_2'] = country_codes.alpha_2
+        df.at[idx, 'country_alpha_3'] = country_codes.alpha_3
+        df.at[idx, 'country_numeric'] = country_codes.numeric
+        df.at[idx, 'continent'] = continents.get(country_codes.alpha_2)
 
     return df
 
