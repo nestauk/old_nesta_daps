@@ -24,6 +24,7 @@ def test_validate(ontology):
     firsts, middles, lasts = [], [], []
     # Test each dataset for valid ontology
     for filename in os.listdir(dataset_dirname):
+        print(filename)
         filename = os.path.join(dataset_dirname, filename)
         with open(filename) as f:
             dataset = json.load(f)
