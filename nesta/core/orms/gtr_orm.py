@@ -72,7 +72,7 @@ class Participant(Base):
 
 
 class OrganisationLocation(Base):
-    """This table is not in the orginal data. It contains all organisations and location
+    """This table is not in the original data. It contains all organisations and location
     details where it has been possible to ascertain them."""
     __tablename__ = "gtr_organisations_locations"
 
