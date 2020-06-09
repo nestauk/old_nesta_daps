@@ -49,7 +49,7 @@ def country_iso_code_dataframe(df, country='country'):
     df['continent'] = None
 
     continents = alpha2_to_continent_mapping()
-
+    country_codes = None
     for idx, row in df.iterrows():
         try:
             country_codes = country_iso_code(row[country])
