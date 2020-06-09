@@ -1,32 +1,24 @@
 {
     "entity_type": "project",
     "tier0_to_tier1": {
-	"id": "id_of_project",
-	"end": "date_end_project",
-	"title": "title_of_project",
-	"status": "status_of_project",
-	"grantCategory": "type_category_funding",
-	"leadFunder":  "name_of_funder",
-	"abstractText": "textBody_abstract_project",
-	"start": "date_start_project",
-	"leadOrganisationDepartment": "name_leadOrgDepartment_project",
-	"potentialImpact": "textBody_potentialImpact_project",
-	"techAbstractText": "textBody_techAbstract_project"
-	"_terms_institutes_project": "terms_institutes_project",
-	"_terms_iso2_project": "terms_iso2_project",
-	"_terms_countries_project": "terms_countries_project",	
-	"_terms_continent_project": "terms_continent_project",	
-	"_terms_instituteIds_project": "terms_instituteIds_project",
-    }
-
-    "entity_type": "organisation",
-    "tier0_to_tier1": {
-	"id": "id_of_organisation",
-	"name": "name_of_organisation",
-	"country_name": "placeName_country_organisation",
-	"country_alpha_2": "id_iso2_organisation",
-	"country_alpha_3": "id_iso3_organisation",
-	"continent": "placeName_continent_organisation",
-	"coordinate": "coordinate_of_organisation"
+        "_json_funding_project": "json_funding_project",
+        "_json_outcomes_project": "json_outcomes_project",
+        "_terms_continent_project": "terms_continent_project",
+        "_terms_countries_project": "terms_countries_project",
+        "_terms_instituteIds_project": "terms_instituteIds_project",
+        "_terms_institutes_project": "terms_institutes_project",
+        "_terms_iso2_project": "terms_iso2_project",
+        "_terms_topics_project": "terms_topics_project",
+        "abstractText": "textBody_abstract_project",
+        "end": "date_end_project",
+        "grantCategory": "type_category_funding",
+        "id": "id_of_project",
+        "leadFunder": "name_of_funder",
+        "leadOrganisationDepartment": "name_leadOrgDepartment_project",
+        "potentialImpact": "textBody_potentialImpact_project",
+        "start": "date_start_project",
+        "status": "status_of_project",
+        "techAbstractText": "textBody_techAbstract_project",
+        "title": "title_of_project"
     }
 }
