@@ -1,21 +1,26 @@
 {
     "mappings": {
         "_doc": {
+            "dynamic": "strict",
             "properties": {
-                "booleanFlag_multinational_article": {
-                    "type": "boolean"
-                },
-                "count_citations_article": {
+                "cost_ecFunding_project": {
                     "type": "integer"
                 },
-                "id_digitalObjectIdentifier_article": {
-                    "type": "keyword"
+                "cost_total_project": {
+                    "type": "integer"
                 },
-                "metric_novelty_article": {
+                "date_ended_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "date_started_project": {
+                    "format": "yyyy-MM-dd",
+                    "type": "date"
+                },
+                "metric_novelty_project": {
                     "type": "float"
                 },
-                "terms_authors_article": {
-                    "analyzer": "terms_analyzer",
+                "name_framework_project": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -23,8 +28,13 @@
                     },
                     "type": "text"
                 },
-                "terms_institutes_article": {
-                    "analyzer": "terms_analyzer",
+                "status_of_project": {
+                    "type": "keyword"
+                },
+                "terms_tokens_entity": {
+                    "type": "keyword"
+                },
+                "textBody_description_project": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -32,7 +42,7 @@
                     },
                     "type": "text"
                 },
-                "textBody_abstract_article": {
+                "title_of_project": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -40,7 +50,10 @@
                     },
                     "type": "text"
                 },
-                "title_of_article": {
+                "type_of_entity": {
+                    "type": "keyword"
+                },
+                "url_of_project": {
                     "fields": {
                         "keyword": {
                             "type": "keyword"
@@ -48,18 +61,12 @@
                     },
                     "type": "text"
                 },
-                "url_of_article": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "year_of_article": {
+                "year_of_project": {
                     "type": "integer"
                 }
             }
-        }
+        },
+        "dynamic": null,
+        "properties": null
     }
 }

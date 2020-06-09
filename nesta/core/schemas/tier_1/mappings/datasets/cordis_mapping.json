@@ -1,6 +1,5 @@
 {
-    "mappings": {	
-	"_doc": null,
+    "mappings": {
         "dynamic": "strict",
         "properties": {
             "cost_ecFunding_project": {

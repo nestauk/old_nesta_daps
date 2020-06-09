@@ -58,8 +58,8 @@ class RootTask(luigi.WrapperTask):
 
         params = (('arxiv', 'article', Article.id),
                   ('companies', 'company', Organization.id),
-                  ('patstat', 'patent', ApplnFamily.docdb_family_id),)
-                  #('cordis', 'project', Project.rcn),)  # Keep commented out until ES7 integration
+                  ('patstat', 'patent', ApplnFamily.docdb_family_id),
+                  ('cordis', 'project', Project.rcn),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
