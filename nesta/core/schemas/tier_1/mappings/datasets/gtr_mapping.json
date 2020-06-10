@@ -61,7 +61,13 @@
                 "type": "keyword"
             },
             "terms_institutes_project": {
-                "type": "keyword"
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
             },
             "terms_iso2_project": {
                 "type": "keyword"
