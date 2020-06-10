@@ -16,13 +16,13 @@
                     "category": {
                         "type": "keyword"
                     },
-                    "currencyCode": {
+                    "currency_code": {
                         "type": "keyword"
                     },
-                    "end": {
+                    "end_date": {
                         "type": "date"
                     },
-                    "start": {
+                    "start_date": {
                         "type": "date"
                     }
                 },
