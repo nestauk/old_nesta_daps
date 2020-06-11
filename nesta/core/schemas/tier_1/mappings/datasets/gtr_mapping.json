@@ -2,9 +2,9 @@
     "mappings": {
         "dynamic": "strict",
         "properties": {
-	    "coordinate_institutes_project" {
-		"type": "geo_point"
-	    }
+            "coordinate_institutes_project": {
+                "type": "geo_point"
+            },
             "date_end_project": {
                 "type": "date"
             },
