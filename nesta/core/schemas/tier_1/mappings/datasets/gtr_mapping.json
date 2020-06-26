@@ -1,0 +1,124 @@
+{
+    "mappings": {
+        "dynamic": "strict",
+        "properties": {
+            "coordinate_institutes_project": {
+                "type": "geo_point"
+            },
+            "date_end_project": {
+                "type": "date"
+            },
+            "date_start_project": {
+                "type": "date"
+            },
+            "json_funding_project": {
+                "properties": {
+                    "amount": {
+                        "type": "integer"
+                    },
+                    "category": {
+                        "type": "keyword"
+                    },
+                    "currency_code": {
+                        "type": "keyword"
+                    },
+                    "end_date": {
+                        "type": "date"
+                    },
+                    "start_date": {
+                        "type": "date"
+                    }
+                },
+                "type": "nested"
+            },
+            "json_outcomes_project": {
+                "dynamic": true,
+                "type": "nested"
+            },
+            "name_leadOrgDepartment_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "name_of_funder": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "status_of_project": {
+                "type": "keyword"
+            },
+            "terms_continent_project": {
+                "type": "keyword"
+            },
+            "terms_countries_project": {
+                "type": "keyword"
+            },
+            "terms_instituteIds_project": {
+                "type": "keyword"
+            },
+            "terms_institutes_project": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "terms_iso2_project": {
+                "type": "keyword"
+            },
+            "terms_topics_project": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_abstract_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_potentialImpact_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "textBody_techAbstract_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "title_of_project": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
+            "type_category_funding": {
+                "type": "keyword"
+            }
+        }
+    }
+}

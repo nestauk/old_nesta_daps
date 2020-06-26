@@ -72,7 +72,7 @@ class Participant(Base):
 
 
 class OrganisationLocation(Base):
-    """This table is not in the orginal data. It contains all organisations and location
+    """This table is not in the original data. It contains all organisations and location
     details where it has been possible to ascertain them."""
     __tablename__ = "gtr_organisations_locations"
 
@@ -292,7 +292,7 @@ class SoftwareAndTechnicalProducts(Base):
 
 
 class DocumentClusters(Base):
-    __tablename__ = 'grt_doc_clusters'
+    __tablename__ = 'gtr_doc_clusters'
 
     doc_id = Column(VARCHAR(36), ForeignKey('gtr_projects.id'), primary_key=True)
     cluster_id = Column(INT, primary_key=True, index=True)
