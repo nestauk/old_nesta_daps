@@ -1,0 +1,25 @@
+{
+    "entity_type": "project",
+    "tier0_to_tier1": {
+        "_continents": "terms_continent_project",
+        "_countries": "terms_countries_project",
+        "_funds": "json_funding_project",
+        "_institute_ids": "terms_instituteIds_project",
+        "_institutes": "terms_institutes_project",
+        "_iso2s": "terms_iso2_project",
+        "_locations": "coordinate_institutes_project",
+        "_outcomes": "json_outcomes_project",
+        "_topics": "terms_topics_project",
+        "abstractText": "textBody_abstract_project",
+        "end": "date_end_project",
+        "grantCategory": "type_category_funding",
+        "id": "id_of_project",
+        "leadFunder": "name_of_funder",
+        "leadOrganisationDepartment": "name_leadOrgDepartment_project",
+        "potentialImpact": "textBody_potentialImpact_project",
+        "start": "date_start_project",
+        "status": "status_of_project",
+        "techAbstractText": "textBody_techAbstract_project",
+        "title": "title_of_project"
+    }
+}
