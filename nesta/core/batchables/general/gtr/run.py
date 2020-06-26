@@ -16,24 +16,39 @@ from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
-from nesta.core.orms.orm_utils import object_to_dict
+from nesta.core.orms.orm_utils import object_to_dict, get_class_by_tablename
 from nesta.core.orms.gtr_orm import Base, Projects, LinkTable, OrganisationLocation
-from collections import defaultdict 
-
- 
-def extract_funds(gtr_funds):  
-    funds = {}  
-    for row in gtr_funds:  
-        row = {k:row[k] for k in row if k != 'id'}  
-        row['start_date'] = row.pop('start') 
-        row['end_date'] = row.pop('end')         
-        composite_key = (row[k] for k in ('start_date', 'end_date', 'category', 
-                                          'amount', 'currencyCode'))         
-        funds[tuple(composite_key)] = row         
-    return [row for _, row in funds.items()]  
+from collections import defaultdict
 
 
-def get_linked_rows(links):
+def extract_funds(gtr_funds):
+    """Extract and deduplicate funding information
+
+    Args:
+        gtr_funds (list of dict): Raw GtR funding information for a single project
+    Returns:
+        _gtr_funds (list of dict): Deduplicated GtR funding information, ready for ingestion to ES
+    """
+    funds = {}
+    for row in gtr_funds:
+        row = {k:row[k] for k in row if k != 'id'}
+        row['start_date'] = row.pop('start')
+        row['end_date'] = row.pop('end')
+        composite_key = (row[k] for k in ('start_date', 'end_date', 'category',
+                                          'amount', 'currencyCode'))
+        funds[tuple(composite_key)] = row
+    return [row for _, row in funds.items()]
+
+
+def get_linked_rows(session, links):
+    """Pull rows out of the database from various tables,
+    As indicated by the link table.
+
+    Args:
+        links (dict): Mapping of table name to a list of PKs in that table
+    Returns:
+        rows (dict): Mapping of table name to a list of rows of data from that table
+    """
     linked_rows = defaultdict(list)
     for table_name, ids in links.items():
         _class = get_class_by_tablename(Base, table_name)
@@ -43,6 +58,8 @@ def get_linked_rows(links):
                                     for _obj in (session.query(_class)\
                                                  .filter(_class.id.in_(ids))\
                                                  .all())]
+    return linked_rows
+
 
 def reformat_row(row):
     """Prepare raw data for ingestion to ES.
@@ -53,31 +70,31 @@ def reformat_row(row):
         row (dict): Reformatted row of data
     """
     # Extract general info
-    row['funds'] = extract_funds(linked_rows.pop('gtr_funds')) 
-    row['outcomes'] = linked_rows['gtr_outcomes'] 
+    row['funds'] = extract_funds(linked_rows.pop('gtr_funds'))
+    row['outcomes'] = linked_rows['gtr_outcomes']
     row['topics'] = [r['text'] for r in linked_rows['gtr_topic'] if r['text'] != 'Unclassified']
-    row['institutes'] = [r['name'] for r in linked_rows['gtr_organisations']] 
-    row['institute_ids'] = [r['id'] for r in linked_rows['gtr_organisations']] 
+    row['institutes'] = [r['name'] for r in linked_rows['gtr_organisations']]
+    row['institute_ids'] = [r['id'] for r in linked_rows['gtr_organisations']]
 
     # Extract geographic info
     org_ids = set(row['institute_ids']) - set(locations.keys())
     row['countries'] = [locations[org_id]['country_name'] for org_id in org_ids]
     row['country_alpha_2'] = [locations[org_id]['country_alpha_2'] for org_id in org_ids]
     row['continent'] = [locations[org_id]['continent'] for org_id in org_ids]
-    row['locations'] = [{'lat': float(locations[org_id]['latitude']), 
+    row['locations'] = [{'lat': float(locations[org_id]['latitude']),
                          'lon': float(locations[org_id]['longitude'])} for org_id in org_ids]
     return row
 
 
-def get_project_links(project_ids):
-    project_links = defaultdict(lambda: defaultdict(list)) 
+def get_project_links(session, project_ids):
+    project_links = defaultdict(lambda: defaultdict(list))
     for obj in session.query(LinkTable).filter(LinkTable.project_id.in_(project_ids)).all():
-        row = object_to_dict(obj)        
+        row = object_to_dict(obj)
         project_links[row['project_id']][row['table_name']].append(row['id'])
     return project_links
 
 
-def get_org_locations():
+def get_org_locations(session):
     locations = {}
     for obj in session.query(OrganisationLocation).all():
         row = object_to_dict(obj)
@@ -129,14 +146,14 @@ def run():
     #
     logging.info('Processing rows')
     with db_session(engine) as session:
-        locations = get_org_locations()
-        project_links = get_project_links(project_ids)        
+        locations = get_org_locations(session)
+        project_links = get_project_links(session, project_ids)
         for count, obj in enumerate((session.query(Projects)
                                      .filter(Projects.id.in_(project_ids))
                                      .all())):
             row = object_to_dict(row)
-            linked_rows = get_linked_rows(project_links.pop(row['id']))
-            row = reformat_row(row, links, locations)            
+            linked_rows = get_linked_rows(session, project_links.pop(row['id']))
+            row = reformat_row(row, links, locations)
             es.index(index=es_index, id=row.pop('id'), body=row)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to "
@@ -148,7 +165,7 @@ if __name__ == "__main__":
     if 'BATCHPAR_outinfo' not in os.environ:
         from nesta.core.orms.orm_utils import setup_es
         from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
-        es, es_config = setup_es(production=False, endpoint='general', 
+        es, es_config = setup_es(production=False, endpoint='general',
                                  dataset='gtr', drop_and_recreate=True)
         environ = {'config': find_filepath_from_pathstub('mysqldb.config'),
                    'batch_file' : (''),
