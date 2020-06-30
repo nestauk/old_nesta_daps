@@ -172,7 +172,7 @@ def run():
         for count, obj in enumerate((session.query(Projects)
                                      .filter(Projects.id.in_(project_ids))
                                      .all())):
-            row = object_to_dict(row)
+            row = object_to_dict(obj)
             linked_rows = get_linked_rows(session, project_links.pop(row['id']))
             row = reformat_row(row, linked_rows, locations)
             es.index(index=es_index, id=row.pop('id'), body=row)

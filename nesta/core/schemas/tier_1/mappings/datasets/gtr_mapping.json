@@ -1,6 +1,6 @@
 {
     "mappings": {
-        "dynamic": "strict",
+        "_doc": null,
         "properties": {
             "coordinate_institutes_project": {
                 "type": "geo_point"
