@@ -42,9 +42,10 @@ def extract_funds(gtr_funds):
 
 def get_linked_rows(session, links):
     """Pull rows out of the database from various tables,
-    As indicated by the link table.
+    as indicated by the link table.
 
     Args:
+        session (SqlAlchemy session): Open session from which to query the database.
         links (dict): Mapping of table name to a list of PKs in that table
     Returns:
         rows (dict): Mapping of table name to a list of rows of data from that table
@@ -61,11 +62,13 @@ def get_linked_rows(session, links):
     return linked_rows
 
 
-def reformat_row(row):
+def reformat_row(row, linked_rows, locations):
     """Prepare raw data for ingestion to ES.
 
     Args:
         row (dict): Row of data.
+        linked_rows (dict): Mapping of table name to a list of rows of data from that table
+        locations (dict): Mapping of organisation id to location data
     Returns:
         row (dict): Reformatted row of data
     """
@@ -77,7 +80,7 @@ def reformat_row(row):
     row['institute_ids'] = [r['id'] for r in linked_rows['gtr_organisations']]
 
     # Extract geographic info
-    org_ids = set(row['institute_ids']) - set(locations.keys())
+    org_ids = list(row['institute_ids'])
     row['countries'] = [locations[org_id]['country_name'] for org_id in org_ids]
     row['country_alpha_2'] = [locations[org_id]['country_alpha_2'] for org_id in org_ids]
     row['continent'] = [locations[org_id]['continent'] for org_id in org_ids]
@@ -87,6 +90,16 @@ def reformat_row(row):
 
 
 def get_project_links(session, project_ids):
+    """Generate the look-up table of table_name to object ids, by project id, 
+    as a prepatory stage for retrieving the "rows" by id from each table_name, 
+    by project id.
+
+    Args:
+        session (SqlAlchemy session): Open session from which to query the database.
+        project_ids (list-like): List of project ids to extract linked entities from.
+    Returns:
+        linked_rows (dict): Mapping of table name to a list of row ids of data in that table
+    """
     project_links = defaultdict(lambda: defaultdict(list))
     for obj in session.query(LinkTable).filter(LinkTable.project_id.in_(project_ids)).all():
         row = object_to_dict(obj)
@@ -95,11 +108,19 @@ def get_project_links(session, project_ids):
 
 
 def get_org_locations(session):
+    """Retrieve look-up of all organisation ids to location metadata.
+
+    Args:
+        session (SqlAlchemy session): Open session from which to query the database.
+    Returns:
+        locations (nested dict): Mapping of organisation id to location metadata.
+    """
     locations = {}
     for obj in session.query(OrganisationLocation).all():
         row = object_to_dict(obj)
         locations[row.pop('id')] = row
     return locations
+
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
@@ -153,7 +174,7 @@ def run():
                                      .all())):
             row = object_to_dict(row)
             linked_rows = get_linked_rows(session, project_links.pop(row['id']))
-            row = reformat_row(row, links, locations)
+            row = reformat_row(row, linked_rows, locations)
             es.index(index=es_index, id=row.pop('id'), body=row)
             if not count % 1000:
                 logging.info(f"{count} rows loaded to "
