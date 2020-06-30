@@ -16,15 +16,15 @@ from datetime import datetime as dt
 import luigi
 
 S3_BUCKET='nesta-production-intermediate'
+ENV_FILES = ['mysqldb.config', 'elasticsearch.config',
+             'nesta']
+ENDPOINT = 'general'
 
 def kwarg_maker(dataset, routine_id):
-    env_files=[f3p('mysqldb.config'),
-               f3p('elasticsearch.config'),
-               f3p(f'tier_1/datasets/{dataset}.json'),
-               f3p('nesta')]
+    env_files=list(f3p(f) for f in ENV_FILES) + [f3p(f'tier_1/datasets/{dataset}.json')]
     batchable=f3p(f'batchables/general/{dataset}')
     return dict(dataset=dataset,
-                endpoint='general',
+                endpoint=ENDPOINT,
                 routine_id=f'{routine_id}_{dataset}',
                 env_files=env_files,
                 batchable=batchable)
