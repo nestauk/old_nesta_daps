@@ -17,9 +17,11 @@
                         "type": "keyword"
                     },
                     "end_date": {
+                        "format": "strict_date_hour_minute_second",
                         "type": "date"
                     },
                     "start_date": {
+                        "format": "strict_date_hour_minute_second",
                         "type": "date"
                     }
                 },
@@ -112,6 +114,15 @@
             },
             "type_category_funding": {
                 "type": "keyword"
+            }
+        }
+    },
+    "settings": {
+        "index": {
+            "mapping": {
+                "nested_objects": {
+                    "limit": 13400
+                }
             }
         }
     }

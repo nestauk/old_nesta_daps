@@ -18,7 +18,7 @@ from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict, get_class_by_tablename
 from nesta.core.orms.gtr_orm import Base, Projects, LinkTable, OrganisationLocation
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 
 def default_pop(dictobj, key, default={}):
@@ -60,13 +60,15 @@ def get_linked_rows(session, links):
     """
     linked_rows = defaultdict(list)
     for table_name, ids in links.items():
-        _class = get_class_by_tablename(Base, table_name)
-        if table_name.startswith('gtr_outcomes'):
-            table_name = 'gtr_outcomes'
-        linked_rows[table_name] += [object_to_dict(_obj)
-                                    for _obj in (session.query(_class)\
-                                                 .filter(_class.id.in_(ids))\
-                                                 .all())]
+        if table_name.startswith('gtr_outcomes'):  # Just make counts of GtR outcomes for now as
+                                                   # they otherwise lead to a mapping explosion
+            linked_rows['gtr_outcomes'] += [table_name[13:]]*len(ids)  # Will make a count of these later
+        else:
+            _class = get_class_by_tablename(Base, table_name)
+            rows = [object_to_dict(_obj)
+                    for _obj in (session.query(_class)\
+                                 .filter(_class.id.in_(ids)).all())]
+            linked_rows[table_name] += rows
     return linked_rows
 
 
@@ -83,7 +85,7 @@ def reformat_row(row, linked_rows, locations):
     # Extract general info
     gtr_funds = default_pop(linked_rows, 'gtr_funds')
     row['_json_funding_project'] = extract_funds(gtr_funds)
-    row['_json_outcomes_project'] = linked_rows['gtr_outcomes']
+    row['_json_outcomes_project'] = dict(Counter(linked_rows['gtr_outcomes']))
     row['_terms_topics_project'] = [r['text'] for r in linked_rows['gtr_topic'] if r['text'] != 'Unclassified']
     row['_terms_institutes_project'] = [r['name'] for r in linked_rows['gtr_organisations']]
     row['_terms_instituteIds_project'] = [r['id'] for r in linked_rows['gtr_organisations']]

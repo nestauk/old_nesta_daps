@@ -53,13 +53,15 @@ def test_extract_funds(gtr_funds):
 @mock.patch(PATH.format('object_to_dict'))
 def test_get_linked_rows(mocked_obj_to_dict, mocked_get_class, links):
     session = mock.MagicMock()
-    outputs = [[None]*len(ids) for ids in links.values()]
+    outputs = [[None]*len(ids) for table_name, ids in links.items() 
+               if not table_name.startswith('gtr_outcomes')]
     session.query().filter().all.side_effect = outputs
     results = get_linked_rows(session, links)
     assert set(results.keys()) == set(['gtr_aTable', 'gtr_anotherTable', 'gtr_outcomes'])
     assert len(results['gtr_aTable']) == len(links['gtr_aTable'])
     assert len(results['gtr_anotherTable']) == len(links['gtr_anotherTable'])
-    assert len(results['gtr_outcomes']) == len(links['gtr_outcomes_outcomeA']) + len(links['gtr_outcomes_outcomeB'])
+    assert len(results['gtr_outcomes']) == 7  # total outcomes
+    assert type(results['gtr_outcomes']) == list
 
 
 @mock.patch(PATH.format('extract_funds'), return_value=['the funds!'])
@@ -68,7 +70,7 @@ def test_reformat_row(mocked_extract_funds):
     linked_rows = {'gtr_funds': None,  # Mocked out
                    'gtr_topic': [{'text': 'one topic'}, {'text': 'Unclassified'}, 
                                  {'text': 'a topic'}, {'text': 'another topic'}],
-                   'gtr_outcomes': 'some outcomes',
+                   'gtr_outcomes': ['some outcomes', 'some outcomes', 'some other outcomes'],
                    'gtr_organisations': [{'id': 'first org', 'name':'an org name'}]}
                    
     locations = {'first org': {'country_name': 'Japan', 'country_alpha_2': 'jp',
@@ -78,15 +80,15 @@ def test_reformat_row(mocked_extract_funds):
     
     row = reformat_row(row, linked_rows, locations)
     assert row == {'something': 'value',
-                   'funds': ['the funds!'],
-                   'outcomes': 'some outcomes',
-                   'topics': ['one topic', 'a topic', 'another topic'],
-                   'institutes': ['an org name'],                   
-                   'institute_ids': ['first org'],
-                   'countries': ['Japan'],
-                   'country_alpha_2': ['jp'],
-                   'continent': ['Asia'],
-                   'locations': [{'lat': 1000, 'lon': 200}]}
+                   '_json_funding_project': ['the funds!'],
+                   '_json_outcomes_project': {'some outcomes': 2, 'some other outcomes': 1},
+                   '_terms_topics_project': ['one topic', 'a topic', 'another topic'],
+                   '_terms_institutes_project': ['an org name'],                   
+                   '_terms_instituteIds_project': ['first org'],
+                   '_terms_countries_project': ['Japan'],
+                   '_terms_iso2_project': ['jp'],
+                   '_terms_continent_project': ['Asia'],
+                   '_coordinate_institutes_project': [{'lat': 1000, 'lon': 200}]}
                  
 
 @mock.patch(PATH.format('LinkTable'))
