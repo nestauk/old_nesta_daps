@@ -21,6 +21,14 @@ from nesta.core.orms.gtr_orm import Base, Projects, LinkTable, OrganisationLocat
 from collections import defaultdict
 
 
+def default_pop(dictobj, key, default={}):
+    try:
+        default = dictobj.pop(key)
+    except KeyError:
+        pass
+    return default
+
+
 def extract_funds(gtr_funds):
     """Extract and deduplicate funding information
 
@@ -73,7 +81,8 @@ def reformat_row(row, linked_rows, locations):
         row (dict): Reformatted row of data
     """
     # Extract general info
-    row['funds'] = extract_funds(linked_rows.pop('gtr_funds'))
+    gtr_funds = default_pop(linked_rows, 'gtr_funds')
+    row['funds'] = extract_funds(gtr_funds)
     row['outcomes'] = linked_rows['gtr_outcomes']
     row['topics'] = [r['text'] for r in linked_rows['gtr_topic'] if r['text'] != 'Unclassified']
     row['institutes'] = [r['name'] for r in linked_rows['gtr_organisations']]
@@ -81,11 +90,18 @@ def reformat_row(row, linked_rows, locations):
 
     # Extract geographic info
     org_ids = list(row['institute_ids'])
-    row['countries'] = [locations[org_id]['country_name'] for org_id in org_ids]
-    row['country_alpha_2'] = [locations[org_id]['country_alpha_2'] for org_id in org_ids]
-    row['continent'] = [locations[org_id]['continent'] for org_id in org_ids]
-    row['locations'] = [{'lat': float(locations[org_id]['latitude']),
-                         'lon': float(locations[org_id]['longitude'])} for org_id in org_ids]
+    _locations = [loc for org_id, loc in locations.items() if org_id in org_ids]
+    row['countries'] = [loc['country_name'] for loc in _locations]
+    row['country_alpha_2'] = [loc['country_alpha_2'] for loc in _locations]
+    row['continent'] = [loc['continent'] for loc in _locations]
+
+    row['locations'] = []
+    for loc in _locations:
+        lat = loc['latitude']
+        lon = loc['longitude']
+        if lat is None or lon is None:
+            continue
+        row['locations'].append({'lat': float(lat), 'lon': float(lon)})
     return row
 
 
@@ -173,7 +189,8 @@ def run():
                                      .filter(Projects.id.in_(project_ids))
                                      .all())):
             row = object_to_dict(obj)
-            linked_rows = get_linked_rows(session, project_links.pop(row['id']))
+            links = default_pop(project_links, row['id'])
+            linked_rows = get_linked_rows(session, links)
             row = reformat_row(row, linked_rows, locations)
             es.index(index=es_index, id=row.pop('id'), body=row)
             if not count % 1000:

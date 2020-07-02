@@ -5,12 +5,6 @@
             "coordinate_institutes_project": {
                 "type": "geo_point"
             },
-            "date_end_project": {
-                "type": "date"
-            },
-            "date_start_project": {
-                "type": "date"
-            },
             "json_funding_project": {
                 "properties": {
                     "amount": {

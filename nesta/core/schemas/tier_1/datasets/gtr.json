@@ -10,13 +10,11 @@
         "_terms_iso2_project": "terms_iso2_project",
         "_terms_topics_project": "terms_topics_project",
         "abstractText": "textBody_abstract_project",
-        "end": "date_end_project",
         "grantCategory": "type_category_funding",
         "id": "id_of_project",
         "leadFunder": "name_of_funder",
         "leadOrganisationDepartment": "name_leadOrgDepartment_project",
         "potentialImpact": "textBody_potentialImpact_project",
-        "start": "date_start_project",
         "status": "status_of_project",
         "techAbstractText": "textBody_techAbstract_project",
         "title": "title_of_project"
