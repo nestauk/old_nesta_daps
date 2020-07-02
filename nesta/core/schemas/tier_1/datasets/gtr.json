@@ -1,6 +1,7 @@
 {
     "entity_type": "project",
     "tier0_to_tier1": {
+        "_coordinate_institutes_project": "coordinate_institutes_project",
         "_json_funding_project": "json_funding_project",
         "_json_outcomes_project": "json_outcomes_project",
         "_terms_continent_project": "terms_continent_project",

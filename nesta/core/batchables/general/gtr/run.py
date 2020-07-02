@@ -82,26 +82,26 @@ def reformat_row(row, linked_rows, locations):
     """
     # Extract general info
     gtr_funds = default_pop(linked_rows, 'gtr_funds')
-    row['funds'] = extract_funds(gtr_funds)
-    row['outcomes'] = linked_rows['gtr_outcomes']
-    row['topics'] = [r['text'] for r in linked_rows['gtr_topic'] if r['text'] != 'Unclassified']
-    row['institutes'] = [r['name'] for r in linked_rows['gtr_organisations']]
-    row['institute_ids'] = [r['id'] for r in linked_rows['gtr_organisations']]
+    row['_json_funding_project'] = extract_funds(gtr_funds)
+    row['_json_outcomes_project'] = linked_rows['gtr_outcomes']
+    row['_terms_topics_project'] = [r['text'] for r in linked_rows['gtr_topic'] if r['text'] != 'Unclassified']
+    row['_terms_institutes_project'] = [r['name'] for r in linked_rows['gtr_organisations']]
+    row['_terms_instituteIds_project'] = [r['id'] for r in linked_rows['gtr_organisations']]
 
     # Extract geographic info
-    org_ids = list(row['institute_ids'])
+    org_ids = list(row['_terms_instituteIds_project'])
     _locations = [loc for org_id, loc in locations.items() if org_id in org_ids]
-    row['countries'] = [loc['country_name'] for loc in _locations]
-    row['country_alpha_2'] = [loc['country_alpha_2'] for loc in _locations]
-    row['continent'] = [loc['continent'] for loc in _locations]
+    row['_terms_countries_project'] = [loc['country_name'] for loc in _locations]
+    row['_terms_iso2_project'] = [loc['country_alpha_2'] for loc in _locations]
+    row['_terms_continent_project'] = [loc['continent'] for loc in _locations]
 
-    row['locations'] = []
+    row['_coordinate_institutes_project'] = []
     for loc in _locations:
         lat = loc['latitude']
         lon = loc['longitude']
         if lat is None or lon is None:
             continue
-        row['locations'].append({'lat': float(lat), 'lon': float(lon)})
+        row['_coordinate_institutes_project'].append({'lat': float(lat), 'lon': float(lon)})
     return row
 
 
