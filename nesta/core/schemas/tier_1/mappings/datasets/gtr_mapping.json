@@ -17,11 +17,11 @@
                         "type": "keyword"
                     },
                     "end_date": {
-                        "format": "strict_date_hour_minute_second",
+                        "format": "strict_date",
                         "type": "date"
                     },
                     "start_date": {
-                        "format": "strict_date_hour_minute_second",
+                        "format": "strict_date",
                         "type": "date"
                     }
                 },

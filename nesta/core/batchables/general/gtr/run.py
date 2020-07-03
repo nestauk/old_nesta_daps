@@ -40,8 +40,8 @@ def extract_funds(gtr_funds):
     funds = {}
     for row in gtr_funds:
         row = {k:row[k] for k in row if k != 'id'}
-        row['start_date'] = row.pop('start')
-        row['end_date'] = row.pop('end')
+        row['start_date'] = row.pop('start')[:10] # YYYY-MM-DD
+        row['end_date'] = row.pop('end')[:10] # YYYY-MM-DD
         composite_key = (row[k] for k in ('start_date', 'end_date', 'category',
                                           'amount', 'currencyCode'))
         funds[tuple(composite_key)] = row
