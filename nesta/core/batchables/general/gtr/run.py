@@ -22,11 +22,32 @@ from collections import defaultdict, Counter
 
 
 def default_pop(dictobj, key, default={}):
+    """Pop the key from the dict-like object. If the key doesn't exist, return a default.
+    
+    Args:
+        dictobj (dict-like): A dict-like object to modify.
+        key (hashable): A key to pop from the dict-like object.
+        default: Any value to be returned as default, should the key not exist.
+    Returns:
+        value: Either the value stored at the key, or the default value.
+    """
     try:
         default = dictobj.pop(key)
     except KeyError:
         pass
     return default
+
+
+def truncate_if_str(value, n):
+    """Truncate a value if it's a string, otherwise return the value itself.
+    
+    Args:
+        value: Object to truncate, if it's a string
+        n (int): Number of chars after which to truncate.
+    Returns:
+        truncated: A truncated string, otherwise the original value itself.
+    """
+    return value[:n] if type(value) is str else value
 
 
 def extract_funds(gtr_funds):
@@ -40,8 +61,8 @@ def extract_funds(gtr_funds):
     funds = {}
     for row in gtr_funds:
         row = {k:row[k] for k in row if k != 'id'}
-        row['start_date'] = row.pop('start')[:10] # YYYY-MM-DD
-        row['end_date'] = row.pop('end')[:10] # YYYY-MM-DD
+        row['start_date'] = truncate_if_str(row.pop('start'), 10)
+        row['end_date'] = truncate_if_str(row.pop('end'), 10)
         composite_key = (row[k] for k in ('start_date', 'end_date', 'category',
                                           'amount', 'currencyCode'))
         funds[tuple(composite_key)] = row
