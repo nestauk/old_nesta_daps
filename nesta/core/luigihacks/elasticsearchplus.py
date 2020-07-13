@@ -302,7 +302,6 @@ def __floatify_coord(coord):
     else:
         _coord['lat'] = float(_coord['lat'])
         _coord['lon'] = float(_coord['lon'])
-    print(coord, _coord)
     return _coord
 
 
