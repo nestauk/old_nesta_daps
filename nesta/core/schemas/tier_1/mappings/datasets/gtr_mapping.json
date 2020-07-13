@@ -1,15 +1,9 @@
 {
     "mappings": {
-        "dynamic": "strict",
+        "_doc": null,
         "properties": {
             "coordinate_institutes_project": {
                 "type": "geo_point"
-            },
-            "date_end_project": {
-                "type": "date"
-            },
-            "date_start_project": {
-                "type": "date"
             },
             "json_funding_project": {
                 "properties": {
@@ -23,9 +17,11 @@
                         "type": "keyword"
                     },
                     "end_date": {
+                        "format": "strict_date",
                         "type": "date"
                     },
                     "start_date": {
+                        "format": "strict_date",
                         "type": "date"
                     }
                 },
@@ -118,6 +114,15 @@
             },
             "type_category_funding": {
                 "type": "keyword"
+            }
+        }
+    },
+    "settings": {
+        "index": {
+            "mapping": {
+                "nested_objects": {
+                    "limit": 13400
+                }
             }
         }
     }

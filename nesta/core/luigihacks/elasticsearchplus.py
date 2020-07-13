@@ -293,6 +293,18 @@ def _null_empty_str(row):
             _row[k] = None
     return _row
 
+
+# Double underscore: a very private method
+def __floatify_coord(coord):
+    _coord = deepcopy(coord)
+    if _coord['lat'] is None or _coord['lon'] is None:
+        _coord = None
+    else:
+        _coord['lat'] = float(_coord['lat'])
+        _coord['lon'] = float(_coord['lon'])
+    return _coord
+
+
 def _coordinates_as_floats(row):
     """Ensure coordinate data are always floats.
 
@@ -307,12 +319,12 @@ def _coordinates_as_floats(row):
             continue
         if v is None:
             continue
-        if v['lat'] is None or v['lon'] is None:
-            _row[k] = None
-            continue
-        _row[k]['lat'] = float(v['lat'])
-        _row[k]['lon'] = float(v['lon'])
+        if type(v) is list:
+            _row[k] = [__floatify_coord(coord) for coord in v]
+        else:
+            _row[k] = __floatify_coord(v)
     return _row
+
 
 def _country_lookup():
     """Extract country/nationality --> iso2 code lookup
