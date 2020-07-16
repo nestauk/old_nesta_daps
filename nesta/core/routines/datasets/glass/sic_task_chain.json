@@ -28,9 +28,9 @@
         "use_intermediate_inputs": false
     },
     {
-        "batchable": "batchables/nlp/multilabel_classifier",
+        "batchable": "batchables/sklearn_models/multilabel_classifier",
         "hyperparameters": {
-	    'model': 'sklearn.linear_model.LogisticRegression'
+	    'model': 'linear_model.LogisticRegression'
 	    "class_weight": ['balanced', null],	    
 	    "penalty": ['l1','l2'],
 	    'C': 'np.arange(0.1, 1, 100)',
@@ -41,9 +41,9 @@
     },
     {
 	"child": "vectorizer"
-        "batchable": "batchables/nlp/multilabel_classifier",
+        "batchable": "batchables/sklearn_models/multilabel_classifier",
         "hyperparameters": {
-	    'model': 'sklearn.ensemble.RandomForestClassifier'
+	    'model': 'ensemble.RandomForestClassifier'
 	    "class_weight": ['balanced', null],
 	    "max_depth": 'np.arange(1, 20, 1)'
 	    "min_samples_leaf": "np.arange(2, 6, 1)",
