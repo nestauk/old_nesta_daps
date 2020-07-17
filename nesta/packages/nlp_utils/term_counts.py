@@ -13,7 +13,8 @@ def make_term_counts(dct, row, binary=False):
         dict of term id (from the Dictionary) to term count.
     """
     return {dct[idx]: (count if not binary else 1)
-            for idx, count in Counter(dct.doc2idx(row)).items()}
+            for idx, count in Counter(dct.doc2idx(row)).items() 
+            if idx != -1}
 
 
 def term_counts_to_sparse(term_counts):
