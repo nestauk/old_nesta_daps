@@ -85,7 +85,7 @@ class RootTask(luigi.Task):
         return SomeBatchTask(date=self.date,
                              env_files=[f3p("/nesta")],
                              batchable=(f3p("batchables/examples/batch_example/")),
-                             job_def="standard_image",
+                             job_def="py36_amzn1_image",
                              job_name="batch-example-%s" % self.date,
                              job_queue="HighPriority",
                              region_name="eu-west-2",
