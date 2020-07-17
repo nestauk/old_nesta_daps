@@ -20,7 +20,7 @@ from nesta.core.luigihacks.automl import AutoMLTask
 from nesta.core.luigihacks.parameter import DictParameterPlus
 
 
-S3PATH = 'nesta-glass-ai/sic-classifer'
+S3PATH = 's3://nesta-glass-ai/sic-classifer'
 CHAIN_FILE = 'sic_task_chain.json'
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH, CHAIN_FILE)
@@ -28,27 +28,27 @@ CHAIN_PARAMETER_PATH = os.path.join(THIS_PATH, CHAIN_FILE)
 
 class DummyInputTask(luigi.ExternalTask):
     '''Dummy task acting as the single input data source'''
+    test = luigi.BoolParameter()
     def output(self):
         '''Points to the S3 Target'''
-        return s3.S3Target(f'{S3PATH}/input.json')
+        return s3.S3Target(f'{S3PATH}/input-test_{self.test}.json')
 
 
 class RootTask(luigi.Task):
-    s3_path_prefix = luigi.Parameter(default=f's3://{S3PATH}')
+    s3_path_prefix = luigi.Parameter(default=S3PATH)
     date = luigi.DateParameter(default=datetime.datetime.now())
     production = luigi.BoolParameter(default=False)
-    grid_task_kwargs = DictParameterPlus(default={})
 
     def requires(self):
         s3_path_prefix = f'{self.s3_path_prefix}/automl/{self.date}'
         s3_path_out = f'{s3_path_prefix}/outputs'
+        test = not self.production
         return AutoMLTask(s3_path_prefix=s3_path_prefix,
                           task_chain_filepath=CHAIN_PARAMETER_PATH,
-                          test=not self.production,
+                          test=test,
                           input_task=DummyInputTask,
-                          input_task_kwargs={'s3_path_out': s3_path_out,
-                                             'test': not self.production,
-                                             'grid_task_kwargs': self.grid_task_kwargs})
+                          input_task_kwargs={'test': test},
+                          maximize_loss=True)  # Using F1-score: so maximise
 
     def run(self):
         # Generate the grid of results
