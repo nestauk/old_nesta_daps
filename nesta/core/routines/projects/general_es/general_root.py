@@ -55,7 +55,7 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (#('gtr', 'project', GtrProject.id),
+        params = (('gtr', 'project', GtrProject.id),
                   ('arxiv', 'article', ArxivArticle.id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
