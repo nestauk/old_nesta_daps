@@ -133,7 +133,7 @@ def generate_authors_and_institutes(mag_authors, good_lookup, grid_lookup):
     return authors, institutes
 
 
-def reformat_row(row, grid_lookup, nuts_finder, inst_matching_threshold=0.9):
+def reformat_row(row, grid_lookup, nuts_finder, fos_lookup, inst_matching_threshold=0.9):
 
     # Create intermediate fields
     mag_authors = row.pop('mag_authors')
@@ -222,7 +222,7 @@ def run():
                                      .filter(Art.id.in_(art_ids))
                                      .all())):
             row = object_to_dict(obj)
-            row = reformat_row(row, grid_lookup, nf)
+            row = reformat_row(row, grid_lookup, nf, fos_lookup)
             _row = es.index(index=es_index, doc_type=es_type,
                             id=row.pop('id'), body=row)
             if not count % 1000:
