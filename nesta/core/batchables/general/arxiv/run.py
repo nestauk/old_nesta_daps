@@ -15,6 +15,7 @@ import boto3
 import json
 import logging
 import os
+from collections import defaultdict
 from nuts_finder import NutsFinder
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -31,9 +32,17 @@ from nesta.packages.geo_utils.lookup import get_eu_countries
 
 
 def generate_grid_lookup(engine):
+    """Query all GRID institutes, and generate a dictionary look-up
+    of GRID ID to a convenience object with country, region, name and lat/lon info.
+
+    Args:
+        engine (SqlAlchemy connectable): SqlAlchemy engine to connect to the database.
+    Returns:
+        grid_lookup (dict of object): look-up of GRID ID to institute objects.
+    """
     class Object(object):
         pass
-    country_lookup = get_country_region_lookup()  #<<<ADD CACHE
+    country_lookup = get_country_region_lookup()  # Note: this is lru cached
     grid_lookup = defaultdict(Object)
     with db_session(engine) as session:
         for inst in session.query(Inst).all():
@@ -45,42 +54,80 @@ def generate_grid_lookup(engine):
 
 
 def flatten_fos(row):
+    """Flatten field of study info into a list
+
+    Args:
+        row (dict): Row of article data containing a field of study field
+    Returns:
+        fields_of_study (list): Flat list of fields of study
+    """
     return [f for fields in row['fields_of_study']['nodes']
             for f in fields if f != []]
 
+
 def flatten_categories(categories):
+    """Flatten category descriptions out into a list
+
+    Args:
+        categories (list of dict): List containing category objects.
+    Returns:
+        descriptions (list): List of category descriptions
+    """
     return [cat['description'] for cat in categories]
 
 
 def calculate_nuts_regions(row, institutes, nuts_finder):
-    # Add NUTS regions
-    for inst in institutes:
+    """Calculate all NUTS regions for all institutes in a row of data,
+    via the NutsFinder.
+
+    Args:
+        row (dict): Row of article data to edit in place.
+        institutes (list of obj): A list of institute objs containing lat, lon info
+        nuts_finder (NutsFinder): A NutsFinder instance for (lat,lon) to NUTS lookup
+    Returns:
+        descriptions (list): List of category descriptions
+    """
+    for inst in institutes:        
         lat, lon = inst.latlon
         if lat is None or lon is None:
             continue
         nuts = nuts_finder.find(lat=lat, lon=lon)
+        # Iterate over the four NUTS levels
         for i in range(0, 4):
             name = f'nuts_{i}'
             if name not in row:
                 row[name] = set()
+            # Add the NUTS region to this level
             for nut in nuts:
                 if nut['LEVL_CODE'] != i:
                     continue
                 row[name].add(nut['NUTS_ID'])
+    # Sort the results
     for i in range(0, 4):
         name = f'nuts_{i}'
         if name in row:
-            row[name] = list(row[name])
+            row[name] = sorted(row[name])
     return row
 
-def generate_authors_and_institutes(mag_authors, good_lookup):
+
+def generate_authors_and_institutes(mag_authors, good_lookup, grid_lookup):
+    """Use MAG author information to extract institutes. If MAG author information
+    isn't available, fall back on the arXiv metadata.
+    
+    Args:
+        mag_authors (list of dict): MAG author information
+        good_lookup (dict): GRID institutes with good matches to the arXiv metadata.
+        grid_lookup (dict): All institutes in GRID
+    Returns:
+        (authors, institutes) (list, list): Author and institute names.
+    """
     authors, institutes = None, []
     if mag_authors is not None:
         if all('author_order' in a for a in mag_authors):
             mag_authors = sorted(mag_authors, key=lambda a: a['author_order'])
         gids = [author.get('affiliation_grid_id') for author in mag_authors]
         authors = [author['author_name'].title() for author in mag_authors]
-        institutes = [good_lookup[g].name.title() for g in gids if g in good_lookup]
+        institutes = [grid_lookup[g].name.title() for g in gids if g in grid_lookup]
     if institutes == []:
         institutes = [inst.name.title() for inst in good_lookup.values()]
     return authors, institutes
@@ -101,8 +148,8 @@ def reformat_row(row, grid_lookup, nuts_finder, inst_matching_threshold=0.9):
     regions = set(inst.region for inst in good_institutes if inst.region is not None)
     has_mn = any(is_multinational(inst.name, all_countries)
                  for inst in good_institutes)
-    eu_countries = get_eu_countries()  ##<<ADD CACHE
-    authors, institutes = generate_authors_and_institutes(mag_authors, good_lookup)
+    eu_countries = get_eu_countries()  # Note: this is lru cached
+    authors, institutes = generate_authors_and_institutes(mag_authors, good_lookup, grid_lookup)
 
     # Input final fields
     row['year'] = row['created'].year if row['created'] is not None else None
@@ -123,7 +170,6 @@ def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
-
     db_name = os.environ["BATCHPAR_db_name"]
     es_host = os.environ['BATCHPAR_outinfo']
     es_port = int(os.environ['BATCHPAR_out_port'])
@@ -166,8 +212,7 @@ def run():
                  "retrieved from s3")
 
     # Generate lookup tables
-    logging.info('Doing country lookup')
-    # Generate GRID institute look-up tables
+    logging.info('Generating GRID lookup')
     grid_lookup = generate_grid_lookup(engine)
 
     # Iterate over articles
@@ -183,8 +228,7 @@ def run():
             if not count % 1000:
                 logging.info(f"{count} rows loaded to "
                              "elasticsearch")
-
-    logging.warning("Batch job complete.")
+    logging.info("Batch job complete.")
 
 
 if __name__ == "__main__":

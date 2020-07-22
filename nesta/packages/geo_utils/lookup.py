@@ -3,7 +3,7 @@ import pandas as pd
 from io import StringIO
 from functools import lru_cache
 
-@lru_cache
+@lru_cache()
 def get_eu_countries():
     """
     All EU ISO-2 codes
@@ -16,7 +16,7 @@ def get_eu_countries():
     return [row['alpha2Code'] for row in r.json()]
 
 
-@lru_cache
+@lru_cache()
 def get_continent_lookup():
     """
     Retrieves continent ISO2 code to continent name mapping from a static open URL.
@@ -35,7 +35,7 @@ def get_continent_lookup():
     return continent_lookup
 
 
-@lru_cache
+@lru_cache()
 def get_country_region_lookup():
     """
     Retrieves subregions (around 18 in total)
