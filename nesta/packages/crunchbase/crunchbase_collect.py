@@ -145,7 +145,7 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
 
     orgs['long_description'] = None
     org_cats = []
-    cat_groups = cat_groups.set_index(['category_name'])
+    cat_groups = cat_groups.set_index(['name'])
     missing_cat_groups = set()
     org_descriptions = org_descriptions.set_index(['uuid'])
 
@@ -186,7 +186,7 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     missing_cat_groups = [{'category_name': cat} for cat in missing_cat_groups]
 
     # remove redundant category columns
-    orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
+    orgs = orgs.drop(['category_list', 'category_groups_list'], axis=1)
 
     # remove existing orgs
     drop_mask = orgs['id'].apply(lambda x: x in existing_orgs)
