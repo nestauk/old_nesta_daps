@@ -6,7 +6,7 @@ from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN
+from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN, ARRAY
 
 from nesta.core.orms.grid_orm import Institute
 from nesta.core.orms.grid_orm import Base as GridBase
@@ -124,3 +124,19 @@ class ArticleTopic(Base):
                       primary_key=True,
                       autoincrement=False)
     topic_weight = Column(FLOAT)
+
+class ArticleVector(Base):
+    """Document vectors for articles."""
+    __tablename__ = 'arxiv_vector'
+    article_id = Column(VARCHAR(40),
+                        ForeignKey(Article.id),
+                        primary_key=True)
+    vector = Column(ARRAY(FLOAT))
+
+class ArticleCluster(Base):
+    """Document clusters for articles."""
+    __tablename__ = 'arxiv_cluster'
+    article_id = Column(VARCHAR(40),
+                        ForeignKey(Article.id),
+                        primary_key=True)
+    clusters = Column(ARRAY(FLOAT))
