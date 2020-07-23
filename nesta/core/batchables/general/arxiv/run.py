@@ -160,7 +160,7 @@ def reformat_row(row, grid_lookup, nuts_finder, fos_lookup, inst_matching_thresh
     row['regions'] = [region for country, region in regions]
     row['is_eu'] = any(country in eu_countries for country in countries)
     row['has_multinational'] = has_mn
-    row = calculate_nuts_regions(row, institutes, nuts_finder)
+    row = calculate_nuts_regions(row, good_institutes, nuts_finder)
     row['institutes'] = institutes
     row['authors'] = authors
     return row

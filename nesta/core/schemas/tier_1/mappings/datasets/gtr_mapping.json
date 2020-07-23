@@ -71,6 +71,15 @@
             "terms_iso2_project": {
                 "type": "keyword"
             },
+            "terms_tokens_entity": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
             "terms_topics_project": {
                 "analyzer": "terms_analyzer",
                 "fields": {
