@@ -1,18 +1,36 @@
 """
-Transforms variable-length texts (usually from sentences
-to paragraphs) to vectors using Sentence Transformers. Then, it fuzzy
-clusters the vectors with HDBSCAN.
+Fetches articles from DB and transforms variable-length texts (usually from sentences to paragraphs)
+to vectors using Sentence Transformers. Fuzzy clusters the vectors with HDBSCAN.
+
+Tasks:
+- start: Fetches articles without a vector from DB.
+- transform: Encodes abstracts as vectors and stores them in DB.
+- cluster: Applies soft clustering with HDBSCAN. It can either predict a cluster distribution for 
+    the newly encoded abstracts using a pre-fitted model or fitting a model on the whole corpus. 
+    The model is stored/loaded from S3. When fitting a new model, it deletes the previous cluster 
+    predictions from the DB.
+- end: Exit metaflow pipeline.
+
+The pipeline takes a set of parameters. Two examples:
+1. Run the pipeline and fit a new HDBSCAN model
+python doc2cluster.py --no-pylint run --transformer distilbert-base-nli-stsb-mean-tokens --db_config mysqldb.config --min_cluster_size 10 --min_samples 2 --new_clusterer True --clusterer_name hdbscan_model --s3_bucket test-document-vectors
+
+2. Run the pipeline and predict a cluster distribution for vectors using a fitted HDBSCAN model 
+python doc2cluster.py --no-pylint run --transformer distilbert-base-nli-stsb-mean-tokens --db_config mysqldb.config --new_clusterer False --clusterer_name hdbscan_model --s3_bucket test-document-vectors
 """
 
 from metaflow import FlowSpec, step, Parameter
 from sqlalchemy import create_engine
+from sqlalchemy.sql import exists
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 import logging
 from sentence_transformers import SentenceTransformer
 import hdbscan
+import numpy as np
 from nesta.core.luigihacks import misctools
 from nesta.core.orms.arxiv_orm import Article, ArticleVector, ArticleCluster
+from nesta.packages.misc_utils.s3_utils import store_on_s3, load_from_s3
 
 
 class Doc2ClusterFlow(FlowSpec):
@@ -32,18 +50,33 @@ class Doc2ClusterFlow(FlowSpec):
         required=True,
         type=str,
     )
+    new_clusterer = Parameter(
+        "new_clusterer",
+        help="Fits a new cluster model using all the document vectors. If set to False, it will fetch a fitted cluster model from S3.",
+        required=True,
+        type=bool,
+    )
+    clusterer_name = Parameter(
+        "clusterer_name", help="Filename of the clusterer.", required=True, type=str
+    )
     min_cluster_size = Parameter(
         "min_cluster_size",
-        help="HDBSCAN: the smallest size grouping that you wish to consider a cluster",
-        required=True,
+        help="HDBSCAN: the smallest size grouping that you wish to consider a cluster. Required only when new_clusterer=True.",
+        required=False,
         type=int,
     )
     min_samples = Parameter(
         "min_samples",
         help="""HDBSCAN: Measure of how conservative you want the clustering to be.
-        The larger the value of min_samples you provide, the more conservative the clustering.""",
-        required=True,
+        The larger the value of min_samples you provide, the more conservative the clustering. Required only when new_clusterer=True.""",
+        required=False,
         type=int,
+    )
+    s3_bucket = Parameter(
+        "s3_bucket",
+        help="S3 bucket to store/load the clusterer.",
+        required=True,
+        type=str,
     )
 
     def _create_db_session(self, config, header="client", database="production"):
@@ -99,8 +132,9 @@ class Doc2ClusterFlow(FlowSpec):
         s = self._create_db_session(self.db_config)
 
         # Get the abstracts and arXiv paper IDs.
-        papers = s.query(Article.id, Article.abstract)
-        logging.info(f"Number of documents to be vectorised: {papers.count()}")
+        papers = s.query(Article.id, Article.abstract).filter(
+            ~exists().where(Article.id == ArticleVector.article_id)
+        )
 
         # Unroll abstracts and paper IDs
         self.ids, self.abstracts = zip(*papers)
@@ -111,11 +145,25 @@ class Doc2ClusterFlow(FlowSpec):
     @step
     def transform(self):
         """Transforms abstracts to vectors with Sentence Transformers."""
+        logging.info(f"Number of documents to be vectorised: {len(self.ids)}")
+
         # Instantiate SentenceTransformer
         model = SentenceTransformer(self.bert_model)
 
         # Convert text to vectors
         self.embeddings = model.encode(self.abstracts)
+
+        # Group arXiv paper IDs with embeddings
+        id_embeddings_mapping = self._create_mappings(
+            self.ids, self.embeddings, "vector"
+        )
+        # Connect to SQL DB
+        s = self._create_db_session(self.db_config)
+        
+        # Store to db
+        s.bulk_insert_mappings(ArticleVector, id_embeddings_mapping)
+        s.commit()
+        logging.info("Committed vectors to DB!")
 
         # Proceed to next task
         self.next(self.cluster)
@@ -123,32 +171,56 @@ class Doc2ClusterFlow(FlowSpec):
     @step
     def cluster(self):
         """Soft clustering with HDBSCAN."""
-        clusterer = hdbscan.HDBSCAN(
-            min_cluster_size=self.min_cluster_size,
-            min_samples=self.min_samples,
-            prediction_data=True,
-        ).fit(self.embeddings)
-        self.soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
-        self.next(self.end)
+        if self.new_clusterer:
+            logging.info("Fitting a new HDBSCAN model.")
+            # Connect to SQL DB
+            s = self._create_db_session(self.db_config)
 
-    @step
-    def end(self):
-        """Creates mappings and stores them in SQL DB."""
-        # Group arXiv paper IDs with embeddings
-        id_embeddings_mapping = self._create_mappings(
-            self.ids, self.embeddings, "vector"
-        )
+            # Delete all clusters to refill the table with the new predictions.
+            s.query(ArticleCluster).delete()
+            s.commit()
+
+            # Fetch all document embeddings
+            papers = s.query(ArticleVector.article_id, ArticleVector.vector)
+
+            # Unroll abstracts and paper IDs
+            self.ids, self.embeddings = zip(*papers)
+
+            # Fit HDBSCAN
+            clusterer = hdbscan.HDBSCAN(
+                min_cluster_size=self.min_cluster_size,
+                min_samples=self.min_samples,
+                prediction_data=True,
+            ).fit(self.embeddings)
+
+            # Assign soft clusters to embeddings
+            self.soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
+
+            # Store clusterer in S3
+            store_on_s3(clusterer, self.s3_bucket, self.clusterer_name)
+        else:
+            logging.info("Loading fitted HDBSCAN from S3.")
+            # Load clusterer from S3
+            clusterer = load_from_s3(self.s3_bucket, self.clusterer_name)
+
+            # Predict soft labels
+            self.soft_clusters = hdbscan.prediction.membership_vector(
+                clusterer, np.array(self.embeddings)
+            )
+
         # Group arXiv paper IDs with clusters
         id_clusters_mapping = self._create_mappings(
             self.ids, self.soft_clusters, "clusters"
         )
-
-        # Connect to SQL DB
-        s = self._create_db_session(self.db_config)
-        # Store to db
-        s.bulk_insert_mappings(ArticleVector, id_embeddings_mapping)
+        # Store mapping in DB
         s.bulk_insert_mappings(ArticleCluster, id_clusters_mapping)
         s.commit()
+        self.next(self.end)
+
+    @step
+    def end(self):
+        """Gracefully exit metaflow."""
+        logging.info("Tasks completed.")
 
 
 if __name__ == "__main__":
