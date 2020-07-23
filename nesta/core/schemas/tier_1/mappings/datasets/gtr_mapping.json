@@ -13,7 +13,7 @@
                     "category": {
                         "type": "keyword"
                     },
-                    "currency_code": {
+                    "currencyCode": {
                         "type": "keyword"
                     },
                     "end_date": {
@@ -123,6 +123,14 @@
             },
             "type_category_funding": {
                 "type": "keyword"
+            },
+            "type_of_entity": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
             }
         }
     },
