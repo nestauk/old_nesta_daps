@@ -116,3 +116,6 @@ venv.bak/
 # vim
 *.swp
 *.swo
+
+# metaflow
+.metaflow/
