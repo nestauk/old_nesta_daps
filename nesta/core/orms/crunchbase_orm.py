@@ -59,7 +59,7 @@ class OrganizationCategory(Base):
     __tablename__ = 'crunchbase_organizations_categories'
 
     organization_id = Column(VARCHAR(50), ForeignKey('crunchbase_organizations.id'), primary_key=True)
-    category_name = Column(VARCHAR(100), ForeignKey('crunchbase_category_groups.category_name'), primary_key=True)
+    category_name = Column(VARCHAR(100), ForeignKey('crunchbase_category_groups.name'), primary_key=True)
 
 
 class CategoryGroup(Base):

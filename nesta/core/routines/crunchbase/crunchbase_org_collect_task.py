@@ -60,7 +60,8 @@ class OrgCollectTask(luigi.Task):
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
         insert_data(self.db_config_env, 'mysqldb', database,
-                    Base, CategoryGroup, cat_groups.to_dict(orient='records'), 
+                    Base, CategoryGroup, 
+                    cat_groups[['id', 'name', 'category_groups_list']].to_dict(orient='records'), 
                     low_memory=True)
 
         # process organizations and categories

@@ -69,8 +69,10 @@ def get_files_from_tar(files, nrows=None):
     dfs = []
     with crunchbase_tar() as tar:
         for filename in files:
-            dfs.append(pd.read_csv(tar.extractfile(f'{filename}.csv'),
-                                   low_memory=False, nrows=nrows))
+            df = pd.read_csv(tar.extractfile(f'{filename}.csv'),
+                             low_memory=False, nrows=nrows)
+            df = df.where(pd.notnull(df), None)  # Fill NaN as null for MySQL
+            dfs.append(df)
             logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
