@@ -66,8 +66,8 @@ class CategoryGroup(Base):
     __tablename__ = 'crunchbase_category_groups'
 
     id = Column(VARCHAR(50))
-    category_name = Column(VARCHAR(100), primary_key=True)
-    category_group_list = Column(VARCHAR(150))
+    name = Column(VARCHAR(100), primary_key=True)
+    category_groups_list = Column(VARCHAR(150))
 
 
 class Acquisition(Base):
