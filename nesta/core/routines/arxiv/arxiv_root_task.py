@@ -41,6 +41,8 @@ class RootTask(luigi.WrapperTask):
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
+        logging.getLogger().setLevel(logging.INFO)
+
         _routine_id = "{}-{}".format(self.date, self.production)
         grid_task_kwargs = {
             '_routine_id':_routine_id,
