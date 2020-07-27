@@ -8,7 +8,7 @@ Collects and combines Mesh terms from S3 and descriptions from MySQL.
 import logging
 import luigi
 
-from nesta.core.routines.crunchbase.crunchbase_parent_id_collect_task import ParentIdCollectTask
+from nesta.core.routines.crunchbase_health.crunchbase_health_label_task import HealthLabelTask
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms, format_mesh_terms
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks import misctools
@@ -34,12 +34,14 @@ class DescriptionMeshTask(luigi.Task):
 
     def requires(self):
         '''Collects the configurations and executes the previous task.'''
-        yield ParentIdCollectTask(date=self.date,
-                                  _routine_id=self._routine_id,
-                                  test=self.test,
-                                  insert_batch_size=self.insert_batch_size,
-                                  db_config_path=self.db_config_path,
-                                  db_config_env=self.db_config_env)
+        yield HealthLabelTask(date=self.date,
+                              _routine_id=self._routine_id,
+                              test=self.test,
+                              insert_batch_size=self.insert_batch_size,
+                              db_config_env=self.db_config_env,
+                              bucket='nesta-crunchbase-models',
+                              vectoriser_key='vectoriser.pickle',
+                              classifier_key='clf.pickle')
 
     def output(self):
         '''Points to the output database engine'''

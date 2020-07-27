@@ -14,7 +14,7 @@ import logging
 import luigi
 import os
 
-from nesta.core.routines.crunchbase.crunchbase_mesh_task import DescriptionMeshTask
+from nesta.core.routines.crunchbase_health.crunchbase_mesh_task import DescriptionMeshTask
 from nesta.packages.crunchbase.crunchbase_collect import all_org_ids
 from nesta.packages.misc_utils.batches import split_batches, put_s3_batch
 from nesta.core.luigihacks import autobatch

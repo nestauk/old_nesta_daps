@@ -10,7 +10,7 @@ import luigi
 import datetime
 import logging
 
-from nesta.core.routines.crunchbase.crunchbase_elasticsearch_task import CrunchbaseSql2EsTask
+from nesta.core.routines.crunchbase_health.crunchbase_elasticsearch_task import CrunchbaseSql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 
