@@ -43,6 +43,7 @@ ENV LANG=C.UTF-8
 ENV PATH="/venv/bin:$PATH"
 ENV PYTHONPATH /app
 ENV MYSQLDB /app/nesta/core/config/mysqldb.config
+ENV LUIGI_EMAIL $LUIGI_EMAIL
 ENV LUIGI_CONFIG_DIR /appdocker
 ENV LUIGI_CONFIG_PATH /app/nesta/core/config/luigi.cfg
 ENV PATH "$PATH:/app/nesta/core/scripts/"
