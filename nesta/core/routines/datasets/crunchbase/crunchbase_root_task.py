@@ -32,16 +32,20 @@ class RootTask(luigi.WrapperTask):
     db_config_env = luigi.Parameter(default="MYSQLDB")
     
     def requires(self):
+        '''Collects the database configurations and executes the central task.'''
+        _routine_id = "{}-{}".format(self.date, self.production)
+
+        logging.getLogger().setLevel(logging.INFO)        
         yield ParentIdCollectTask(date=self.date,
-                                  _routine_id=self._routine_id,
-                                  test=self.test,
+                                  _routine_id=_routine_id,
+                                  test=not self.production,
                                   insert_batch_size=self.insert_batch_size,
                                   db_config_path=self.db_config_path,
                                   db_config_env=self.db_config_env)
         
         yield OrgGeocodeTask(date=self.date,
-                             _routine_id=self._routine_id,
-                             test=self.test,
+                             _routine_id=_routine_id,
+                             test=not self.production,
                              db_config_env=self.db_config_env,
                              city_col=Organization.city,
                              country_col=Organization.country,
@@ -50,7 +54,7 @@ class RootTask(luigi.WrapperTask):
                              env_files=[f3p("nesta/nesta/"),
                                         f3p("config/mysqldb.config")],
                              job_def="py36_amzn1_image",
-                             job_name=f"CrunchBaseOrgGeocodeTask-{self._routine_id}",
+                             job_name=f"CrunchBaseOrgGeocodeTask-{_routine_id}",
                              job_queue="HighPriority",
                              region_name="eu-west-2",
                              poll_time=10,
