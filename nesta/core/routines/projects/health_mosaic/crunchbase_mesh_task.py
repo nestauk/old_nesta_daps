@@ -8,7 +8,7 @@ Collects and combines Mesh terms from S3 and descriptions from MySQL.
 import logging
 import luigi
 
-from nesta.core.routines.crunchbase_health.crunchbase_health_label_task import HealthLabelTask
+from nesta.core.routines.projects.health_mosaic.crunchbase_health_label_task import HealthLabelTask
 from nesta.packages.health_data.process_mesh import retrieve_mesh_terms, format_mesh_terms
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks import misctools
