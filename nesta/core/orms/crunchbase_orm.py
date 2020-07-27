@@ -13,27 +13,26 @@ Base = declarative_base()
 
 # There are a lot of repeated data types in this schema, so the following
 # fixtures are designed to maintain consistency between tables
-FIXTURES = {'permalink': lambda: Column(VARCHAR(100)),
-            'cb_url': lambda: Column(VARCHAR(200)),
-            'rank': lambda: Column(BIGINT),
-            'type': lambda: Column(VARCHAR(50)),
-            'timestamp': lambda: Column(DATETIME),  # {create/updated}_at
-            'external_url': lambda: Column(TEXT),
-            'name': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
-            'iso3': lambda: Column(VARCHAR(3)),
-            'country': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
-            'state_code': lambda: Column(VARCHAR(2)),
-            'region': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
+FIXTURES = {'cb_url': lambda: Column(VARCHAR(200)),
             'city': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
-            'location_id': lambda: Column(VARCHAR(400, collation='utf8mb4_unicode_ci'), index=True),
+            'country': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
+            'currency_code': lambda: Column(VARCHAR(3)),             
+            'external_url': lambda: Column(TEXT),
             'happened_on': lambda: Column(DATE),
             'id_pk': lambda: Column(VARCHAR(50), primary_key=True),
             'id_idx': lambda: Column(VARCHAR(50), index=True),
-            'currency_code': lambda: Column(VARCHAR(3)),
-            'job_title': lambda: Column(VARCHAR(150)),
+            'iso3': lambda: Column(VARCHAR(3)),
+            'job_title': lambda: Column(VARCHAR(150)),             
+            'location_id': lambda: Column(VARCHAR(400, collation='utf8mb4_unicode_ci'), index=True),
+            'monetary_amount': lambda: Column(BIGINT),
+            'name': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
+            'permalink': lambda: Column(VARCHAR(100)),
+            'rank': lambda: Column(BIGINT),
+            'region': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
             'roles': lambda: Column(VARCHAR(50)),
-            'monetary_amount': lambda: Column(BIGINT)}
-
+            'state_code': lambda: Column(VARCHAR(2)),
+            'type': lambda: Column(VARCHAR(50)),
+            'timestamp': lambda: Column(DATETIME)}  # {create/updated}_at}
 
 def fixture(key):
     return FIXTURES[key]()
