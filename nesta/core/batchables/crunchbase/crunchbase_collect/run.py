@@ -62,8 +62,16 @@ def run():
 
 if __name__ == "__main__":
     log_stream_handler = logging.StreamHandler()
+    if 'BATCHPAR_config' not in os.environ:
+        environ = {'test': 'True',
+                   'db_name': 'dev',
+                   'table': 'degrees',
+                   'batch_size': '500',
+                   'config': f'{os.environ["HOME"]}/nesta/nesta/core/config/mysqldb.config',
+                   'outinfo': 's3://nesta-production-intermediate/degrees_dev'}
+        for k, v in environ.items():
+            os.environ[f'BATCHPAR_{k}'] = v
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
     run()
-

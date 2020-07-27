@@ -218,6 +218,7 @@ def process_non_orgs(df, existing, pks):
     if {'city', 'country_code'}.issubset(df.columns):
         logging.info("Locations found in table. Generating composite keys.")
         df['country'] = df['country_code'].apply(country_iso_code_to_name)
+        df = df.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
         df['location_id'] = df[['city', 'country']].apply(lambda row: _generate_composite_key(**row), axis=1)
 
     # convert any boolean columns to correct values
