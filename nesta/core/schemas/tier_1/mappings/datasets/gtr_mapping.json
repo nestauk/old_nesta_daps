@@ -13,7 +13,7 @@
                     "category": {
                         "type": "keyword"
                     },
-                    "currency_code": {
+                    "currencyCode": {
                         "type": "keyword"
                     },
                     "end_date": {
@@ -71,6 +71,15 @@
             "terms_iso2_project": {
                 "type": "keyword"
             },
+            "terms_tokens_entity": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
+            },
             "terms_topics_project": {
                 "analyzer": "terms_analyzer",
                 "fields": {
@@ -114,6 +123,14 @@
             },
             "type_category_funding": {
                 "type": "keyword"
+            },
+            "type_of_entity": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
+                },
+                "type": "text"
             }
         }
     },
