@@ -9,11 +9,12 @@ import luigi
 import datetime
 import logging
 
-
 from nesta.core.routines.datasets.crunchbase.crunchbase_parent_id_collect_task import ParentIdCollectTask
-from nesta.core.routines.datasets.crunchbase.crunchbase_geocode_task import OrgGeocodeTask
-from nesta.core.orms.crunchbase_orm import Organization
+from nesta.core.routines.datasets.crunchbase.crunchbase_geocode_task import CBGeocodeBatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
+from nesta.core.orms.crunchbase_orm import Base
+from nesta.core.orms.orm_utils import get_class_by_tablename
+
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations
@@ -42,21 +43,27 @@ class RootTask(luigi.WrapperTask):
                                   insert_batch_size=self.insert_batch_size,
                                   db_config_path=self.db_config_path,
                                   db_config_env=self.db_config_env)
-        
-        yield OrgGeocodeTask(date=self.date,
-                             _routine_id=_routine_id,
-                             test=not self.production,
-                             db_config_env=self.db_config_env,
-                             city_col=Organization.city,
-                             country_col=Organization.country,
-                             location_key_col=Organization.location_id,
-                             insert_batch_size=self.insert_batch_size,
-                             env_files=[f3p("nesta"),
-                                        f3p("config/mysqldb.config")],
-                             job_def="py36_amzn1_image",
-                             job_name=f"CrunchBaseOrgGeocodeTask-{_routine_id}",
-                             job_queue="HighPriority",
-                             region_name="eu-west-2",
-                             poll_time=10,
-                             memory=4096,
-                             max_live_jobs=2)
+
+        geocode_kwargs = dict(date=self.date,
+                              _routine_id=_routine_id,
+                              test=not self.production,
+                              db_config_env="MYSQLDB",
+                              insert_batch_size=self.insert_batch_size,
+                              env_files=[f3p("nesta"),
+                                         f3p("config/mysqldb.config"),
+                                         f3p("config/crunchbase.config")],
+                              job_def="py36_amzn1_image",
+                              job_queue="HighPriority",
+                              region_name="eu-west-2",
+                              poll_time=10,
+                              memory=4096,
+                              max_live_jobs=2)
+
+        for tablename in ['organizations', 'funding_rounds', 'investors', 'people', 'ipos']:
+            _class = get_class_by_tablename(Base, f'crunchbase_{tablename}')
+            yield CBGeocodeBatchTask(city_col=_class.city,
+                                     country_col=_class.country,
+                                     location_key_col=_class.location_id,
+                                     job_name=f"Crunchbase-{tablename}-{_routine_id}",
+                                     **geocode_kwargs)
+
