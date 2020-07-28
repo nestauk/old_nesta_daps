@@ -1,8 +1,8 @@
 """
-run.py (crunchbase_elasticsearch)
+run.py (crunchbase_general)
 =================================
 
-Pipe Crunchbase data from MySQL to Elasticsearch.
+Curate crunchbase data, ready for ingestion to the general ES endpoint.
 """
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -27,22 +27,34 @@ from nesta.core.orms.crunchbase_orm import FundingRound
 from nesta.core.orms.geographic_orm import Geographic
 
 
-def run():
+def reformat_row(row, session, investor_names):
+    row['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
+    row['investor_names'] = list(set(investor_names))
+    row['coordinates'] = {'lat': row.pop('latitude'), 'lon': row.pop('longitude')}
 
-    test = literal_eval(os.environ["BATCHPAR_test"])
-    bucket = os.environ['BATCHPAR_bucket']
-    batch_file = os.environ['BATCHPAR_batch_file']
+    # iterate through categories and groups
+    row['category_list'] = []
+    row['category_group_list'] = []
+    for category in (session.query(CategoryGroup)
+                     .select_from(OrganizationCategory)
+                     .join(CategoryGroup)
+                     .filter(OrganizationCategory.organization_id==row.Organization.id)
+                     .all()):
+        row['category_list'].append(category.category_name)
+        row['category_group_list'] += [group for group
+                                                in str(category.category_group_list).split('|')
+                                                if group is not 'None']
+        
+    # Add a field for US state name
+    state_code = row['state_code']
+    row['placeName_state_organisation'] = states_lookup[state_code]
+    continent_code = row['continent']
+    row['placeName_continent_organisation'] = continent_lookup[continent_code]
+    row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
 
-    db_name = os.environ["BATCHPAR_db_name"]
-    es_host = os.environ['BATCHPAR_outinfo']
-    es_port = int(os.environ['BATCHPAR_out_port'])
-    es_index = os.environ['BATCHPAR_out_index']
-    es_type = os.environ['BATCHPAR_out_type']
-    entity_type = os.environ["BATCHPAR_entity_type"]
-    aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
 
-    # database setup
-    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
+def get_states_lookup():
+    # TODO: move this to package and add lru_cache
     static_engine = get_mysql_engine("BATCHPAR_config", "mysqldb", "static_data")
     states_lookup = {row['state_code']: row['state_name']
                      for _, row in  pd.read_sql_table('us_states_lookup',
@@ -51,103 +63,86 @@ def run():
     states_lookup["AA"] = "Armed Forces (Americas)"
     states_lookup["AP"] = "Armed Forces (Pacific)"
     states_lookup[None] = None  # default lookup for non-US countries
+    return states_lookup
 
-    # Get continent lookup
+
+def get_continent_lookup():
+    # TODO: move this to package and add lru_cache
     url = "https://nesta-open-data.s3.eu-west-2.amazonaws.com/rwjf-viz/continent_codes_names.json"
     continent_lookup = {row["Code"]: row["Name"] for row in requests.get(url).json()}
     continent_lookup[None] = None
+    return continent_lookup
 
-    # es setup
-    field_null_mapping = load_json_from_pathstub("health-scanner", "nulls.json")
-    strans_kwargs = {'filename': 'companies.json', 'ignore': ['id']}
-    es = ElasticsearchPlus(hosts=es_host,
-                           port=es_port,
-                           aws_auth_region=aws_auth_region,
-                           no_commit=("AWSBATCHTEST" in os.environ),
-                           entity_type=entity_type,
-                           strans_kwargs=strans_kwargs,
-                           field_null_mapping=field_null_mapping,
-                           null_empty_str=True,
-                           coordinates_as_floats=True,
-                           country_detection=True,
-                           listify_terms=True,
-                           terms_delimiters=("|",),
-                           null_pairs={"currency_of_funding": "cost_of_funding"})
 
-    # collect file
+def sqlalchemy_to_dict(_row, fields):
+    row = {}
+    row.updated({k: v for k, v in _row.Organization.__dict__.items()
+                 if k in fields})
+    row.update({k: v for k, v in _row.Geographic.__dict__.items()
+                if k in fields})
+    return row
+
+
+def retrieve_categories(_row, session):
+    categories, groups_list = [], []
+    for category in (session.query(CategoryGroup)
+                     .select_from(OrganizationCategory)
+                     .join(CategoryGroup)
+                     .filter(OrganizationCategory.organization_id==_row.Organization.id)
+                     .all()):
+        categories.append(category.name)
+        groups_list += [group for group in str(category.category_groups_list).split('|')
+                        if group is not 'None']
+    return categories, groups_list
+
+        
+def run():
+
+    test = literal_eval(os.environ["BATCHPAR_test"])
+    bucket = os.environ['BATCHPAR_bucket']
+    batch_file = os.environ['BATCHPAR_batch_file']
+    db_name = os.environ["BATCHPAR_db_name"]
+
+    # Database setup
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)    
+    # Retrieve lookup tables
+    states_lookup = get_states_lookup()
+    continent_lookup = get_continent_lookup()
+    # Retrieve list of Org ids from S3
     nrows = 20 if test else None
-
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     org_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(org_ids)} organisations retrieved from s3")
-
+    # Lists of fields to extract
     org_fields = set(c.name for c in Organization.__table__.columns)
-
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
                   'continent', 'latitude', 'longitude']
 
-    # First get all funders
+    # First get all investors
     investor_names = defaultdict(list)
     with db_session(engine) as session:
-        rows = (session
-                .query(Organization, FundingRound)
-                .join(FundingRound, Organization.id==FundingRound.company_id)
-                .filter(Organization.id.in_(org_ids))
-                .all())
-        for row in rows:
-            _id = row.Organization.id
+        query = (session.query(Organization, FundingRound)
+                 .join(FundingRound, Organization.id==FundingRound.company_id)
+                 .filter(Organization.id.in_(org_ids)))
+        for row in query.all():
             _investor_names = row.FundingRound.investor_names
-            investor_names[_id] += parse_investor_names(_investor_names)
+            investor_names[row.Organization.id] += parse_investor_names(_investor_names)
 
-    # Pipe orgs to ES
+    # Now process organisations
     with db_session(engine) as session:
-        rows = (session
-                .query(Organization, Geographic)
-                .join(Geographic, Organization.location_id==Geographic.id)
-                .filter(Organization.id.in_(org_ids))
-                .limit(nrows)
-                .all())
-        for count, row in enumerate(rows, 1):
-            # convert sqlalchemy to dictionary
-            row_combined = {k: v for k, v in row.Organization.__dict__.items()
-                            if k in org_fields}
-            row_combined['currency_of_funding'] = 'USD'  # all values are from 'funding_total_usd'
-            row_combined.update({k: v for k, v in row.Geographic.__dict__.items()
-                                 if k in geo_fields})
-            row_combined['investor_names'] = list(set(investor_names[row_combined['id']]))
-
-            # reformat coordinates
-            row_combined['coordinates'] = {'lat': row_combined.pop('latitude'),
-                                           'lon': row_combined.pop('longitude')}
-
-            # iterate through categories and groups
-            row_combined['category_list'] = []
-            row_combined['category_group_list'] = []
-            for category in (session.query(CategoryGroup)
-                             .select_from(OrganizationCategory)
-                             .join(CategoryGroup)
-                             .filter(OrganizationCategory.organization_id==row.Organization.id)
-                             .all()):
-                row_combined['category_list'].append(category.category_name)
-                row_combined['category_group_list'] += [group for group
-                                                        in str(category.category_group_list).split('|')
-                                                        if group is not 'None']
-
-            # Add a field for US state name
-            state_code = row_combined['state_code']
-            row_combined['placeName_state_organisation'] = states_lookup[state_code]
-            continent_code = row_combined['continent']
-            row_combined['placeName_continent_organisation'] = continent_lookup[continent_code]
-            row_combined['updated_at'] = row_combined['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-
-            uid = row_combined.pop('id')
-            _row = es.index(index=es_index, doc_type=es_type,
-                            id=uid, body=row_combined)
-            if not count % 1000:
-                logging.info(f"{count} rows loaded to elasticsearch")
-    
-    logging.warning("Batch job complete.")
+        query = (session.query(Organization, Geographic).
+                 .join(Geographic, Organization.location_id==Geographic.id)
+                 .filter(Organization.id.in_(org_ids)))
+        data = []
+        for count, _row in enumerate(query.limit(nrows).all(), 1):
+            row = sqlalchemy_to_dict(_row, fields=org_fields+geo_fields)
+            categories, groups_list = retrieve_categories(_row, session)
+            row = reformat_row(row, investor_names=investor_names[row['id']],
+                               categories=categories, groups_list=groups_list)
+            data.append(row)
+        insert_data(data)
+    logging.info("Batch job complete.")
 
 
 if __name__ == "__main__":
