@@ -101,7 +101,7 @@ def bool_convert(value):
         (bool): boolean representation of the field, or None on failure so pd.apply can
                 be used and unconvertable fields will be empty
     """
-    lookup = {'t': True, 'f': False}
+    lookup = {'t': True, 'f': False, True: True, False: False}
     try:
         return lookup[value]
     except KeyError:

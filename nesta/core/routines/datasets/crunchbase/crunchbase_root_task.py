@@ -51,7 +51,7 @@ class RootTask(luigi.WrapperTask):
                              country_col=Organization.country,
                              location_key_col=Organization.location_id,
                              insert_batch_size=self.insert_batch_size,
-                             env_files=[f3p("nesta/nesta/"),
+                             env_files=[f3p("nesta"),
                                         f3p("config/mysqldb.config")],
                              job_def="py36_amzn1_image",
                              job_name=f"CrunchBaseOrgGeocodeTask-{_routine_id}",
