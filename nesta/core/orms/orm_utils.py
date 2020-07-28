@@ -236,10 +236,12 @@ def update_nested(original_dict, update_dict):
         original_dict (dict): The original dictionary after updates.
     """
     for k, v in update_dict.items():
+        nested_dict = v
         if isinstance(v, Mapping):  # Mapping ~= any dict-like object
-            original_dict[k] = update_nested(original_dict.get(k, {}), v)
-        else:
-            original_dict[k] = v
+            nested_dict = original_dict.get(k, {})
+            if nested_dict is not None:
+                nested_dict = update_nested(nested_dict, v)
+        original_dict[k] = nested_dict
     return original_dict
 
 
