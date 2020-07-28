@@ -116,6 +116,7 @@ class Acquisition(Base):
     acquiree_id = fixture('id_idx')
     acquiree_name = fixture('name')
     acquiree_region = fixture('region')
+    acquiree_state_code = fixture('state_code')
     acquirer_cb_url = fixture('cb_url')
     acquirer_city = fixture('city')
     acquirer_country_code = fixture('iso3')
@@ -132,7 +133,6 @@ class Acquisition(Base):
     price_currency_code = fixture('currency_code')
     price_usd = fixture('monetary_amount')
     rank = fixture('rank')
-    state_code = fixture('state_code')
     type = fixture('type')
     updated_at = fixture('timestamp')
 
