@@ -29,7 +29,7 @@ class OrgCollectTask(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     test = luigi.BoolParameter()
-    insert_batch_size = luigi.IntParameter(default=500)
+    insert_batch_size = luigi.IntParameter(default=200)
     db_config_env = luigi.Parameter()
 
     def output(self):
