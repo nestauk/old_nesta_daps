@@ -44,9 +44,9 @@ class Organization(Base):
 
     id = fixture('id_pk')
     address = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
-    alias1 = fixture('name')
-    alias2 = fixture('name')
-    alias3 = fixture('name')
+    alias1 = Column(_TEXT)
+    alias2 = Column(_TEXT)
+    alias3 = Column(_TEXT)
     categories = relationship('CategoryGroup',
                               secondary='crunchbase_organizations_categories')
     cb_url = fixture('cb_url')
@@ -56,7 +56,7 @@ class Organization(Base):
     country_code = fixture('iso3')
     created_at = fixture('timestamp')
     domain = Column(_TEXT)
-    email = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
+    email = Column(_TEXT)
     employee_count = Column(_TEXT)
     facebook_url = fixture('url')
     founded_on = fixture('happened_on')
