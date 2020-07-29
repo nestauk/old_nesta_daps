@@ -44,7 +44,7 @@ class CrunchbaseLolveltyRootTask(luigi.WrapperTask):
                                      batchable=f3p("batchables/novelty/lolvelty"),
                                      env_files=[f3p("nesta/"),
                                                 f3p("config/mysqldb.config"),
-                                                f3p("config/elasticsearch.config")],
+                                                f3p("config/elasticsearch.yaml")],
                                      job_def="py36_amzn1_image",
                                      job_name=routine_id,
                                      job_queue="HighPriority",

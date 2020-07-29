@@ -158,7 +158,7 @@ class ClioTask(luigi.Task):
 
         # Prepare connection to ES
         prod_label = '' if self.production else '_dev'
-        es_config = get_config('elasticsearch.config', 'clio')
+        es_config = get_config('elasticsearch.yaml', 'clio')
         es_config['index'] = f"clio_{self.dataset}{prod_label}"
         aws_auth_region=es_config.pop('region')
         es = ElasticsearchPlus(hosts=es_config['host'],
