@@ -7,12 +7,12 @@ from functools import lru_cache
 def get_eu_countries():
     """
     All EU ISO-2 codes
-    
+
     Returns:
         data (list): List of ISO-2 codes)
     """
     url = 'https://restcountries.eu/rest/v2/regionalbloc/eu'
-    r = requests.get(url)        
+    r = requests.get(url)
     return [row['alpha2Code'] for row in r.json()]
 
 
@@ -49,7 +49,7 @@ def get_country_region_lookup():
            "/r/country-codes.csv")
     r = requests.get(url)
     r.raise_for_status()
-    with StringIO(r.text) as csv:        
+    with StringIO(r.text) as csv:
         df = pd.read_csv(csv, usecols=['official_name_en', 'ISO3166-1-Alpha-2',
                                        'Sub-region Name'])
     data = {row['ISO3166-1-Alpha-2']: (row['official_name_en'],
@@ -60,3 +60,24 @@ def get_country_region_lookup():
     data['XK'] = ('Kosovo', 'Southern Europe')
     data['TW'] = ('Kosovo', 'Eastern Asia')
     return data
+
+
+@lru_cache()
+def get_us_states_lookup():
+    """
+    Retrieves US state ISO2 codes to state name mapping from our DB.
+
+    Returns:
+        lookup (dict): Key-value pairs of state-codes and names.
+    """
+    engine = get_mysql_engine("MYSQLDB", "mysqldb", "static_data")
+    states_lookup = {row['state_code']: row['state_name']
+                     for _, row in  pd.read_sql_table('us_states_lookup',
+                                                      engine).iterrows()}
+    states_lookup["AE"] = "Armed Forces (Canada, Europe, Middle East)"
+    states_lookup["AA"] = "Armed Forces (Americas)"
+    states_lookup["AP"] = "Armed Forces (Pacific)"
+    states_lookup[None] = None  # default lookup for non-US countries
+    states_lookup[""] = None  # default lookup for non-US countries
+    return states_lookup
+
