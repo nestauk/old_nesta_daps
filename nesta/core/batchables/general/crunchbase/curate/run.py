@@ -22,12 +22,16 @@ from nesta.packages.geo_utils.lookup import get_continent_lookup
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
+
+# Input ORMs:
 from nesta.core.orms.crunchbase_orm import Organization
 from nesta.core.orms.crunchbase_orm import OrganizationCategory
 from nesta.core.orms.crunchbase_orm import CategoryGroup
 from nesta.core.orms.crunchbase_orm import FundingRound
 from nesta.core.orms.geographic_orm import Geographic
 
+# Output ORM
+from nesta.core.orms.general_orm import CrunchbaseOrg
 
 def reformat_row(row, investor_names, categories, categories_groups_list)
     states_lookup = get_us_states_lookup()  # Note: this is lru_cached
@@ -111,7 +115,8 @@ def run():
             row = reformat_row(row, investor_names=investor_names[row['id']],
                                categories=categories, groups_list=groups_list)
             data.append(row)
-        insert_data(data)
+        insert_data("BATCHPAR_config", "mysqldb", db_name, Base,
+                    CrunchbaseOrg, data, low_memory=True)
     logging.info("Batch job complete.")
 
 
