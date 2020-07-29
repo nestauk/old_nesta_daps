@@ -10,6 +10,7 @@ from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.core.luigihacks.autobatch import AutoBatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.orms.geographic_orm import Base, Geographic
 from nesta.core.orms.orm_utils import get_mysql_engine, try_until_allowed, insert_data, db_session
 from nesta.core.luigihacks.misctools import get_config
@@ -35,10 +36,10 @@ class GeocodeBatchTask(AutoBatchTask):
     test = luigi.BoolParameter()
     _routine_id = luigi.Parameter(default="DUMMY ROUTINE")
     db_config_env = luigi.Parameter()
-    city_col = luigi.SqlAlchemyParameter()
-    country_col = luigi.SqlAlchemyParameter()
+    city_col = SqlAlchemyParameter()
+    country_col = SqlAlchemyParameter()
     country_is_iso2 = luigi.BoolParameter(default=False)
-    location_key_col = luigi.SqlAlchemyParameter(default=None)
+    location_key_col = SqlAlchemyParameter(default=None)
     batch_size = luigi.IntParameter(default=1000)
     intermediate_bucket = luigi.Parameter(default="nesta-production-intermediate")
     batchable = luigi.Parameter(default=find_filepath_from_pathstub("batchables/batchgeocode"))

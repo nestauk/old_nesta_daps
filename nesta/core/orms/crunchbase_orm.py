@@ -57,7 +57,7 @@ class Organization(Base):
     created_at = fixture('timestamp')
     domain = Column(_TEXT)
     email = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
-    employee_count = Column(BIGINT)
+    employee_count = Column(_TEXT)
     facebook_url = fixture('url')
     founded_on = fixture('happened_on')
     homepage_url = fixture('url')
