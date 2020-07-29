@@ -1,4 +1,6 @@
 """
+Doc2Cluster
+===========
 Fetches articles from DB and transforms variable-length texts (usually from sentences to paragraphs)
 to vectors using Sentence Transformers. Fuzzy clusters the vectors with HDBSCAN.
 
@@ -30,7 +32,8 @@ import hdbscan
 import numpy as np
 from nesta.core.luigihacks import misctools
 from nesta.core.orms.arxiv_orm import Article, ArticleVector, ArticleCluster
-from nesta.packages.misc_utils.s3_utils import store_on_s3, load_from_s3
+from nesta.packages.misc_utils.s3_utils import pickle_to_s3, s3_to_pickle
+from nesta.core.orms.orm_utils import db_session
 
 
 class Doc2ClusterFlow(FlowSpec):
@@ -79,7 +82,7 @@ class Doc2ClusterFlow(FlowSpec):
         type=str,
     )
 
-    def _create_db_session(self, config, header="client", database="production"):
+    def _create_engine(self, config, header="client", database="production"):
         """Creates a SQL engine.
         
         Args:
@@ -88,7 +91,7 @@ class Doc2ClusterFlow(FlowSpec):
             database (str) Database name.
 
         Returns:
-            (`sqlalchemy.orm.session.Session`)
+            (`sqlalchemy.engine.base.Engine`)
 
         """
         db_config = misctools.get_config(config, header)
@@ -100,9 +103,7 @@ class Doc2ClusterFlow(FlowSpec):
             password=db_config["password"],
             port=db_config["port"],
         )
-        engine = create_engine(url)
-        Session = sessionmaker(engine)
-        return Session()
+        return create_engine(url)
 
     def _create_mappings(self, ids, entities, column_name):
         """Transforms inputs to the bulk_insert_mappings() format.
@@ -128,13 +129,12 @@ class Doc2ClusterFlow(FlowSpec):
         """Connects to SQL DB, filters vectorised articles and passes the rest
         to the next task.
         """
-        # Connect to SQL DB
-        s = self._create_db_session(self.db_config)
-
-        # Get the abstracts and arXiv paper IDs.
-        papers = s.query(Article.id, Article.abstract).filter(
-            ~exists().where(Article.id == ArticleVector.article_id)
-        )
+        # Connect to SQL DB and get the abstracts and arXiv paper IDs.
+        engine = self._create_engine(self.db_config)
+        with db_session(engine) as session:
+            papers = session.query(Article.id, Article.abstract).filter(
+                ~exists().where(Article.id == ArticleVector.article_id)
+            )
 
         # Unroll abstracts and paper IDs
         self.ids, self.abstracts = zip(*papers)
@@ -157,13 +157,11 @@ class Doc2ClusterFlow(FlowSpec):
         id_embeddings_mapping = self._create_mappings(
             self.ids, self.embeddings, "vector"
         )
-        # Connect to SQL DB
-        s = self._create_db_session(self.db_config)
-        
-        # Store to db
-        s.bulk_insert_mappings(ArticleVector, id_embeddings_mapping)
-        s.commit()
-        logging.info("Committed vectors to DB!")
+        # Connect to SQL DB and store vectors and arXiv paper IDs
+        engine = self._create_engine(self.db_config)
+        with db_session(engine) as session:
+            session.bulk_insert_mappings(ArticleVector, id_embeddings_mapping)
+            logging.info("Committed vectors to DB!")
 
         # Proceed to next task
         self.next(self.cluster)
@@ -173,15 +171,14 @@ class Doc2ClusterFlow(FlowSpec):
         """Soft clustering with HDBSCAN."""
         if self.new_clusterer:
             logging.info("Fitting a new HDBSCAN model.")
-            # Connect to SQL DB
-            s = self._create_db_session(self.db_config)
+            # Create SQL engine
+            engine = self._create_engine(self.db_config)
+            with db_session(engine) as session:
+                # Delete all clusters to refill the table with the new predictions.
+                session.query(ArticleCluster).delete()
 
-            # Delete all clusters to refill the table with the new predictions.
-            s.query(ArticleCluster).delete()
-            s.commit()
-
-            # Fetch all document embeddings
-            papers = s.query(ArticleVector.article_id, ArticleVector.vector)
+                # Fetch all document embeddings
+                papers = session.query(ArticleVector.article_id, ArticleVector.vector)
 
             # Unroll abstracts and paper IDs
             self.ids, self.embeddings = zip(*papers)
@@ -197,11 +194,11 @@ class Doc2ClusterFlow(FlowSpec):
             self.soft_clusters = hdbscan.all_points_membership_vectors(clusterer)
 
             # Store clusterer in S3
-            store_on_s3(clusterer, self.s3_bucket, self.clusterer_name)
+            pickle_to_s3(clusterer, self.s3_bucket, self.clusterer_name)
         else:
             logging.info("Loading fitted HDBSCAN from S3.")
             # Load clusterer from S3
-            clusterer = load_from_s3(self.s3_bucket, self.clusterer_name)
+            clusterer = s3_to_pickle(self.s3_bucket, self.clusterer_name)
 
             # Predict soft labels
             self.soft_clusters = hdbscan.prediction.membership_vector(
@@ -212,9 +209,11 @@ class Doc2ClusterFlow(FlowSpec):
         id_clusters_mapping = self._create_mappings(
             self.ids, self.soft_clusters, "clusters"
         )
-        # Store mapping in DB
-        s.bulk_insert_mappings(ArticleCluster, id_clusters_mapping)
-        s.commit()
+        # Create SQL engine
+        engine = self._create_engine(self.db_config)
+        with db_session(engine) as session:
+            # Store mapping in DB
+            session.bulk_insert_mappings(ArticleCluster, id_clusters_mapping)
         self.next(self.end)
 
     @step
