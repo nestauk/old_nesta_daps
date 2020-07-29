@@ -33,7 +33,7 @@ from nesta.core.orms.geographic_orm import Geographic
 # Output ORM
 from nesta.core.orms.general_orm import CrunchbaseOrg
 
-def reformat_row(row, investor_names, categories, categories_groups_list)
+def reformat_row(row, investor_names, categories, categories_groups_list):
     states_lookup = get_us_states_lookup()  # Note: this is lru_cached
     continent_lookup = get_continent_lookup()  # Note: this is lru_cached
     row['aliases'] = [row.pop('legal_name')] + [row.pop(f'alias{i}') for i in [1, 2, 3]]
@@ -72,7 +72,6 @@ def retrieve_categories(_row, session):
 
         
 def run():
-
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
@@ -105,7 +104,7 @@ def run():
 
     # Now process organisations
     with db_session(engine) as session:
-        query = (session.query(Organization, Geographic).
+        query = (session.query(Organization, Geographic)
                  .join(Geographic, Organization.location_id==Geographic.id)
                  .filter(Organization.id.in_(org_ids)))
         data = []
@@ -125,29 +124,4 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-
-    if 'BATCHPAR_outinfo' not in os.environ:
-        from nesta.core.orms.orm_utils import setup_es
-        es, es_config = setup_es(production=False, endpoint='health-scanner',
-                                 dataset='companies',
-                                 drop_and_recreate=True)
-
-        environ = {"AWSBATCHTEST": "",
-                   'BATCHPAR_batch_file': 'crunchbase_to_es-15597291977144725.json', 
-                   'BATCHPAR_config': ('/home/ec2-user/nesta/nesta/'
-                                       'core/config/mysqldb.config'),
-                   'BATCHPAR_db_name': 'production', 
-                   'BATCHPAR_bucket': 'nesta-production-intermediate', 
-                   'BATCHPAR_done': "False", 
-                   'BATCHPAR_outinfo': ('https://search-health-scanner-'
-                               '5cs7g52446h7qscocqmiky5dn4.'
-                               'eu-west-2.es.amazonaws.com'), 
-                   'BATCHPAR_out_port': '443', 
-                   'BATCHPAR_out_index': 'companies_v1', 
-                   'BATCHPAR_out_type': '_doc', 
-                   'BATCHPAR_aws_auth_region': 'eu-west-2', 
-                   'BATCHPAR_entity_type': 'company', 
-                   'BATCHPAR_test': "False"}
-        for k, v in environ.items():
-            os.environ[k] = v
     run()

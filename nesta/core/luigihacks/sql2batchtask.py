@@ -12,6 +12,7 @@ import os
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.core.luigihacks import autobatch
+from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.orms.orm_utils import get_mysql_engine
@@ -78,9 +79,7 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
         logging.info(f"Retrieved {len(all_ids)} IDs rom MySQL")
 
         job_params = []
-        for count, batch in enumerate(split_batches(ids_to_process,
-                                                    self.process_batch_size),
-                                      1):
+        for count, batch in enumerate(split_batches(all_ids, self.process_batch_size),1):
             # write batch of ids to s3
             batch_file = put_s3_batch(batch, self.intermediate_bucket,
                                       self.routine_id)

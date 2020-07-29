@@ -10,6 +10,7 @@ from sqlalchemy.dialects.mysql import VARCHAR, BIGINT, TEXT, JSON
 from sqlalchemy.types import INT, DATE, DATETIME, BOOLEAN
 from sqlalchemy import Column
 from nesta.core.orms.crunchbase_orm import fixture as cb_fixture
+from nesta.core.orms.crunchbase_orm import _TEXT
 
 Base = declarative_base()
 
@@ -24,11 +25,11 @@ class CrunchbaseOrg(Base):
     closed_on = cb_fixture('happened_on')
     country = cb_fixture('country')
     employee_count = cb_fixture('country')
-    facebook_url = cb_fixture('external_url')
+    facebook_url = cb_fixture('url')
     founded_on = cb_fixture('happened_on')
-    homepage_url = cb_fixture('external_url')
+    homepage_url = cb_fixture('url')
     last_funding_on = cb_fixture('happened_on')
-    linkedin_url = cb_fixture('external_url')
+    linkedin_url = cb_fixture('url')
     long_description = Column(_TEXT)
     name = cb_fixture('name')
     num_exits = Column(INT)
@@ -41,7 +42,7 @@ class CrunchbaseOrg(Base):
     state_code = cb_fixture('state_code')
     status = Column(VARCHAR(9))
     total_funding_usd = cb_fixture('monetary_amount')
-    twitter_url = cb_fixture('external_url')
+    twitter_url = cb_fixture('url')
 
     # New, joined or updated fields
     aliases = Column(JSON)

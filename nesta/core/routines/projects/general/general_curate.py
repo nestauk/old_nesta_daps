@@ -1,5 +1,5 @@
 from nesta.core.luigihacks.luigi_logging import set_log_level
-from nesta.core.luigihacks.sql2estask import Sql2EsTask
+from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.crunchbase_orm import Organization as CrunchbaseOrg
 
@@ -11,12 +11,9 @@ S3_BUCKET='nesta-production-intermediate'
 ENV_FILES = ['mysqldb.config', 'nesta']
 
 def kwarg_maker(dataset, routine_id):
-    env_files=list(f3p(f) for f in ENV_FILES) + [f3p(f'tier_1/datasets/{dataset}.json')]
-    batchable=f3p(f'batchables/general/{dataset}/curate')
-    return dict(dataset=dataset,
-                routine_id=f'{routine_id}_{dataset}',
-                env_files=env_files,
-                batchable=batchable)
+    return dict(routine_id=f'{routine_id}_{dataset}',
+                env_files=[f3p(f) for f in ENV_FILES],
+                batchable=f3p(f'batchables/general/{dataset}/curate'))
 
 class CurateTask(luigi.WrapperTask):
     process_batch_size = luigi.IntParameter(default=1000)
