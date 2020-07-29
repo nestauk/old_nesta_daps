@@ -2,7 +2,7 @@ import pickle
 import boto3
 
 
-def store_on_s3(data, bucket, prefix):
+def pickle_to_s3(data, bucket, prefix):
     """Writes out data to s3 as pickle, so it can be picked up by a task.
 
     Args:
@@ -26,7 +26,7 @@ def store_on_s3(data, bucket, prefix):
     return filename
 
 
-def load_from_s3(bucket, prefix):
+def s3_to_pickle(bucket, prefix):
     """Loads a pickled file from s3.
 
     Args:
