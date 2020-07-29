@@ -137,7 +137,6 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     """
     # fix uuid column names
     orgs = rename_uuid_columns(orgs)
-    orgs = orgs.astype({'employee_count':int})
 
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
