@@ -11,12 +11,13 @@ from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 from nesta.core.orms.gtr_orm import Projects as GtrProject
+from nesta.core.orms.arxiv_orm import Article as ArxivArticle
 
 from datetime import datetime as dt
 import luigi
 
 S3_BUCKET='nesta-production-intermediate'
-ENV_FILES = ['mysqldb.config', 'elasticsearch.config',
+ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml',
              'nesta']
 ENDPOINT = 'general'
 
@@ -54,7 +55,8 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('gtr', 'project', GtrProject.id),)
+        params = (('gtr', 'project', GtrProject.id),
+                  ('arxiv', 'article', ArxivArticle.id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,

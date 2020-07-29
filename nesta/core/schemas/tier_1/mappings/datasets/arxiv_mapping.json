@@ -1,64 +1,63 @@
 {
     "mappings": {
-        "_doc": {
-            "properties": {
-                "booleanFlag_multinational_article": {
-                    "type": "boolean"
+        "_doc": null,
+        "properties": {
+            "booleanFlag_multinational_article": {
+                "type": "boolean"
+            },
+            "count_citations_article": {
+                "type": "integer"
+            },
+            "id_digitalObjectIdentifier_article": {
+                "type": "keyword"
+            },
+            "metric_novelty_article": {
+                "type": "float"
+            },
+            "terms_authors_article": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "count_citations_article": {
-                    "type": "integer"
+                "type": "text"
+            },
+            "terms_institutes_article": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_digitalObjectIdentifier_article": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "textBody_abstract_article": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "metric_novelty_article": {
-                    "type": "float"
+                "type": "text"
+            },
+            "title_of_article": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_authors_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "url_of_article": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_institutes_article": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "textBody_abstract_article": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "title_of_article": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "url_of_article": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "year_of_article": {
-                    "type": "integer"
-                }
+                "type": "text"
+            },
+            "year_of_article": {
+                "type": "integer"
             }
         }
     }
