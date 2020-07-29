@@ -1,45 +1,64 @@
 '''
-Crunchbase
-================
+General ORM
+===========
+
+ORMs for curated data, to be transfered to the general ES endpoint.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR, BIGINT, TEXT
 from sqlalchemy.types import INT, DATE, DATETIME, BOOLEAN
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column
+from nesta.core.orms.crunchbase_orm import fixture as cb_fixture
 
 Base = declarative_base()
 
-# There are a lot of repeated data types in this schema, so the following
-# fixtures are designed to maintain consistency between tables
-FIXTURES = {'cb_url': lambda: Column(VARCHAR(200)),
-            'city': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
-            'country': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
-            'currency_code': lambda: Column(VARCHAR(3)),             
-            'external_url': lambda: Column(TEXT),
-            'happened_on': lambda: Column(DATE),
-            'id_pk': lambda: Column(VARCHAR(50), primary_key=True),
-            'id_idx': lambda: Column(VARCHAR(50), index=True),
-            'iso3': lambda: Column(VARCHAR(3)),
-            'job_title': lambda: Column(VARCHAR(150)),             
-            'location_id': lambda: Column(VARCHAR(400, collation='utf8mb4_unicode_ci'), index=True),
-            'monetary_amount': lambda: Column(BIGINT),
-            'name': lambda: Column(VARCHAR(250, collation='utf8mb4_unicode_ci')),
-            'permalink': lambda: Column(VARCHAR(100)),
-            'rank': lambda: Column(BIGINT),
-            'region': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
-            'roles': lambda: Column(VARCHAR(50)),
-            'state_code': lambda: Column(VARCHAR(2)),
-            'type': lambda: Column(VARCHAR(50)),
-            'timestamp': lambda: Column(DATETIME)}  # {create/updated}_at}
+class CrunchbaseOrg(Base):
+    __tablename__ = 'curated_crunchbase_organizations'
 
-def fixture(key):
-    return FIXTURES[key]()
+    # Fields ported from crunchbase_orm.Organization
+    address = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
+    cb_url = cb_fixture('cb_url')
+    city = cb_fixture('city')
+    closed_on = cb_fixture('happened_on')
+    country = cb_fixture('country')
+    employee_count = 
+    facebook_url
+    founded_on
+    num_exits 
+    num_funding_rounds
+    total_funding_usd
+    homepage_url
+    last_funding_on
+    linkedin_url
+    long_description
+    name = cb_fixture('name')
+    parent_id
+    primary_role
+    region
+    roles
+    short_description
+    state_code
+    status
+    twitter_url
 
+    # New, joined or updated fields
+    aliases
+    category_list
+    category_groups_list
+    coordinates
+    continent
+    continent_name
+    currency_of_funding
+    investor_names
+    is_eu
+    state_name
+    updated_at <-- str
+    country_alpha_2
+    country_alpha_3
+    country_numeric
+    currency_of_funding <-- always "USD"
 
-class Organization(Base):
-    __tablename__ = 'crunchbase_organizations'
 
     id = fixture('id_pk')
     address = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
