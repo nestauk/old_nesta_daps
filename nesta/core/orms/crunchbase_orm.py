@@ -13,11 +13,12 @@ Base = declarative_base()
 
 # There are a lot of repeated data types in this schema, so the following
 # fixtures are designed to maintain consistency between tables
+_TEXT = TEXT(collation='utf8mb4_unicode_ci')
 FIXTURES = {'cb_url': lambda: Column(VARCHAR(200)),
             'city': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
             'country': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
             'currency_code': lambda: Column(VARCHAR(3)),             
-            'external_url': lambda: Column(TEXT),
+            'url': lambda: Column(_TEXT),
             'happened_on': lambda: Column(DATE),
             'id_pk': lambda: Column(VARCHAR(50), primary_key=True),
             'id_idx': lambda: Column(VARCHAR(50), index=True),
@@ -26,13 +27,13 @@ FIXTURES = {'cb_url': lambda: Column(VARCHAR(200)),
             'location_id': lambda: Column(VARCHAR(400, collation='utf8mb4_unicode_ci'), index=True),
             'monetary_amount': lambda: Column(BIGINT),
             'name': lambda: Column(VARCHAR(250, collation='utf8mb4_unicode_ci')),
-            'permalink': lambda: Column(VARCHAR(100)),
             'rank': lambda: Column(BIGINT),
             'region': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
             'roles': lambda: Column(VARCHAR(50)),
             'state_code': lambda: Column(VARCHAR(2)),
             'type': lambda: Column(VARCHAR(50)),
             'timestamp': lambda: Column(DATETIME)}  # {create/updated}_at}
+
 
 def fixture(key):
     return FIXTURES[key]()
@@ -54,26 +55,26 @@ class Organization(Base):
     country = fixture('country')
     country_code = fixture('iso3')
     created_at = fixture('timestamp')
-    domain = Column(TEXT)
+    domain = Column(_TEXT)
     email = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
     employee_count = Column(BIGINT)
-    facebook_url = fixture('external_url')
+    facebook_url = fixture('url')
     founded_on = fixture('happened_on')
-    homepage_url = fixture('external_url')
+    homepage_url = fixture('url')
     is_health = Column(BOOLEAN)
     last_funding_on = fixture('happened_on')
     legal_name = fixture('name')
-    linkedin_url = fixture('external_url')
+    linkedin_url = fixture('url')
     location_id = fixture('location_id')
-    logo_url = fixture('external_url')
-    long_description = Column(TEXT(collation='utf8mb4_unicode_ci'))
-    mesh_terms = Column(TEXT)
+    logo_url = fixture('url')
+    long_description = Column(_TEXT)
+    mesh_terms = Column(_TEXT)
     name = fixture('name')
     num_exits = Column(INT)
     num_funding_rounds = Column(INT)
     parent_id = fixture('id_idx')
-    permalink = fixture('permalink')
-    phone = Column(TEXT)
+    permalink = fixture('url')
+    phone = Column(_TEXT)
     postal_code = Column(VARCHAR(30, collation='utf8mb4_unicode_ci'))
     primary_role = Column(VARCHAR(50))
     rank = fixture('rank')
@@ -85,7 +86,7 @@ class Organization(Base):
     total_funding = fixture('monetary_amount')
     total_funding_currency_code = fixture('currency_code')
     total_funding_usd = fixture('monetary_amount')
-    twitter_url = fixture('external_url')
+    twitter_url = fixture('url')
     type = fixture('type')
     updated_at = fixture('timestamp')
 
@@ -128,7 +129,7 @@ class Acquisition(Base):
     cb_url = fixture('cb_url')
     created_at = fixture('timestamp')
     name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     price = fixture('monetary_amount')
     price_currency_code = fixture('currency_code')
     price_usd = fixture('monetary_amount')
@@ -149,7 +150,7 @@ class Degree(Base):
     institution_name = fixture('name')
     is_completed = Column(BOOLEAN)
     name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     person_id = fixture('id_idx')
     person_name = fixture('name')
     rank = fixture('rank')
@@ -171,12 +172,12 @@ class FundingRound(Base):
     created_at = fixture('timestamp')
     investment_type = Column(VARCHAR(30))
     investor_count = Column(BIGINT)
-    lead_investor_ids = Column(TEXT)
+    lead_investor_ids = Column(_TEXT)
     location_id = fixture('location_id')
     name = fixture('name')
     org_id = fixture('id_idx')
     org_name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     post_money_valuation = fixture('monetary_amount')
     post_money_valuation_currency_code = fixture('currency_code')
     post_money_valuation_usd = fixture('monetary_amount')
@@ -200,7 +201,7 @@ class Fund(Base):
     entity_id = fixture('id_idx')
     entity_type = fixture('type')
     name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     raised_amount = fixture('monetary_amount')
     raised_amount_currency_code = fixture('currency_code')
     raised_usd = fixture('monetary_amount')
@@ -222,7 +223,7 @@ class InvestmentPartner(Base):
     name = fixture('name')
     partner_id = fixture('id_idx')
     partner_name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     rank = fixture('rank')
     type = fixture('type')
     updated_at = fixture('timestamp')
@@ -241,7 +242,7 @@ class Investment(Base):
     is_lead_investor = Column(BOOLEAN)
     name = fixture('name')
     partner_name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     rank = fixture('rank')
     type = fixture('type')
     updated_at = fixture('timestamp')
@@ -258,15 +259,15 @@ class Investor(Base):
     country_code = fixture('iso3')
     created_at = fixture('timestamp')
     domain = Column(VARCHAR(80))
-    facebook_url = fixture('external_url')
+    facebook_url = fixture('url')
     founded_on = fixture('happened_on')
     investment_count = Column(BIGINT)
-    investor_types = Column(TEXT)
-    linkedin_url = fixture('external_url')
+    investor_types = Column(_TEXT)
+    linkedin_url = fixture('url')
     location_id = fixture('location_id')
-    logo_url = fixture('external_url')
+    logo_url = fixture('url')
     name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     rank = fixture('rank')
     region = fixture('region')
     roles = fixture('roles')
@@ -274,7 +275,7 @@ class Investor(Base):
     total_funding = fixture('monetary_amount')
     total_funding_currency_code = fixture('currency_code')
     total_funding_usd = fixture('monetary_amount')
-    twitter_url = fixture('external_url')
+    twitter_url = fixture('url')
     type = fixture('type')
     updated_at = fixture('timestamp')
 
@@ -296,7 +297,7 @@ class Ipo(Base):
     org_cb_url = fixture('cb_url')
     org_id = fixture('id_idx')
     org_name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     rank = fixture('rank')
     region = fixture('region')
     share_price = fixture('monetary_amount')
@@ -325,7 +326,7 @@ class Job(Base):
     name = fixture('name')
     org_id = fixture('id_idx')
     org_name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     person_id = fixture('id_idx')
     person_name = fixture('name')
     rank = fixture('rank')
@@ -344,21 +345,21 @@ class People(Base):
     country = fixture('country')
     country_code = fixture('iso3')
     created_at = fixture('timestamp')
-    facebook_url = fixture('external_url')
+    facebook_url = fixture('url')
     featured_job_organization_id = fixture('id_idx')
     featured_job_organization_name = fixture('name')
     featured_job_title = fixture('job_title')
     first_name = fixture('name')
     gender = Column(VARCHAR(20))
     last_name = fixture('name')
-    linkedin_url = fixture('external_url')
+    linkedin_url = fixture('url')
     location_id = fixture('location_id')
-    logo_url = fixture('external_url')
+    logo_url = fixture('url')
     name = fixture('name')
-    permalink = fixture('permalink')
+    permalink = fixture('url')
     rank = fixture('rank')
     region = fixture('region')
     state_code = fixture('state_code')
-    twitter_url = fixture('external_url')
+    twitter_url = fixture('url')
     type = fixture('type')
     updated_at = fixture('timestamp')
