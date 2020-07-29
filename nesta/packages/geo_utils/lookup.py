@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from io import StringIO
 from functools import lru_cache
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 @lru_cache()
 def get_eu_countries():

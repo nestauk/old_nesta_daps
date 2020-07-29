@@ -19,9 +19,10 @@ from collections import defaultdict
 from nesta.packages.crunchbase.utils import parse_investor_names
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
+from nesta.packages.geo_utils.lookup import get_eu_countries
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import load_json_from_pathstub
+from nesta.core.orms.orm_utils import load_json_from_pathstub, insert_data
 
 # Input ORMs:
 from nesta.core.orms.crunchbase_orm import Organization
@@ -31,16 +32,18 @@ from nesta.core.orms.crunchbase_orm import FundingRound
 from nesta.core.orms.geographic_orm import Geographic
 
 # Output ORM
-from nesta.core.orms.general_orm import CrunchbaseOrg
+from nesta.core.orms.general_orm import CrunchbaseOrg, Base
 
 def reformat_row(row, investor_names, categories, categories_groups_list):
     states_lookup = get_us_states_lookup()  # Note: this is lru_cached
     continent_lookup = get_continent_lookup()  # Note: this is lru_cached
+    eu_countries = get_eu_countries()  # Note: this is lru_cached
     row['aliases'] = [row.pop('legal_name')] + [row.pop(f'alias{i}') for i in [1, 2, 3]]
     row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
     row['currency_of_funding'] = 'USD'  # Only fall back on 'funding_total_usd'
     row['investor_names'] = sorted(set(investor_names))
-    row['coordinates'] = {'lat': row.pop('latitude'), 'lon': row.pop('longitude')}
+    row['is_eu'] = row['country_alpha_2'] in eu_countries
+    row['coordinates'] = {'lat': float(row.pop('latitude')), 'lon': float(row.pop('longitude'))}
     row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
     row['category_list'] = categories    
     row['category_group_list'] = categories_groups_list
@@ -51,8 +54,8 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
 
 def sqlalchemy_to_dict(_row, fields):
     row = {}
-    row.updated({k: v for k, v in _row.Organization.__dict__.items()
-                 if k in fields})
+    row.update({k: v for k, v in _row.Organization.__dict__.items()
+                if k in fields})
     row.update({k: v for k, v in _row.Geographic.__dict__.items()
                 if k in fields})
     return row
@@ -88,7 +91,7 @@ def run():
     org_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(org_ids)} organisations retrieved from s3")
     # Lists of fields to extract
-    org_fields = set(c.name for c in Organization.__table__.columns)
+    org_fields = list(set(c.name for c in Organization.__table__.columns))
     geo_fields = ['country_alpha_2', 'country_alpha_3', 'country_numeric',
                   'continent', 'latitude', 'longitude']
 
@@ -96,7 +99,7 @@ def run():
     investor_names = defaultdict(list)
     with db_session(engine) as session:
         query = (session.query(Organization, FundingRound)
-                 .join(FundingRound, Organization.id==FundingRound.company_id)
+                 .join(FundingRound, Organization.id==FundingRound.org_id)
                  .filter(Organization.id.in_(org_ids)))
         for row in query.all():
             _investor_names = row.FundingRound.investor_names
@@ -112,7 +115,10 @@ def run():
             row = sqlalchemy_to_dict(_row, fields=org_fields+geo_fields)
             categories, groups_list = retrieve_categories(_row, session)
             row = reformat_row(row, investor_names=investor_names[row['id']],
-                               categories=categories, groups_list=groups_list)
+                               categories=categories, categories_groups_list=groups_list)
+            to_pop = [k for k in row if k not in CrunchbaseOrg.__dict__]
+            for k in to_pop:
+                row.pop(k)
             data.append(row)
         insert_data("BATCHPAR_config", "mysqldb", db_name, Base,
                     CrunchbaseOrg, data, low_memory=True)
@@ -124,4 +130,13 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
+    if "BATCHPAR_test" not in os.environ:
+        env = {"batch_file": "General-Curate-2020-07-29_crunchbase-15960376638858845.json",
+               "config": os.environ["HOME"]+"/nesta/nesta/core/config/mysqldb.config",
+               "routine_id": "General-Curate-2020-07-29_crunchbase",
+               "bucket": "nesta-production-intermediate",
+               "test": "True",
+               "db_name": "dev"}
+        for k, v in env.items():
+            os.environ[f'BATCHPAR_{k}'] = v
     run()
