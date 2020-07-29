@@ -26,7 +26,7 @@ FIXTURES = {'cb_url': lambda: Column(VARCHAR(200)),
             'job_title': lambda: Column(VARCHAR(150)),             
             'location_id': lambda: Column(VARCHAR(400, collation='utf8mb4_unicode_ci'), index=True),
             'monetary_amount': lambda: Column(BIGINT),
-            'name': lambda: Column(VARCHAR(200, collation='utf8mb4_unicode_ci')),
+            'name': lambda: Column(VARCHAR(250, collation='utf8mb4_unicode_ci')),
             'rank': lambda: Column(BIGINT),
             'region': lambda: Column(VARCHAR(100, collation='utf8mb4_unicode_ci')),
             'roles': lambda: Column(VARCHAR(50)),
@@ -57,7 +57,7 @@ class Organization(Base):
     created_at = fixture('timestamp')
     domain = Column(_TEXT)
     email = Column(VARCHAR(200, collation='utf8mb4_unicode_ci'))
-    employee_count = Column(BIGINT)
+    employee_count = Column(_TEXT)
     facebook_url = fixture('url')
     founded_on = fixture('happened_on')
     homepage_url = fixture('url')
