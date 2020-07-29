@@ -22,9 +22,9 @@ class CrunchbaseOrg(Base):
     city = cb_fixture('city')
     closed_on = cb_fixture('happened_on')
     country = cb_fixture('country')
-    employee_count = 
-    facebook_url
-    founded_on
+    employee_count = cb_fixture('country')
+    facebook_url = fixture('external_url')
+    founded_on = fixture('happened_on')
     num_exits 
     num_funding_rounds
     total_funding_usd
