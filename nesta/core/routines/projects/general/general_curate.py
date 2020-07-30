@@ -20,14 +20,15 @@ def kwarg_maker(dataset, routine_id):
 
 class CurateTask(luigi.Task):
     process_batch_size = luigi.IntParameter(default=1000)
-    test = luigi.BoolParameter(default=True)
+    production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
 
     def output(self):
-        routine_id = f'General-Curate-Root-{self.date}'
+        test = not self.production
+        routine_id = f'General-Curate-Root-{self.date}-{test}'
         db_config_path = os.environ['MYSQLDB']
         db_config = get_config(db_config_path, "mysqldb")
-        db_config["database"] = 'dev' if self.test else 'production'
+        db_config["database"] = 'dev' if test else 'production'
         db_config["table"] = f"{routine_id} <dummy>"  # Not a real table
         return MySqlTarget(update_id=routine_id, **db_config)
 
@@ -43,7 +44,7 @@ class CurateTask(luigi.Task):
                               poll_time=10,
                               max_live_jobs=50,
                               db_config_env='MYSQLDB',
-                              test=self.test,
+                              test=not self.production,
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
