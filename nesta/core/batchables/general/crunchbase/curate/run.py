@@ -34,6 +34,13 @@ from nesta.core.orms.geographic_orm import Geographic
 # Output ORM
 from nesta.core.orms.general_orm import CrunchbaseOrg, Base
 
+def float_pop(d, k):
+    v = d.pop(k)
+    if v is not None:
+        return float(v)
+    return v
+
+
 def reformat_row(row, investor_names, categories, categories_groups_list):
     states_lookup = get_us_states_lookup()  # Note: this is lru_cached
     continent_lookup = get_continent_lookup()  # Note: this is lru_cached
@@ -42,8 +49,8 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
     row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
     row['currency_of_funding'] = 'USD'  # Only fall back on 'funding_total_usd'
     row['investor_names'] = sorted(set(investor_names))
-    row['is_eu'] = row['country_alpha_2'] in eu_countries
-    row['coordinates'] = {'lat': float(row.pop('latitude')), 'lon': float(row.pop('longitude'))}
+    row['is_eu'] = row['country_alpha_2'] in eu_countries    
+    row['coordinates'] = {'lat': float_pop(row, 'latitude'), 'lon': float_pop(row, 'longitude')}
     row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
     row['category_list'] = categories    
     row['category_group_list'] = categories_groups_list
