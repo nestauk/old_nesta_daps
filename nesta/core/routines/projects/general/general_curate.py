@@ -17,7 +17,8 @@ def kwarg_maker(dataset, routine_id):
                 env_files=[f3p(f) for f in ENV_FILES],
                 batchable=f3p(f'batchables/general/{dataset}/curate'))
 
-class CurateTask(luigi.WrapperTask):
+
+class CurateTask(luigi.Task):
     process_batch_size = luigi.IntParameter(default=1000)
     test = luigi.BoolParameter(default=True)
     date = luigi.DateParameter(default=dt.now())
@@ -28,8 +29,7 @@ class CurateTask(luigi.WrapperTask):
         db_config = get_config(db_config_path, "mysqldb")
         db_config["database"] = 'dev' if self.test else 'production'
         db_config["table"] = f"{routine_id} <dummy>"  # Not a real table
-        update_id = f"{self.routine_id}"
-        return MySqlTarget(update_id=update_id, **db_config)
+        return MySqlTarget(update_id=routine_id, **db_config)
 
     def requires(self):
         set_log_level(True)
@@ -52,3 +52,6 @@ class CurateTask(luigi.WrapperTask):
             yield Sql2BatchTask(id_field=id_field,
                                 **kwarg_maker(dataset, routine_id),
                                 **default_kwargs)
+        
+    def run(self):
+        self.output().touch()
