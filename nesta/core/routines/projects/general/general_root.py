@@ -10,6 +10,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
+from nesta.core.orms.general_orm import CrunchbaseOrg
 from nesta.core.orms.gtr_orm import Projects as GtrProject
 from nesta.core.orms.arxiv_orm import Article as ArxivArticle
 
@@ -56,7 +57,8 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('gtr', 'project', GtrProject.id),
-                  ('arxiv', 'article', ArxivArticle.id),)
+                  ('arxiv', 'article', ArxivArticle.id),
+                  ('companies', 'company', CrunchbaseOrg.id))
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
