@@ -79,9 +79,10 @@ def run():
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
     db_name = os.environ["BATCHPAR_db_name"]
+    os.environ["MYSQLDB"] = os.environ["BATCHPAR_config"]
 
     # Database setup
-    engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)    
+    engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)    
     # Retrieve lookup tables
 
     # Retrieve list of Org ids from S3
@@ -120,7 +121,7 @@ def run():
             for k in to_pop:
                 row.pop(k)
             data.append(row)
-        insert_data("BATCHPAR_config", "mysqldb", db_name, Base,
+        insert_data("MYSQLDB", "mysqldb", db_name, Base,
                     CrunchbaseOrg, data, low_memory=True)
     logging.info("Batch job complete.")
 

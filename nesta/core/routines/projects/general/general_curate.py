@@ -2,10 +2,12 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.crunchbase_orm import Organization as CrunchbaseOrg
+from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.mysqldb import MySqlTarget
 
 import luigi
 from datetime import datetime as dt
-
+import os
 
 S3_BUCKET='nesta-production-intermediate'
 ENV_FILES = ['mysqldb.config', 'nesta']
@@ -19,6 +21,15 @@ class CurateTask(luigi.WrapperTask):
     process_batch_size = luigi.IntParameter(default=1000)
     test = luigi.BoolParameter(default=True)
     date = luigi.DateParameter(default=dt.now())
+
+    def output(self):
+        routine_id = f'General-Curate-Root-{self.date}'
+        db_config_path = os.environ['MYSQLDB']
+        db_config = get_config(db_config_path, "mysqldb")
+        db_config["database"] = 'dev' if self.test else 'production'
+        db_config["table"] = f"{routine_id} <dummy>"  # Not a real table
+        update_id = f"{self.routine_id}"
+        return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
         set_log_level(True)
