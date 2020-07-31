@@ -22,7 +22,7 @@ python doc2cluster.py --no-pylint run --transformer distilbert-base-nli-stsb-mea
 """
 
 from metaflow import FlowSpec, step, Parameter
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.sql import exists
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
@@ -133,7 +133,10 @@ class Doc2ClusterFlow(FlowSpec):
         engine = self._create_engine(self.db_config)
         with db_session(engine) as session:
             papers = session.query(Article.id, Article.abstract).filter(
-                ~exists().where(Article.id == ArticleVector.article_id)
+                and_(
+                    ~exists().where(Article.id == ArticleVector.article_id),
+                    Article.abstract.isnot(None),
+                )
             )
 
         # Unroll abstracts and paper IDs
