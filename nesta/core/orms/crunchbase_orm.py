@@ -240,6 +240,7 @@ class Investment(Base):
     funding_round_name = fixture('name')
     investor_id = fixture('id_idx')
     investor_name = fixture('name')
+    investor_type = fixture('type')
     is_lead_investor = Column(BOOLEAN)
     name = fixture('name')
     partner_name = fixture('name')
