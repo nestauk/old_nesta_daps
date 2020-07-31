@@ -9,7 +9,7 @@
         "category_list": "terms_subcategory_organisation",
         "cb_url": "url_crunchBase_organisation",
         "city": "placeName_city_organisation",
-        "closed_on": "date_death_organisation",
+        "closed_on": "date_closed_organisation",
         "continent_alpha_2": "id_of_continent",
         "continent_name": "placeName_continent_organisation",
         "coordinates": "coordinate_of_city",
