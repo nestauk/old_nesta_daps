@@ -32,6 +32,7 @@ import hdbscan
 import numpy as np
 from nesta.core.luigihacks import misctools
 from nesta.core.orms.arxiv_orm import Article, ArticleVector, ArticleCluster
+from nesta.core.orms.arxiv_orm import Base
 from nesta.packages.misc_utils.s3_utils import pickle_to_s3, s3_to_pickle
 from nesta.core.orms.orm_utils import db_session
 
@@ -84,7 +85,7 @@ class Doc2ClusterFlow(FlowSpec):
 
     def _create_engine(self, config, header="client", database="production"):
         """Creates a SQL engine.
-        
+
         Args:
             config (str): Configuration filename.
             header (str): Header in the configuration file.
@@ -131,6 +132,7 @@ class Doc2ClusterFlow(FlowSpec):
         """
         # Connect to SQL DB and get the abstracts and arXiv paper IDs.
         engine = self._create_engine(self.db_config)
+        Base.metadata.create_all(engine)  # Required for first-time use
         with db_session(engine) as session:
             papers = session.query(Article.id, Article.abstract).filter(
                 ~exists().where(Article.id == ArticleVector.article_id)
