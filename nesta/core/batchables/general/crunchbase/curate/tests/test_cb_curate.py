@@ -2,20 +2,9 @@ import pytest
 from unittest import mock
 from datetime import datetime as dt
 
-from nesta.core.batchables.general.crunchbase.curate.run import float_pop
 from nesta.core.batchables.general.crunchbase.curate.run import reformat_row
 from nesta.core.batchables.general.crunchbase.curate.run import sqlalchemy_to_dict
 from nesta.core.batchables.general.crunchbase.curate.run import retrieve_categories
-
-
-def test_float_pop():
-    d = {'a_float': '12.3', 'an_int': '12', 'a_none': None, 'a_str': 'hello'}
-    assert float_pop(d, 'a_float') == 12.3
-    assert float_pop(d, 'an_int') == 12
-    assert float_pop(d, 'a_none') == None
-    with pytest.raises(ValueError):
-        float_pop(d, 'a_str')
-    assert len(d) == 0  # all popped
 
 
 def test_reformat_row():
@@ -28,7 +17,8 @@ def test_reformat_row():
            'longitude': 23.4,
            'updated_at': dt.strptime('2019-08-14 09:53:10', '%Y-%m-%d %H:%M:%S'),
            'state_code': 'CA',
-           'continent': 'NA'}
+           'continent': 'NA',
+           'long_text': 'this is some text about about Mexico and Egypt'}
     investor_names = ['jk', 'jk', 'ak']
     categories = ['balancing', 'juggling']
     categories_groups_list = ['circus', 'physics']
@@ -45,7 +35,9 @@ def test_reformat_row():
                     'continent': 'NA',
                     'continent_name': 'North America',
                     'category_list': categories,
-                    'category_groups_list': categories_groups_list}
+                    'category_groups_list': categories_groups_list,
+                    'long_text':'this is some text about about Mexico and Egypt',
+                    'country_mentions':['EG','MX']}
 
 def test_sqlalchemy_to_dict():
     _row = mock.Mock()

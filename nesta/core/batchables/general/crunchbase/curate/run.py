@@ -6,6 +6,9 @@ Curate crunchbase data, ready for ingestion to the general ES endpoint.
 """
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.luigihacks.elasticsearchplus import _null_empty_str, __floatify_coord
+from nesta.core.luigihacks.elasticsearchplus import _clean_up_lists, _remove_padding
+from nesta.core.luigihacks.elasticsearchplus import _country_detection
 
 from ast import literal_eval
 import boto3
@@ -67,12 +70,19 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
     row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
     row['investor_names'] = sorted(set(investor_names))
     row['is_eu'] = row['country_alpha_2'] in eu_countries
-    row['coordinates'] = {'lat': float_pop(row, 'latitude'), 'lon': float_pop(row, 'longitude')}
+    row['coordinates'] = {'lat': row.pop('latitude'), 'lon': row.pop('longitude')}
     row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
     row['category_list'] = sorted(set(categories))
     row['category_groups_list'] = sorted(set(categories_groups_list))
     row['state_name'] = states_lookup[row['state_code']]
     row['continent_name'] = continent_lookup[row['continent']]
+
+
+    row['coordinates'] = __floatify_coord(row['coordinates'])
+    row = _country_detection(row, 'country_mentions')
+    row = _remove_padding(row)
+    row = _null_empty_str(row)
+    row = _clean_up_lists(row)
     return row
 
 
