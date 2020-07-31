@@ -1,3 +1,10 @@
+"""
+General Curate
+==============
+
+Tasks for curating and merging MySQL data, and then piping to unified table.
+"""
+
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
@@ -13,6 +20,7 @@ S3_BUCKET='nesta-production-intermediate'
 ENV_FILES = ['mysqldb.config', 'nesta']
 
 def kwarg_maker(dataset, routine_id):
+    """kwarg factory for Sql2BatchTask tasks"""
     return dict(routine_id=f'{routine_id}_{dataset}',
                 env_files=[f3p(f) for f in ENV_FILES],
                 batchable=f3p(f'batchables/general/{dataset}/curate'))
