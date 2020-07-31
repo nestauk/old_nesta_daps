@@ -205,7 +205,7 @@ class Fund(Base):
     permalink = fixture('url')
     raised_amount = fixture('monetary_amount')
     raised_amount_currency_code = fixture('currency_code')
-    raised_usd = fixture('monetary_amount')
+    raised_amount_usd = fixture('monetary_amount')
     rank = fixture('rank')
     type = fixture('type')
     updated_at = fixture('timestamp')
