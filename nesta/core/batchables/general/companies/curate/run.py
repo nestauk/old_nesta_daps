@@ -30,7 +30,7 @@ from nesta.core.orms.orm_utils import load_json_from_pathstub, insert_data
 from nesta.core.orms.crunchbase_orm import Organization
 from nesta.core.orms.crunchbase_orm import OrganizationCategory
 from nesta.core.orms.crunchbase_orm import CategoryGroup
-from nesta.core.orms.crunchbase_orm import FundingRound
+from nesta.core.orms.crunchbase_orm import FundingRound, Investor
 from nesta.core.orms.geographic_orm import Geographic
 
 # Output ORM
@@ -151,12 +151,12 @@ def run():
     # First get all investors
     investor_names = defaultdict(list)
     condition = (Organization.id.in_(org_ids) & 
-                 FundingRound.lead_investor_id.isnot(None))
-    query = (session.query(Organization, FundingRound)
-             .join(FundingRound, Organization.id==FundingRound.org_id)
-             .join(Investor, Investor.id==FundingRound.lead_investor_id)
-             .filter(condition))
+                 FundingRound.lead_investor_ids.isnot(None))
     with db_session(engine) as session:        
+        query = (session.query(Organization, FundingRound, Investor)
+                 .join(FundingRound, Organization.id==FundingRound.org_id)
+                 .join(Investor, Investor.id==FundingRound.lead_investor_ids)
+                 .filter(condition))
         for row in query.all():
             investor_names[row.Organization.id].append(row.Investor.name)
 

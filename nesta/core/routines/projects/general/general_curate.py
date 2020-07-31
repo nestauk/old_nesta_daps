@@ -27,7 +27,7 @@ def kwarg_maker(dataset, routine_id):
 
 
 class CurateTask(luigi.Task):
-    process_batch_size = luigi.IntParameter(default=1000)
+    process_batch_size = luigi.IntParameter(default=5000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
 
