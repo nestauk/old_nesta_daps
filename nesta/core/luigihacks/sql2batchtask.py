@@ -20,7 +20,8 @@ from nesta.core.orms.orm_utils import db_session
 
 
 class Sql2BatchTask(autobatch.AutoBatchTask):
-    '''Launches batch tasks to pipe data from MySQL to Elasticsearch.
+    '''Launches batch tasks to pipe data from MySQL in batches to
+    AWS batches.
 
     Args:
         date (datetime): Datetime used to label the outputs.
@@ -28,14 +29,10 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
         intermediate_bucket (str): Name of the S3 bucket where to store the batch ids.
         db_config_env (str): The output database envariable.
         process_batch_size (int): Number of rows to process in a batch.
-        drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
-        dataset (str): Name of the elasticsearch dataset.
-        endpoint (str): Name of the AWS ES domain endpoint.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
         filter (SqlAlchemy conditional statement): A conditional statement, to be passed
                                                    to query.filter(). This allows for
                                                    subsets of the data to be processed.
-        entity_type (str): Name of the entity type to label this task with.
         kwargs (dict): Any other job parameters to pass to the batchable.
     '''
     date = luigi.DateParameter()
