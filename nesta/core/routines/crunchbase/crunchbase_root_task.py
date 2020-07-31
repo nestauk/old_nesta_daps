@@ -46,7 +46,7 @@ class RootTask(luigi.WrapperTask):
                                    env_files=[f3p("nesta/"),
                                               f3p("config/mysqldb.config"),
                                               f3p("datasets/companies.json"),
-                                              f3p("config/elasticsearch.config")],
+                                              f3p("config/elasticsearch.yaml")],
                                    job_def="py36_amzn1_image",
                                    job_name=f"CrunchBaseElasticsearchTask-{_routine_id}",
                                    job_queue="HighPriority",

@@ -41,6 +41,8 @@ class RootTask(luigi.WrapperTask):
     def requires(self):
         '''Collects the database configurations
         and executes the central task.'''
+        logging.getLogger().setLevel(logging.INFO)
+
         _routine_id = "{}-{}".format(self.date, self.production)
         grid_task_kwargs = {
             '_routine_id':_routine_id,
@@ -81,7 +83,7 @@ class RootTask(luigi.WrapperTask):
                                      env_files=[f3p("nesta/"),
                                                 f3p("config/mysqldb.config"),
                                                 f3p("config/"
-                                                    "elasticsearch.config")],
+                                                    "elasticsearch.yaml")],
                                      job_def="py36_amzn1_image",
                                      job_name=routine_id,
                                      job_queue="HighPriority",
