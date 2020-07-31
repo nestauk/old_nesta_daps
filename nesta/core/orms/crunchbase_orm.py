@@ -199,6 +199,7 @@ class Fund(Base):
     cb_url = fixture('cb_url')
     created_at = fixture('timestamp')
     entity_id = fixture('id_idx')
+    entity_name = fixture('name')
     entity_type = fixture('type')
     name = fixture('name')
     permalink = fixture('url')
