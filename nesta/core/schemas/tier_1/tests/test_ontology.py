@@ -21,7 +21,7 @@ def test_ontology_uniqueness(ontology):
 def test_validate(ontology):
     dirname = Path(os.path.dirname(__file__)).parent
     dataset_dirname = os.path.join(dirname, 'datasets')
-    firsts, middles, lasts = [], [], []
+    firsts, middles, lasts = set(), set(), set()
     # Test each dataset for valid ontology
     for filename in os.listdir(dataset_dirname):
         filename = os.path.join(dataset_dirname, filename)
@@ -36,9 +36,9 @@ def test_validate(ontology):
             assert middle in ontology['middleName'], f'{dataset} has unexpected field {field_name}'
             assert last in ontology['lastName'], f'{dataset} has unexpected field {field_name}'
             # Save these for the tests at the end
-            firsts.append(first)
-            middles.append(middle)
-            lasts.append(last)
+            firsts.add(first)
+            middles.add(middle)
+            lasts.add(last)
     # Test there is no superfluous vocab in the ontology
     for f in ontology['firstName']:
         assert f in firsts, f'Unused first name: {f}'
