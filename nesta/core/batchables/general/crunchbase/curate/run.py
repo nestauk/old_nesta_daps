@@ -65,13 +65,12 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
     eu_countries = get_eu_countries()  # Note: this is lru_cached
     row['aliases'] = [row.pop('legal_name')] + [row.pop(f'alias{i}') for i in [1, 2, 3]]
     row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
-    row['currency_of_funding'] = 'USD'  # Only fall back on 'funding_total_usd'
     row['investor_names'] = sorted(set(investor_names))
     row['is_eu'] = row['country_alpha_2'] in eu_countries
     row['coordinates'] = {'lat': float_pop(row, 'latitude'), 'lon': float_pop(row, 'longitude')}
     row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-    row['category_list'] = categories
-    row['category_group_list'] = categories_groups_list
+    row['category_list'] = sorted(set(categories))
+    row['category_groups_list'] = sorted(set(categories_groups_list))
     row['state_name'] = states_lookup[row['state_code']]
     row['continent_name'] = continent_lookup[row['continent']]
     return row
@@ -114,7 +113,7 @@ def retrieve_categories(_row, session):
                      .all()):
         categories.append(category.name)
         groups_list += [group for group in str(category.category_groups_list).split('|')
-                        if group is not 'None']
+                        if group != 'None']
     return categories, groups_list
 
 
