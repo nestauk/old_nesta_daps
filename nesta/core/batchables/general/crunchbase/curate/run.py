@@ -59,12 +59,12 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
     return row
 
 
-def sqlalchemy_to_dict(_row, fields):
+def sqlalchemy_to_dict(_row, org_fields, geo_fields):
     row = {}
     row.update({k: v for k, v in _row.Organization.__dict__.items()
-                if k in fields})
+                if k in org_fields})
     row.update({k: v for k, v in _row.Geographic.__dict__.items()
-                if k in fields})
+                if k in geo_fields})
     return row
 
 
@@ -120,7 +120,7 @@ def run():
                  .filter(Organization.id.in_(org_ids)))
         data = []
         for count, _row in enumerate(query.limit(nrows).all(), 1):
-            row = sqlalchemy_to_dict(_row, fields=org_fields+geo_fields)
+            row = sqlalchemy_to_dict(_row, org_fields=org_fields, geo_fields=geo_fields)
             categories, groups_list = retrieve_categories(_row, session)
             row = reformat_row(row, investor_names=investor_names[row['id']],
                                categories=categories, categories_groups_list=groups_list)
