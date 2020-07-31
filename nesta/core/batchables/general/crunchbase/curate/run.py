@@ -187,13 +187,4 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-    if "BATCHPAR_batch_file" not in os.environ:
-        from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
-        os.environ["BATCHPAR_done"] = "False"
-        os.environ["BATCHPAR_batch_file"] = "General-Curate-2020-07-31_crunchbase-15962048966472027.json"
-        os.environ["BATCHPAR_config"] = f3p("config/mysqldb.config")
-        os.environ["BATCHPAR_routine_id"] = "General-Curate-2020-07-31_crunchbase"
-        os.environ["BATCHPAR_bucket"] = "nesta-production-intermediate"
-        os.environ["BATCHPAR_test"] = "False"
-        os.environ["BATCHPAR_db_name"] = "production"
     run()
