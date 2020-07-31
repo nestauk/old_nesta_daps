@@ -35,6 +35,14 @@ from nesta.core.orms.geographic_orm import Geographic
 from nesta.core.orms.general_orm import CrunchbaseOrg, Base
 
 def float_pop(d, k):
+    """Pop a value from dict by key, then convert to float if not None.
+
+    Args:
+        d (dict): dict to remove key k from.
+        k: Key to pop from dict d.
+    Returns:
+        v: Value popped from dict d, convert to float if not None.
+    """
     v = d.pop(k)
     if v is not None:
         return float(v)
@@ -42,6 +50,16 @@ def float_pop(d, k):
 
 
 def reformat_row(row, investor_names, categories, categories_groups_list):
+    """Curate raw data for ingestion to MySQL.
+
+    Args:
+        row (dict): Row of data.
+        investor_names (list): List of investor names for this org.
+        categories (list): List of crunchbase categories for this org.
+        categories_groups_list (list): List of crunchbase category groups for this org
+    Returns:
+        row (dict): Reformatted row of data
+    """
     states_lookup = get_us_states_lookup()  # Note: this is lru_cached
     continent_lookup = get_continent_lookup()  # Note: this is lru_cached
     eu_countries = get_eu_countries()  # Note: this is lru_cached
@@ -49,10 +67,10 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
     row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
     row['currency_of_funding'] = 'USD'  # Only fall back on 'funding_total_usd'
     row['investor_names'] = sorted(set(investor_names))
-    row['is_eu'] = row['country_alpha_2'] in eu_countries    
+    row['is_eu'] = row['country_alpha_2'] in eu_countries
     row['coordinates'] = {'lat': float_pop(row, 'latitude'), 'lon': float_pop(row, 'longitude')}
     row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-    row['category_list'] = categories    
+    row['category_list'] = categories
     row['category_group_list'] = categories_groups_list
     row['state_name'] = states_lookup[row['state_code']]
     row['continent_name'] = continent_lookup[row['continent']]
@@ -60,6 +78,16 @@ def reformat_row(row, investor_names, categories, categories_groups_list):
 
 
 def sqlalchemy_to_dict(_row, org_fields, geo_fields):
+    """Pull relevant fields out of the JOIN'd org-geo object.
+
+    Args:
+        _row (sqlalchemy model): JOIN'd org-geo object.
+        org_fields (list): List of Organization fields to extract.
+        geo_fields (list): List of Geographic fields to extract.
+    returns:
+        row (dict): dict representation of the sqlalchemy model, with
+                    releveant fields extracted.
+    """
     row = {}
     row.update({k: v for k, v in _row.Organization.__dict__.items()
                 if k in org_fields})
@@ -69,6 +97,15 @@ def sqlalchemy_to_dict(_row, org_fields, geo_fields):
 
 
 def retrieve_categories(_row, session):
+    """Retrieve Crunchbase categories for this Organization
+
+    Args:
+        _row (sqlalchemy model): JOIN'd org-geo object.
+        session (sqlalchemy connectable): SqlAlchemy connectable
+    returns:
+        row (dict): dict representation of the sqlalchemy model, with
+                    releveant fields extracted.
+    """
     categories, groups_list = [], []
     for category in (session.query(CategoryGroup)
                      .select_from(OrganizationCategory)
@@ -80,7 +117,7 @@ def retrieve_categories(_row, session):
                         if group is not 'None']
     return categories, groups_list
 
-        
+
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
@@ -89,7 +126,7 @@ def run():
     os.environ["MYSQLDB"] = os.environ["BATCHPAR_config"]
 
     # Database setup
-    engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)    
+    engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)
     # Retrieve lookup tables
 
     # Retrieve list of Org ids from S3
@@ -124,9 +161,11 @@ def run():
             categories, groups_list = retrieve_categories(_row, session)
             row = reformat_row(row, investor_names=investor_names[row['id']],
                                categories=categories, categories_groups_list=groups_list)
+            # Pop fields which aren't required
             to_pop = [k for k in row if k not in CrunchbaseOrg.__dict__]
             for k in to_pop:
                 row.pop(k)
+            # Append the row for bulk insertion
             data.append(row)
         insert_data("MYSQLDB", "mysqldb", db_name, Base,
                     CrunchbaseOrg, data, low_memory=True)
@@ -138,13 +177,4 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-    if "BATCHPAR_test" not in os.environ:
-        env = {"batch_file": "General-Curate-2020-07-29_crunchbase-15960376638858845.json",
-               "config": os.environ["HOME"]+"/nesta/nesta/core/config/mysqldb.config",
-               "routine_id": "General-Curate-2020-07-29_crunchbase",
-               "bucket": "nesta-production-intermediate",
-               "test": "True",
-               "db_name": "dev"}
-        for k, v in env.items():
-            os.environ[f'BATCHPAR_{k}'] = v
     run()
