@@ -54,7 +54,6 @@ class CrunchbaseOrg(Base):
     country_alpha_2 = cb_fixture('state_code')
     country_alpha_3 = cb_fixture('iso3')
     country_numeric = cb_fixture('iso3')
-    currency_of_funding = Column(VARCHAR(3))
     investor_names = Column(JSON)
     is_eu = Column(BOOLEAN, nullable=False)
     state_name = cb_fixture('name')
