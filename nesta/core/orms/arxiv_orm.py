@@ -6,7 +6,7 @@ from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN, ARRAY
+from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN
 
 from nesta.core.orms.grid_orm import Institute
 from nesta.core.orms.grid_orm import Base as GridBase
@@ -131,7 +131,7 @@ class ArticleVector(Base):
     article_id = Column(VARCHAR(40),
                         ForeignKey(Article.id),
                         primary_key=True)
-    vector = Column(ARRAY(FLOAT))
+    vector = Column(JSON)
 
 class ArticleCluster(Base):
     """Document clusters for articles."""
@@ -139,4 +139,4 @@ class ArticleCluster(Base):
     article_id = Column(VARCHAR(40),
                         ForeignKey(Article.id),
                         primary_key=True)
-    clusters = Column(ARRAY(FLOAT))
+    clusters = Column(JSON)
