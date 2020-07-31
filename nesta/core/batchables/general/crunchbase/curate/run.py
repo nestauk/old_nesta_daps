@@ -19,7 +19,6 @@ import pandas as pd
 import requests
 from collections import defaultdict
 
-from nesta.packages.crunchbase.utils import parse_investor_names
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.lookup import get_eu_countries
@@ -151,13 +150,15 @@ def run():
 
     # First get all investors
     investor_names = defaultdict(list)
-    with db_session(engine) as session:
-        query = (session.query(Organization, FundingRound)
-                 .join(FundingRound, Organization.id==FundingRound.org_id)
-                 .filter(Organization.id.in_(org_ids)))
+    condition = (Organization.id.in_(org_ids) & 
+                 FundingRound.lead_investor_id.isnot(None))
+    query = (session.query(Organization, FundingRound)
+             .join(FundingRound, Organization.id==FundingRound.org_id)
+             .join(Investor, Investor.id==FundingRound.lead_investor_id)
+             .filter(condition))
+    with db_session(engine) as session:        
         for row in query.all():
-            _investor_names = row.FundingRound.investor_names
-            investor_names[row.Organization.id] += parse_investor_names(_investor_names)
+            investor_names[row.Organization.id].append(row.Investor.name)
 
     # Now process organisations
     with db_session(engine) as session:
