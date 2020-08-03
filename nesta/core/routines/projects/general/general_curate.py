@@ -58,9 +58,11 @@ class CurateTask(luigi.Task):
 
         params = (('companies', CrunchbaseOrg.id),)
         for dataset, id_field in params:
-            yield Sql2BatchTask(id_field=id_field,
-                                **kwarg_maker(dataset, routine_id),
-                                **default_kwargs)
+            print(kwarg_maker(dataset, routine_id))
+            assert False
+            #yield Sql2BatchTask(id_field=id_field,
+            #                    **kwarg_maker(dataset, routine_id),
+            #                    **default_kwargs)
         
     def run(self):
         self.output().touch()

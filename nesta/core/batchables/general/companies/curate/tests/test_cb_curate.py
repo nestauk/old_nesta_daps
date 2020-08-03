@@ -2,9 +2,9 @@ import pytest
 from unittest import mock
 from datetime import datetime as dt
 
-from nesta.core.batchables.general.crunchbase.curate.run import reformat_row
-from nesta.core.batchables.general.crunchbase.curate.run import sqlalchemy_to_dict
-from nesta.core.batchables.general.crunchbase.curate.run import retrieve_categories
+from nesta.core.batchables.general.companies.curate.run import reformat_row
+from nesta.core.batchables.general.companies.curate.run import sqlalchemy_to_dict
+from nesta.core.batchables.general.companies.curate.run import retrieve_categories
 
 
 def test_reformat_row():
