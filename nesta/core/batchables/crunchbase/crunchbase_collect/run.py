@@ -65,4 +65,11 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
+
+    os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/jobs_production"
+    os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
+    os.environ["BATCHPAR_batch_size"] = "500"
+    os.environ["BATCHPAR_table"] = "jobs"
+    os.environ["BATCHPAR_test"] = "False"
+    os.environ["BATCHPAR_db_name"] = "production"
     run()
