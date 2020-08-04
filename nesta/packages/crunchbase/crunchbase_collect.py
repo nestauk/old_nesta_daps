@@ -211,8 +211,12 @@ def process_non_orgs(df, existing, pks):
 
     # drop any rows already existing in the database
     total_rows = len(df)
-    drop_mask = df[pks].apply(lambda row: tuple(row[pks]) in existing, axis=1)
-    df = df.loc[~drop_mask]
+
+    _pks = list(df[pks].apply(lambda x: tuple(x), axis=1)) 
+    all_pks = set(_pks) 
+    remaining_pks = all_pks - existing 
+    condition = list(map(lambda x: x in remaining_pks, _pks))
+    df = df.loc[condition]                                  
     logging.info(f"Dropped {total_rows - len(df)} rows already existing in database")
 
     # convert country name and add composite key if locations in table

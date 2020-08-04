@@ -121,7 +121,7 @@ def retrieve_categories(_row, session):
                      .filter(OrganizationCategory.organization_id==_row.Organization.id)
                      .all()):
         categories.append(category.name)
-        groups_list += [group for group in str(category.category_groups_list).split('|')
+        groups_list += [group for group in str(category.category_groups_list).split(',')
                         if group != 'None']
     return categories, groups_list
 

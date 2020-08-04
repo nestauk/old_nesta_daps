@@ -55,7 +55,7 @@ def test_retrieve_categories():
     cat2 = mock.Mock()
     cat1.name = 'juggling'
     cat2.name = 'balancing'
-    cat1.category_groups_list = 'circus|physics'
+    cat1.category_groups_list = 'circus,physics'
     cat2.category_groups_list = None
     session.query().select_from().join().filter().all.return_value = [cat1, cat2]
     categories, groups_list = retrieve_categories(_row, session)
