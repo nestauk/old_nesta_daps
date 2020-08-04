@@ -44,7 +44,7 @@ class CBGeocodeBatchTask(GeocodeBatchTask):
                                 job_queue="HighPriority",
                                 region_name="eu-west-2",
                                 poll_time=10,
-                                memory=4096,
+                                memory=16000,
                                 max_live_jobs=20)
 
     def combine(self, job_params):
