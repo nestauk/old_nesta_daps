@@ -24,7 +24,7 @@ ENDPOINT = 'general'
 
 def kwarg_maker(dataset, routine_id):
     env_files=list(f3p(f) for f in ENV_FILES) + [f3p(f'tier_1/datasets/{dataset}.json')]
-    batchable=f3p(f'batchables/general/sql2es/{dataset}')
+    batchable=f3p(f'batchables/general/{dataset}/sql2es')
     return dict(dataset=dataset,
                 endpoint=ENDPOINT,
                 routine_id=f'{routine_id}_{dataset}',

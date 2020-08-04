@@ -7,7 +7,7 @@ Pipe curated Crunchbase data from MySQL to Elasticsearch.
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import obj_to_dict
+from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.general_orm import CrunchbaseOrg
 
 from ast import literal_eval
@@ -48,10 +48,10 @@ def run():
     logging.info(f"{len(org_ids)} organisations retrieved from s3")
 
     # Pipe orgs to ES
-    query = session.query(CrunchbaseOrg).filter(CrunchbaseOrg.id.in_(org_ids))
     with db_session(engine) as session:
+        query = session.query(CrunchbaseOrg).filter(CrunchbaseOrg.id.in_(org_ids))
         for row in query.all():
-            row = obj_to_dict(row)
+            row = object_to_dict(row)
             _row = es.index(index=es_index, doc_type=es_type,
                             id=row.pop('id'), body=row)
     logging.info("Batch job complete.")
