@@ -1,8 +1,8 @@
 """
-run.py (general.crunchbase.sql2es)
+run.py (general.companies.sql2es)
 ==================================
 
-Pipe curated Crunchbase data from MySQL to Elasticsearch.
+Pipe curated Companies data from MySQL to Elasticsearch.
 """
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus

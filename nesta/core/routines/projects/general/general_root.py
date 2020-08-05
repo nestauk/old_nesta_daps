@@ -40,7 +40,7 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         test = not self.production
-        set_log_level(True)
+        set_log_level(test)
         routine_id = f'General-Sql2EsTask-{self.date}'
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,

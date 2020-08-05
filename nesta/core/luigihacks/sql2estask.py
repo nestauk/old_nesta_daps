@@ -12,6 +12,7 @@ import os
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.core.luigihacks import autobatch
+from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.orms.orm_utils import get_mysql_engine
@@ -48,8 +49,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     dataset = luigi.Parameter()
     endpoint = luigi.Parameter()
-    id_field = luigi.Parameter()
-    filter = luigi.Parameter(default=None)
+    id_field = luigi.SqlAlchemyParameter()
+    filter = luigi.SqlAlchemyParameter(default=None)
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
