@@ -9,7 +9,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import f3p
 from nesta.core.luigihacks.misctools import load_batch_config
-from nesta.core.luigihacks.misctools import make_mysql_target
+from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.orms.arxiv_orm import Article
 
 import luigi

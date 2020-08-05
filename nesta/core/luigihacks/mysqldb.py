@@ -29,6 +29,8 @@ import logging
 
 import luigi
 from nesta.core.luigihacks.misctools import extract_task_info
+from nesta.core.luigihacks.misctools import get_config
+import os
 
 logger = logging.getLogger('luigi-interface')
 
