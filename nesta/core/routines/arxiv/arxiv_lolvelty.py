@@ -57,7 +57,7 @@ class ArxivElasticsearchTask(ElasticsearchTask):
                                          'mysqldb.config'),
                                      f3p('datasets/arxiv.json'),
                                      f3p('config/'
-                                         'elasticsearch.config')],
+                                         'elasticsearch.yaml')],
                           job_def='py36_amzn1_image',
                           job_name=self.routine_id,
                           job_queue='HighPriority',

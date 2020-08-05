@@ -21,7 +21,7 @@ S3_BUCKET='nesta-production-intermediate'
 
 def kwarg_maker(dataset, routine_id):
     env_files=[f3p('config/mysqldb.config'),
-               f3p('config/elasticsearch.config'),
+               f3p('config/elasticsearch.yaml'),
                f3p(f'tier_1/datasets/{dataset}.json'),
                f3p('nesta')]
     batchable=f3p(f'batchables/eurito/{dataset}_eu')
