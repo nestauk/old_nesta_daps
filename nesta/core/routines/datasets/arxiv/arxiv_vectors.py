@@ -8,7 +8,7 @@ Tasks for converting arXiv abstracts to vectors via BERT in batches.
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.misctools import f3p
 from nesta.core.luigihacks.misctools import load_batch_config
-from nesta.core.luigihacks.text2vec_task import Text2VecTask
+from nesta.core.luigihacks.text2vectask import Text2VecTask
 from nesta.core.orms.arxiv_orm import Article, ArticleVector
 
 import luigi

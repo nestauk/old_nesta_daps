@@ -113,17 +113,19 @@ class CorExTopic(Base):
     id = Column(INTEGER, primary_key=True, autoincrement=False)
     terms = Column(JSON)
 
+
 class ArticleTopic(Base):
     """Association table to CorEx topics."""
     __tablename__ = 'arxiv_article_corex_topics'
-    article_id = Column(VARCHAR(40), 
-                        ForeignKey(Article.id), 
+    article_id = Column(VARCHAR(40),
+                        ForeignKey(Article.id),
                         primary_key=True)
-    topic_id = Column(INTEGER, 
-                      ForeignKey(CorExTopic.id), 
+    topic_id = Column(INTEGER,
+                      ForeignKey(CorExTopic.id),
                       primary_key=True,
                       autoincrement=False)
     topic_weight = Column(FLOAT)
+
 
 class ArticleVector(Base):
     """Document vectors for articles."""
@@ -132,6 +134,7 @@ class ArticleVector(Base):
                         ForeignKey(Article.id),
                         primary_key=True)
     vector = Column(JSON)
+
 
 class ArticleCluster(Base):
     """Document clusters for articles."""

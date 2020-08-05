@@ -15,11 +15,10 @@ import luigi
 
 
 def get_class_info(_class):
-    _path, _file = os.path.split(inspect.getfile(Article))
-    _, _path = os.path.split(_path)
-    pathstub = os.path.join(_path, _file)
+    _, _file = os.path.split(inspect.getfile(_class))
+    module = _file.replace(".py", "")
     tablename = _class.__tablename__
-    return pathstub, tablename
+    return module, tablename
 
 
 class Text2VectorTask(Sql2BatchTask):
@@ -33,7 +32,7 @@ class Text2VectorTask(Sql2BatchTask):
                 _class = kwargs.pop(arg_name)
             except KeyError:
                 raise AttributeError(f'{arg_name} must be a named argument.')
-            pathstub, tablename = get_class_info(_class)
-            kwargs['kwargs'][f'{arg_name}_pathstub'] = pathstub
+            module, tablename = get_class_info(_class)
+            kwargs['kwargs'][f'{arg_name}_module'] = module
             kwargs['kwargs'][f'{arg_name}_tablename'] = tablename
         super().__init__(*args, **kwargs)

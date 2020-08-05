@@ -14,6 +14,7 @@ from elasticsearch.helpers import scan
 from datetime import datetime
 from py2neo.database import Graph
 
+import importlib
 import re
 import pymysql
 import os
@@ -556,10 +557,18 @@ def get_class_by_tablename(Base, tablename):
     Returns:
         reference or None.
     """
+    if type(Base) is str:
+        Base = get_base_from_orm_name(Base)
+
     for c in Base._decl_class_registry.values():
         if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
             return c
     raise NameError(tablename)
+
+
+def get_base_from_orm_name(orm_module_name):
+    orm_module = importlib.import_module(f'nesta.core.orms.{orm_module_name}')
+    return orm_module.Base
 
 
 def try_until_allowed(f, *args, **kwargs):
