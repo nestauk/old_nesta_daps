@@ -262,8 +262,8 @@ def test_country_lookup():
     assert len(all_tags) < len(lookup)
 
 
-def test_country_detection(row, lookup):
-    _row = _country_detection(row, lookup)
+def test_country_detection(row):
+    _row = _country_detection(row)
     assert len(_row) == len(row) + 1  # added one field
     row[COUNTRY_TAG] = _row[COUNTRY_TAG]  # add that field in for the next test
     assert _row == row
