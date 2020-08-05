@@ -7,7 +7,7 @@ import os
 
 def get_config(file_name, header, path="core/config/"):
     '''Get the configuration from a file in the luigi config path
-    directory, and convert the key-value pairs under the 
+    directory, and convert the key-value pairs under the
     config :code:`header` into a `dict`.
 
     Parameters:
@@ -61,3 +61,36 @@ def find_filepath_from_pathstub(path_stub):
             if path.endswith(path_stub.rstrip("/")):
                 return path
         relative += 1
+
+
+def f3p(path_stub):
+    return find_filepath_from_pathstub(path_stub)
+
+
+def load_yaml_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be yaml).
+
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
+    Returns:
+        The file contents as a json-like object.
+    """
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        return yaml.safe_load(f)
+
+
+def load_batch_config(luigi_task, additional_env_files=[], **overrides):
+    config = load_yaml_from_pathstub('config/luigi-batch.yaml')
+    test = luigi_task.test if 'test' in luigi_task.__dict__ else luigi_task.production
+    task_name = type(luigi_task).__name__
+    routine_id = f'{task_name}-{luigi_task.date}-{test}'
+    config['test'] = test
+    config['job_name'] = routine_id
+    config['routine_id'] = routine_id
+    config['env_files'] += additional_env_files
+    config['env_files'] = [f3p(fp) for fp in config['env_files']]
+    return config

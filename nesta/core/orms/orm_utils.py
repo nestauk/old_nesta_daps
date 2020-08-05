@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.sql.expression import and_
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
-from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.misctools import get_config, load_yaml_from_pathstub
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
@@ -208,21 +208,6 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.loads(_js)
     return js
 
-
-def load_yaml_from_pathstub(pathstub, filename):
-    """Basic wrapper around :obj:`find_filepath_from_pathstub`
-    which also opens the file (assumed to be yaml).
-
-    Args:
-        pathstub (str): Stub of filepath where the file should be found.
-        filename (str): The filename.
-    Returns:
-        The file contents as a json-like object.
-    """
-    _path = find_filepath_from_pathstub(pathstub)
-    _path = os.path.join(_path, filename)
-    with open(_path) as f:
-        return yaml.safe_load(f)
 
 
 def update_nested(original_dict, update_dict):

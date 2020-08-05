@@ -39,6 +39,19 @@ except ImportError as e:
         This will crash at runtime if MySQL functionality is used.")
 
 
+def make_mysql_target(luigi_task):
+    config = load_yaml_from_pathstub('config/luigi-batch.yaml')
+    test = luigi_task.test if 'test' in luigi_task.__dict__ else luigi_task.production
+    task_name = type(luigi_task).__name__
+    routine_id = f'{task_name}-{luigi_task.date}-{test}'
+    config['test'] = test
+    config['job_name'] = routine_id
+    config['routine_id'] = routine_id
+    config['env_files'] += additional_env_files
+    config['env_files'] = [f3p(fp) for fp in config['env_files']]
+    return config
+
+    
 class MySqlTarget(luigi.Target):
     """
     Target for a resource in MySql.
