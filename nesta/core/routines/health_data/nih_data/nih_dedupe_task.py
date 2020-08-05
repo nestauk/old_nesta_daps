@@ -50,7 +50,7 @@ class DedupeTask(autobatch.AutoBatchTask):
                                               "nih_abstract_mesh_data"),
                                 env_files=[f3p("nesta/"),
                                            f3p("config/mysqldb.config"),
-                                           f3p("config/elasticsearch.config"),
+                                           f3p("config/elasticsearch.yaml"),
                                            f3p("nih.json")],
                                 job_def=self.job_def,
                                 job_name="AbstractsMeshTask-%s" % self.routine_id,

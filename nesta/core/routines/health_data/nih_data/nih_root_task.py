@@ -49,7 +49,7 @@ class RootTask(luigi.WrapperTask):
                                        "nih_dedupe"),
                          env_files=[f3p("nesta/"),
                                     f3p("config/mysqldb.config"),
-                                    f3p("config/elasticsearch.config"),
+                                    f3p("config/elasticsearch.yaml"),
                                     f3p("nih.json")],
                          job_def="py36_amzn1_image",
                          job_name="NiHDedupeTask-%s" % _routine_id,
