@@ -7,7 +7,8 @@ from nesta.core.batchables.general.crunchbase.curate.run import sqlalchemy_to_di
 from nesta.core.batchables.general.crunchbase.curate.run import retrieve_categories
 
 
-def test_reformat_row():
+@mock.patch('nesta.packages.geo_utils.lookup.get_us_states_lookup', return_value={'CA': 'California'})
+def test_reformat_row(mocked_lookup):
     row = {'legal_name': 'joel corp',
            'alias1': 'joeljoel',
            'alias2': None,
