@@ -29,7 +29,7 @@ class OrgCollectTask(luigi.Task):
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     test = luigi.BoolParameter()
-    insert_batch_size = luigi.IntParameter(default=500)
+    insert_batch_size = luigi.IntParameter(default=200)
     db_config_env = luigi.Parameter()
 
     def output(self):
@@ -60,7 +60,8 @@ class OrgCollectTask(luigi.Task):
         # process category_groups
         cat_groups = rename_uuid_columns(cat_groups)
         insert_data(self.db_config_env, 'mysqldb', database,
-                    Base, CategoryGroup, cat_groups.to_dict(orient='records'), 
+                    Base, CategoryGroup, 
+                    cat_groups[['id', 'name', 'category_groups_list']].to_dict(orient='records'), 
                     low_memory=True)
 
         # process organizations and categories

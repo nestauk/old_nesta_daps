@@ -202,7 +202,7 @@ class TestDBSession(TestDB):
 
 def test_load_json_from_pathstub():
     for ds in ["nih", "companies"]:
-        js = load_json_from_pathstub("datasets/",
+        js = load_json_from_pathstub("tier_1/datasets/",
                                      f"{ds}.json")
         assert len(js) > 0
 

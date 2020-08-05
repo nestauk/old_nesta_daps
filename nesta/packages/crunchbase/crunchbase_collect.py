@@ -69,8 +69,11 @@ def get_files_from_tar(files, nrows=None):
     dfs = []
     with crunchbase_tar() as tar:
         for filename in files:
-            dfs.append(pd.read_csv(tar.extractfile(f'{filename}.csv'),
-                                   low_memory=False, nrows=nrows))
+            df = pd.read_csv(tar.extractfile(f'{filename}.csv'),
+                             low_memory=False, nrows=nrows)
+            df = df.replace('unknown', pd.np.nan) # Fill "unknown" as NaN
+            df = df.where(pd.notnull(df), None)  # Fill NaN as null for MySQL
+            dfs.append(df)
             logging.info(f"Collected {filename} from crunchbase tarfile")
     return dfs
 
@@ -98,7 +101,7 @@ def bool_convert(value):
         (bool): boolean representation of the field, or None on failure so pd.apply can
                 be used and unconvertable fields will be empty
     """
-    lookup = {'t': True, 'f': False}
+    lookup = {'t': True, 'f': False, True: True, False: False}
     try:
         return lookup[value]
     except KeyError:
@@ -135,17 +138,12 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
     # fix uuid column names
     orgs = rename_uuid_columns(orgs)
 
-    # change NaNs to None
-    orgs = orgs.where(orgs.notnull(), None)
-    org_descriptions = org_descriptions.where(org_descriptions.notnull(), None)
-
     # lookup country name and add as a column
     orgs['country'] = orgs['country_code'].apply(country_iso_code_to_name)
-    orgs = orgs.drop('country_code', axis=1)  # now redundant with country_alpha_3 appended
-
+    
     orgs['long_description'] = None
     org_cats = []
-    cat_groups = cat_groups.set_index(['category_name'])
+    cat_groups = cat_groups.set_index(['name'])
     missing_cat_groups = set()
     org_descriptions = org_descriptions.set_index(['uuid'])
 
@@ -183,10 +181,10 @@ def process_orgs(orgs, existing_orgs, cat_groups, org_descriptions):
             logging.debug(f"Category '{category_name}' not found in categories table")
             missing_cat_groups.add(category_name)
     logging.info(f"{len(missing_cat_groups)} missing category groups to add")
-    missing_cat_groups = [{'category_name': cat} for cat in missing_cat_groups]
+    missing_cat_groups = [{'name': cat} for cat in missing_cat_groups]
 
     # remove redundant category columns
-    orgs = orgs.drop(['category_list', 'category_group_list'], axis=1)
+    orgs = orgs.drop(['category_list', 'category_groups_list'], axis=1)
 
     # remove existing orgs
     drop_mask = orgs['id'].apply(lambda x: x in existing_orgs)
@@ -213,12 +211,13 @@ def process_non_orgs(df, existing, pks):
 
     # drop any rows already existing in the database
     total_rows = len(df)
-    drop_mask = df[pks].apply(lambda row: tuple(row[pks]) in existing, axis=1)
-    df = df.loc[~drop_mask]
-    logging.info(f"Dropped {total_rows - len(df)} rows already existing in database")
 
-    # change NaNs to None
-    df = df.where(df.notnull(), None)
+    _pks = list(df[pks].apply(lambda x: tuple(x), axis=1)) 
+    all_pks = set(_pks) 
+    remaining_pks = all_pks - existing 
+    condition = list(map(lambda x: x in remaining_pks, _pks))
+    df = df.loc[condition]                                  
+    logging.info(f"Dropped {total_rows - len(df)} rows already existing in database")
 
     # convert country name and add composite key if locations in table
     if {'city', 'country_code'}.issubset(df.columns):

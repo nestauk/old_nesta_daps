@@ -36,3 +36,11 @@ class DictParameterPlus(luigi.DictParameter):
 
     def serialize(self, x):
         return json.dumps(x, cls=self.encoder)
+
+
+class SqlAlchemyParameter(luigi.Parameter):
+    """
+    Parameter whose value is a ``sqlalchemy`` column.
+    """
+    def serialize(self, x):        
+        return str(x)
