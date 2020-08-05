@@ -49,8 +49,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     dataset = luigi.Parameter()
     endpoint = luigi.Parameter()
-    id_field = luigi.SqlAlchemyParameter()
-    filter = luigi.SqlAlchemyParameter(default=None)
+    id_field = SqlAlchemyParameter()
+    filter = SqlAlchemyParameter(default=None)
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
