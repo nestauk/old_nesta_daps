@@ -28,6 +28,7 @@ has been directly lifted. The main difference to the latter, is that
 import logging
 
 import luigi
+from nesta.core.luigihacks.misctools import extract_task_info
 
 logger = logging.getLogger('luigi-interface')
 
@@ -39,19 +40,15 @@ except ImportError as e:
         This will crash at runtime if MySQL functionality is used.")
 
 
-def make_mysql_target(luigi_task):
-    config = load_yaml_from_pathstub('config/luigi-batch.yaml')
-    test = luigi_task.test if 'test' in luigi_task.__dict__ else luigi_task.production
-    task_name = type(luigi_task).__name__
-    routine_id = f'{task_name}-{luigi_task.date}-{test}'
-    config['test'] = test
-    config['job_name'] = routine_id
-    config['routine_id'] = routine_id
-    config['env_files'] += additional_env_files
-    config['env_files'] = [f3p(fp) for fp in config['env_files']]
-    return config
+def make_mysql_target(luigi_task, mysqldb_env='MYSQLDB'):
+    test, routine_id = extract_task_info(luigi_task)
+    db_config_path = os.environ[mysqldb_env]
+    db_config = get_config(db_config_path, "mysqldb")
+    db_config["database"] = 'dev' if test else 'production'
+    db_config["table"] = f"{routine_id} <dummy>"  # Not a real table                                                          
+    return MySqlTarget(update_id=routine_id, **db_config)
 
-    
+
 class MySqlTarget(luigi.Target):
     """
     Target for a resource in MySql.
