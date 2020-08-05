@@ -10,6 +10,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
+from nesta.core.orms.general_orm import CrunchbaseOrg
 from nesta.core.orms.gtr_orm import Projects as GtrProject
 from nesta.core.orms.arxiv_orm import Article as ArxivArticle
 
@@ -23,7 +24,7 @@ ENDPOINT = 'general'
 
 def kwarg_maker(dataset, routine_id):
     env_files=list(f3p(f) for f in ENV_FILES) + [f3p(f'tier_1/datasets/{dataset}.json')]
-    batchable=f3p(f'batchables/general/{dataset}')
+    batchable=f3p(f'batchables/general/{dataset}/sql2es')
     return dict(dataset=dataset,
                 endpoint=ENDPOINT,
                 routine_id=f'{routine_id}_{dataset}',
@@ -39,7 +40,7 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         test = not self.production
-        set_log_level(True)
+        set_log_level(test)
         routine_id = f'General-Sql2EsTask-{self.date}'
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
@@ -56,7 +57,8 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('gtr', 'project', GtrProject.id),
-                  ('arxiv', 'article', ArxivArticle.id),)
+                  ('arxiv', 'article', ArxivArticle.id),
+                  ('companies', 'company', CrunchbaseOrg.id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,

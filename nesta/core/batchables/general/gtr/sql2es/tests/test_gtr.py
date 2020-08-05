@@ -2,13 +2,13 @@ import pytest
 from unittest import mock
 from schema import Schema
 
-from nesta.core.batchables.general.gtr.run import extract_funds
-from nesta.core.batchables.general.gtr.run import get_linked_rows
-from nesta.core.batchables.general.gtr.run import reformat_row
-from nesta.core.batchables.general.gtr.run import get_project_links
-from nesta.core.batchables.general.gtr.run import get_org_locations
+from nesta.core.batchables.general.gtr.sql2es.run import extract_funds
+from nesta.core.batchables.general.gtr.sql2es.run import get_linked_rows
+from nesta.core.batchables.general.gtr.sql2es.run import reformat_row
+from nesta.core.batchables.general.gtr.sql2es.run import get_project_links
+from nesta.core.batchables.general.gtr.sql2es.run import get_org_locations
 
-PATH='nesta.core.batchables.general.gtr.run.{}'
+PATH='nesta.core.batchables.general.gtr.sql2es.run.{}'
 
 
 
