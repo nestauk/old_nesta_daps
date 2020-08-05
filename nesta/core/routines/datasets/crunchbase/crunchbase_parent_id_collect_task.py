@@ -8,7 +8,7 @@ import boto3
 import logging
 import luigi
 
-from nesta.core.routines.crunchbase.crunchbase_health_label_task import HealthLabelTask
+from nesta.core.routines.datasets.crunchbase.crunchbase_org_collect_task import OrgCollectTask
 from nesta.packages.crunchbase.crunchbase_collect import get_files_from_tar
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.luigihacks import misctools
@@ -40,14 +40,11 @@ class ParentIdCollectTask(luigi.Task):
     insert_batch_size = luigi.IntParameter(default=500)
 
     def requires(self):
-        yield HealthLabelTask(date=self.date,
-                              _routine_id=self._routine_id,
-                              test=self.test,
-                              insert_batch_size=self.insert_batch_size,
-                              db_config_env=self.db_config_env,
-                              bucket='nesta-crunchbase-models',
-                              vectoriser_key='vectoriser.pickle',
-                              classifier_key='clf.pickle')
+        yield OrgCollectTask(date=self.date,
+                             _routine_id=self._routine_id,
+                             test=self.test,
+                             insert_batch_size=self.insert_batch_size,
+                             db_config_env='MYSQLDB')
 
     def output(self):
         '''Points to the output database engine'''

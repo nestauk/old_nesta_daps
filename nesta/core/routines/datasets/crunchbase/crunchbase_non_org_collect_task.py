@@ -15,7 +15,7 @@ import luigi
 from nesta.packages.crunchbase.crunchbase_collect import get_csv_list
 from nesta.core.luigihacks import autobatch, misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
-from nesta.core.routines.crunchbase.crunchbase_org_collect_task import OrgCollectTask
+from nesta.core.routines.datasets.crunchbase.crunchbase_org_collect_task import OrgCollectTask
 
 
 S3 = boto3.resource('s3')
