@@ -609,7 +609,6 @@ def get_mysql_engine(db_env, section, database="production_tests"):
 
     conf_path = os.environ[db_env]
     if conf_path == "TRAVISMODE":
-        print("---> In travis mode")
         url = URL(drivername='mysql+pymysql',
                   username="travis",
                   database=database)
