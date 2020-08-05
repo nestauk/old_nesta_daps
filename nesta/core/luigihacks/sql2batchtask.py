@@ -47,12 +47,7 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
 
     def output(self):
         '''Points to the output database engine'''
-        self.db_config_path = os.environ[self.db_config_env]
-        db_config = get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = 'dev' if self.test else 'production'
-        db_config["table"] = f"{self.routine_id} <dummy>"  # Not a real table
-        update_id = f"{self.routine_id}_{self.date}"
-        return MySqlTarget(update_id=update_id, **db_config)
+        return make_mysql_target(self)
 
     def prepare(self):
         if self.test:
