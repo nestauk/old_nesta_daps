@@ -66,7 +66,7 @@ class AbstractsMeshTask(autobatch.AutoBatchTask):
                           batchable=f3p("batchables/health_data/nih_process_data"),
                           env_files=[f3p("nesta/"),
                                      f3p("config/mysqldb.config"),
-                                     f3p("config/elasticsearch.config"),
+                                     f3p("config/elasticsearch.yaml"),
                                      f3p("nih.json")],
                           job_def=self.job_def,
                           job_name="ProcessTask-%s" % self._routine_id,

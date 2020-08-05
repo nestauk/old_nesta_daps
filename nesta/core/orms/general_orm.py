@@ -58,4 +58,4 @@ class CrunchbaseOrg(Base):
     investor_names = Column(JSON)
     is_eu = Column(BOOLEAN, nullable=False)
     state_name = cb_fixture('name')
-    updated_at = Column(TEXT)
+    updated_at = cb_fixture('happened_on')

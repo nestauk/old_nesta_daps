@@ -86,7 +86,7 @@ class RootTask(luigi.WrapperTask):
                                      env_files=[f3p("nesta/"),
                                                 f3p("config/mysqldb.config"),
                                                 f3p("datasets/meetup.json"),
-                                                f3p("config/elasticsearch.config")],
+                                                f3p("config/elasticsearch.yaml")],
                                      job_def="py36_amzn1_image",
                                      job_name=f"MeetupHealthSql2EsTask-{routine_id}",
                                      job_queue="MinimalCpus",

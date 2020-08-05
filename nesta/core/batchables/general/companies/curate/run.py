@@ -135,7 +135,6 @@ def run():
 
     # Database setup
     engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)
-    # Retrieve lookup tables
 
     # Retrieve list of Org ids from S3
     nrows = 20 if test else None
