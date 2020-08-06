@@ -20,15 +20,15 @@
         "nih": "id_of_continent"
     },
     "cost": {
-        "companies": "cost_of_funding",
+        "companies": "cost_usd_funding",
         "nih": "cost_total_project"
     },
     "cost_ref": {
-        "companies": "cost_of_funding",
+        "companies": "cost_usd_funding",
         "nih": "cost_total_project"
     },
     "countries_ids": {
-        "companies": "terms_of_countryTags",
+        "companies": "terms_countryTags_organisation",
         "meetup": "terms_of_countryTags",
         "nih": "terms_of_countryTags"
     },
@@ -43,22 +43,18 @@
         "nih": "id_iso2_country"
     },
     "currency": {
-        "companies": "currency_of_funding",
         "nih": "currency_total_cost"
     },
     "end": {
-        "companies": "date_death_organisation",
+        "companies": "date_closed_organisation",
         "nih": "date_end_project"
     },
     "funders": {
-        "companies": "terms_of_funders",
+        "companies": "terms_names_funders",
         "nih": "terms_of_funders"
     },
     "is_duplicate": {
         "nih": "booleanFlag_duplicate_abstract"
-    },
-    "is_health_related": {
-        "companies": "booleanFlag_health_organisation"
     },
     "is_translated": {
         "meetup": "booleanFlag_autotranslated_entity"
@@ -77,7 +73,6 @@
         "nih": "title_of_organisation"
     },
     "novelty": {
-        "companies": "rank_rhodonite_organisation",
         "meetup": "rank_rhodonite_group",
         "nih": "rank_rhodonite_abstract"
     },
@@ -103,7 +98,6 @@
         "nih": "textBody_abstract_project"
     },
     "terms": {
-        "companies": "terms_mesh_description",
         "meetup": "terms_mesh_group",
         "nih": "terms_mesh_abstract"
     },

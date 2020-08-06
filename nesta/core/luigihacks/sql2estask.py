@@ -12,6 +12,7 @@ import os
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.core.luigihacks import autobatch
+from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.orms.orm_utils import get_mysql_engine
@@ -48,8 +49,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     drop_and_recreate = luigi.BoolParameter(default=False)
     dataset = luigi.Parameter()
     endpoint = luigi.Parameter()
-    id_field = luigi.Parameter()
-    filter = luigi.Parameter(default=None)
+    id_field = SqlAlchemyParameter()
+    filter = SqlAlchemyParameter(default=None)
     entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
@@ -86,18 +87,18 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         logging.info(f"Collected {len(existing_ids)} existing in "
                      "Elasticsearch")
 
-        # Get set of all organisations from mysql
+        # Get set of all entitites from MySQL
         with db_session(engine) as session:
             query = session.query(self.id_field)
             if self.filter is not None:
                 query = query.filter(self.filter)
             result = query.all()
             all_ids = {r[0] for r in result}
-        logging.info(f"{len(all_ids)} organisations in MySQL")
+        logging.info(f"Identified {len(all_ids)} entitites in MySQL")
 
         # Remove previously processed
-        ids_to_process = (org for org in all_ids
-                          if org not in existing_ids)
+        ids_to_process = (_id for _id in all_ids
+                          if _id not in existing_ids)
 
         job_params = []
         for count, batch in enumerate(split_batches(ids_to_process,

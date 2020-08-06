@@ -2,13 +2,13 @@ import pytest
 from unittest import mock
 from datetime import datetime as dt
 
-from nesta.core.batchables.general.crunchbase.curate.run import reformat_row
-from nesta.core.batchables.general.crunchbase.curate.run import sqlalchemy_to_dict
-from nesta.core.batchables.general.crunchbase.curate.run import retrieve_categories
+from nesta.core.batchables.general.companies.curate.run import reformat_row
+from nesta.core.batchables.general.companies.curate.run import sqlalchemy_to_dict
+from nesta.core.batchables.general.companies.curate.run import retrieve_categories
 
-PATH = 'nesta.core.batchables.general.crunchbase.curate.run.{}'
+PATH = 'nesta.core.batchables.general.companies.curate.run.{}'
 
-@mock.patch(PATH.format('get_us_states_lookup'), return_value={'CA': 'California'})
+@mock.patch(PATH.format("get_us_states_lookup"), return_value={'CA':'California'})
 def test_reformat_row(mocked_lookup):
     row = {'legal_name': 'joel corp',
            'alias1': 'joeljoel',

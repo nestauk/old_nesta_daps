@@ -56,7 +56,7 @@ class CurateTask(luigi.Task):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('crunchbase', CrunchbaseOrg.id),)
+        params = (('companies', CrunchbaseOrg.id),)
         for dataset, id_field in params:
             yield Sql2BatchTask(id_field=id_field,
                                 **kwarg_maker(dataset, routine_id),
