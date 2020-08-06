@@ -9,7 +9,7 @@ from nesta.core.batchables.general.companies.curate.run import retrieve_categori
 PATH = 'nesta.core.batchables.general.companies.curate.run.{}'
 
 @mock.patch(PATH.format("get_us_states_lookup"), return_value={'CA':'California'})
-def test_reformat_row():
+def test_reformat_row(mocked_lookup):
     row = {'legal_name': 'joel corp',
            'alias1': 'joeljoel',
            'alias2': None,
