@@ -10,6 +10,7 @@ install:
   - python -m nltk.downloader punkt
   - python -m nltk.downloader stopwords
   - pip install lxml
+  - pip install Cython
   - python -c "import sys; print(sys.path)"
 before_script:
   - rm -r nesta/core/config/*
