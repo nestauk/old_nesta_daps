@@ -1,235 +1,252 @@
 {
     "mappings": {
-        "_doc": {
-            "properties": {
-                "_cost_usd2018_organisation": {
-                    "type": "float"
+        "_doc": null,
+        "properties": {
+            "address_of_organisation": {
+                "type": "keyword"
+            },
+            "booleanFlag_autotranslated_entity": {
+                "type": "boolean"
+            },
+            "booleanFlag_eu_organisation": {
+                "type": "boolean"
+            },
+            "coordinate_of_city": {
+                "type": "geo_point"
+            },
+            "cost_usd_funding": {
+                "type": "long"
+            },
+            "count_employee_organisation": {
+                "type": "keyword"
+            },
+            "count_exits_funding": {
+                "type": "keyword"
+            },
+            "count_rounds_funding": {
+                "type": "integer"
+            },
+            "date_birth_organisation": {
+                "format": "yyyy-MM-dd",
+                "type": "date"
+            },
+            "date_closed_organisation": {
+                "format": "yyyy-MM-dd",
+                "type": "date"
+            },
+            "date_last_funding": {
+                "format": "yyyy-MM-dd",
+                "type": "date"
+            },
+            "date_updated_organisation": {
+                "format": "yyyy-MM-dd",
+                "type": "date"
+            },
+            "id_continent_organisation": {
+                "type": "keyword"
+            },
+            "id_iso2_country": {
+                "type": "keyword"
+            },
+            "id_iso3_country": {
+                "type": "keyword"
+            },
+            "id_isoNumeric_country": {
+                "type": "integer"
+            },
+            "id_of_continent": {
+                "type": "keyword"
+            },
+            "id_parent_organisation": {
+                "type": "keyword"
+            },
+            "id_state_organisation": {
+                "type": "keyword"
+            },
+            "name_of_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "_terms_sdg_summary": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "placeName_city_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "address_of_organisation": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "placeName_continent_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "booleanFlag_health_organisation": {
-                    "type": "boolean"
+                "type": "text"
+            },
+            "placeName_country_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "coordinate_of_city": {
-                    "type": "geo_point"
+                "type": "text"
+            },
+            "placeName_region_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "cost_of_funding": {
-                    "type": "long"
+                "type": "text"
+            },
+            "placeName_state_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "count_employee_organisation": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "status_of_organisation": {
+                "type": "keyword"
+            },
+            "terms_alias_organisation": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "count_rounds_funding": {
-                    "type": "integer"
+                "type": "text"
+            },
+            "terms_category_organisation": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "currency_of_funding": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "terms_countryTags_organisation": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "date_birth_organisation": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
+                "type": "text"
+            },
+            "terms_iso2lang_entity": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "date_death_organisation": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
+                "type": "text"
+            },
+            "terms_names_funders": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "date_last_funding": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
+                "type": "text"
+            },
+            "terms_roles_organisation": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "date_updated_organisation": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
+                "type": "text"
+            },
+            "terms_subcategory_organisation": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_continent_organisation": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "terms_tokens_entity": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_iso2_country": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "textBody_descriptive_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_iso3_country": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "textBody_summary_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_isoNumeric_country": {
-                    "type": "integer"
+                "type": "text"
+            },
+            "type_of_entity": {
+                "type": "keyword"
+            },
+            "type_of_organisation": {
+                "type": "keyword"
+            },
+            "url_crunchBase_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_of_continent": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "url_facebook_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_parent_organisation": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "url_linkedIn_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "id_state_organisation": {
-                    "type": "keyword"
+                "type": "text"
+            },
+            "url_of_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "name_of_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "url_twitter_organisation": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "placeName_city_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "placeName_continent_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "placeName_country_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "placeName_region_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "placeName_state_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "rank_rhodonite_organisation": {
-                    "type": "float"
-                },
-                "status_of_organisation": {
-                    "type": "keyword"
-                },
-                "terms_alias_organisation": {
-                    "type": "keyword"
-                },
-                "terms_category_organisation": {
-                    "type": "keyword"
-                },
-                "terms_mesh_description": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_of_countryTags": {
-                    "type": "keyword"
-                },
-                "terms_of_funders": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_roles_organisation": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_subcategory_organisation": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_tokens_entity": {
-                    "type": "keyword"
-                },
-                "textBody_descriptive_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "textBody_summary_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "type_of_entity": {
-                    "type": "keyword"
-                },
-                "type_of_organisation": {
-                    "type": "keyword"
-                },
-                "url_crunchBase_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "url_facebook_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "url_linkedIn_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "url_of_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "url_twitter_organisation": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                }
+                "type": "text"
             }
         }
     }

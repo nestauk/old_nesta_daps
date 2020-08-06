@@ -1,16 +1,16 @@
 import pytest
 from unittest import mock
 
-from nesta.core.batchables.general.arxiv.run import generate_grid_lookup
-from nesta.core.batchables.general.arxiv.run import flatten_fos
-from nesta.core.batchables.general.arxiv.run import flatten_categories
-from nesta.core.batchables.general.arxiv.run import calculate_nuts_regions
-from nesta.core.batchables.general.arxiv.run import generate_authors_and_institutes
+from nesta.core.batchables.general.arxiv.sql2es.run import generate_grid_lookup
+from nesta.core.batchables.general.arxiv.sql2es.run import flatten_fos
+from nesta.core.batchables.general.arxiv.sql2es.run import flatten_categories
+from nesta.core.batchables.general.arxiv.sql2es.run import calculate_nuts_regions
+from nesta.core.batchables.general.arxiv.sql2es.run import generate_authors_and_institutes
 
 # Just an import, not testing this
-from nesta.core.batchables.general.arxiv.run import NutsFinder
+from nesta.core.batchables.general.arxiv.sql2es.run import NutsFinder
 
-PATH='nesta.core.batchables.general.arxiv.run.{}'
+PATH='nesta.core.batchables.general.arxiv.sql2es.run.{}'
 
 class Object(object):
     pass
