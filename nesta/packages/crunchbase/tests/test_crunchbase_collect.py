@@ -104,7 +104,7 @@ class TestProcessOrgs():
         return pd.DataFrame({'uuid': ['1-1', '2-2', '3-3'],
                              'country_code': ['FRA', 'DEU', 'GBR'],
                              'category_list': ['Data,Digital,Cats', 'Science,Cats', 'Data'],
-                             'category_group_list': ['Groups', 'More groups', 'extra group'],
+                             'category_groups_list': ['Groups', 'More groups', 'extra group'],
                              'city': ['Paris', 'Berlin', 'London']
                              })
 
@@ -114,7 +114,7 @@ class TestProcessOrgs():
         return pd.DataFrame({'uuid': ['1-1', '2-2', '3-3'],
                              'country_code': ['FRI', 'DEU', 'GBR'],
                              'category_list': ['Data,Digital,Dogs', 'Science,Cats,Goats', pd.np.nan],
-                             'category_group_list': ['Groups', 'More groups', 'extra group'],
+                             'category_groups_list': ['Groups', 'More groups', 'extra group'],
                              'city': [None, 'Berlin', 'London']
                              })
 
@@ -132,8 +132,8 @@ class TestProcessOrgs():
     @pytest.fixture
     def valid_cat_groups():
         return pd.DataFrame({'id': ['A', 'B', 'C', 'D'],
-                             'category_name': ['data', 'digital', 'cats', 'science'],
-                             'category_group_list': ['Group', 'Groups', 'Grep', 'Grow']
+                             'name': ['data', 'digital', 'cats', 'science'],
+                             'category_groups_list': ['Group', 'Groups', 'Grep', 'Grow']
                              })
 
     @staticmethod
@@ -166,14 +166,6 @@ class TestProcessOrgs():
         expected_result = pd.Series(['France', 'Germany', 'United Kingdom'])
 
         assert_series_equal(processed_orgs['country'], expected_result, check_names=False)
-
-    def test_process_orgs_removes_country_code_column(self, valid_org_data, no_existing_orgs,
-                                                      valid_cat_groups, valid_org_descs):
-        processed_orgs, _, _ = process_orgs(valid_org_data, no_existing_orgs,
-                                            valid_cat_groups, valid_org_descs)
-        processed_orgs = pd.DataFrame(processed_orgs)
-
-        assert 'country_code' not in processed_orgs
 
     def test_process_orgs_generates_location_id_composite_keys(self, valid_org_data, no_existing_orgs,
                                                                valid_cat_groups, valid_org_descs):
@@ -218,7 +210,7 @@ class TestProcessOrgs():
                              {'organization_id': '2-2', 'category_name': 'cats'},
                              {'organization_id': '2-2', 'category_name': 'goats'}
                              ]
-        missing_cats = {c['category_name'] for c in missing_cat_groups}
+        missing_cats = {c['name'] for c in missing_cat_groups}
         expected_missing_cat_groups = {'dogs', 'goats'}
 
         assert org_cats == expected_org_cats
@@ -251,7 +243,7 @@ class TestProcessOrgs():
         processed_orgs = pd.DataFrame(processed_orgs)
 
         assert 'category_list' not in processed_orgs
-        assert 'category_group_list' not in processed_orgs
+        assert 'category_groups_list' not in processed_orgs
 
     def test_process_orgs_removes_existing_orgs(self, valid_org_data, existing_orgs,
                                                 valid_cat_groups, valid_org_descs):
@@ -297,16 +289,6 @@ class TestProcessNonOrgs():
         expected_result = [{'id': '333', 'other': 'frog'}]
 
         assert process_non_orgs(valid_table, existing, pks) == expected_result
-
-    def test_process_non_orgs_changes_nans_to_none(self):
-        df = pd.DataFrame({'uuid': ['111', '222', '333'],
-                           'other': [pd.np.nan, 'dog', None]})
-
-        expected_result = [{'id': '111', 'other': None},
-                           {'id': '222', 'other': 'dog'},
-                           {'id': '333', 'other': None}]
-
-        assert process_non_orgs(df, set(), ['id']) == expected_result
 
     @mock.patch('nesta.packages.crunchbase.crunchbase_collect.generate_composite_key')
     @mock.patch('nesta.packages.crunchbase.crunchbase_collect.country_iso_code_to_name')

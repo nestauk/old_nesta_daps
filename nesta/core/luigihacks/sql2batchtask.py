@@ -1,8 +1,8 @@
 '''
-Sql2EsTask
-==========
+Sql2BatchTask
+=============
 
-Task for piping data from MySQL to Elasticsearch
+Task for piping data from MySQL to a batch task in chunks
 '''
 
 import logging
@@ -16,13 +16,12 @@ from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.orms.orm_utils import get_mysql_engine
-from nesta.core.orms.orm_utils import setup_es
 from nesta.core.orms.orm_utils import db_session
-from nesta.core.orms.orm_utils import get_es_ids
 
 
-class Sql2EsTask(autobatch.AutoBatchTask):
-    '''Launches batch tasks to pipe data from MySQL to Elasticsearch.
+class Sql2BatchTask(autobatch.AutoBatchTask):
+    '''Launches batch tasks to pipe data from MySQL in batches to
+    AWS batches.
 
     Args:
         date (datetime): Datetime used to label the outputs.
@@ -30,14 +29,10 @@ class Sql2EsTask(autobatch.AutoBatchTask):
         intermediate_bucket (str): Name of the S3 bucket where to store the batch ids.
         db_config_env (str): The output database envariable.
         process_batch_size (int): Number of rows to process in a batch.
-        drop_and_recreate (bool): If in test mode, drop and recreate the ES index?
-        dataset (str): Name of the elasticsearch dataset.
-        endpoint (str): Name of the AWS ES domain endpoint.
         id_field (SqlAlchemy selectable attribute): The ID field attribute.
         filter (SqlAlchemy conditional statement): A conditional statement, to be passed
                                                    to query.filter(). This allows for
                                                    subsets of the data to be processed.
-        entity_type (str): Name of the entity type to label this task with.
         kwargs (dict): Any other job parameters to pass to the batchable.
     '''
     date = luigi.DateParameter()
@@ -45,13 +40,9 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     intermediate_bucket = luigi.Parameter()
     db_config_env = luigi.Parameter()
     db_section = luigi.Parameter(default="mysqldb")
-    process_batch_size = luigi.IntParameter(default=10000)
-    drop_and_recreate = luigi.BoolParameter(default=False)
-    dataset = luigi.Parameter()
-    endpoint = luigi.Parameter()
+    process_batch_size = luigi.IntParameter(default=1000)
     id_field = SqlAlchemyParameter()
     filter = SqlAlchemyParameter(default=None)
-    entity_type = luigi.Parameter()
     kwargs = luigi.DictParameter(default={})
 
     def output(self):
@@ -66,9 +57,8 @@ class Sql2EsTask(autobatch.AutoBatchTask):
     def prepare(self):
         if self.test:
             self.process_batch_size = 1000
-            logging.warning("Batch size restricted to "
-                            f"{self.process_batch_size}"
-                            " while in test mode")
+            logging.debug("Batch size restricted to "
+                          f"{self.process_batch_size} while in test mode")
 
         # MySQL setup
         database = 'dev' if self.test else 'production'
@@ -76,34 +66,17 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                                   self.db_section,
                                   database)
 
-        # Elasticsearch setup
-        es, es_config = setup_es(endpoint=self.endpoint,
-                                 dataset=self.dataset,
-                                 production=not self.test,
-                                 drop_and_recreate=self.drop_and_recreate)
-
-        # Get set of existing ids from elasticsearch via scroll
-        existing_ids = get_es_ids(es, es_config)
-        logging.info(f"Collected {len(existing_ids)} existing in "
-                     "Elasticsearch")
-
-        # Get set of all entitites from MySQL
+        # Get set of all objects IDs from the database
         with db_session(engine) as session:
             query = session.query(self.id_field)
             if self.filter is not None:
                 query = query.filter(self.filter)
             result = query.all()
             all_ids = {r[0] for r in result}
-        logging.info(f"Identified {len(all_ids)} entitites in MySQL")
-
-        # Remove previously processed
-        ids_to_process = (_id for _id in all_ids
-                          if _id not in existing_ids)
+        logging.info(f"Retrieved {len(all_ids)} IDs rom MySQL")
 
         job_params = []
-        for count, batch in enumerate(split_batches(ids_to_process,
-                                                    self.process_batch_size),
-                                      1):
+        for count, batch in enumerate(split_batches(all_ids, self.process_batch_size),1):
             # write batch of ids to s3
             batch_file = put_s3_batch(batch, self.intermediate_bucket,
                                       self.routine_id)
@@ -113,12 +86,6 @@ class Sql2EsTask(autobatch.AutoBatchTask):
                 "db_name": database,
                 "bucket": self.intermediate_bucket,
                 "done": False,
-                'outinfo': es_config['host'],
-                'out_port': es_config['port'],
-                'out_index': es_config['index'],
-                'out_type': es_config['type'],
-                'aws_auth_region': es_config['region'],
-                'entity_type': self.entity_type,
                 'test': self.test,
                 'routine_id': self.routine_id
             }

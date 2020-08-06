@@ -16,6 +16,7 @@ import boto3
 from requests_aws4auth import AWS4Auth
 import time
 import os
+from functools import lru_cache
 
 from nesta.packages.nlp_utils.ngrammer import Ngrammer
 from nesta.packages.decorators.schema_transform import schema_transformer
@@ -325,7 +326,7 @@ def _coordinates_as_floats(row):
             _row[k] = __floatify_coord(v)
     return _row
 
-
+@lru_cache()
 def _country_lookup():
     """Extract country/nationality --> iso2 code lookup
     from a public json file.
@@ -343,7 +344,7 @@ def _country_lookup():
             lookup[v].append(iso2)
     return lookup
 
-def _country_detection(row, lookup):
+def _country_detection(row, country_tag=COUNTRY_TAG):
     """Append a list of countries detected from keywords
     discovered in all text fields. The new field name
     is titled according to the global variable COUNTRY_TAG.
@@ -353,17 +354,18 @@ def _country_detection(row, lookup):
     Returns:
         _row (dict): Modified row.
     """
+    lookup = _country_lookup()
     _row = deepcopy(row)
-    _row[COUNTRY_TAG] = []
+    _row[country_tag] = []
     for k, v in row.items():
         if type(v) is not str:
             continue
         for country in lookup:
             if country not in v:
                 continue
-            _row[COUNTRY_TAG] += lookup[country]
-    tags = _row[COUNTRY_TAG]
-    _row[COUNTRY_TAG] = None if len(tags) == 0 else list(set(tags))
+            _row[country_tag] += lookup[country]
+    tags = _row[country_tag]
+    _row[country_tag] = None if len(tags) == 0 else list(set(tags))
     return _row
 
 
@@ -572,8 +574,7 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Detect countries in text fields
         if country_detection:
-            _lookup = _country_lookup()
-            self.transforms.append(lambda row: _country_detection(row, _lookup))
+            self.transforms.append(lambda row: _country_detection(row))
 
         # Convert items which SHOULD be lists to lists
         if listify_terms:
