@@ -6,7 +6,6 @@ from nesta.core.batchables.general.companies.curate.run import reformat_row
 from nesta.core.batchables.general.companies.curate.run import sqlalchemy_to_dict
 from nesta.core.batchables.general.companies.curate.run import retrieve_categories
 
-
 def test_reformat_row():
     row = {'legal_name': 'joel corp',
            'alias1': 'joeljoel',
