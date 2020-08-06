@@ -19,6 +19,10 @@ def retrieve_model():
 
 
 def numberfy(s):
+    if s == 'True' or s == 'true':
+        return True
+    if s == 'False' or s == 'false':
+        return False
     if s == 'None':
         return None
     try:
