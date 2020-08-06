@@ -26,22 +26,20 @@ def assert_kwarg(kwargs, arg_name):
         value = kwargs[arg_name]
     except KeyError:
         raise AttributeError(f'{arg_name} must be a named argument.')
+    return value
 
 
-def assert_and_pop_kwarg(kwargs, arg_name):
-    assert_kwarg(kwargs, arg_name)
-    return kwargs.pop(arg_name)
-
-
-class Text2VectorTask(Sql2BatchTask):
+class Text2VecTask(Sql2BatchTask):
     batchable = luigi.Parameter(f3p('batchables/nlp/bert_vectorize'))
     in_class = SqlAlchemyParameter()
     out_class = SqlAlchemyParameter()
     text_field = SqlAlchemyParameter()
 
     def __init__(self, *args, **kwargs):
+        if 'kwargs' not in kwargs:
+            kwargs['kwargs'] = {}
         for arg_name in ('in_class', 'out_class'):
-            _class = assert_and_pop_kwarg(kwargs, arg_name)
+            _class = assert_kwarg(kwargs, arg_name)
             module, tablename = get_class_info(_class)
             kwargs['kwargs'][f'{arg_name}_module'] = module
             kwargs['kwargs'][f'{arg_name}_tablename'] = tablename

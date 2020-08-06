@@ -4,6 +4,8 @@ A collection of miscellaneous tools.
 import configparser
 import os
 from functools import lru_cache
+import yaml
+from datetime import datetime as dt
 
 
 def get_config(file_name, header, path="core/config/"):
@@ -85,19 +87,22 @@ def load_yaml_from_pathstub(pathstub, filename):
 
 
 def load_batch_config(luigi_task, additional_env_files=[], **overrides):
-    config = load_yaml_from_pathstub('config/luigi-batch.yaml')
+    config = load_yaml_from_pathstub('config', 'luigi-batch.yaml')
     test, routine_id = extract_task_info(luigi_task)
     config['test'] = test
     config['job_name'] = routine_id
     config['routine_id'] = routine_id
     config['env_files'] += additional_env_files
-    config['env_files'] = [f3p(fp) for fp in config['env_files']]
+    config['env_files'] = [f3p(fp) for fp in config['env_files']]    
+    config['date'] = dt.now()
+    config.update(overrides)
     return config
 
 
 @lru_cache()
 def extract_task_info(luigi_task):
-    test = luigi_task.test if 'test' in luigi_task.__dict__ else luigi_task.production
+    test = (luigi_task.test if 'test' in luigi_task.__dict__ 
+            else not luigi_task.production)
     task_name = type(luigi_task).__name__
     routine_id = f'{task_name}-{luigi_task.date}-{test}'
     return test, routine_id

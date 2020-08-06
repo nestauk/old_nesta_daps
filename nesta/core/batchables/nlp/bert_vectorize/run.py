@@ -24,18 +24,17 @@ def run():
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
     db_name = os.environ["BATCHPAR_db_name"]
-    bert_model_name = os.environ["BATCHPAR_bert_model"]
-    id_field = os.environ["BATCHPAR_id_field"]
-    text_field = os.environ["BATCHPAR_text_field"]
     in_module = os.environ["BATCHPAR_in_class_module"]
-    in_tablename = os.environ["BATCHPAR_in_class_module"]
+    in_tablename = os.environ["BATCHPAR_in_class_tablename"]
     out_module = os.environ["BATCHPAR_out_class_module"]
-    out_tablename = os.environ["BATCHPAR_out_class_module"]
+    out_tablename = os.environ["BATCHPAR_out_class_tablename"]
     id_field = os.environ["BATCHPAR_id_field_name"]
     text_field = os.environ["BATCHPAR_text_field_name"]
+    bert_model_name = os.environ.get("BATCHPAR_bert_model", "distilbert-base-nli-stsb-mean-tokens")
+
 
     # Instantiate SentenceTransformer
-    model = SentenceTransformer(bert_model)
+    model = SentenceTransformer(bert_model_name)
 
     # Database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
@@ -50,18 +49,19 @@ def run():
     _class = get_class_by_tablename(in_module, in_tablename)
     id_attribute = getattr(_class, id_field)
     text_attribute = getattr(_class, text_field)
-    with db_session(engine) as session:
-        query = (session
+    with db_session(engine) as session: 
+        query = (session 
                  .query(id_attribute, text_attribute)
-                 .filter(id_attribute in _ids))
-        rows = [object_to_dict(row) for row in query.all()]
-    ids = [row[id_field] for row in rows]
-    docs = [row[text_field] for row in rows]
-    del rows
+                 .filter(id_attribute.in_(_ids)) 
+                 .limit(nrows)) 
+        docs, ids = [], []            
+        for _id, text in query.all(): 
+            docs.append(text) 
+            ids.append(_id)
 
     # Convert text to vectors
     embeddings = model.encode(docs)
-    out_data = [{"article_id": _id, "vector": embedding}
+    out_data = [{"article_id": _id, "vector": embedding.tolist()}
                 for _id, embedding in zip(ids, embeddings)]
     Base = get_base_from_orm_name(out_module)
     out_class = get_class_by_tablename(out_module, out_tablename)
@@ -74,4 +74,20 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
+    if "BATCHPAR_config" not in os.environ:
+        os.environ["BATCHPAR_id_field_name"] = "id"
+        os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
+        os.environ["BATCHPAR_bucket"] = "nesta-production-intermediate"
+        os.environ["BATCHPAR_out_class_tablename"] = "arxiv_vector"
+        os.environ["BATCHPAR_done"] = "False"
+        os.environ["BATCHPAR_batch_file"] = "ArxivVectorTask-2020-08-06-True-15967177122383485.json"
+        os.environ["BATCHPAR_in_class_module"] = "arxiv_orm"
+        os.environ["BATCHPAR_routine_id"] = "ArxivVectorTask-2020-08-06-True"
+        os.environ["BATCHPAR_out_class_module"] = "arxiv_orm"
+        os.environ["BATCHPAR_test"] = "True"
+        os.environ["BATCHPAR_db_name"] = "dev"
+        os.environ["BATCHPAR_text_field_name"] = "abstract"
+        os.environ["BATCHPAR_in_class_tablename"] = "arxiv_articles"
+    
+
     run()

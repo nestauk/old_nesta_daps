@@ -19,7 +19,6 @@ import re
 import pymysql
 import os
 import json
-import yaml
 import logging
 import time
 from collections import defaultdict

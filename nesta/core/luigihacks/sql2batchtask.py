@@ -14,7 +14,7 @@ from nesta.packages.misc_utils.batches import put_s3_batch
 from nesta.core.luigihacks import autobatch
 from nesta.core.luigihacks.parameter import SqlAlchemyParameter
 from nesta.core.luigihacks.misctools import get_config
-from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.orm_utils import db_session
 
