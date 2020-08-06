@@ -6,8 +6,10 @@ from nesta.core.batchables.general.companies.curate.run import reformat_row
 from nesta.core.batchables.general.companies.curate.run import sqlalchemy_to_dict
 from nesta.core.batchables.general.companies.curate.run import retrieve_categories
 
+PATH = 'nesta.core.batchables.general.companies.curate.run.{}'
 
-def test_reformat_row():
+@mock.patch(PATH.format("get_us_states_lookup"), return_value={'CA':'California'})
+def test_reformat_row(mocked_lookup):
     row = {'legal_name': 'joel corp',
            'alias1': 'joeljoel',
            'alias2': None,
