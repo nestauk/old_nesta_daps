@@ -12,20 +12,28 @@ import logging
 import os
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import insert_data
+from nesta.core.orms.orm_utils import insert_data, object_to_dict
 from nesta.core.orms.orm_utils import get_class_by_tablename
 from nesta.core.orms.orm_utils import get_base_from_orm_name
 
 from sentence_transformers import SentenceTransformer
+
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
     db_name = os.environ["BATCHPAR_db_name"]
-    os.environ["MYSQLDB"] = os.environ["BATCHPAR_config"]
     bert_model_name = os.environ["BATCHPAR_bert_model"]
-    
+    id_field = os.environ["BATCHPAR_id_field"]
+    text_field = os.environ["BATCHPAR_text_field"]
+    in_module = os.environ["BATCHPAR_in_class_module"]
+    in_tablename = os.environ["BATCHPAR_in_class_module"]
+    out_module = os.environ["BATCHPAR_out_class_module"]
+    out_tablename = os.environ["BATCHPAR_out_class_module"]
+    id_field = os.environ["BATCHPAR_id_field_name"]
+    text_field = os.environ["BATCHPAR_text_field_name"]
+
     # Instantiate SentenceTransformer
     model = SentenceTransformer(bert_model)
 
@@ -59,7 +67,7 @@ def run():
     out_class = get_class_by_tablename(out_module, out_tablename)
     insert_data("BATCHPAR_config", "mysqldb", db_name, Base,
                 out_class, out_data, low_memory=True)
-    
+
 
 if __name__ == "__main__":
     log_stream_handler = logging.StreamHandler()

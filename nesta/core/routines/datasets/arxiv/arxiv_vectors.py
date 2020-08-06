@@ -24,6 +24,7 @@ class ArxivVectorTask(luigi.WrapperTask):
         set_log_level(not self.production)
         batch_kwargs = load_batch_config(self)
         return Text2VecTask(id_field=Article.id,
+                            text_field=Article.abstract,
                             batchable=f3p('batchables/nlp/bert_vectorize'),
                             process_batch_size=self.process_batch_size,
                             in_class=Article,
