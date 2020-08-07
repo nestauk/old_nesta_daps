@@ -56,6 +56,8 @@ def run():
                  .limit(nrows)) 
         docs, ids = [], []            
         for _id, text in query.all(): 
+            if text is None:
+                continue
             docs.append(text) 
             ids.append(_id)
 
@@ -80,12 +82,12 @@ if __name__ == "__main__":
         os.environ["BATCHPAR_bucket"] = "nesta-production-intermediate"
         os.environ["BATCHPAR_out_class_tablename"] = "arxiv_vector"
         os.environ["BATCHPAR_done"] = "False"
-        os.environ["BATCHPAR_batch_file"] = "ArxivVectorTask-2020-08-06-True-15967177122383485.json"
+        os.environ["BATCHPAR_batch_file"] = "ArxivVectorTask-2020-08-06-False-1596751284566725.json"
         os.environ["BATCHPAR_in_class_module"] = "arxiv_orm"
         os.environ["BATCHPAR_routine_id"] = "ArxivVectorTask-2020-08-06-True"
         os.environ["BATCHPAR_out_class_module"] = "arxiv_orm"
-        os.environ["BATCHPAR_test"] = "True"
-        os.environ["BATCHPAR_db_name"] = "dev"
+        os.environ["BATCHPAR_test"] = "False"
+        os.environ["BATCHPAR_db_name"] = "production"
         os.environ["BATCHPAR_text_field_name"] = "abstract"
         os.environ["BATCHPAR_in_class_tablename"] = "arxiv_articles"
     
