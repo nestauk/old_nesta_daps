@@ -40,7 +40,7 @@ def get_paths_from_relative(relative=1):
     return map(os.path.abspath, paths)
 
 
-def find_filepath_from_pathstub(path_stub):
+def find_filepath_from_pathstub(path_stub, ignore=('docs/_build',)):
     '''Find the full path of the 'closest' file (or directory) to the current working
     directory ending with :obj:`path_stub`. The `closest` file is determined by
     starting forwards of the current working directory. The algorithm is then repeated
@@ -50,14 +50,19 @@ def find_filepath_from_pathstub(path_stub):
 
     Args:
         path_stub (str): The partial file (or directory) path stub to find.
+        ignore(tuple): Tuple of directory sub-strings to ignore
     Returns:
         The full path to the partial file (or directory) path stub.
     '''
+    def is_ignore(path):
+        """ Checks if any `element` of ignore is a substring of `path` """
+        return any([i in path for i in ignore])
+
     relative = 0
     while True:
         for path in get_paths_from_relative(relative):
             if path.rstrip("/") == os.environ["HOME"]:
                 raise FileNotFoundError(f"Could not find {path_stub}")
-            if path.endswith(path_stub.rstrip("/")):
+            if path.endswith(path_stub.rstrip("/")) and not is_ignore(path):
                 return path
         relative += 1
