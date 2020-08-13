@@ -163,7 +163,7 @@ def grid_name_lookup(engine):
                           .all()):
             found = re.match(r'(.*) \((.*)\)', bracketed.name)
             if found:
-                # combine all matches to a cleaned and lowered country name {IBM : [grid_id1, grid_id2]}
+                # results: s/country name/institute --> the processed to give {"ibm" : {grid_id1, grid_id2}}
                 name = found.groups()[0].lower()
                 institute_name_id_lookup[name].add(bracketed.id)
                 n_countries += 1
