@@ -82,3 +82,11 @@ def get_us_states_lookup():
     states_lookup[""] = None  # default lookup for non-US countries
     return states_lookup
 
+
+@lru_cache()
+def get_iso2_to_iso3_lookup():
+    country_codes = pd.read_csv("https://datahub.io/core/country-codes/r/country-codes.csv")
+    alpha2_to_alpha3 = {row['ISO3166-1-Alpha-2']: row['ISO3166-1-Alpha-3'] for _, row in country_codes.iterrows()}
+    alpha2_to_alpha3[None] = None  # no country
+    alpha2_to_alpha3['XK'] = 'RKS'  # kosovo
+    return alpha2_to_alpha3
