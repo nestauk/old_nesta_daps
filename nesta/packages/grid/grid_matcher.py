@@ -72,3 +72,48 @@ class MatchEvaluator:
                              self.multinat_threshold, self.multimatch_threshold, 
                              self.long_name_threshold, cb_ctry, 
                              self.reverse_lookup, self.grid_ctry_lookup, self.disputed_ctrys)
+
+        
+    def generate_matches(self, data):
+        matches, remaining_names = find_exact_matches(data)
+        jaccard_matches = fast_nested_jaccard(remaining_names, self.all_grid_names)
+        inexact_matches = find_inexact_matches(data, matches, jaccard_matches)
+        matches.update(inexact_matches)
+        return matches
+
+
+def find_exact_matches(data):
+    all_grid_names = set().union(*self.grid_df.names)
+    all_comparison_names = set().union(row['names'] for row in data.values())
+    exact_matches = all_comparison_names.intersection(self.all_grid_names)
+
+    matches = {}
+    matched_names = set()
+    for id, row in data.items():
+        matched_names = row["names"].intersection(exact_matches)
+        gids, best_score = matcher.find_matches(iso2_code=row['iso2_code'],
+                                                match_scores={m: 1 for m in matched_names})
+        if best_score is not None:
+            matches[id] = {'grid_ids': gids, 'score': best_score}
+            matched_names = matched_names.union(row["names"])
+    remaining_names = all_comparison_names - matched_names
+    return matches, remaining_names
+
+def find_inexact_matches(data, exact_matches, jaccard_matches):
+    matches = {}
+    for id, row in data.items():
+        if id in exact_matches:
+            continue
+        _score, _gids = 0, []
+        for name in row['names']:
+            if name not in jaccard_matches:
+                continue
+            match_scores = jaccard_matches[name]
+            gids, best_score = matcher.find_matches(iso2_code=row['country_code'],
+                                                    match_scores=match_scores)
+            if best_score is not None and best_score > _score:
+                _score = best_score
+                _gids = gids
+        if _score > 0:
+            matches[id] = {'grid_ids': gids, 'score': best_score}
+    return matches

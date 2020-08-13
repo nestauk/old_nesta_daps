@@ -48,3 +48,18 @@ def nested_jaccard(a, b, nested_threshold=0):
     intersection += _nested_jaccard(unmatched_A, unmatched_B, nested_threshold)
     intersection += _nested_jaccard(unmatched_B, unmatched_A, nested_threshold)
     return jaccard(intersection, union)
+
+
+def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard):
+    terms_to_index = list(terms_to_index)
+    search_index = SearchIndex(terms_to_index, similarity_threshold=0.5)
+    jaccard_matches = defaultdict(dict)
+    for query_term in terms_to_query:
+        for idx, score in search_index.query(query_term):
+            index_term = terms_to_index[idx]
+            jaccard_matches[index_term][query_term] = kernel(index_term, query_term)
+    return jaccard_matches
+
+
+def fast_nested_jaccard(terms_to_index, terms_to_query):
+    return fast_jaccard(terms_to_index, terms_to_query, kernel=nested_jaccard)
