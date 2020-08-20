@@ -1,6 +1,12 @@
-import string
+import sys 
+from unicodedata import category
+from nesta.packages.geo_utils.lookup import get_disputed_countries
+from collections import Counter
 
-PUNCT = string.punctuation
+"""All unicode punctuation characters"""
+PUNCT = "".join(chr(i) for i in range(sys.maxunicode)  
+                if category(chr(i)).startswith("P"))
+
 
 def hashable_tokens(string_to_split):
     """Split string into unique tokens, sort and return as tuple,
@@ -86,13 +92,13 @@ def _evaluate_matches(match_scores, ctry_code,
                       score_threshold=1,
                       multinat_threshold=3,
                       multimatch_threshold=2,
-                      long_name_threshold=4)
+                      long_name_threshold=4):
     """Evaluate whether the list of proposed matches should be accepted,
     based on a series of criteria.
 
     Args:
         match_scores (dict): Precalculated match terms and scores
-        ctry_code (str): Country code of the organisation we're
+        ctry_code (str): Country code (ISO3) of the organisation we're
                          trying to match.
         name_id_lookup (dict): Lookup of GRID names to IDs
                                (including aliases)
@@ -116,11 +122,16 @@ def _evaluate_matches(match_scores, ctry_code,
     """
     # Generate other form (if any) of this country's id
     disputed_ctrys = get_disputed_countries()  # Note: lru_cached
+    if ctry_code is not None and len(ctry_code) != 3:
+        raise ValueError(f'ISO code "{ctry_code}" is not ISO3')
     other_ctry = (disputed_ctrys[ctry_code]
                   if ctry_code in disputed_ctrys else ctry_code)
 
     # Find a match
     found_gids = set()
+    n_perfect_scores = sum(v == 1 for v in match_scores.values())
+    multiple_perfect_scores = (n_perfect_scores > 1 
+                               or n_perfect_scores == len(match_scores))
     scores = Counter(match_scores).most_common()  # best scores first
     for name, score in scores:
         if score < score_threshold:
@@ -144,11 +155,12 @@ def _evaluate_matches(match_scores, ctry_code,
         # --------------------------------
         is_very_multinational =  (len(grid_ctrys) >= multinat_threshold)
         # matches found to multiple aliases
-        multiple_matches = len(matches) >= multimatch_threshold
+        multiple_matches = (len(match_scores) >= multimatch_threshold
+                            and multiple_perfect_scores)
         # chance of accidentally matching a very long name seem
         # slim, unless matched fuzzily (score < 1)
-        is_long_name = any(len(name) >= long_name_threshold
-                           for name in matches) and score == 1
+        is_long_name = (len(name) >= long_name_threshold
+                        and score == 1)
 
         # If none of the criteria, skip
         if not any((no_ctry_code, ctry_match,
@@ -186,7 +198,7 @@ class MatchEvaluator:
                                    accepted, regardless of the country
                                    match.
     """
-    def __init__(self, score_threshold=1, multinat_threshold=3,
+    def __init__(self, score_threshold=0.8, multinat_threshold=3,
                  multimatch_threshold=2, long_name_threshold=4):
         self.s_threshold = score_threshold
         self.mn_threshold = multinat_threshold
@@ -258,7 +270,7 @@ class MatchEvaluator:
         for id, row in data.items():
             # Evaluate the matches for this row
             matched_names = row["names"].intersection(exact_matches)
-            scores = match_scores={m: 1 for m in matched_names})
+            scores = {m: 1 for m in matched_names}
             iso2 = row['iso2_code']
             gids, best_score = self.evaluate_matches(iso2_code=iso2,
                                                      match_scores=scores)
