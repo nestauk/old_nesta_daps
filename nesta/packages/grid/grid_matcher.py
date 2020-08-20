@@ -1,7 +1,12 @@
 import sys 
 from unicodedata import category
+from collections import Counter, defaultdict
+import pandas as pd
 from nesta.packages.geo_utils.lookup import get_disputed_countries
-from collections import Counter
+from nesta.packages.geo_utils.lookup import get_iso2_to_iso3_lookup
+from nesta.packages.grid.grid import grid_name_lookup
+from nesta.core.orms.orm_utils import get_mysql_engine
+
 
 """All unicode punctuation characters"""
 PUNCT = "".join(chr(i) for i in range(sys.maxunicode)  
@@ -63,6 +68,7 @@ def generate_grid_lookups():
                                columns=["id", "city", "country_code"],
                                chunksize=1000)
     grid_df = pd.concat([df for df in chunks])
+    alpha2_to_alpha3 = get_iso2_to_iso3_lookup()
     grid_ctry_lookup = {row['id']:
                         alpha2_to_alpha3[row['country_code']]
                         for _, row in grid_df.iterrows()}
@@ -204,7 +210,6 @@ class MatchEvaluator:
         self.mn_threshold = multinat_threshold
         self.mm_threshold = multimatch_threshold
         self.ln_threshold = long_name_threshold
-        self.name_id_lookup = name_id_lookup
 
         # Generate GRID lookup tables
         lookups = generate_grid_lookups()

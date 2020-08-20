@@ -36,11 +36,11 @@ def test_process_name(mocked_hashable_tokens):
 
 def test_append_disputed_countries():
     grid_ctrys = {'UGA', 'GBR', 'TWN'}
-    _grid_ctrys = append_disputed_countries(grid_ctrys)    
+    _grid_ctrys = append_disputed_countries(grid_ctrys)
     assert _grid_ctrys == {'UGA', 'GBR', 'TWN', 'CHN'}
 
     grid_ctrys = {'USA', 'RKS', 'FRA'}
-    _grid_ctrys = append_disputed_countries(grid_ctrys)    
+    _grid_ctrys = append_disputed_countries(grid_ctrys)
     assert _grid_ctrys == {'USA', 'RKS', 'FRA', 'SRB'}
 
 
@@ -53,7 +53,7 @@ def test__evaluate_matches_good_country():
     grid_ctry_lookup = {'grid.123': 'GBR',
                         'grid.111': 'UGA'}
     gids, score = _evaluate_matches(match_scores, ctry_code,
-                                    name_id_lookup, grid_ctry_lookup, 
+                                    name_id_lookup, grid_ctry_lookup,
                                     score_threshold=0.5)
     assert gids == {'grid.123'}
     assert score == 0.8
@@ -68,7 +68,7 @@ def test__evaluate_matches_perfect_match_bad_country():
     grid_ctry_lookup = {'grid.123': 'GBR',
                         'grid.111': 'UGA'}
     gids, score = _evaluate_matches(match_scores, ctry_code,
-                                    name_id_lookup, grid_ctry_lookup, 
+                                    name_id_lookup, grid_ctry_lookup,
                                     score_threshold=0.1)
     assert gids == {'grid.123'}
     assert score == 1
@@ -139,7 +139,3 @@ def test__evaluate_matches_fails_match_multinat_bad_country():
                                     multinat_threshold=10)
     assert gids == set()
     assert score == None
-
-
-def MatchEvaluator():
-    pass

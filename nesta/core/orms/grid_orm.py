@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import INTEGER
 
+from nesta.core.orms.crunchbase_orm import fixture as cb_fixture
 
 Base = declarative_base()
 
@@ -41,3 +42,12 @@ class Alias(Base):
     id = Column(INTEGER, primary_key=True, autoincrement=True)
     grid_id = Column(VARCHAR(20), ForeignKey('grid_institutes.id'))
     alias = Column(VARCHAR(250, collation='utf8_bin'))
+
+
+class GridCrunchbaseLookup(Base):
+    __tablename__ = 'grid_crunchbase_lookup'
+    grid_id = Column(VARCHAR(20), ForeignKey('grid_institutes.id'),
+                     primary_key=True)
+    cb_id = Column(cb_fixture('id_pk').type, 
+                   ForeignKey('crunchbase_organizations.id'),
+                   primary_key=True)
