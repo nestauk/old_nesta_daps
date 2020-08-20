@@ -95,9 +95,24 @@ def get_iso2_to_iso3_lookup(reverse=False):
         lookup (dict): Key-value pairs of ISO2 to ISO3 codes (or reverse).
     """
     country_codes = pd.read_csv(COUNTRY_CODES_URL)
-    alpha2_to_alpha3 = {row['ISO3166-1-Alpha-2']: row['ISO3166-1-Alpha-3'] for _, row in country_codes.iterrows()}
+    alpha2_to_alpha3 = {row['ISO3166-1-Alpha-2']: row['ISO3166-1-Alpha-3'] 
+                        for _, row in country_codes.iterrows()}
     alpha2_to_alpha3[None] = None  # no country
     alpha2_to_alpha3['XK'] = 'RKS'  # kosovo
     if reverse:
         alpha2_to_alpha3 = {v: k for k, v in alpha2_to_alpha3.items()}
     return alpha2_to_alpha3
+
+
+@lru_cache()
+def get_disputed_countries():
+    """Lookup of disputed aliases, to "forgive" disperate datasets
+    for making different geo-political decisions
+    
+    Returns:
+        lookup (dict): 
+    """
+    return {'RKS': 'SRB', # Kosovo: Serbia
+            'TWN': 'CHN', # Taiwan: China
+            'HKG': 'CHN', # Hong Kong: China
+            'ROU': 'ROM'} # not disputed: just inconsistent format for Romania
