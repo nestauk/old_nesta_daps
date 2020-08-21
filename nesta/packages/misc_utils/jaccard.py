@@ -132,12 +132,13 @@ def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
         terms_to_index (iterable): Terms to be indexed by SetSimilaritySearch.
         terms_to_query (iterbale): Terms to be queried against the indexed terms for Jaccard similarity.
         kernel (function): Function which calculates the similarity between two terms.
-        similarity_threshold (float): Do not re-evaluate similiarities between terms with a strict Jaccard similarity less than this value.
+        similarity_threshold (float): Do not re-evaluate similiarities between terms with a strict Jaccard similarity less than this value. Threshold=0.5 in our context should be interpreted as meaning that if there are two terms, require one to match exactly.
     Returns:
         jaccard_matches (dict of dict of float): Jaccard similarity scores between near matching
     """
     terms_to_index = list(terms_to_index)
-    search_index = SearchIndex(terms_to_index, 
+    search_index = SearchIndex(terms_to_index,
+                               similarity_func_name="jaccard",
                                similarity_threshold=similarity_threshold)
     jaccard_matches = defaultdict(dict)
     for query_term in terms_to_query:
@@ -150,7 +151,7 @@ def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
 
 def fast_nested_jaccard(terms_to_index, terms_to_query, 
                         similarity_threshold=0.5):
-    """Superficial wrapper of :obj:`fast_jaccard`, with :obj:`kernel` set to :obj:`nested_jaccard`"""
+    """Superficial wrapper of :obj:`fast_jaccard`, with :obj:`kernel` set to :obj:`nested_jaccard`"""    
     return fast_jaccard(terms_to_index, terms_to_query, 
                         kernel=nested_jaccard, 
                         similarity_threshold=similarity_threshold)

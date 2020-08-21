@@ -2,6 +2,8 @@ import sys
 from unicodedata import category
 from collections import Counter, defaultdict
 import pandas as pd
+from nesta.packages.misc_utils.jaccard import fast_nested_jaccard
+from nesta.packages.misc_utils.jaccard import fast_jaccard
 from nesta.packages.geo_utils.lookup import get_disputed_countries
 from nesta.packages.geo_utils.lookup import get_iso2_to_iso3_lookup
 from nesta.packages.grid.grid import grid_name_lookup
@@ -93,7 +95,7 @@ def generate_grid_lookups():
     return all_grid_names, name_id_lookup, grid_ctry_lookup
 
 
-def _evaluate_matches(match_scores, ctry_code,
+def _evaluate_matches(match_scores, iso3_code,
                       name_id_lookup, grid_ctry_lookup,
                       score_threshold=1,
                       multinat_threshold=3,
@@ -104,7 +106,7 @@ def _evaluate_matches(match_scores, ctry_code,
 
     Args:
         match_scores (dict): Precalculated match terms and scores
-        ctry_code (str): Country code (ISO3) of the organisation we're
+        iso3_code (str): Country code (ISO3) of the organisation we're
                          trying to match.
         name_id_lookup (dict): Lookup of GRID names to IDs
                                (including aliases)
@@ -128,10 +130,10 @@ def _evaluate_matches(match_scores, ctry_code,
     """
     # Generate other form (if any) of this country's id
     disputed_ctrys = get_disputed_countries()  # Note: lru_cached
-    if ctry_code is not None and len(ctry_code) != 3:
-        raise ValueError(f'ISO code "{ctry_code}" is not ISO3')
-    other_ctry = (disputed_ctrys[ctry_code]
-                  if ctry_code in disputed_ctrys else ctry_code)
+    if iso3_code is not None and len(iso3_code) != 3:
+        raise ValueError(f'ISO code "{iso3_code}" is not ISO3')
+    other_ctry = (disputed_ctrys[iso3_code]
+                  if iso3_code in disputed_ctrys else iso3_code)
 
     # Find a match
     found_gids = set()
@@ -150,10 +152,10 @@ def _evaluate_matches(match_scores, ctry_code,
         # Country-based matching criteria
         # -------------------------------
         # weak criteria: name match, but no country code available
-        no_ctry_code = ((ctry_code is None or grid_ctrys == {None})
+        no_iso3_code = ((iso3_code is None or grid_ctrys == {None})
                         and score == 1)
         # good criteria: name match, country match
-        ctry_match = (ctry_code in grid_ctrys
+        ctry_match = (iso3_code in grid_ctrys
                       or other_ctry in grid_ctrys)
 
         # Circumstantial matching criteria
@@ -165,11 +167,12 @@ def _evaluate_matches(match_scores, ctry_code,
                             and multiple_perfect_scores)
         # chance of accidentally matching a very long name seem
         # slim, unless matched fuzzily (score < 1)
-        is_long_name = (len(name) >= long_name_threshold
+        is_long_name = (type(name) is tuple
+                        and len(name) >= long_name_threshold
                         and score == 1)
 
         # If none of the criteria, skip
-        if not any((no_ctry_code, ctry_match,
+        if not any((no_iso3_code, ctry_match,
                     is_very_multinational, multiple_matches,
                     is_long_name)):
             continue
@@ -214,16 +217,24 @@ class MatchEvaluator:
         # Generate GRID lookup tables
         lookups = generate_grid_lookups()
         all_grid_names, name_id_lookup, grid_ctry_lookup = lookups
-        self.all_grid_names = all_grid_names
+        # Flatten out any single-term tuples for bonus jaccard lookup
+        self.all_grid_names = set()
+        for n in all_grid_names:
+            self.all_grid_names.add(n)
+            if len(n) > 1:
+                continue
+            _n = n[0]  # Extract only term
+            self.all_grid_names.add(_n)
+            name_id_lookup[_n] = name_id_lookup[n]
         self.name_id_lookup = name_id_lookup
         self.grid_ctry_lookup = grid_ctry_lookup
 
 
-    def evaluate_matches(self, ctry_code, match_scores):
+    def evaluate_matches(self, iso3_code, match_scores):
         """Shallow wrapper around :obj:`_evaluate_matches`,
         where most arguments have already been passed to `__init__`."""
         return _evaluate_matches(match_scores=match_scores,
-                                 ctry_code=ctry_code,
+                                 iso3_code=iso3_code,
                                  name_id_lookup=self.name_id_lookup,
                                  grid_ctry_lookup=self.grid_ctry_lookup,
                                  score_threshold=self.s_threshold,
@@ -241,16 +252,32 @@ class MatchEvaluator:
             data (list of dict): List of rows, of the format
                                  {'id': 123,
                                   'names':[('apple','inc'),('apple',)],
-                                  'iso2_code': 'US'}
+                                  'iso3_code': 'US'}
         Returns:
             matches (dict): Mapping of ID from the input data to matching
                             GRID IDs
         """
-        matches, remaining_names = find_exact_matches(data)
+        matches, remaining_names = self.find_exact_matches(data)
         exact_matches = set(matches.keys())
-        jaccard_matches = fast_nested_jaccard(remaining_names)
-        inexact_matches = find_inexact_matches(data, exact_matches,
-                                               jaccard_matches)
+        jaccard_matches = fast_nested_jaccard(remaining_names,
+                                              self.all_grid_names)
+        # Flatten out single term names for bonus jaccard lookup
+        single_terms = set()
+        single_term_rows = {}
+        for i, row in enumerate(data):
+            for name in row['names'].copy():
+                if name not in remaining_names:
+                    continue
+                if len(name) > 1:
+                    continue               
+                single_terms.add(name[0])
+                row['names'].add(name[0])
+        bonus_jaccard_matches = fast_jaccard(single_terms,
+                                             self.all_grid_names)
+        jaccard_matches.update(bonus_jaccard_matches)
+        inexact_matches = self.find_inexact_matches(data, 
+                                                    exact_matches,
+                                                    jaccard_matches)
         matches.update(inexact_matches)
         return matches
 
@@ -263,25 +290,26 @@ class MatchEvaluator:
             data (list of dict): List of rows, of the format
                                  {'id': 123,
                                   'names':[('apple','inc'),('apple',)],
-                                  'iso2_code': 'US'}
+                                  'iso3_code': 'US'}
         Returns:
             matches (dict): Mapping of ID from the input data to matching
                             GRID IDs
         """
-        all_names = set().union(row['names'] for row in data.values())
+        all_names = set().union(*(row['names'] for row in data))
         exact_matches = all_names.intersection(self.all_grid_names)
         matches = {}
         matched_names = set()
-        for id, row in data.items():
+        for row in data:
+            _id = row['id']
             # Evaluate the matches for this row
             matched_names = row["names"].intersection(exact_matches)
             scores = {m: 1 for m in matched_names}
-            iso2 = row['iso2_code']
-            gids, best_score = self.evaluate_matches(iso2_code=iso2,
+            iso3 = row['iso3_code']
+            gids, best_score = self.evaluate_matches(iso3_code=iso3,
                                                      match_scores=scores)
             # best_score is only None if the match was rejected
             if best_score is not None:
-                matches[id] = {'grid_ids': gids, 'score': best_score}
+                matches[_id] = {'grid_ids': gids, 'score': best_score}
                 matched_names = matched_names.union(row["names"])
         remaining_names = all_names - matched_names
         return matches, remaining_names
@@ -294,7 +322,7 @@ class MatchEvaluator:
             data (list of dict): List of rows, of the format
                                  {'id': 123,
                                   'names':[('apple','inc'),('apple',)],
-                                  'iso2_code': 'US'}
+                                  'iso3_code': 'US'}
             exact_matches (set): Set of IDs already matched, so not to 
                                  duplicate work.
             jaccard_matches (dict of dict): Lookup table of nested jaccard
@@ -306,9 +334,10 @@ class MatchEvaluator:
                             GRID IDs
         """
         matches = {}
-        for id, row in data.items():
+        for row in data:
+            _id = row['id']
             # Don't duplicate re-evaluating exact matches
-            if id in exact_matches:
+            if _id in exact_matches:
                 continue
             # Find the best fuzzy match across all aliases
             _score, _gids = 0, []
@@ -318,9 +347,9 @@ class MatchEvaluator:
                     continue
                 # Evaluate this match
                 scores = jaccard_matches[name]
-                iso2 = row['country_code']
-                gids, best = matcher.find_matches(iso2_code=iso2,
-                                                  match_scores=scores)
+                iso3 = row['iso3_code']
+                gids, best = self.evaluate_matches(iso3_code=iso3,
+                                                   match_scores=scores)
                 # If the match has been rejected, or it is worse than
                 # previous matches
                 if (best is None) or (best <= _score):
@@ -329,5 +358,5 @@ class MatchEvaluator:
                 _score, _gids = best, gids
             # If a good match was found, assign it
             if _score > 0:
-                matches[id] = {'grid_ids': _gids, 'score': _score}
+                matches[_id] = {'grid_ids': _gids, 'score': _score}
         return matches
