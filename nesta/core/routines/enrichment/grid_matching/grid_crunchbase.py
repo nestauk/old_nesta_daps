@@ -1,6 +1,7 @@
 from nesta.packages.grid.grid_matcher import process_name
 from nesta.packages.grid.grid_matcher import MatchEvaluator
 from nesta.core.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.orm_utils insert_data
 from nesta.core.orms.grid_orm import Base, GridCrunchbaseLookup
 import pandas as pd
 
@@ -17,9 +18,9 @@ def read_cb_data(db):
                                columns=cb_fields , chunksize=10000)
     df = pd.concat(chunks)
     df['names'] = df.apply(lambda r: _process(r, name_fields), axis=1)
-    data = {row['id']: {"names":row["names"],
-                        "iso3_code": row["country_code"]}
-            for _, row in df.iterrows()}
+    data = [{'id': row['id'], "names":row["names"],
+             "iso3_code": row["country_code"]}
+            for _, row in df.iterrows()]
     return data
 
 
@@ -30,5 +31,11 @@ class GridCBMatchingTask(luigi.Task):
         # Takes about 25 mins
         matcher = MatchEvaluator()
         matches = matcher.generate_matches(cb_data)
+        # Flatten ready to save to disk
+        out_data = [{"crunchbase_id": k,
+                     "grid_id": row["id"],
+                     "matching_score": row['score']}
+                    for k, row in matches.items()]
         # write to disk
-        write_data(data=matches, Base=Base, _class=GridCrunchbaseLookup)
+        insert_data("MYSQLDB", "mysqldb", "production", Base,
+                    GridCrunchbaseLooku, out_data, low_memory=True)

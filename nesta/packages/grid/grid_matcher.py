@@ -2,6 +2,7 @@ import sys
 from unicodedata import category
 from collections import Counter, defaultdict
 import pandas as pd
+from nltk.util import ngrams
 from nesta.packages.misc_utils.jaccard import fast_nested_jaccard
 from nesta.packages.misc_utils.jaccard import fast_jaccard
 from nesta.packages.geo_utils.lookup import get_disputed_countries
@@ -13,6 +14,10 @@ from nesta.core.orms.orm_utils import get_mysql_engine
 """All unicode punctuation characters"""
 PUNCT = "".join(chr(i) for i in range(sys.maxunicode)  
                 if category(chr(i)).startswith("P"))
+
+
+def sorted_bigrams(x):
+    return sorted("".join(grams) for grams in ngrams(x, 2))
 
 
 def hashable_tokens(string_to_split):
@@ -27,7 +32,11 @@ def hashable_tokens(string_to_split):
     s = set(string_to_split.split(" ")) # unique tokens
     if '' in s:
         s.remove('') # ignore empty tokens
-    return tuple(sorted(s))  # standardise order, and make hashable
+    tokens = sorted(s)  # standardise order
+    if len(tokens) == 1:
+        tokens = sorted_bigrams(tokens[0]) # If only one term, split into bigrams
+    return tuple(tokens) # and make hashable
+    
 
 
 def process_name(name):
@@ -167,7 +176,8 @@ def _evaluate_matches(match_scores, iso3_code,
                             and multiple_perfect_scores)
         # chance of accidentally matching a very long name seem
         # slim, unless matched fuzzily (score < 1)
-        is_long_name = (type(name) is tuple
+        not_all_bigrams = not all(len(n) == 2 for n in name)
+        is_long_name = (not_all_bigrams
                         and len(name) >= long_name_threshold
                         and score == 1)
 
@@ -217,15 +227,7 @@ class MatchEvaluator:
         # Generate GRID lookup tables
         lookups = generate_grid_lookups()
         all_grid_names, name_id_lookup, grid_ctry_lookup = lookups
-        # Flatten out any single-term tuples for bonus jaccard lookup
-        self.all_grid_names = set()
-        for n in all_grid_names:
-            self.all_grid_names.add(n)
-            if len(n) > 1:
-                continue
-            _n = n[0]  # Extract only term
-            self.all_grid_names.add(_n)
-            name_id_lookup[_n] = name_id_lookup[n]
+        self.all_grid_names = all_grid_names
         self.name_id_lookup = name_id_lookup
         self.grid_ctry_lookup = grid_ctry_lookup
 
@@ -261,20 +263,6 @@ class MatchEvaluator:
         exact_matches = set(matches.keys())
         jaccard_matches = fast_nested_jaccard(remaining_names,
                                               self.all_grid_names)
-        # Flatten out single term names for bonus jaccard lookup
-        single_terms = set()
-        single_term_rows = {}
-        for i, row in enumerate(data):
-            for name in row['names'].copy():
-                if name not in remaining_names:
-                    continue
-                if len(name) > 1:
-                    continue               
-                single_terms.add(name[0])
-                row['names'].add(name[0])
-        bonus_jaccard_matches = fast_jaccard(single_terms,
-                                             self.all_grid_names)
-        jaccard_matches.update(bonus_jaccard_matches)
         inexact_matches = self.find_inexact_matches(data, 
                                                     exact_matches,
                                                     jaccard_matches)
