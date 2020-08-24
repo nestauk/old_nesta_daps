@@ -43,6 +43,15 @@ except ImportError as e:
 
 
 def make_mysql_target(luigi_task, mysqldb_env='MYSQLDB'):
+    """Generate a MySQL target for a luigi Task, based on the Task's :obj:`date` and 
+    :obj:`test` parameters, and indicated configuration file.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+        mysqldb_env (str): Environmental variable storing the path to MySQL config.
+    Returns:
+        target (MySqlTarget)
+    """
     test, routine_id = extract_task_info(luigi_task)
     db_config_path = os.environ[mysqldb_env]
     db_config = get_config(db_config_path, "mysqldb")
