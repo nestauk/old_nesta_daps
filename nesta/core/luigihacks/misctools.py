@@ -67,6 +67,7 @@ def find_filepath_from_pathstub(path_stub):
 
 
 def f3p(path_stub):
+    """Shortened name for coding convenience"""
     return find_filepath_from_pathstub(path_stub)
 
 
@@ -87,6 +88,17 @@ def load_yaml_from_pathstub(pathstub, filename):
 
 
 def load_batch_config(luigi_task, additional_env_files=[], **overrides):
+    """Load default luigi batch parametes, and apply any overrides if required. Note that
+    the usage pattern for this is normally :obj:`load_batch_config(self, additional_env_files, **overrides)`
+    from within a luigi Task, where :obj:`self` is the luigi Task.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+        additional_env_files (list): List of files to pass directly to the batch local environment.
+        overrides (**kwargs): Any overrides or additional parameters to pass to the batch task as parameters.
+    Returns:
+        config (dict): Batch configuration paramaters, which can be expanded as **kwargs in BatchTask.
+    """
     config = load_yaml_from_pathstub('config', 'luigi-batch.yaml')
     test, routine_id = extract_task_info(luigi_task)
     config['test'] = test
@@ -101,6 +113,13 @@ def load_batch_config(luigi_task, additional_env_files=[], **overrides):
 
 @lru_cache()
 def extract_task_info(luigi_task):
+    """Extract task name and generate a routine id from a luigi task, from the date and test fields.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+    Returns:
+        {test, routine_id} (tuple): Test flag, and routine ID for this task.
+    """
     test = (luigi_task.test if 'test' in luigi_task.__dict__ 
             else not luigi_task.production)
     task_name = type(luigi_task).__name__
