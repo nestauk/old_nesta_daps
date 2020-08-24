@@ -14,14 +14,31 @@ import os
 import luigi
 
 
-def get_class_info(_class):
+def inspect_orm(_class):
+    """Retrieve the python module name and the database table 
+    that describe the given ORM.
+    
+    Args:
+        _class (object): A SqlAlchemy ORM.
+    Returns:
+        {module, tablename} (tuple): Name of the python module and database 
+                                     table that describe the given ORM.
+    """
     _, _file = os.path.split(inspect.getfile(_class))
     module = _file.replace(".py", "")
     tablename = _class.__tablename__
     return module, tablename
 
 
-def assert_kwarg(kwargs, arg_name):
+def assert_and_retrieve_kwarg(kwargs, arg_name):
+    """Retrieve an argument from kwargs.
+    
+    Args:
+        kwargs (dict): Keyword arguments.
+        arg_name (str): Name of argument which should exist.
+    Returns:
+        value: The value associated with the keyword argument.
+    """
     try:
         value = kwargs[arg_name]
     except KeyError:
@@ -30,19 +47,30 @@ def assert_kwarg(kwargs, arg_name):
 
 
 class Text2VecTask(Sql2BatchTask):
-    batchable = luigi.Parameter(f3p('batchables/nlp/bert_vectorize'))
+    """Embed any text field in MySQL as a BERT vector.
+    
+    Args:
+        in_class (SqlAlchemyParameter): The input ORM to containing a text field to be vectorized.
+        id_field (SqlAlchemyParameter): The input ORM PK field, for splitting the data into batches.
+        text_field (SqlAlchemyParameter): The input ORM text field to be vectorized.
+        out_class (SqlAlchemyParameter): The output ORM to hold the vectors.
+    """
     in_class = SqlAlchemyParameter()
-    out_class = SqlAlchemyParameter()
+    id_field = SqlAlchemyParameter()
     text_field = SqlAlchemyParameter()
+    out_class = SqlAlchemyParameter()
 
     def __init__(self, *args, **kwargs):
+        # Build some meta-kwargs to pass to Sql2BatchTask
         if 'kwargs' not in kwargs:
             kwargs['kwargs'] = {}
+        # Extract the module and table name for these ORMs
         for arg_name in ('in_class', 'out_class'):
             _class = assert_kwarg(kwargs, arg_name)
-            module, tablename = get_class_info(_class)
+            module, tablename = inspect_orm(_class)
             kwargs['kwargs'][f'{arg_name}_module'] = module
             kwargs['kwargs'][f'{arg_name}_tablename'] = tablename
+        # The name of the id and text fields
         for arg_name in ('id_field', 'text_field'):
             kwargs['kwargs'][f'{arg_name}_name'] = assert_kwarg(kwargs, arg_name).key
         super().__init__(*args, **kwargs)
