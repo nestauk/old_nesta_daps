@@ -16,13 +16,13 @@ from datetime import datetime as dt
 
 
 class ArxivVectorTask(luigi.WrapperTask):
-    process_batch_size = luigi.IntParameter(default=5000)
+    process_batch_size = luigi.IntParameter(default=1000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
 
     def requires(self):
         set_log_level(not self.production)
-        batch_kwargs = load_batch_config(self)
+        batch_kwargs = load_batch_config(self, memory=16000, vcpus=4) #job_def="py36_pytorch")
         return Text2VecTask(id_field=Article.id,
                             text_field=Article.abstract,
                             batchable=f3p('batchables/nlp/bert_vectorize'),
@@ -30,6 +30,3 @@ class ArxivVectorTask(luigi.WrapperTask):
                             in_class=Article,
                             out_class=ArticleVector,
                             **batch_kwargs)
-
-    def run(self):
-        self.output().touch()
