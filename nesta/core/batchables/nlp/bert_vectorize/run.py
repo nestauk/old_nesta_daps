@@ -20,6 +20,7 @@ from sentence_transformers import SentenceTransformer
 
 
 def run():
+    # Pull out job parameters
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
@@ -32,20 +33,20 @@ def run():
     text_field = os.environ["BATCHPAR_text_field_name"]
     bert_model_name = os.environ.get("BATCHPAR_bert_model", "distilbert-base-nli-stsb-mean-tokens")
 
-
     # Instantiate SentenceTransformer
     model = SentenceTransformer(bert_model_name)
 
     # Database setup
     engine = get_mysql_engine("BATCHPAR_config", "mysqldb", db_name)
 
-    # Retrieve list of Org ids from S3
+    # Retrieve list of object ids from S3
     nrows = 20 if test else None
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     _ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(_ids)} objects retrieved from s3")
 
+    # Retrieve each document by id
     _class = get_class_by_tablename(in_module, in_tablename)
     id_attribute = getattr(_class, id_field)
     text_attribute = getattr(_class, text_field)
@@ -63,6 +64,7 @@ def run():
 
     # Convert text to vectors
     embeddings = model.encode(docs)
+    # Write to output
     out_data = [{"article_id": _id, "vector": embedding.tolist()}
                 for _id, embedding in zip(ids, embeddings)]
     Base = get_base_from_orm_name(out_module)
@@ -76,20 +78,4 @@ if __name__ == "__main__":
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
-    if "BATCHPAR_config" not in os.environ:
-        os.environ["BATCHPAR_id_field_name"] = "id"
-        os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
-        os.environ["BATCHPAR_bucket"] = "nesta-production-intermediate"
-        os.environ["BATCHPAR_out_class_tablename"] = "arxiv_vector"
-        os.environ["BATCHPAR_done"] = "False"
-        os.environ["BATCHPAR_batch_file"] = "ArxivVectorTask-2020-08-06-False-1596751284566725.json"
-        os.environ["BATCHPAR_in_class_module"] = "arxiv_orm"
-        os.environ["BATCHPAR_routine_id"] = "ArxivVectorTask-2020-08-06-True"
-        os.environ["BATCHPAR_out_class_module"] = "arxiv_orm"
-        os.environ["BATCHPAR_test"] = "False"
-        os.environ["BATCHPAR_db_name"] = "production"
-        os.environ["BATCHPAR_text_field_name"] = "abstract"
-        os.environ["BATCHPAR_in_class_tablename"] = "arxiv_articles"
-    
-
     run()
