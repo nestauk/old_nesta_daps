@@ -1,4 +1,4 @@
-import sys 
+import sys
 from unicodedata import category
 from collections import Counter, defaultdict
 import pandas as pd
@@ -16,8 +16,8 @@ PUNCT = "".join(chr(i) for i in range(sys.maxunicode)
                 if category(chr(i)).startswith("P"))
 
 
-def sorted_bigrams(x):
-    return sorted("".join(grams) for grams in ngrams(x, 2))
+def sorted_fourgrams(x):
+    return sorted("".join(grams) for grams in ngrams(x, 4))
 
 
 def hashable_tokens(string_to_split):
@@ -34,7 +34,7 @@ def hashable_tokens(string_to_split):
         s.remove('') # ignore empty tokens
     tokens = sorted(s)  # standardise order
     if len(tokens) == 1:
-        tokens = sorted_bigrams(tokens[0]) # If only one term, split into bigrams
+        tokens = sorted_fourgrams(tokens[0]) # If only one term, split into bigrams
     return tuple(tokens) # and make hashable
     
 
@@ -176,8 +176,8 @@ def _evaluate_matches(match_scores, iso3_code,
                             and multiple_perfect_scores)
         # chance of accidentally matching a very long name seem
         # slim, unless matched fuzzily (score < 1)
-        not_all_bigrams = not all(len(n) == 2 for n in name)
-        is_long_name = (not_all_bigrams
+        not_all_fourgrams = not all(len(n) == 4 for n in name)
+        is_long_name = (not_all_fourgrams
                         and len(name) >= long_name_threshold
                         and score == 1)
 
@@ -218,7 +218,9 @@ class MatchEvaluator:
                                    match.
     """
     def __init__(self, score_threshold=0.8, multinat_threshold=3,
-                 multimatch_threshold=2, long_name_threshold=4):
+                 multimatch_threshold=2, long_name_threshold=4,
+                 nested_threshold=0.8):
+        self.nested_threshold = nested_threshold
         self.s_threshold = score_threshold
         self.mn_threshold = multinat_threshold
         self.mm_threshold = multimatch_threshold
@@ -262,7 +264,8 @@ class MatchEvaluator:
         matches, remaining_names = self.find_exact_matches(data)
         exact_matches = set(matches.keys())
         jaccard_matches = fast_nested_jaccard(remaining_names,
-                                              self.all_grid_names)
+                                              self.all_grid_names,
+                                              nested_threshold=self.nested_threshold)
         inexact_matches = self.find_inexact_matches(data, 
                                                     exact_matches,
                                                     jaccard_matches)

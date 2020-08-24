@@ -101,7 +101,7 @@ def _nested_intersection_score(unmatched_A, unmatched_B, nested_threshold):
     return intersection
 
 
-def nested_jaccard(a, b, nested_threshold=0):
+def nested_jaccard(a, b, nested_threshold=0.7):
     """Calculate the nested ("fuzzy") Jacard score between two objects, which have elements which themselves are hashable and iterable.
 
     Args:
@@ -125,7 +125,7 @@ def nested_jaccard(a, b, nested_threshold=0):
 
 
 def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
-                 similarity_threshold=0.5):
+                 similarity_threshold=0.5, **kwargs):
     """Fast Jaccard index lookup via SetSimilaritySearch, and then applying a choice of kernels to recalculate the Jaccard index, if required.
     
     Args:
@@ -145,13 +145,15 @@ def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
         for idx, _ in search_index.query(query_term):
             index_term = terms_to_index[idx]
             jaccard_matches[index_term][query_term] = kernel(index_term,
-                                                             query_term)
+                                                             query_term,
+                                                             **kwargs)
     return jaccard_matches
 
 
 def fast_nested_jaccard(terms_to_index, terms_to_query, 
-                        similarity_threshold=0.5):
+                        similarity_threshold=0.5, 
+                        nested_threshold=0.8):
     """Superficial wrapper of :obj:`fast_jaccard`, with :obj:`kernel` set to :obj:`nested_jaccard`"""    
     return fast_jaccard(terms_to_index, terms_to_query, 
                         kernel=nested_jaccard, 
-                        similarity_threshold=similarity_threshold)
+                        nested_threshold=nested_threshold)

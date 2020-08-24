@@ -147,7 +147,7 @@ def test_MatchEvaluator(mocked_generate_grid_lookups):
     appl_inc = process_name('appl inc')
     apple = process_name('apple')
     google = process_name('google')
-    goggle = process_name('goggle')
+    doogle = process_name('doogle')
     nesta = process_name('nesta')
     nest = process_name('nest')
     all_grid_names = {apple_inc, apple, google, nesta}
@@ -161,14 +161,31 @@ def test_MatchEvaluator(mocked_generate_grid_lookups):
 
     data = [{'id': "first", "names": {appl_inc}, 'iso3_code': 'USA'},
             {'id': 'second', "names": {google}, 'iso3_code': 'USA'},
-            {'id': 'third', "names": {goggle}, 'iso3_code': 'UGA'},
+            {'id': 'third', "names": {doogle}, 'iso3_code': 'UGA'},
             {'id': 'fourth', "names": {nest}, 'iso3_code': 'FRA'}]
     # Throw in some randomish noise
     for i in range(0, 5):
         row = {'id': i, "names": {('nesabgoogl'*i,'inc')}, 'iso3_code': None}
         data.append(row)
-    me = MatchEvaluator(score_threshold=0.6)
+
+    # Again with looser thresholds
+    me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.6)
     matches = me.generate_matches(data)
     assert matches == {'first': {'grid_ids': {1}, 'score': 0.875}, 
-                       'third': {'grid_ids': {3}, 'score': 2/3},
-                       'fourth': {'grid_ids': {4}, 'score': 0.75}}
+                       'third': {'grid_ids': {3}, 'score': 8/9},
+                       'fourth': {'grid_ids': {4}, 'score': 0.5}}
+
+    # Again with tighter thresholds
+    me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.7)
+    matches = me.generate_matches(data)
+    assert matches == {'first': {'grid_ids': {1}, 'score': 0.875},
+                       'third': {'grid_ids': {3}, 'score': 0.5},
+                       'fourth': {'grid_ids': {4}, 'score': 0.5}}
+
+
+    # Again with tighter thresholds
+    me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.8)
+    matches = me.generate_matches(data)
+    assert matches == {'third': {'grid_ids': {3}, 'score': 0.5},
+                       'fourth': {'grid_ids': {4}, 'score': 0.5}}
+    
