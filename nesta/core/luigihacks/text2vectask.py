@@ -59,6 +59,7 @@ class Text2VecTask(Sql2BatchTask):
     id_field = SqlAlchemyParameter()
     text_field = SqlAlchemyParameter()
     out_class = SqlAlchemyParameter()
+    batchable = luigi.Parameter(default=f3p('batchables/nlp/bert_vectorize'))
 
     def __init__(self, *args, **kwargs):
         # Build some meta-kwargs to pass to Sql2BatchTask
@@ -66,11 +67,11 @@ class Text2VecTask(Sql2BatchTask):
             kwargs['kwargs'] = {}
         # Extract the module and table name for these ORMs
         for arg_name in ('in_class', 'out_class'):
-            _class = assert_kwarg(kwargs, arg_name)
+            _class = assert_and_retrieve_kwarg(kwargs, arg_name)
             module, tablename = inspect_orm(_class)
             kwargs['kwargs'][f'{arg_name}_module'] = module
             kwargs['kwargs'][f'{arg_name}_tablename'] = tablename
         # The name of the id and text fields
         for arg_name in ('id_field', 'text_field'):
-            kwargs['kwargs'][f'{arg_name}_name'] = assert_kwarg(kwargs, arg_name).key
+            kwargs['kwargs'][f'{arg_name}_name'] = assert_and_retrieve_kwarg(kwargs, arg_name).key
         super().__init__(*args, **kwargs)
