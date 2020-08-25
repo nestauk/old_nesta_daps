@@ -5,8 +5,9 @@ python:
 install:
   - pip install --upgrade setuptools
   - pip install Cython
-  - python setup.py install
+  - pip install -r requirments.txt
   - pip install -r nesta/packages/tf_requirements.txt
+  - python setup.py install
   - python -m nltk.downloader punkt
   - python -m nltk.downloader stopwords
   - python -c "import sys; print(sys.path)"
