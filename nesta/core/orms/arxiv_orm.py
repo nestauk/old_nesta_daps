@@ -124,3 +124,19 @@ class ArticleTopic(Base):
                       primary_key=True,
                       autoincrement=False)
     topic_weight = Column(FLOAT)
+
+class ArticleVector(Base):
+    """Document vectors for articles."""
+    __tablename__ = 'arxiv_vector'
+    article_id = Column(VARCHAR(40),
+                        ForeignKey(Article.id),
+                        primary_key=True)
+    vector = Column(JSON)
+
+class ArticleCluster(Base):
+    """Document clusters for articles."""
+    __tablename__ = 'arxiv_cluster'
+    article_id = Column(VARCHAR(40),
+                        ForeignKey(Article.id),
+                        primary_key=True)
+    clusters = Column(JSON)
