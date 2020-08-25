@@ -5,12 +5,12 @@ python:
 install:
   - pip install --upgrade setuptools
   - python setup.py install
+  - pip install lxml
+  - pip install Cython
   - pip install -r requirements.txt
   - pip install -r nesta/packages/tf_requirements.txt
   - python -m nltk.downloader punkt
   - python -m nltk.downloader stopwords
-  - pip install lxml
-  - pip install Cython
   - python -c "import sys; print(sys.path)"
 before_script:
   - rm -r nesta/core/config/*
