@@ -4,7 +4,6 @@ python:
   - '3.6'
 install:
   - pip install --upgrade setuptools
-  - pip install lxml
   - pip install Cython
   - python setup.py install
   - pip install -r nesta/packages/tf_requirements.txt
