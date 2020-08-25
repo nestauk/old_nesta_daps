@@ -141,33 +141,37 @@ def grid_name_lookup(engine):
     Returns:
         (:obj:`list` of :obj:`dict`): lookup table [{name: [id1, id2, id3]}]
                 Where ids are different country entities for multinational institutes.
-                Most entities just have a singe [id1]
+                Most entities just have a single [id1]
     """
+    institute_name_id_lookup = defaultdict(set)
     with db_session(engine) as session:
-        institute_name_id_lookup = {institute.name.lower(): [institute.id]
-                                    for institute in session.query(Institute).all()}
+        for institute in session.query(Institute).all():
+            name = institute.name.lower()
+            institute_name_id_lookup[name].add(institute.id)
         logging.info(f"{len(institute_name_id_lookup)} institutes in GRID")
 
         for alias in session.query(Alias).all():
-            institute_name_id_lookup.update({alias.alias.lower(): [alias.grid_id]})
+            name = alias.alias.lower()
+            institute_name_id_lookup[name].add(alias.grid_id)
         logging.info(f"{len(institute_name_id_lookup)} institutes after adding aliases")
 
         # look for institute names containing brackets: IBM (United Kingdom)
-        with_country = defaultdict(list)
+        n_countries = 0
         for bracketed in (session
                           .query(Institute)
                           .filter(Institute.name.contains('(') & Institute.name.contains(')'))
                           .all()):
             found = re.match(r'(.*) \((.*)\)', bracketed.name)
             if found:
-                # combine all matches to a cleaned and lowered country name {IBM : [grid_id1, grid_id2]}
-                with_country[found.groups()[0].lower()].append(bracketed.id)
-        logging.info(f"{len(with_country)} institutes with country name in the title")
+                # results: s/country name/institute --> the processed to give {"ibm" : {grid_id1, grid_id2}}
+                name = found.groups()[0].lower()
+                institute_name_id_lookup[name].add(bracketed.id)
+                n_countries += 1
+        logging.info(f"{n_countries} institutes with country name in the title")
 
-        # append cleaned names to the lookup table
-        institute_name_id_lookup.update(with_country)
-        logging.info(f"{len(institute_name_id_lookup)} total institute names in lookup")
-
+    # Convert to dict --> list
+    institute_name_id_lookup = {k: list(v) for k, v in institute_name_id_lookup.items()}
+    logging.info(f"{len(institute_name_id_lookup)} total institute names in lookup")
     return institute_name_id_lookup
 
 
