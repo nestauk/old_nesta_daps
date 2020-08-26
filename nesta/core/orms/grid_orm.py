@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.types import INTEGER, FLOAT
 
 from nesta.core.orms.crunchbase_orm import fixture as cb_fixture
+from nesta.core.orms.crunchbase_orm import Organization as CbOrg
 
 Base = declarative_base()
 
@@ -49,6 +50,6 @@ class GridCrunchbaseLookup(Base):
     grid_id = Column(VARCHAR(20), ForeignKey('grid_institutes.id'),
                      primary_key=True)
     crunchbase_id = Column(cb_fixture('id_pk').type, 
-                           ForeignKey('crunchbase_organizations.id'),
+                           ForeignKey(CbOrg.id),
                            primary_key=True)
     matching_score = Column(FLOAT)
