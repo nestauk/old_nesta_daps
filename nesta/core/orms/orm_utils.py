@@ -8,17 +8,17 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.sql.expression import and_
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
-from nesta.core.luigihacks.misctools import get_config
+from nesta.core.luigihacks.misctools import get_config, load_yaml_from_pathstub
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
 from py2neo.database import Graph
 
+import importlib
 import re
 import pymysql
 import os
 import json
-import yaml
 import logging
 import time
 from collections import defaultdict
@@ -208,21 +208,6 @@ def load_json_from_pathstub(pathstub, filename, sort_on_load=True):
         js = json.loads(_js)
     return js
 
-
-def load_yaml_from_pathstub(pathstub, filename):
-    """Basic wrapper around :obj:`find_filepath_from_pathstub`
-    which also opens the file (assumed to be yaml).
-
-    Args:
-        pathstub (str): Stub of filepath where the file should be found.
-        filename (str): The filename.
-    Returns:
-        The file contents as a json-like object.
-    """
-    _path = find_filepath_from_pathstub(pathstub)
-    _path = os.path.join(_path, filename)
-    with open(_path) as f:
-        return yaml.safe_load(f)
 
 
 def update_nested(original_dict, update_dict):
@@ -571,10 +556,18 @@ def get_class_by_tablename(Base, tablename):
     Returns:
         reference or None.
     """
+    if type(Base) is str:
+        Base = get_base_from_orm_name(Base)
+
     for c in Base._decl_class_registry.values():
         if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
             return c
     raise NameError(tablename)
+
+
+def get_base_from_orm_name(orm_module_name):
+    orm_module = importlib.import_module(f'nesta.core.orms.{orm_module_name}')
+    return orm_module.Base
 
 
 def try_until_allowed(f, *args, **kwargs):

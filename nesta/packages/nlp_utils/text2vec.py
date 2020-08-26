@@ -1,3 +1,5 @@
+## DEPRECATED
+
 import sys
 import time
 import numpy as np
@@ -10,7 +12,7 @@ np.random.seed(42)
 USE_LITE = "https://tfhub.dev/google/universal-sentence-encoder-lite/2"
 
 
-def process_to_IDs_in_sparse_format(sp, documents):
+def process_to_ids_in_sparse_format(sp, documents):
     """Process documents with the SentencePiece processor. The results have a format
     similar to tf.SparseTensor (values, indices, dense_shape)."""
     ids = [sp.EncodeAsIds(x) for x in documents]
@@ -45,7 +47,7 @@ def docs2vectors(documents):
         sp = spm.SentencePieceProcessor()
         sp.Load(spm_path)
         # Preprocess documents
-        values, indices, dense_shape = process_to_IDs_in_sparse_format(sp, documents)
+        values, indices, dense_shape = process_to_ids_in_sparse_format(sp, documents)
         sess.run([tf.compat.v1.global_variables_initializer(), tf.compat.v1.tables_initializer()])
         doc_embeddings = sess.run(
                                 encodings,
