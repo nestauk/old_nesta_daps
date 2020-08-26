@@ -16,12 +16,8 @@ PUNCT = "".join(chr(i) for i in range(sys.maxunicode)
                 if category(chr(i)).startswith("P"))
 
 
-def sorted_fourgrams(x):
-    return sorted("".join(grams) for grams in ngrams(x, 4))
-
-
 def hashable_tokens(string_to_split):
-    """Split string into unique tokens, sort and return as tuple,
+    """Split string into unique ngram tokens, sort and return as tuple,
     which is hashable.
 
     Args:
@@ -29,12 +25,10 @@ def hashable_tokens(string_to_split):
     Returns:
         hashable_tokens (tuple): Hashable, standardised tuple of tokens
     """
-    s = set(string_to_split.split(" ")) # unique tokens
-    if '' in s:
-        s.remove('') # ignore empty tokens
-    tokens = sorted(s)  # standardise order
-    if len(tokens) == 1:
-        tokens = sorted_fourgrams(tokens[0]) # If only one term, split into bigrams
+    tokens = set(string_to_split.split(" ")) # unique tokens
+    while '' in tokens:
+        tokens.remove('') # ignore empty tokens
+    tokens = sorted(tokens) # standardise order
     return tuple(tokens) # and make hashable
     
 
@@ -176,9 +170,7 @@ def _evaluate_matches(match_scores, iso3_code,
                             and multiple_perfect_scores)
         # chance of accidentally matching a very long name seem
         # slim, unless matched fuzzily (score < 1)
-        not_all_fourgrams = not all(len(n) == 4 for n in name)
-        is_long_name = (not_all_fourgrams
-                        and len(name) >= long_name_threshold
+        is_long_name = (len(name) >= long_name_threshold
                         and score == 1)
 
         # If none of the criteria, skip
@@ -217,11 +209,11 @@ class MatchEvaluator:
                                    accepted, regardless of the country
                                    match.
     """
-    def __init__(self, score_threshold=0.8, multinat_threshold=3,
+    def __init__(self, score_threshold=0.95, multinat_threshold=3,
                  multimatch_threshold=2, long_name_threshold=4,
                  nested_threshold=0.8):
         self.nested_threshold = nested_threshold
-        self.s_threshold = score_threshold
+        self.score_threshold = score_threshold
         self.mn_threshold = multinat_threshold
         self.mm_threshold = multimatch_threshold
         self.ln_threshold = long_name_threshold
@@ -241,7 +233,7 @@ class MatchEvaluator:
                                  iso3_code=iso3_code,
                                  name_id_lookup=self.name_id_lookup,
                                  grid_ctry_lookup=self.grid_ctry_lookup,
-                                 score_threshold=self.s_threshold,
+                                 score_threshold=self.score_threshold,
                                  multinat_threshold=self.mn_threshold,
                                  multimatch_threshold=self.mm_threshold,
                                  long_name_threshold=self.ln_threshold)

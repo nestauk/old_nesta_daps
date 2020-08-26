@@ -12,7 +12,9 @@ PATH = "nesta.packages.grid.grid_matcher.{}"
 def test_hashable_tokens():
     # Token and sort
     a = " tokenize my words please"
-    _a = ("my", "please", "tokenize", "words")
+    _a = ('ease', 'eniz', 'keni', 'leas', 
+          'my', 'nize', 'oken', 'ords', 
+          'plea', 'toke', 'word')
     assert hashable_tokens(a) == _a
 
     # Excess spaces ignored
@@ -22,7 +24,8 @@ def test_hashable_tokens():
 
     # Duplicate words ignored
     c = " my my please   chop up   my   words    "
-    _c = ("chop", "my", "please", "up", "words")
+    _c = ("chop", "ease", "leas", "my", 
+          "ords", "plea", "up", "word")
     assert hashable_tokens(c) == _c
 
 
@@ -171,21 +174,20 @@ def test_MatchEvaluator(mocked_generate_grid_lookups):
     # Again with looser thresholds
     me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.6)
     matches = me.generate_matches(data)
-    assert matches == {'first': {'grid_ids': {1}, 'score': 0.875}, 
+    assert matches == {'first': {'grid_ids': {1}, 'score': 2/3}, 
                        'third': {'grid_ids': {3}, 'score': 8/9},
                        'fourth': {'grid_ids': {4}, 'score': 0.5}}
 
     # Again with tighter thresholds
     me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.7)
     matches = me.generate_matches(data)
-    assert matches == {'first': {'grid_ids': {1}, 'score': 0.875},
+    assert matches == {'first': {'grid_ids': {1}, 'score': 2/3},
                        'third': {'grid_ids': {3}, 'score': 0.5},
                        'fourth': {'grid_ids': {4}, 'score': 0.5}}
 
 
     # Again with tighter thresholds
-    me = MatchEvaluator(score_threshold=0.5, nested_threshold=0.8)
+    me = MatchEvaluator(score_threshold=0.6, nested_threshold=0.7)
     matches = me.generate_matches(data)
-    assert matches == {'third': {'grid_ids': {3}, 'score': 0.5},
-                       'fourth': {'grid_ids': {4}, 'score': 0.5}}
+    assert matches == {'first': {'grid_ids': {1}, 'score': 2/3}}
     

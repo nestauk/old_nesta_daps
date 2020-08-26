@@ -151,9 +151,10 @@ def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
 
 
 def fast_nested_jaccard(terms_to_index, terms_to_query, 
-                        similarity_threshold=0.5, 
+                        similarity_threshold=0.3, 
                         nested_threshold=0.8):
     """Superficial wrapper of :obj:`fast_jaccard`, with :obj:`kernel` set to :obj:`nested_jaccard`"""    
     return fast_jaccard(terms_to_index, terms_to_query, 
                         kernel=nested_jaccard, 
+                        similarity_threshold=similarity_threshold,
                         nested_threshold=nested_threshold)

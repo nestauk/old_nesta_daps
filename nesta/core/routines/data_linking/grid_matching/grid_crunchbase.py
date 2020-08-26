@@ -25,9 +25,15 @@ def read_cb_data(db):
 
 
 class GridCBMatchingTask(luigi.Task):
+    
+    def output(self):
+        
 
     def run(self):
-        cb_data = read_cb_data(db="production")
+        db = "production" is self.production else "test"
+        cb_data = read_cb_data(db=db)
+        if not self.production:
+            cb_data = cb_data[:1000]
         # Takes about 25 mins
         matcher = MatchEvaluator()
         matches = matcher.generate_matches(cb_data)
@@ -37,5 +43,5 @@ class GridCBMatchingTask(luigi.Task):
                      "matching_score": row['score']}
                     for k, row in matches.items()]
         # write to disk
-        insert_data("MYSQLDB", "mysqldb", "production", Base,
-                    GridCrunchbaseLooku, out_data, low_memory=True)
+        insert_data("MYSQLDB", "mysqldb", db, Base,
+                    GridCrunchbaseLookup, out_data, low_memory=True)
