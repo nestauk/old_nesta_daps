@@ -359,7 +359,7 @@ class RootTask(luigi.WrapperTask):
                                batchable=BATCHABLE.format("group_details"),
                                env_files=[find_filepath_from_pathstub("/nesta/nesta"),
                                           find_filepath_from_pathstub("/config/mysqldb.config")],
-                               job_def="py36_amzn1_image",
+                               job_def="py37_amzn2",
                                job_name="GroupDetails-%s" % _routine_id,
                                job_queue="HighPriority",
                                region_name="eu-west-2",

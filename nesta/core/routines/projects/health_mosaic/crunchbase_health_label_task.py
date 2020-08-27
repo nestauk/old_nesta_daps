@@ -54,7 +54,7 @@ class HealthLabelTask(luigi.Task):
                              insert_batch_size=self.insert_batch_size,
                              env_files=[find_filepath_from_pathstub("nesta/nesta/"),
                                         find_filepath_from_pathstub("config/mysqldb.config")],
-                             job_def="py36_amzn1_image",
+                             job_def="py37_amzn2",
                              job_name=f"CrunchBaseOrgGeocodeTask-{self._routine_id}",
                              job_queue="HighPriority",
                              region_name="eu-west-2",
