@@ -5,7 +5,7 @@
             "/nesta",
             "/config/mysqldb.config"
         ],
-        "job_def": "py36_sklearn_amzn1_image",
+        "job_def": "py37_sklearn_amzn2",
         "job_name": "ngram",
         "job_queue": "HighPriority",
         "memory": 4000,
@@ -30,7 +30,7 @@
         "hyperparameters": {
             "n_hidden": "np.arange(25, 41, 1)"
         },
-        "job_def": "py36_sklearn_amzn1_image",
+        "job_def": "py37_sklearn_amzn2",
         "job_name": "corex_topic_model",
         "memory": 16000,
         "n_batches": 1,

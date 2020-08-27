@@ -42,7 +42,7 @@ class RootTask(luigi.WrapperTask):
                                          batchable=f3p("batchables/examples/template_batchable"),  # folder name
                                          env_files=[f3p("nesta/nesta/"),
                                                     f3p("config/mysqldb.config")],
-                                         job_def="py36_amzn1_image",
+                                         job_def="py37_amzn2",
                                          job_name=f"MyBatchTaskWhichNeedsAName-{_routine_id}",
                                          job_queue="LowPriority",
                                          region_name="eu-west-2",
