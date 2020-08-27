@@ -118,7 +118,7 @@ class GtrOnlyRootTask(luigi.WrapperTask):
                       batchable=find_filepath_from_pathstub("core/batchables/gtr/collect_gtr"),
                       env_files=[find_filepath_from_pathstub("/nesta"),
                                  find_filepath_from_pathstub("/config/mysqldb.config")],
-                      job_def="py36_amzn1_image",
+                      job_def="py37_amzn2",
                       job_name=f"GtR-{self.date}-{self.page_size}-{self.production}",
                       #job_queue="HighPriority",
                       job_queue="MinimalCpus",

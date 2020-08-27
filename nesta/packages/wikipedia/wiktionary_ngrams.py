@@ -5,8 +5,8 @@ from gzip import GzipFile
 from urllib.request import urlopen
 import re
 
-TOP_URL = "https://ftp.acc.umu.se/mirror/wikimedia.org/dumps/enwiktionary/{}/"
-FILENAME = "enwiktionary-{}-all-titles-in-ns0.gz"
+TOP_URL = "https://ftp.acc.umu.se/mirror/wikimedia.org/dumps/enwiktionary/{}"
+FILENAME = "/enwiktionary-{}-all-titles-in-ns0.gz"
 NON_ALPHA_PATTERN = re.compile(rb'[\W]+')
 NON_BRACKET_PATTERN = re.compile(rb"[\(\[].*?[\)\]]")
 

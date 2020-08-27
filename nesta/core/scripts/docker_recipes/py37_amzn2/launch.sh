@@ -5,7 +5,7 @@ set -e
 # Install any other python packages which aren't picked up
 # in the requirements
 pwd
-source activate py36
+source activate py37
 which pip
 which python
 pip install awscli --upgrade --user
@@ -24,13 +24,11 @@ ls
 #aws sts get-caller-identity
 #aws iam list-roles
 # Remove the following from reqs since they're huge
-sed -i '/luigi/d' requirements.txt
 sed -i '/tensorflow/d' requirements.txt
 sed -i '/hdbscan/d' requirements.txt
 sed -i '/Cython/d' requirements.txt
 sed -i '/sentence_transformers/d' requirements.txt
 sed -i '/torch/d' requirements.txt
-
 
 # Install remaining reqs
 pip install -r requirements.txt
