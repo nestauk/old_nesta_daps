@@ -91,7 +91,7 @@ class RootTask(luigi.WrapperTask):
                                  test=not self.production,
                                  batchable=batchable,
                                  env_files=env_files,
-                                 job_def="py36_amzn1_image",
+                                 job_def="py37_amzn2",
                                  job_name=f"Collect-{routine_id}",
                                  job_queue="HighPriority",
                                  region_name="eu-west-2",
