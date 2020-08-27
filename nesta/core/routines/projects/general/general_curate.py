@@ -45,7 +45,7 @@ class CurateTask(luigi.Task):
         routine_id = f'General-Curate-{self.date}'
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
-                              job_def='py36_amzn1_image',
+                              job_def='py37_amzn2',
                               job_name=routine_id,
                               job_queue='HighPriority',
                               region_name='eu-west-2',

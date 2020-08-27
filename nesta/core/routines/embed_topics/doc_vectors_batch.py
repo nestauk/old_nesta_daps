@@ -120,7 +120,7 @@ class RootTask(luigi.WrapperTask):
                            db_config_env="MYSQLDB",
                            process_batch_size=self.process_batch_size,
                            intermediate_bucket="nesta-production-intermediate",
-                           job_def="py36_amzn1_image",
+                           job_def="py37_amzn2",
                            job_name="text2vectors-%s" % self.date,
                            job_queue="HighPriority",
                            region_name="eu-west-2",

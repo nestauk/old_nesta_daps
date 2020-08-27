@@ -52,7 +52,7 @@ class RootTask(luigi.WrapperTask):
                               env_files=[f3p("nesta"),
                                          f3p("config/mysqldb.config"),
                                          f3p("config/crunchbase.config")],
-                              job_def="py36_amzn1_image",
+                              job_def="py37_amzn2",
                               job_queue="HighPriority",
                               region_name="eu-west-2",
                               poll_time=10,
