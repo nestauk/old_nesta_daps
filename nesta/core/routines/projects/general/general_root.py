@@ -19,8 +19,7 @@ from datetime import datetime as dt
 import luigi
 
 S3_BUCKET='nesta-production-intermediate'
-ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml',
-             'nesta']
+ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml', 'nesta']
 ENDPOINT = 'general'
 
 def kwarg_maker(dataset, routine_id):
@@ -60,7 +59,7 @@ class RootTask(luigi.WrapperTask):
         #params = (('gtr', 'project', GtrProject.id),
         #          ('arxiv', 'article', ArxivArticle.id),
         #          ('companies', 'company', CrunchbaseOrg.id),
-        params = (('patstat','patent', PatstatFamily.id),)
+        params = (('patstat','patent', PatstatFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
