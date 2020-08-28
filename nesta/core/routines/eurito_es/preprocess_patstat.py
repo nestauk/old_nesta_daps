@@ -8,7 +8,7 @@ This is will significantly speed up transfer to ES.
 
 import luigi
 import logging
-from nesta.packages.patstat.fetch_appln_eu import extract_data
+from nesta.packages.patstat.fetch_appln import extract_data
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.orms.patstat_eu_orm import ApplnFamily, Base
 from nesta.core.luigihacks import misctools
@@ -32,7 +32,7 @@ class PreprocessPatstatTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        data = extract_data(limit=1000 if self.test else None)
+        data = extract_data(limit=1000 if self.test else None, region='eu')
         logging.info(f'Got {len(data)} rows')
         database = 'dev' if self.test else 'production'
         for chunk in split_batches(data, 10000):
