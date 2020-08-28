@@ -5,7 +5,7 @@ import pandas as pd
 
 MYSQL_INTEGER_LIMIT = 18446744073709551615  # BIGINT
 
-def generate_temp_tables(engine, limit=MYSQL_INTEGER_LIMIT):
+def generate_temp_tables(engine, limit=MYSQL_INTEGER_LIMIT, region='eu'):
     '''
     Generate some temporary tables,
     which will be selected by Pandas.
@@ -13,12 +13,12 @@ def generate_temp_tables(engine, limit=MYSQL_INTEGER_LIMIT):
     Args:
         engine (sqlalchemy.Engine): SqlAlchemy connectable.
         limit (int): Maximum number of results to return.
-
+        region (str): 'eu' (default) for EU region, or 'all' for everything.
     Returns:
         session (sqlalchemy.Session): SqlAlchemy session in which the temp tables exist.
     '''
     dir_path = os.path.dirname(os.path.abspath(__file__))  # path to this very module
-    data_path = os.path.join(dir_path, "patstat_eu.sql")  # this SQL file exists right here
+    data_path = os.path.join(dir_path, f"patstat_{region}.sql")  # this SQL file exists right here
     # Get the SQL code
     with open(data_path) as f:
         sql = f.read()
@@ -81,10 +81,10 @@ def concat_dfs(dfs):
     return data
 
 
-def extract_data(limit=None, db='patstat_2019_05_13'):
-    '''Get all EU patents, grouped and aggregated by their doc families'''
+def extract_data(limit=None, db='patstat_2019_05_13', region='eu'):
+    '''Get all patents, grouped and aggregated by their doc families'''
     engine = get_mysql_engine('MYSQLDB', 'mysqldb', db)
-    session = generate_temp_tables(engine, limit=limit)
+    session = generate_temp_tables(engine, limit=limit, region=region)
     dfs = temp_tables_to_dfs(engine, limit=limit)
     session.close()
     del session
