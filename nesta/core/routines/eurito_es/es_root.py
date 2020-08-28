@@ -11,7 +11,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.crunchbase_orm import Organization
-from nesta.core.orms.patstat_eu_orm import ApplnFamily
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as ApplnFamily
 from nesta.core.orms.cordis_orm import Project
 
 from datetime import datetime as dt

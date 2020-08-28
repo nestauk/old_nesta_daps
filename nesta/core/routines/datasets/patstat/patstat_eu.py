@@ -2,7 +2,7 @@
 Preprocess PATSTAT data
 =======================
 
-Select the EU subset of patstat, by doc family id.
+Select all, and the EU subset of patstat, by doc family id.
 This is will significantly speed up transfer to ES.
 """
 
@@ -10,7 +10,8 @@ import luigi
 import logging
 from nesta.packages.patstat.fetch_appln import extract_data
 from nesta.packages.misc_utils.batches import split_batches
-from nesta.core.orms.patstat_eu_orm import ApplnFamily, Base
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as ApplnFamily
+from nesta.core.orms.patstat_orm import Base
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.luigi_logging import set_log_level

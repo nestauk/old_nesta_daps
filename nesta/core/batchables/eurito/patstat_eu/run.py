@@ -18,7 +18,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import object_to_dict
-from nesta.core.orms.patstat_eu_orm import ApplnFamily
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as ApplnFamily
 from nesta.core.orms.patstat_2019_05_13 import *
 from nesta.packages.geo_utils.lookup import get_eu_countries
 
