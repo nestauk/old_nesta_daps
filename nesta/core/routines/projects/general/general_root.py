@@ -45,7 +45,7 @@ class RootTask(luigi.WrapperTask):
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
                               drop_and_recreate=self.drop_and_recreate,
-                              job_def='py37_amzn1_es7',
+                              job_def='py37_amzn2',
                               job_name=routine_id,
                               job_queue='HighPriority',
                               region_name='eu-west-2',

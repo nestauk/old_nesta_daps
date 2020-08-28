@@ -92,7 +92,7 @@ def run():
     logging.info('Processing rows')
     _filter = ApplnFamilyAll.docdb_family_id.in_(docdb_fam_ids)
     with db_session(engine) as session:
-        for obj in session.query(ApplnFamily).filter(_filter).all():
+        for obj in session.query(ApplnFamilyAll).filter(_filter).all():
             row = object_to_dict(obj)
             appln_ids = row.pop('appln_id')
             with db_session(_engine) as _session:
