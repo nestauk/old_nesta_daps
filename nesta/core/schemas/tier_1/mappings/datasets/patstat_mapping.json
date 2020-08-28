@@ -1,110 +1,108 @@
 {
     "mappings": {
-        "_doc": {
-            "dynamic": "strict",
-            "properties": {
-                "booleanFlag_autotranslated_entity": {
-                    "type": "boolean"
+        "dynamic": "strict",
+        "properties": {
+            "booleanFlag_autotranslated_entity": {
+                "type": "boolean"
+            },
+            "count_citations_patent": {
+                "type": "integer"
+            },
+            "date_of_patent": {
+                "format": "yyyy-MM-dd",
+                "type": "date"
+            },
+            "metric_novelty_patent": {
+                "type": "float"
+            },
+            "terms_authCountry_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "count_citations_patent": {
-                    "type": "integer"
+                "type": "text"
+            },
+            "terms_ipc_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "date_of_patent": {
-                    "format": "yyyy-MM-dd",
-                    "type": "date"
+                "type": "text"
+            },
+            "terms_iso2lang_entity": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "metric_novelty_patent": {
-                    "type": "float"
+                "type": "text"
+            },
+            "terms_nace2_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_authCountry_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "terms_personCountry_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_ipc_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "terms_personNuts_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_iso2lang_entity": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "terms_techFieldNumber_patent": {
+                "analyzer": "terms_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_nace2_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "terms_tokens_entity": {
+                "type": "keyword"
+            },
+            "textBody_abstract_patent": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_personCountry_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
+                "type": "text"
+            },
+            "title_of_patent": {
+                "fields": {
+                    "keyword": {
+                        "type": "keyword"
+                    }
                 },
-                "terms_personNuts_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_techFieldNumber_patent": {
-                    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "terms_tokens_entity": {
-                    "type": "keyword"
-                },
-                "textBody_abstract_patent": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "title_of_patent": {
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-                },
-                "type_of_entity": {
-                    "type": "keyword"
-                },
-                "year_of_patent": {
-                    "type": "integer"
+                "type": "text"
+            },
+            "type_of_entity": {
+                "type": "keyword"
+            },
+            "year_of_patent": {
+                "type": "integer"
                 }
-            }
         }
     }
 }
