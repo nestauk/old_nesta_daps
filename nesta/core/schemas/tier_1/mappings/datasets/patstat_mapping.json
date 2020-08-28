@@ -5,6 +5,9 @@
             "booleanFlag_autotranslated_entity": {
                 "type": "boolean"
             },
+            "booleanFlag_eu_patent": {
+                "type": "boolean"
+            },
             "count_citations_patent": {
                 "type": "integer"
             },
