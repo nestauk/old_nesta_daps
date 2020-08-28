@@ -17,6 +17,8 @@ def generate_temp_tables(engine, limit=MYSQL_INTEGER_LIMIT, region='eu'):
     Returns:
         session (sqlalchemy.Session): SqlAlchemy session in which the temp tables exist.
     '''
+    if limit is None:
+        limit = MYSQL_INTEGER_LIMIT
     dir_path = os.path.dirname(os.path.abspath(__file__))  # path to this very module
     data_path = os.path.join(dir_path, f"patstat_{region}.sql")  # this SQL file exists right here
     # Get the SQL code
