@@ -61,6 +61,6 @@ class CurateTask(luigi.Task):
             yield Sql2BatchTask(id_field=id_field,
                                 **kwarg_maker(dataset, routine_id),
                                 **default_kwargs)
-        
+
     def run(self):
         self.output().touch()

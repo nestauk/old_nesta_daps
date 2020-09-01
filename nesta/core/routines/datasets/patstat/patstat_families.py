@@ -23,6 +23,7 @@ from nesta.core.orms.orm_utils import insert_data
 from datetime import datetime as dt
 import os
 
+
 class PatstatFamilyTask(luigi.Task):
     date = luigi.DateParameter(default=dt.now())
     test = luigi.BoolParameter(default=True)
@@ -31,9 +32,13 @@ class PatstatFamilyTask(luigi.Task):
         return make_mysql_target(self)
 
     def run(self):
+        """Create two seperate tables of PATSTAT families, 
+        one for applications featuring an EU country (EURITO legacy table)
+        and one for all PATSTAT data.
+        """
         limit = 1000 if self.test else None
-        database = 'dev' if self.test else 'production'        
-        for (rgn, _class) in (('eu', ApplnFamilyEU), 
+        database = 'dev' if self.test else 'production'
+        for (rgn, _class) in (('eu', ApplnFamilyEU),
                               ('all', ApplnFamilyAll)):
             data = extract_data(limit=limit, region=rgn)
             logging.info(f'Got {len(data)} rows')
@@ -47,7 +52,7 @@ class PatstatFamilyTask(luigi.Task):
 class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=dt.now())
     production = luigi.BoolParameter(default=False)
-    
+
     def requires(self):
         set_log_level(True)
         yield PatstatFamilyTask(date=self.date,
