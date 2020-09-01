@@ -49,11 +49,11 @@ def select_text(objs, lang_field, text_field):
     if len(_objs) == 0:
         _objs = objs
     # Select the object with the longest passage of text
-    obj = sorted(_objs, key=lambda x: len(x), reverse=True)[0]
+    obj = sorted(_objs, key=lambda x: len(x[text_field]), reverse=True)[0]
     return obj[text_field]
 
 
-def select_metadata(orm, session, appln_ids, field_selector=orm.appln_id):
+def select_metadata(orm, session, appln_ids, field_selector=None):
     """Extract the PATSTAT metadata for these application IDs.
 
     Args:
@@ -64,6 +64,8 @@ def select_metadata(orm, session, appln_ids, field_selector=orm.appln_id):
     Returns:
         objs (list): List of all metadata objects for these application IDs.
     """
+    if field_selector is None:
+        field_selector = orm.appln_id
     _filter = field_selector.in_(appln_ids)
     return [object_to_dict(_obj) for _obj in
             session.query(orm).filter(_filter).all()]
@@ -100,11 +102,11 @@ def reformat_row(row, _engine):
     abstr = select_text(_abstrs, 'appln_abstract_lg', 'appln_abstract')
 
     # Get names from lookups
-    ipcs = list(set(i['ipc_class_symbol'].split()[0] for i in ipcs))
-    nace2s = list(set(n['nace2_code'] for n in nace2s))
-    techs = list(set(t['techn_field_nr'] for t in techs))
-    ctrys = list(set(p['person_ctry_code'] for p in persons))
-    nuts = list(set(p['nuts'] for p in persons))
+    ipcs = sorted(set(i['ipc_class_symbol'].split()[0] for i in ipcs))
+    nace2s = sorted(set(n['nace2_code'] for n in nace2s))
+    techs = sorted(set(t['techn_field_nr'] for t in techs))
+    ctrys = sorted(set(p['person_ctry_code'] for p in persons))
+    nuts = sorted(set(p['nuts'] for p in persons))
     is_eu = any(c in eu_countries for c in ctrys)
 
     # Index the data
