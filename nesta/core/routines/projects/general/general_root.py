@@ -22,6 +22,11 @@ import luigi
 S3_BUCKET='nesta-production-intermediate'
 ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml', 'nesta']
 ENDPOINT = 'general'
+DATASETS = {'gtr': ('project', GtrProject.id),
+            'arxiv': ('article', ArxivArticle.id),
+            'companies': ('company', CrunchbaseOrg.id),
+            'patstat': ('patent', PatstatFamily.docdb_family_id),  # <--- takes one week
+            'cordis': ('project', CordisProject.rcn)}
 
 def kwarg_maker(dataset, routine_id):
     env_files=list(f3p(f) for f in ENV_FILES) + [f3p(f'tier_1/datasets/{dataset}.json')]
@@ -38,6 +43,7 @@ class RootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
     drop_and_recreate = luigi.BoolParameter(default=False)
+    dataset = luigi.Parameter(default=None)
 
     def requires(self):
         test = not self.production
@@ -57,12 +63,10 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('gtr', 'project', GtrProject.id),
-                  ('arxiv', 'article', ArxivArticle.id),
-                  ('companies', 'company', CrunchbaseOrg.id),
-                  ('patstat', 'patent', PatstatFamily.docdb_family_id),  # <--- takes one week
-                  ('cordis', 'project', CordisProject.rcn),)
-        for dataset, entity_type, id_field in params:
+        for dataset, (entity_type, id_field) in params,items():
+            # Filter dataset if specified
+            if self.dataset is not None and dataset != self.dataset:
+                continue
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
                              **kwarg_maker(dataset,
