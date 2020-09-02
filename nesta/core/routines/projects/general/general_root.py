@@ -10,10 +10,11 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
-from nesta.core.orms.general_orm import CrunchbaseOrg  # Pre-curate
+from nesta.core.orms.general_orm import CrunchbaseOrg  # Already curated
 from nesta.core.orms.gtr_orm import Projects as GtrProject  # Curated on ingestion
-from nesta.core.orms.arxiv_orm import Article as ArxivArticle # Curated on ingestion
-from nesta.core.orms.patstat_orm import ApplnFamilyAll as PatstatFamily # Curated on ingestion
+from nesta.core.orms.arxiv_orm import Article as ArxivArticle  # Curated on ingestion
+from nesta.core.orms.patstat_orm import ApplnFamilyAll as PatstatFamily  # Curated on ingestion
+from nesta.core.orms.cordis_orm import Project as CordisProject  # Curated on ingestion
 
 from datetime import datetime as dt
 import luigi
@@ -59,7 +60,8 @@ class RootTask(luigi.WrapperTask):
         params = (('gtr', 'project', GtrProject.id),
                   ('arxiv', 'article', ArxivArticle.id),
                   ('companies', 'company', CrunchbaseOrg.id),
-                  ('patstat', 'patent', PatstatFamily.docdb_family_id),)
+                  ('patstat', 'patent', PatstatFamily.docdb_family_id),
+                  ('cordis', 'project', CordisProject.rcn),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
