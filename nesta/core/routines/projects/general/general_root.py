@@ -60,7 +60,7 @@ class RootTask(luigi.WrapperTask):
         params = (('gtr', 'project', GtrProject.id),
                   ('arxiv', 'article', ArxivArticle.id),
                   ('companies', 'company', CrunchbaseOrg.id),
-                  ('patstat', 'patent', PatstatFamily.docdb_family_id),
+                  ('patstat', 'patent', PatstatFamily.docdb_family_id),  # <--- takes one week
                   ('cordis', 'project', CordisProject.rcn),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
