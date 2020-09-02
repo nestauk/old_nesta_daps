@@ -43,12 +43,12 @@ class RootTask(luigi.WrapperTask):
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
     drop_and_recreate = luigi.BoolParameter(default=False)
-    dataset = luigi.Parameter(default=None)
+    dataset = luigi.Parameter(default='all')
 
     def requires(self):
         test = not self.production
         set_log_level(test)
-        routine_id = f'General-Sql2EsTask-{self.date}'
+        routine_id = f'General-Sql2EsTask-{self.date}-{self.dataset}'
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
                               drop_and_recreate=self.drop_and_recreate,
@@ -63,9 +63,9 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        for dataset, (entity_type, id_field) in params,items():
+        for dataset, (entity_type, id_field) in DATASETS.items():
             # Filter dataset if specified
-            if self.dataset is not None and dataset != self.dataset:
+            if self.dataset != 'all' and dataset != self.dataset:
                 continue
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
