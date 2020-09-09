@@ -3,11 +3,14 @@ A collection of miscellaneous tools.
 '''
 import configparser
 import os
+from functools import lru_cache
+import yaml
+from datetime import datetime as dt
 
 
 def get_config(file_name, header, path="core/config/"):
     '''Get the configuration from a file in the luigi config path
-    directory, and convert the key-value pairs under the 
+    directory, and convert the key-value pairs under the
     config :code:`header` into a `dict`.
 
     Parameters:
@@ -61,3 +64,64 @@ def find_filepath_from_pathstub(path_stub):
             if path.endswith(path_stub.rstrip("/")):
                 return path
         relative += 1
+
+
+def f3p(path_stub):
+    """Shortened name for coding convenience"""
+    return find_filepath_from_pathstub(path_stub)
+
+
+def load_yaml_from_pathstub(pathstub, filename):
+    """Basic wrapper around :obj:`find_filepath_from_pathstub`
+    which also opens the file (assumed to be yaml).
+
+    Args:
+        pathstub (str): Stub of filepath where the file should be found.
+        filename (str): The filename.
+    Returns:
+        The file contents as a json-like object.
+    """
+    _path = find_filepath_from_pathstub(pathstub)
+    _path = os.path.join(_path, filename)
+    with open(_path) as f:
+        return yaml.safe_load(f)
+
+
+def load_batch_config(luigi_task, additional_env_files=[], **overrides):
+    """Load default luigi batch parametes, and apply any overrides if required. Note that
+    the usage pattern for this is normally :obj:`load_batch_config(self, additional_env_files, **overrides)`
+    from within a luigi Task, where :obj:`self` is the luigi Task.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+        additional_env_files (list): List of files to pass directly to the batch local environment.
+        overrides (**kwargs): Any overrides or additional parameters to pass to the batch task as parameters.
+    Returns:
+        config (dict): Batch configuration paramaters, which can be expanded as **kwargs in BatchTask.
+    """
+    config = load_yaml_from_pathstub('config', 'luigi-batch.yaml')
+    test, routine_id = extract_task_info(luigi_task)
+    config['test'] = test
+    config['job_name'] = routine_id
+    config['routine_id'] = routine_id
+    config['env_files'] += additional_env_files
+    config['env_files'] = [f3p(fp) for fp in config['env_files']]    
+    config['date'] = dt.now()
+    config.update(overrides)
+    return config
+
+
+@lru_cache()
+def extract_task_info(luigi_task):
+    """Extract task name and generate a routine id from a luigi task, from the date and test fields.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+    Returns:
+        {test, routine_id} (tuple): Test flag, and routine ID for this task.
+    """
+    test = (luigi_task.test if 'test' in luigi_task.__dict__ 
+            else not luigi_task.production)
+    task_name = type(luigi_task).__name__
+    routine_id = f'{task_name}-{luigi_task.date}-{test}'
+    return test, routine_id
