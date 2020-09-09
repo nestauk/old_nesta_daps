@@ -28,6 +28,9 @@ has been directly lifted. The main difference to the latter, is that
 import logging
 
 import luigi
+from nesta.core.luigihacks.misctools import extract_task_info
+from nesta.core.luigihacks.misctools import get_config
+import os
 
 logger = logging.getLogger('luigi-interface')
 
@@ -37,6 +40,24 @@ try:
 except ImportError as e:
     logger.warning("Loading MySQL module without the python package mysql-connector-python. \
         This will crash at runtime if MySQL functionality is used.")
+
+
+def make_mysql_target(luigi_task, mysqldb_env='MYSQLDB'):
+    """Generate a MySQL target for a luigi Task, based on the Task's :obj:`date` and 
+    :obj:`test` parameters, and indicated configuration file.
+    
+    Args:
+        luigi_task (luigi.Task): Task to extract test and date parameters from.
+        mysqldb_env (str): Environmental variable storing the path to MySQL config.
+    Returns:
+        target (MySqlTarget)
+    """
+    test, routine_id = extract_task_info(luigi_task)
+    db_config_path = os.environ[mysqldb_env]
+    db_config = get_config(db_config_path, "mysqldb")
+    db_config["database"] = 'dev' if test else 'production'
+    db_config["table"] = f"{routine_id} <dummy>"  # Not a real table                                                          
+    return MySqlTarget(update_id=routine_id, **db_config)
 
 
 class MySqlTarget(luigi.Target):

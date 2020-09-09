@@ -5,7 +5,6 @@ python:
 install:
   - pip install --upgrade setuptools
   - pip install Cython
-  - pip install -r requirements.txt
   - pip install -r nesta/packages/tf_requirements.txt
   - python setup.py install
   - python -m nltk.downloader punkt
