@@ -3,7 +3,7 @@
         "_doc": {
             "properties": {
                 "booleanFlag_eu_article": {
-                    "type": "boolean"
+                    "type": "boolean",
                 },
                 "date_created_article": {
                     "format": "yyyy-MM-dd",
