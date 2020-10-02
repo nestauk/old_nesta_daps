@@ -59,7 +59,7 @@ class SimpleTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        base_url = "https://swapi.co/api/starships{}"
+        base_url = "https://swapi.dev/api/starships{}"
         url = base_url.format(f"?search={self.name}" if self.name else '')
 
         r = requests.get(url)
