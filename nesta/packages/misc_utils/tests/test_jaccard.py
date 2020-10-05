@@ -90,7 +90,7 @@ def test_fast_nested_jaccard():
     assert jaccard_matches == {("the", "open", "university"):
                                {("the", "open", "university"): 1},
                                ("manchester", "university"):
-                               {("munchester", "university"): 0.9},
+                               {("munchester", "university"): 1/3},
                                ("boston","analytics"):
                                {("boston",): 1/2}}
 
