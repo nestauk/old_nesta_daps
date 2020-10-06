@@ -87,7 +87,7 @@ def generate_grid_lookups():
         for _id in ids:
             lookup[_id].add(_name)
         name_id_lookup[_name] = name_id_lookup[_name].union(ids)
-    # don't want defdict behaviour after this point
+    # Don't want defdict behaviour after this point
     name_id_lookup = {k: v for k, v in name_id_lookup.items()}
 
     # Generate list of all names for the inst, including
