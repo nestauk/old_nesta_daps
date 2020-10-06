@@ -1,6 +1,6 @@
 import unittest
 from sqlalchemy.orm import sessionmaker
-from nesta.core.orms.patstat_eu_orm import Base
+from nesta.core.orms.patstat_orm import Base
 from nesta.core.orms.orm_utils import get_mysql_engine
 
 

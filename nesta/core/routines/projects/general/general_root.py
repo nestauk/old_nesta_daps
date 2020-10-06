@@ -13,7 +13,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.general_orm import CrunchbaseOrg  # Pre-curate
 from nesta.core.orms.gtr_orm import Projects as GtrProject  # Curated on ingestion
 from nesta.core.orms.arxiv_orm import Article as ArxivArticle # Curated on ingestion
-from nesta.core.orms.patstat_orm import ApplnFamilyAll as PatstatFamily # Curated on ingestion
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as PatstatFamily # Curated on ingestion
 
 from datetime import datetime as dt
 import luigi
@@ -56,10 +56,11 @@ class RootTask(luigi.WrapperTask):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('gtr', 'project', GtrProject.id),
-                  ('arxiv', 'article', ArxivArticle.id),
-                  ('companies', 'company', CrunchbaseOrg.id),
-                  ('patstat', 'patent', PatstatFamily.docdb_family_id),)
+        #params = (('gtr', 'project', GtrProject.id),
+        #          ('arxiv', 'article', ArxivArticle.id),
+        #          ('companies', 'company', CrunchbaseOrg.id),
+        #          ('patstat', 'patent', PatstatFamily.docdb_family_id),)
+        params = (('patstat', 'patent', PatstatFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
