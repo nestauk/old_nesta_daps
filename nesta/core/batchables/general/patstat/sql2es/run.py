@@ -106,7 +106,7 @@ def reformat_row(row, _engine):
     nace2s = sorted(set(n['nace2_code'] for n in nace2s))
     techs = sorted(set(t['techn_field_nr'] for t in techs))
     ctrys = sorted(set(p['person_ctry_code'] for p in persons))
-    nuts = sorted(set(p['nuts'] for p in persons))
+    nuts = sorted(set(p['nuts'] for p in persons if p['nuts'] is not None))
     is_eu = any(c in eu_countries for c in ctrys)
 
     # Index the data
