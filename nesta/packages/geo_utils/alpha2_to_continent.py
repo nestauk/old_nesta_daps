@@ -16,6 +16,3 @@ def alpha2_to_continent_mapping():
         except KeyError:
             pass
     return continents
-
-if __name__ == '__main__':
-    continents = alpha2_to_continent_mapping()

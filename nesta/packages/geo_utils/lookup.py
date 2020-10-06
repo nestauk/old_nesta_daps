@@ -4,6 +4,9 @@ from io import StringIO
 from functools import lru_cache
 from nesta.core.orms.orm_utils import get_mysql_engine
 
+COUNTRY_CODES_URL = ("https://datahub.io/core/country-codes"
+                     "/r/country-codes.csv")
+
 @lru_cache()
 def get_eu_countries():
     """
@@ -46,9 +49,7 @@ def get_country_region_lookup():
     Returns:
         data (dict): Values are country_name-region_name pairs.
     """
-    url = ("https://datahub.io/core/country-codes"
-           "/r/country-codes.csv")
-    r = requests.get(url)
+    r = requests.get(COUNTRY_CODES_URL)
     r.raise_for_status()
     with StringIO(r.text) as csv:
         df = pd.read_csv(csv, usecols=['official_name_en', 'ISO3166-1-Alpha-2',
@@ -82,3 +83,36 @@ def get_us_states_lookup():
     states_lookup[""] = None  # default lookup for non-US countries
     return states_lookup
 
+
+@lru_cache()
+def get_iso2_to_iso3_lookup(reverse=False):
+    """
+    Retrieves lookup of ISO2 to ISO3 (or reverse).
+    
+    Args:
+        reverse (bool): If True, return ISO3 to ISO2 lookup instead.
+    Returns:
+        lookup (dict): Key-value pairs of ISO2 to ISO3 codes (or reverse).
+    """
+    country_codes = pd.read_csv(COUNTRY_CODES_URL)
+    alpha2_to_alpha3 = {row['ISO3166-1-Alpha-2']: row['ISO3166-1-Alpha-3'] 
+                        for _, row in country_codes.iterrows()}
+    alpha2_to_alpha3[None] = None  # no country
+    alpha2_to_alpha3['XK'] = 'RKS'  # kosovo
+    if reverse:
+        alpha2_to_alpha3 = {v: k for k, v in alpha2_to_alpha3.items()}
+    return alpha2_to_alpha3
+
+
+@lru_cache()
+def get_disputed_countries():
+    """Lookup of disputed aliases, to "forgive" disperate datasets
+    for making different geo-political decisions
+    
+    Returns:
+        lookup (dict): 
+    """
+    return {'RKS': 'SRB', # Kosovo: Serbia
+            'TWN': 'CHN', # Taiwan: China
+            'HKG': 'CHN', # Hong Kong: China
+            'ROU': 'ROM'} # not disputed: just inconsistent format for Romania
