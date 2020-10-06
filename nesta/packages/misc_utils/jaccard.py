@@ -15,7 +15,7 @@ The regular Jaccard similarity between these is 1/3. Instead, if we define the s
    jaccard("open", "apen") ==> 3/5
    jaccard("university", "university") ==> 1
 
-Then the total Jaccard similarity can be reinterpretted as (3/5 + 1)/2 = 8/10. Using this via SetSimilaritySearch offers significant speedups with respect to fuzzywuzzy.
+Then the total Jaccard similarity can be reinterpretted as (3/5 + 1)/2 = 8/10. Using this via SetSimilaritySearch offers significant speed-ups with respect to fuzzywuzzy.
 """
 
 from collections import defaultdict
@@ -125,7 +125,8 @@ def nested_jaccard(a, b, nested_threshold=0.7):
 
 
 def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
-                 similarity_threshold=0.5, **kwargs):
+                 similarity_threshold=0.5, single_term_threshold=0.75,
+                 **kwargs):
     """Fast Jaccard index lookup via SetSimilaritySearch, and then applying a choice of kernels to recalculate the Jaccard index, if required.
     
     Args:
@@ -137,24 +138,38 @@ def fast_jaccard(terms_to_index, terms_to_query, kernel=jaccard,
         jaccard_matches (dict of dict of float): Jaccard similarity scores between near matching
     """
     terms_to_index = list(terms_to_index)
-    search_index = SearchIndex(terms_to_index,
-                               similarity_func_name="jaccard",
-                               similarity_threshold=similarity_threshold)
+    single_terms = [terms[0] if len(terms) == 1 else (None, )
+                    for terms in terms_to_index]
+    search_single_index = SearchIndex(single_terms, similarity_threshold=single_term_threshold,
+                                      similarity_func_name="jaccard")
+    search_index = SearchIndex(terms_to_index, similarity_threshold=similarity_threshold,
+                               similarity_func_name="jaccard")
     jaccard_matches = defaultdict(dict)
     for query_term in terms_to_query:
-        for idx, _ in search_index.query(query_term):
+        # Make initial search over sets
+        for idx, DELETEME in search_index.query(query_term):
             index_term = terms_to_index[idx]
-            jaccard_matches[index_term][query_term] = kernel(index_term,
-                                                             query_term,
-                                                             **kwargs)
+            jaccard_matches[index_term][query_term] = kernel(index_term, query_term, **kwargs)
+        if len(query_term) != 1:
+            continue
+        # If there are single terms, check those too
+        for idx, DELETEME in search_single_index.query(query_term[0]):
+            index_term = single_terms[idx]
+            if index_term == (None,):
+                continue
+            index_term = terms_to_index[idx]
+            if query_term not in jaccard_matches[index_term]:
+                jaccard_matches[index_term][query_term] = kernel(index_term, query_term, **kwargs)
     return jaccard_matches
 
 
 def fast_nested_jaccard(terms_to_index, terms_to_query, 
-                        similarity_threshold=0.5,
-                        nested_threshold=0.8):
+                        similarity_threshold=0.,
+                        nested_threshold=0.8,
+                        single_term_threshold=0.75):
     """Superficial wrapper of :obj:`fast_jaccard`, with :obj:`kernel` set to :obj:`nested_jaccard`"""    
     return fast_jaccard(terms_to_index, terms_to_query, 
                         kernel=nested_jaccard, 
                         similarity_threshold=similarity_threshold,
-                        nested_threshold=nested_threshold)
+                        nested_threshold=nested_threshold,
+                        single_term_threshold=single_term_threshold)
