@@ -10,16 +10,16 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
-from nesta.core.orms.general_orm import CrunchbaseOrg
-from nesta.core.orms.gtr_orm import Projects as GtrProject
-from nesta.core.orms.arxiv_orm import Article as ArxivArticle
+from nesta.core.orms.general_orm import CrunchbaseOrg  # Pre-curate
+from nesta.core.orms.gtr_orm import Projects as GtrProject  # Curated on ingestion
+from nesta.core.orms.arxiv_orm import Article as ArxivArticle # Curated on ingestion
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as PatstatFamily # Curated on ingestion
 
 from datetime import datetime as dt
 import luigi
 
 S3_BUCKET='nesta-production-intermediate'
-ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml',
-             'nesta']
+ENV_FILES = ['mysqldb.config', 'elasticsearch.yaml', 'nesta']
 ENDPOINT = 'general'
 
 def kwarg_maker(dataset, routine_id):
@@ -45,7 +45,7 @@ class RootTask(luigi.WrapperTask):
         default_kwargs = dict(date=self.date,
                               process_batch_size=self.process_batch_size,
                               drop_and_recreate=self.drop_and_recreate,
-                              job_def='py37_amzn1_es7',
+                              job_def='py37_amzn2',
                               job_name=routine_id,
                               job_queue='HighPriority',
                               region_name='eu-west-2',
@@ -57,11 +57,12 @@ class RootTask(luigi.WrapperTask):
                               intermediate_bucket=S3_BUCKET)
 
         params = (('gtr', 'project', GtrProject.id),
-                  ('arxiv', 'article', ArxivArticle.id),
-                  ('companies', 'company', CrunchbaseOrg.id),)
+                 ('arxiv', 'article', ArxivArticle.id),
+                 ('companies', 'company', CrunchbaseOrg.id),
+                 ('patstat', 'patent', PatstatFamily.docdb_family_id),)
         for dataset, entity_type, id_field in params:
             yield Sql2EsTask(id_field=id_field,
                              entity_type=entity_type,
-                             **kwarg_maker(dataset, 
+                             **kwarg_maker(dataset,
                                            routine_id),
                              **default_kwargs)

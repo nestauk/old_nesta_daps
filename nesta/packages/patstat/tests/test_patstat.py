@@ -2,14 +2,13 @@ import pytest
 from unittest import mock
 from pandas.testing import assert_frame_equal
 
-from nesta.packages.patstat.fetch_appln_eu import pd
+from nesta.packages.patstat.fetch_appln import pd
+from nesta.packages.patstat.fetch_appln import concat_dfs
+from nesta.packages.patstat.fetch_appln import pop_and_split
+from nesta.packages.patstat.fetch_appln import temp_tables_to_dfs
+from nesta.packages.patstat.fetch_appln import generate_temp_tables
 
-from nesta.packages.patstat.fetch_appln_eu import concat_dfs
-from nesta.packages.patstat.fetch_appln_eu import pop_and_split
-from nesta.packages.patstat.fetch_appln_eu import temp_tables_to_dfs
-from nesta.packages.patstat.fetch_appln_eu import generate_temp_tables
-
-PATH='nesta.packages.patstat.fetch_appln_eu.{}'
+PATH='nesta.packages.patstat.fetch_appln.{}'
 
 @pytest.fixture
 def df_groups():

@@ -137,7 +137,7 @@ def _evaluate_matches(match_scores, iso3_code,
         raise ValueError(f'ISO code "{iso3_code}" is not ISO3')
     other_ctry = (disputed_ctrys[iso3_code]
                   if iso3_code in disputed_ctrys else iso3_code)
-    
+
     # Find a match
     found_gids = set()
     n_perfect_scores = sum(v == 1 for v in match_scores.values())
@@ -160,6 +160,7 @@ def _evaluate_matches(match_scores, iso3_code,
         # good criteria: name match, country match
         ctry_match = (iso3_code in grid_ctrys
                       or other_ctry in grid_ctrys)
+
         # Circumstantial matching criteria
         # (don't need country match if these are satisfied)
         # --------------------------------
