@@ -13,7 +13,7 @@ from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.general_orm import CrunchbaseOrg  # Already curated
 from nesta.core.orms.gtr_orm import Projects as GtrProject  # Curated on ingestion
 from nesta.core.orms.arxiv_orm import Article as ArxivArticle  # Curated on ingestion
-from nesta.core.orms.patstat_orm import ApplnFamilyAll as PatstatFamily  # Curated on ingestion
+from nesta.core.orms.patstat_orm import ApplnFamilyEU as PatstatFamily  # Curated on ingestion
 from nesta.core.orms.cordis_orm import Project as CordisProject  # Curated on ingestion
 
 from datetime import datetime as dt

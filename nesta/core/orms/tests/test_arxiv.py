@@ -1,5 +1,6 @@
 import unittest
 from sqlalchemy.orm import sessionmaker
+from nesta.core.orms.crunchbase_orm import Base as CbBase
 from nesta.core.orms.arxiv_orm import Base
 from nesta.core.orms.orm_utils import get_mysql_engine
 
@@ -11,6 +12,7 @@ class TestArxiv(unittest.TestCase):
 
     def setUp(self):
         '''Create the temporary table'''
+        CbBase.metadata.create_all(self.engine)
         Base.metadata.create_all(self.engine)
 
     def tearDown(self):
@@ -19,6 +21,7 @@ class TestArxiv(unittest.TestCase):
 
     def test_build(self):
         pass
+
 
 if __name__ == "__main__":
     unittest.main()
