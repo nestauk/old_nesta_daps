@@ -1,0 +1,133 @@
+"""
+run.py (cordis)
+---------------
+
+Transfer pre-collected Cordis data from MySQL
+to Elasticsearch.
+"""
+
+from ast import literal_eval
+import boto3
+import json
+import logging
+import os
+from datetime import datetime as dt
+
+from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.luigihacks.luigi_logging import set_log_level
+from nesta.core.orms.orm_utils import db_session, get_mysql_engine
+from nesta.core.orms.orm_utils import load_json_from_pathstub
+from nesta.core.orms.orm_utils import object_to_dict
+from nesta.core.orms.cordis_orm import Project
+
+
+def validate_date(row, label):
+    """Reformat dates so they are as expected on ingestion to ES
+
+    If the date is invalid or null, the corresponding date field on
+    the input row will be transformed to None, otherwise the
+    date will be stripped from the first 10 chars. The year of the
+    date will be returned, as this is used in another field.
+
+    Args:
+        row (dict): Row of data (NB: will be changed in place)
+        label (str): One of 'start' or 'end', corresponding to 
+                     project date fields in Cordis data.
+    Returns:
+        year (int): Reformatted row of data
+    """
+    key = f'{label}_date_code'
+    year = None
+    try:
+        year = dt.strptime(row[key], '%Y-%m-%dT00:00:00').year
+    except ValueError:
+        row[key] = None
+    else:
+        row[key] = row[key][0:10]
+    finally:
+        return year
+
+
+def reformat_row(row):
+    """Prepare raw data for ingestion to ES.
+
+    Args:
+        row (dict): Row of data.
+    Returns:
+        row (dict): Reformatted row of data
+    """
+    # Extract year from date
+    start_year = validate_date(row, 'start')
+    end_year = validate_date(row, 'end')
+    # Preference of start, then end, and otherwise None
+    row['year'] = start_year if start_year is not None else end_year
+
+    # Combine text fields, since they are of variable length and quality
+    _desc = row.pop('project_description')
+    _obj = row.pop('objective')
+    row['description'] = f'Description:\n{_desc}\n\nObjective:\n{_obj}'
+    row['link'] = f'https://cordis.europa.eu/project/id/{row["rcn"]}'
+    return row
+
+
+def run():
+    test = literal_eval(os.environ["BATCHPAR_test"])
+    bucket = os.environ['BATCHPAR_bucket']
+    batch_file = os.environ['BATCHPAR_batch_file']
+
+    db_name = os.environ["BATCHPAR_db_name"]
+    es_host = os.environ['BATCHPAR_outinfo']
+    es_port = int(os.environ['BATCHPAR_out_port'])
+    es_index = os.environ['BATCHPAR_out_index']
+    es_type = os.environ['BATCHPAR_out_type']
+    entity_type = os.environ["BATCHPAR_entity_type"]
+    aws_auth_region = os.environ["BATCHPAR_aws_auth_region"]
+
+    # database setup
+    logging.info('Retrieving engine connection')
+    engine = get_mysql_engine("BATCHPAR_config", "mysqldb",
+                              db_name)
+
+    # es setup
+    logging.info('Connecting to ES')
+    strans_kwargs = {'filename': 'cordis.json', 'ignore': ['id']}
+    es = ElasticsearchPlus(hosts=es_host,
+                           port=es_port,
+                           aws_auth_region=aws_auth_region,
+                           no_commit=("AWSBATCHTEST" in
+                                      os.environ),
+                           entity_type=entity_type,
+                           strans_kwargs=strans_kwargs,
+                           null_empty_str=True,
+                           coordinates_as_floats=True,
+                           listify_terms=True,
+                           do_sort=False,
+                           ngram_fields=['textBody_description_project'])
+
+    # collect file
+    logging.info('Retrieving project ids')
+    s3 = boto3.resource('s3')
+    obj = s3.Object(bucket, batch_file)
+    project_ids = json.loads(obj.get()['Body']._raw_stream.read())
+    logging.info(f"{len(project_ids)} project IDs "
+                 "retrieved from s3")
+
+    #
+    logging.info('Processing rows')
+    with db_session(engine) as session:
+        for count, obj in enumerate((session.query(Project)
+                                     .filter(Project.rcn.in_(project_ids))
+                                     .all())):
+            row = object_to_dict(obj)
+            row = reformat_row(row)
+            es.index(index=es_index, doc_type=es_type,
+                     id=row.pop('rcn'), body=row)
+            if not count % 1000:
+                logging.info(f"{count} rows loaded to "
+                             "elasticsearch")
+
+
+if __name__ == "__main__":
+    set_log_level()
+    logging.info('Starting...')
+    run()
