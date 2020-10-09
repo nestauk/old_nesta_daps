@@ -58,14 +58,10 @@ def generate_id(text):
     start = 1 if len(_id) > 8 else None
     return -int(_id[start:end])
 
-def hit_api(api='', rcn=None, content_type=None):
-    try:
-        payload = _hit_api(api=api, rcn=rcn, content_type=content_type)
-    except requests.exceptions.HTTPError
 
 @retry(stop_max_attempt_number=10)
 @ratelimit(max_per_second=10)
-def _hit_api(api='', rcn=None, content_type=None):
+def hit_api(api='', rcn=None, content_type=None):
     """
     Hit the Cordis API by project code
 
