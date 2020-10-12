@@ -58,6 +58,7 @@ def generate_id(text):
     start = 1 if len(_id) > 8 else None
     return -int(_id[start:end])
 
+
 @retry(stop_max_attempt_number=10)
 @ratelimit(max_per_second=10)
 def hit_api(api='', rcn=None, content_type=None):
@@ -80,9 +81,10 @@ def hit_api(api='', rcn=None, content_type=None):
                                   'contenttype': content_type},
                      headers={'User-Agent':USER_AGENT})
     # Not all projects have data, so this is not an error
-    if (r.status_code == 500 and 
-        r.json()['payload']['errorType'] == 'ica'):
-        return None
+    if r.status_code in (404, 500):
+        p = r.json()['payload']
+        if p['errorType'] == 'ica' or 'does not exist!' in p['message']:
+            return None
     r.raise_for_status()
     return r.json()['payload']
 
