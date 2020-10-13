@@ -2,23 +2,21 @@
 NIH schema
 ==============
 
-The schema for the World RePORTER data. Note that the schema
-was automatically generated based on an IPython hack session
-using the limits and properties of the data from the 
-World ExPORTER (which explains the unusual VARCHAR limits).
+The schema for the World RePORTER data.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import VARCHAR, TEXT
-from sqlalchemy.types import INTEGER
+from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
+from sqlalchemy.dialects.mysql import TEXT as _TEXT
+from sqlalchemy.types import INTEGER, JSON, DATETIME
 from sqlalchemy import Column, Table
 
 
 Base = declarative_base()
-TEXT = TEXT(collation='utf8mb4_unicode_ci')
-VARCHAR = lambda *args, **kwargs: VARCHAR(*args, 
-                                          collation='utf8mb4_unicode_ci', 
-                                          **kwargs)
+TEXT = _TEXT(collation='utf8mb4_unicode_ci')
+VARCHAR = lambda *args, **kwargs: _VARCHAR(*args, 
+                                           collation='utf8mb4_unicode_ci', 
+                                           **kwargs)
 
 
 class Projects(Base):
@@ -44,7 +42,7 @@ class Projects(Base):
     org_city = Column(VARCHAR(50), index=True)
     org_country = Column(VARCHAR(50), index=True)
     org_dept = Column(VARCHAR(100), index=True)
-    org_district = Column(INTEGER, )
+    org_district = Column(INTEGER)
     org_duns = Column(JSON)
     org_fips = Column(VARCHAR(2), index=True)
     org_ipf_code = Column(INTEGER)
@@ -119,7 +117,7 @@ class LinkTables(Base):
 class ClinicalStudies(Base):
     __tablename__ = "nih_clinicalstudies"
     
+    clinicaltrials_govid = Column(VARCHAR(20), primary_key=True)
     core_project_number = Column(VARCHAR(50), index=True)
-    clinicaltrials_govid = Column(VARCHAR(20), index=True)
     study = Column(TEXT)
     study_status = Column(VARCHAR(30), index=True)
