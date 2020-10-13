@@ -1,3 +1,7 @@
+# TODO: set default batchable and runtime params where possible
+# TODO: update orm, where required, incl lots of indexes
+# TODO: update batchable to collect and clean as required
+# TODO: write decent tests to check good dq
 '''
 Data collection
 ===============
@@ -9,46 +13,23 @@ via the World ExPORTER data dump.
 import luigi
 import datetime
 import logging
+import boto3
 
 from nesta.packages.health_data.collect_nih import get_data_urls
-
-from nesta.core.luigihacks import misctools
-from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.luigihacks import autobatch
+from nesta.core.luigihacks.misctools import bucket_keys
 
-import boto3
-import re
-
-S3 = boto3.resource('s3')
-_BUCKET = S3.Bucket("nesta-production-intermediate")
-DONE_KEYS = set(obj.key for obj in _BUCKET.objects.all())
-
-def exists(_class, **kwargs):
-    statements = [getattr(_class, pkey.name) == kwargs[pkey.name]
-                  for pkey in _class.__table__.primary_key.columns]
-    return sql_exists().where(and_(*statements))
+OUTBUCKET = 'nesta-production-intermediate'
 
 
 class CollectTask(autobatch.AutoBatchTask):
     '''Scrape CSVs from the World ExPORTER site and dump the
-    data in the MySQL server.
-
-    Args:
-        date (datetime): Datetime used to label the outputs
-        _routine_id (str): String used to label the AWS task
-        db_config_path: (str) The output database configuration
-    '''
-    date = luigi.DateParameter()
-    _routine_id = luigi.Parameter()
-    db_config_path = luigi.Parameter()
+    data in the MySQL server.'''
 
     def output(self):
         '''Points to the output database engine'''
-        db_config = misctools.get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = "production" if not self.test else "dev"
-        db_config["table"] = "NIH <dummy>"  # Note, not a real table
-        update_id = "NihCollectData_{}".format(self.date)
-        return MySqlTarget(update_id=update_id, **db_config)
+        return make_mysql_target(self)
 
     def prepare(self):
         '''Prepare the batch job parameters'''
@@ -59,12 +40,12 @@ class CollectTask(autobatch.AutoBatchTask):
             title, urls = get_data_urls(i)
             table_name = "nih_{}".format(title.replace(" ","").lower())
             for url in urls:
-                done = url in DONE_KEYS
+                done = url in bucket_keys()  # Note: lru_cached
                 params = {"table_name": table_name,
                           "url": url,
                           "config": "mysqldb.config",
                           "db_name": "production" if not self.test else "dev",
-                          "outinfo": "s3://nesta-production-intermediate/%s" % url,
+                          "outinfo": f"s3://{OUTBUCKET}/{url}",
                           "done": done,
                           "entity_type": 'paper'}
                 job_params.append(params)

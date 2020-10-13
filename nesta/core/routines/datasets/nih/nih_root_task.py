@@ -1,3 +1,8 @@
+# TODO: update anything here with latest method (e.g. mysqltarget)
+# TODO: set default batchable and runtime params where possible
+# TODO: update orm, where required, incl lots of indexes
+# TODO: update batchable as required
+# TODO: write decent tests to check good dq
 '''
 Root Task (HealthMosaic)
 ========================
