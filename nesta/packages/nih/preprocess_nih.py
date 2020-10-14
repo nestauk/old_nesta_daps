@@ -51,7 +51,17 @@ def get_long_text_cols(orm, min_length=10):
 def is_nih_null(value, nulls=('', [], {}, 'N/A', 'Not Required', 'None')):
     """Returns True if the value is listed in the `nulls` argument,
     or the value is NaN, null or None."""
-    return (value in nulls or pd.isnull(value))
+    try:
+        iter(value)
+    # Only run pd.isnull if the value is not iterable (list, dict, etc)
+    except TypeError:
+        is_null = pd.isnull(value)
+    # Otherwise set a dummy value = False
+    else:
+        is_null = False
+    # Then check if value is either null, or in the list of null values
+    finally:        
+        return is_null or value in nulls
 
 
 @lru_cache()
@@ -178,8 +188,9 @@ def clean_text(text, suffix_removal_length=100):
 def detect_and_split(value):
     n_commas = value.count(",")
     n_colons = value.count(";")
-    if n_colons >= n_commas:  # also includes case where n=0
-        value = value.split(";")
+    # e.g "last_name, first_name; next_last_name, next_first_name"
+    if n_colons >= n_commas - 1:  # also includes case where n=0
+        value = value.split(";")    
     else:
         value = value.split(",")        
     return value

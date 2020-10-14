@@ -113,12 +113,15 @@ def test_detect_and_split():
     # More ; than ,
     assert detect_and_split('split;me;up, please!') == ['split', 'me', 
                                                         'up, please!']
-    # More , than ;
-    assert detect_and_split('split,me;up, please!') == ['split', 'me;up', 
-                                                        ' please!']
+    # One more , than ;
+    assert detect_and_split('split,me;up, please!') == ['split,me',
+                                                        'up, please!']
+    # Two or more , than ;
+    assert detect_and_split('split,me;up, please,!') == ['split', 'me;up',
+                                                         ' please', '!']
     # Equal numbers of , and ;
     assert detect_and_split('split;me;up, please,!') == ['split', 'me', 
-                                                        'up, please,!']
+                                                         'up, please,!']
     # No ; or n
     assert detect_and_split('split me up please!') == ['split me up please!']
     
@@ -137,5 +140,19 @@ def test_preprocess_row_text():
                  "application_id": "DON?T CHANGE ME!"}
     assert preprocess_row(row_before, Abstracts) == row_after
 
-def test_preprocess_row_json():
-    pass
+
+def test_preprocess_row_json_colons():
+    row_before = {'author_list': 'FOO, BAR; DOE, JANE',
+                  'pmid': 234}
+    row_after = {'author_list': ['Foo, Bar','Doe, Jane'],
+                 'pmid': 234}
+    assert preprocess_row(row_before, Publications) == row_after
+
+
+def test_preprocess_row_json_commas():
+    row_before = {'author_list': 'FOO BAR, DOE; JANE, DOE, JOHN',
+                  'pmid': 234}
+    row_after = {'author_list': ['Foo Bar','Doe; Jane', 'Doe', 'John'],
+                 'pmid': 234}
+    assert preprocess_row(row_before, Publications) == row_after
+
