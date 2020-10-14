@@ -30,7 +30,7 @@ class TestAbstractYielder(TestCase):
     def tearDown(self):
         Base.metadata.drop_all(self.engine)
 
-    @mock.patch('nesta.packages.health_data.'
+    @mock.patch('nesta.packages.nih.'
                 'nih_abstract_yielder.get_mysql_engine')
     def test_abstracts_found(self, mocked_engine):
         mocked_engine.return_value = self.engine

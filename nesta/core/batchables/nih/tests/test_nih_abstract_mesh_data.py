@@ -1,4 +1,4 @@
-from nesta.core.batchables.health_data.nih_abstract_mesh_data.run import clean_abstract
+from nesta.core.batchables.nih.nih_abstract_mesh_data.run import clean_abstract
 
 
 def test_remove_newlines():

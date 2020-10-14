@@ -15,7 +15,7 @@ import datetime
 import logging
 import boto3
 
-from nesta.packages.health_data.collect_nih import get_data_urls
+from nesta.packages.nih.collect_nih import get_data_urls
 from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.luigihacks import autobatch
 from nesta.core.luigihacks.misctools import bucket_keys

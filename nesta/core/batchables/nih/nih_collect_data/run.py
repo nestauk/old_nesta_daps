@@ -16,7 +16,7 @@ from nesta.core.orms.orm_utils import try_until_allowed
 from nesta.core.orms.orm_utils import exists
 
 from nesta.core.orms.nih_orm import Base
-from nesta.packages.health_data.collect_nih import iterrows
+from nesta.packages.nih.collect_nih import iterrows
 from nesta.core.luigihacks.s3 import parse_s3_path
 
 import os

@@ -11,7 +11,7 @@ Code and scripts
 .. toctree::
 
     nesta.packages.meetup
-    nesta.packages.health_data
+    nesta.packages.nih
     nesta.packages.nlp_utils
     nesta.packages.geo_utils
     nesta.packages.format_utils

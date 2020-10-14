@@ -6,22 +6,22 @@ the pipeline is executed in the following order (documentation for the `run.py` 
 
 The data is collected from official data dumps, parsed into MySQL (tier 0) and then piped into Elasticsearch (tier 1), post-processing.
 
-.. automodule:: core.batchables.health_data.nih_collect_data.run
+.. automodule:: core.batchables.nih.nih_collect_data.run
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: core.batchables.health_data.nih_process_data.run
+.. automodule:: core.batchables.nih.nih_process_data.run
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: core.batchables.health_data.nih_abstract_mesh_data.run
+.. automodule:: core.batchables.nih.nih_abstract_mesh_data.run
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: core.batchables.health_data.nih_dedupe.run
+.. automodule:: core.batchables.nih.nih_dedupe.run
     :members:
     :undoc-members:
     :show-inheritance:

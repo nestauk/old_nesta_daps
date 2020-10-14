@@ -23,7 +23,7 @@ from nesta.core.orms.orm_utils import get_es_ids
 from nesta.core.orms.orm_utils import setup_es
 from nesta.core.orms.orm_utils import get_config
 
-from nesta.core.routines.health_data.nih_data.nih_abstracts_mesh_task import AbstractsMeshTask
+from nesta.core.routines.nih.nih_data.nih_abstracts_mesh_task import AbstractsMeshTask
 
 class DedupeTask(autobatch.AutoBatchTask):
     '''
@@ -51,7 +51,7 @@ class DedupeTask(autobatch.AutoBatchTask):
                                 _routine_id=self.routine_id,
                                 db_config_path=self.db_config_path,
                                 test=self.test,
-                                batchable=f3p("batchables/health_data/"
+                                batchable=f3p("batchables/nih/"
                                               "nih_abstract_mesh_data"),
                                 env_files=[f3p("nesta/"),
                                            f3p("config/mysqldb.config"),

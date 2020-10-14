@@ -14,5 +14,5 @@
     nesta.core.routines.embed_topics
     nesta.core.routines.eurito_es
     nesta.core.routines.gtr
-    nesta.core.routines.health_data
+    nesta.core.routines.nih
     nesta.core.routines.meetup

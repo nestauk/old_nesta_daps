@@ -13,8 +13,8 @@ import lxml  # To force pipreqs' hand
 
 from nesta.packages.geo_utils.geocode import generate_composite_key
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
-from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
-from nesta.packages.health_data.process_mesh import format_mesh_terms
+from nesta.packages.nih.process_mesh import retrieve_mesh_terms
+from nesta.packages.nih.process_mesh import format_mesh_terms
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.meetup_orm import Group
