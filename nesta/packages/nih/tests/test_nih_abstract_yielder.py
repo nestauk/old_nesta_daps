@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from nesta.core.orms.orm_utils import get_mysql_engine
 
 # What we're actually testing
-from nesta.packages.health_data.nih_abstract_yielder import AbstractYielder
+from nesta.packages.nih.nih_abstract_yielder import AbstractYielder
 
 
 class TestAbstractYielder(TestCase):

@@ -46,7 +46,7 @@ class Projects(Base):
     org_duns = Column(JSON)
     org_fips = Column(VARCHAR(2), index=True)
     org_ipf_code = Column(INTEGER)
-    org_name = Column(VARCHAR(92), index=True)
+    org_name = Column(VARCHAR(100), index=True)
     org_state = Column(VARCHAR(2), index=True)
     org_zipcode = Column(VARCHAR(10))
     phr = Column(TEXT)

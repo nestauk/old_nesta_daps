@@ -1,6 +1,6 @@
 import unittest
-from nesta.packages.health_data.collect_nih import get_data_urls
-from nesta.packages.health_data.collect_nih import iterrows
+from nesta.packages.nih.collect_nih import get_data_urls
+from nesta.packages.nih.collect_nih import iterrows
 
 TEST_URL = 'https://s3.eu-west-2.amazonaws.com/nesta-open-data/RePORTER_PRJABS_C_FY2018_052.zip'
 

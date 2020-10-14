@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-from nesta.packages.health_data.process_mesh import format_mesh_terms
-from nesta.packages.health_data.process_mesh import format_duplicate_map
+from nesta.packages.nih.process_mesh import format_mesh_terms
+from nesta.packages.nih.process_mesh import format_duplicate_map
 
 
 @pytest.fixture
