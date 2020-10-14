@@ -458,7 +458,6 @@ def insert_data(db_env, section, database, Base,
         :obj:`list` of :obj:`dict` data found already existing in the database (optional)
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
-
     response = filter_out_duplicates(db_env=db_env,
                                      section=section,
                                      database=database,

@@ -30,8 +30,6 @@ GENERIC_PREFIXES = ['proposal narrative', 'project narrative',
 @lru_cache()
 def get_json_cols(orm):
     """Return the column names in the ORM which are of JSON type"""
-    for col in orm.__table__.columns:
-        print(col.name, type(col.type))
     return {col.name for col in orm.__table__.columns
             if type(col.type) is JSON}
 

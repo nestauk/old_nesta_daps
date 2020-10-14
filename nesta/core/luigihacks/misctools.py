@@ -6,7 +6,7 @@ import os
 from functools import lru_cache
 import yaml
 from datetime import datetime as dt
-
+import boto3
 
 def get_config(file_name, header, path="core/config/"):
     '''Get the configuration from a file in the luigi config path
