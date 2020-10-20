@@ -216,7 +216,13 @@ def split_and_clean(col_value):
 
 
 def parse_date(col_value):
-    return dt.strptime(col_value, '%m/%d/%Y')
+    try:
+        value = dt.strptime(col_value, '%m/%d/%Y')
+    except ValueError:
+        value = None
+    finally:
+        return value
+
 
 def preprocess_row(row, orm):
     """Clean text, split values and standardise nulls, as required.

@@ -19,6 +19,7 @@ from nesta.packages.nih.collect_nih import get_data_urls
 from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.luigihacks import autobatch
 from nesta.core.luigihacks.misctools import bucket_keys, f3p
+from nesta.core.luigihacks.luigi_logging import set_log_level
 
 OUTBUCKET = 'nesta-production-intermediate'
 
@@ -49,12 +50,13 @@ class CollectTask(autobatch.AutoBatchTask):
             title, urls = get_data_urls(i)
             table_name = "nih_{}".format(title.replace(" ","").lower())
             for url in urls:
-                done = url in bucket_keys(OUTBUCKET)  # Note: lru_cached
+                key = f'{url}-{self.date}'
+                done = key in bucket_keys(OUTBUCKET)  # Note: lru_cached
                 params = {"table_name": table_name,
                           "url": url,
                           "config": "mysqldb.config",
                           "db_name": "production" if not self.test else "dev",
-                          "outinfo": f"s3://{OUTBUCKET}/{url}",
+                          "outinfo": f"s3://{OUTBUCKET}/{key}",
                           "done": done}
                 job_params.append(params)
         return job_params
@@ -69,5 +71,6 @@ class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=dt.today())
     production = luigi.BoolParameter(default=False)
     def requires(self):
+        set_log_level()
         yield CollectTask(test=not self.production,
                           date=self.date)
