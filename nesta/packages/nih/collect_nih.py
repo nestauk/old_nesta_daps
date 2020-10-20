@@ -76,7 +76,8 @@ def iterrows(url):
             _data = tmp_zip.read(internal_file_names[0])
 
     # Yield JSON chunks of each CSV row
-    _data = _data.decode('cp1252').split("\r\n")
+    #_data = _data.decode('cp1252').split("\r\n")
+    _data = _data.decode('latin-1').split("\r\n")
     _data_it = csv.reader(_data)
     columns = next(_data_it)
     for row in _data_it:

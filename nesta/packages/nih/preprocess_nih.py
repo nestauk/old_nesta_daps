@@ -11,22 +11,24 @@ specifically:
   * Splitting of strings into arrays as indicated by JSON the ORM,
   * CAPS to Camel Case for any string field which isn't VARCHAR(n) < 10
   * Dealing consistently with null values
+  * explicit conversion to datetime of relevant fields
 """
 from sqlalchemy.dialects.mysql import VARCHAR
-from sqlalchemy.types import JSON
+from sqlalchemy.types import JSON, DATETIME
+from datetime import datetime as dt
 from functools import lru_cache
 import pandas as pd
 import string
 
-GENERIC_PREFIXES = ['proposal narrative', 'project narrative', 
-                    'relevance to public health', 'public health relevance', 
-                    'narrative', 'relevance', 'statement', 
+GENERIC_PREFIXES = ['proposal narrative', 'project narrative',
+                    'relevance to public health', 'public health relevance',
+                    'narrative', 'relevance', 'statement',
                     '(relevance to veterans)', 'relevance to the va',
-                    'description', '(provided by applicant)', 
+                    'description', '(provided by applicant)',
                     'project summary', 'abstract', 'overall', 'project',
                     '? ', ' ', '/', 'administrative', '.', 'core', 'title',
                     'summary', '*', 'pilot project', '#']
-                    
+
 @lru_cache()
 def get_json_cols(orm):
     """Return the column names in the ORM which are of JSON type"""
@@ -37,13 +39,20 @@ def get_json_cols(orm):
 @lru_cache()
 def get_long_text_cols(orm, min_length=10):
     """Return the column names in the ORM which are a text type,
-    (i.e. TEXT or VARCHAR) and if a max length is specified, with max 
-    length > 10. The length requirement is because we don't want 
+    (i.e. TEXT or VARCHAR) and if a max length is specified, with max
+    length > 10. The length requirement is because we don't want
     to preprocess ID-like or code fields (e.g. ISO codes).
     """
     return {col.name for col in orm.__table__.columns
             if col.type.python_type is str and
             not (type(col.type) == VARCHAR  and col.type.length < 10)}
+
+
+@lru_cache()
+def get_date_cols(orm):
+    """Return the column names in the ORM which are of JSON type"""
+    return {col.name for col in orm.__table__.columns
+            if type(col.type) is DATETIME}
 
 
 def is_nih_null(value, nulls=('', [], {}, 'N/A', 'Not Required', 'None')):
@@ -58,14 +67,14 @@ def is_nih_null(value, nulls=('', [], {}, 'N/A', 'Not Required', 'None')):
     else:
         is_null = False
     # Then check if value is either null, or in the list of null values
-    finally:        
+    finally:
         return is_null or value in nulls
 
 
 @lru_cache()
 def expand_prefix_list():
     """Expand GENERIC_PREFIXES to include integers, and then a large
-    numbers of permutations of additional characters, upper case 
+    numbers of permutations of additional characters, upper case
     and title case. From tests, this covers 19 out of 20 generic
     prefixes from either abstract text or the "PHR" field."""
     prefixes = []
@@ -73,7 +82,7 @@ def expand_prefix_list():
     for prefix in GENERIC_PREFIXES + numbers:
         _prefixes = [prefix]
         _prefixes += [prefix+ext for ext in ['', '/', ':', '-', ' -', '.']]
-        _prefixes += [ext+prefix for ext in ['?']] 
+        _prefixes += [ext+prefix for ext in ['?']]
         prefixes += _prefixes
     prefixes += [p+' ' for p in prefixes]
     prefixes += [p.upper() for p in prefixes]
@@ -106,7 +115,7 @@ def remove_large_spaces(text):
     while text.startswith(' '):
         text = text[1:]
     while text.endswith(' '):
-        text = text[:-1]    
+        text = text[:-1]
     return text
 
 
@@ -136,7 +145,7 @@ def replace_question_with_best_guess(text):
         is_final_char = (i == len(text) - 1)
         # Ignore e.g. '? Title', but not '?. Title' or '? title'
         is_question = (i < len(text) - 2 and  # a char exists after '? '
-                       text[i+1] == ' ' and text[i+2].isupper())        
+                       text[i+1] == ' ' and text[i+2].isupper())
         if is_final_char or is_question:
             continue
         # The case 'sometext?somemoretext' --> 'sometext - somemoretext'
@@ -162,10 +171,10 @@ def remove_trailing_exclamation(text):
     return text
 
 
-def upper_to_title(text):
-    """Inconsistently, NiH has fields as all upper case. 
+def upper_to_title(text, force_title=False):
+    """Inconsistently, NiH has fields as all upper case.
     Convert to titlecase"""
-    if text == text.upper():
+    if text == text.upper() or force_title:
         text = string.capwords(text.lower())
     return text
 
@@ -175,7 +184,8 @@ def clean_text(text, suffix_removal_length=100):
     operations = [remove_large_spaces, remove_trailing_exclamation]
     if len(text) > suffix_removal_length:
         operations.append(remove_generic_suffixes)
-    operations += [replace_question_with_best_guess, upper_to_title]
+    operations += [replace_question_with_best_guess, upper_to_title,
+                   remove_trailing_exclamation]
     # Sequentially apply operations, and clean up spaces
     # after each operation
     for f in operations:
@@ -188,29 +198,45 @@ def detect_and_split(value):
     n_colons = value.count(";")
     # e.g "last_name, first_name; next_last_name, next_first_name"
     if n_colons >= n_commas - 1:  # also includes case where n=0
-        value = value.split(";")    
+        value = value.split(";")
     else:
-        value = value.split(",")        
+        value = value.split(",")
     return value
 
 
+def split_and_clean(col_value):
+    values = []
+    for value in detect_and_split(col_value):
+        value = value.replace('(contact)', '').strip()
+        if value == '':
+            continue
+        value = upper_to_title(value, force_title=True)
+        values.append(value)
+    return values
+
+
+def parse_date(col_value):
+    return dt.strptime(col_value, '%m/%d/%Y')
+
 def preprocess_row(row, orm):
     """Clean text, split values and standardise nulls, as required.
-    
+
     Args:
-        row (dict): Row of data to clean, that should match 
+        row (dict): Row of data to clean, that should match
                     the provided ORM.
-        orm (SqlAlchemy selectable): ORM from which to infer JSON 
+        orm (SqlAlchemy selectable): ORM from which to infer JSON
                                      and text fields.
     """
-    json_cols = get_json_cols(orm)
+    json_cols = get_json_cols(orm)    
     long_text_cols = get_long_text_cols(orm)
+    date_cols = get_date_cols(orm)
     for col_name, col_value in row.copy().items():
         if col_name in long_text_cols and not pd.isnull(col_value):
             col_value = clean_text(col_value)
         elif col_name in json_cols:
-            col_value = [upper_to_title(value)
-                         for value in detect_and_split(col_value)]
+            col_value = split_and_clean(col_value)
+        elif col_name in date_cols:
+            col_value = parse_date(col_value)
         if is_nih_null(col_value):
             col_value = None
         row[col_name] = col_value

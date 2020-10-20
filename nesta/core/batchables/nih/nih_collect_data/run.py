@@ -28,8 +28,7 @@ def run():
     data = [preprocess_row(row, _class) 
             for row in iterrows(url) if len(row) > 0]
     insert_data("BATCHPAR_config", "mysqldb", db_name,
-                _class, data, low_memory=True)
-
+                Base, _class, data, low_memory=True)
     # Mark the task as done
     s3 = boto3.resource('s3')
     s3_obj = s3.Object(*parse_s3_path(s3_path))
