@@ -560,8 +560,8 @@ def insert_data(db_env, section, database, Base,
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    if merge_non_null:
-        session.execute(existing_objs)  # Drop existing objs if merging
+    if merge_non_null:        
+        session.execute(existing_objs)  # Drop existing objs if merging    
     session.bulk_save_objects(objs)
     session.commit()
     session.close()
