@@ -97,6 +97,7 @@ def assert_correct_config(test, config, key):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
 
+
 def default_to_regular(d):
     """Convert nested defaultdicts to nested dicts.
     This is useful when you want to throw KeyErrors, which
@@ -378,6 +379,7 @@ def filter_out_duplicates(db_env, section, database,
 
 
 def get_all_pks(session, _class, pkey_cols):
+    """Get every PK in the database for this ORM"""
     fields = [getattr(_class, pkey.name)
               for pkey in pkey_cols]
     all_pks = set(session.query(*fields).all())
@@ -385,6 +387,7 @@ def get_all_pks(session, _class, pkey_cols):
 
 
 def check_is_auto_pkey(pkey_cols):
+    """Check if the PK is autoincrement"""
     is_auto_pkey = all(p.autoincrement and
                        p.type.python_type is int
                        for p in pkey_cols)
@@ -392,6 +395,7 @@ def check_is_auto_pkey(pkey_cols):
 
 
 def generate_pk(row, pkey_cols):
+    """Generate the PK for this row, based on the PK column names"""
     pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
                 for pkey in pkey_cols])
     return pk
@@ -453,6 +457,7 @@ def _filter_out_duplicates(session, Base, _class, data,
 
 
 def retrieve_row_by_pk(session, _class, row, pkey_cols):
+    """Retrieve a row from the database based on it's PK components"""
     q = session.query(_class)
     for col in pkey_cols:
         q = q.filter(getattr(_class, col.name) == row[col.name])
@@ -461,30 +466,56 @@ def retrieve_row_by_pk(session, _class, row, pkey_cols):
     return _row
 
 
-def create_drop_stmt(_class, pkey_cols, pks):
-    all_rows_stmt = None
+def create_delete_stmt(_class, pkey_cols, pks):
+    """Create a SqlAlchemy drop statement for fields with existing
+    primary keys.
+    """
+    all_rows_stmt = None  # The overall "where" statement
+    # Iterate through all existing primary keys (note, these are tuples)
     for col_values in pks:
-        this_row_stmt = None
+        this_row_stmt = None  # The "where" statement for this primary key
+        # Iterate through the pk name and value
         for col, value in zip(pkey_cols, col_values):
             key = getattr(_class, col.name)
             pk_stmt = (key == value)
-            this_row_stmt = (pk_stmt if this_row_stmt is None 
+            # "&" is used since all PK components must match
+            this_row_stmt = (pk_stmt if this_row_stmt is None
                              else (this_row_stmt & pk_stmt))
+        # "|" is used since want to filter any PKs that match
         all_rows_stmt = (this_row_stmt if all_rows_stmt is None
                          else (all_rows_stmt | this_row_stmt))
-    drop_stmt = _class.__table__.delete().where(all_rows_stmt)
-    return drop_stmt
+    # Generate the delete statement
+    delete_stmt = _class.__table__.delete().where(all_rows_stmt)
+    return delete_stmt
 
 
-def is_null(x):     
-    try: 
+def is_null(x):
+    """Wrapper around pandas isnull with an exception for iterables,
+    which cause a ValueError on conversion to boolean."""
+    try:
         return bool(pd.isnull(x))
-    except ValueError: 
-        return False 
+    except ValueError:
+        return False
 
 
 def merge_duplicates(db_env, section, database,
                      Base, _class, data, low_memory):
+    """Alternative to `filter_out_duplicates`: Find all duplicates in the list of data,
+    and also for duplicates between the provided data and the database, and then
+    select the most recent non-null value for upsertion.
+
+    Args:
+        session (:obj:`sqlalchemy.orm.session.Session`): SqlAlchemy session object.
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): If the pkeys are few or small types (i.e. they won't
+                           occupy lots of memory) then set this to True.
+                           This will speed things up significantly (like x 100),
+                           but will blow up for heavy pkeys or large tables.
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+    """
     pkey_cols = _class.__table__.primary_key.columns
     is_auto_pkey = check_is_auto_pkey(pkey_cols)
     if is_auto_pkey:
@@ -504,7 +535,7 @@ def merge_duplicates(db_env, section, database,
             _row = retrieve_row_by_pk(session, _class, row, pkey_cols)
             pk_row_lookup[pk].append(_row)
             pks_to_drop.append(pk)
-    drop_stmt = create_drop_stmt(_class, pkey_cols, pks_to_drop)
+    delete_stmt = create_delete_stmt(_class, pkey_cols, pks_to_drop)
 
     # Now merge the fields by taking the first non-null value
     objs = []
@@ -518,7 +549,7 @@ def merge_duplicates(db_env, section, database,
                     break
             merged_row[col] = value
         objs.append(_class(**merged_row))
-    return objs, drop_stmt, None
+    return objs, delete_stmt, None
 
 
 def insert_data(db_env, section, database, Base,
@@ -538,6 +569,8 @@ def insert_data(db_env, section, database, Base,
         low_memory (bool): To speed things up significantly, you can read
                            all pkeys into memory first, but this will blow
                            up for heavy pkeys or large tables.
+        merge_non_null (bool): Upsert rather than ignore duplicates,
+                               if the updated fields are not null.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                 were in the supplied data but not imported (for checks)
 
