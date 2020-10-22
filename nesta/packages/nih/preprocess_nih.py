@@ -181,7 +181,7 @@ def upper_to_title(text, force_title=False):
 
 def clean_text(text, suffix_removal_length=100):
     """Apply the full text-cleaning procedure."""
-    operations = [remove_unspecified_unicode, remove_large_spaces, 
+    operations = [remove_unspecified_unicode, remove_large_spaces,
                   remove_trailing_exclamation]
     if len(text) > suffix_removal_length:
         operations.append(remove_generic_suffixes)
@@ -194,7 +194,13 @@ def clean_text(text, suffix_removal_length=100):
         text = remove_large_spaces(text)
     return text
 
+
 def detect_and_split(value):
+    """Split values either by colons or commas. If there are more colons than
+    commas (+1), then colons are used for splitting (this takes into account
+    that NiH name fields are written as
+    'last_name, first_name; next_last_name, next_first_name'). Otherwise
+    NiH list fields are delimeted by commas."""
     n_commas = value.count(",")
     n_colons = value.count(";")
     # e.g "last_name, first_name; next_last_name, next_first_name"
@@ -206,17 +212,22 @@ def detect_and_split(value):
 
 
 def split_and_clean(col_value):
+    """Apply `detect_and_split` and then apply some general cleaning."""
     values = []
     for value in detect_and_split(col_value):
+        # Remove contact boilerplate
         value = value.replace('(contact)', '').strip()
+        # Splitting procedure inconsistently leads to blanks
         if value == '':
             continue
+        # Force all fields to be title-cased
         value = upper_to_title(value, force_title=True)
         values.append(value)
     return values
 
 
 def parse_date(value):
+    """Convert to date, unless the value null, or poorly formatted."""
     try:
         value = dt.strptime(value, '%m/%d/%Y')
     except ValueError:
@@ -226,9 +237,15 @@ def parse_date(value):
 
 
 def remove_unspecified_unicode(value):
+    """In a very small number of cases, NiH has some pre-processed badly
+    formatted unspecifed unicode characters. The following recipe seems to
+    clean up all of the discovered cases."""
+    # These are all spaces
     for char in ('\xa0\xa0', '\xa0 ', '\xa0'):
         value = value.replace(char, ' ')
+    # This is a hyphen
     value = value.replace('-\xad', '-')
+    # Clean up any bonus spaces
     while '  ' in value:
         value = value.replace('  ', ' ')
     return value
@@ -243,10 +260,11 @@ def preprocess_row(row, orm):
         orm (SqlAlchemy selectable): ORM from which to infer JSON
                                      and text fields.
     """
-    json_cols = get_json_cols(orm)    
+    json_cols = get_json_cols(orm)
     long_text_cols = get_long_text_cols(orm)
     date_cols = get_date_cols(orm)
     for col_name, col_value in row.copy().items():
+        # If it's: TEXT-> clean it, JSON-> split it, DATE-> parse it
         if col_name in long_text_cols and not pd.isnull(col_value):
             col_value = clean_text(col_value)
         elif col_name in json_cols:
