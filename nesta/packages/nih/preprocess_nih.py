@@ -181,7 +181,8 @@ def upper_to_title(text, force_title=False):
 
 def clean_text(text, suffix_removal_length=100):
     """Apply the full text-cleaning procedure."""
-    operations = [remove_large_spaces, remove_trailing_exclamation]
+    operations = [remove_unspecified_unicode, remove_large_spaces, 
+                  remove_trailing_exclamation]
     if len(text) > suffix_removal_length:
         operations.append(remove_generic_suffixes)
     operations += [replace_question_with_best_guess, upper_to_title,
@@ -215,13 +216,22 @@ def split_and_clean(col_value):
     return values
 
 
-def parse_date(col_value):
+def parse_date(value):
     try:
-        value = dt.strptime(col_value, '%m/%d/%Y')
+        value = dt.strptime(value, '%m/%d/%Y')
     except ValueError:
         value = None
     finally:
         return value
+
+
+def remove_unspecified_unicode(value):
+    for char in ('\xa0\xa0', '\xa0 ', '\xa0'):
+        value = value.replace(char, ' ')
+    value = value.replace('-\xad', '-')
+    while '  ' in value:
+        value = value.replace('  ', ' ')
+    return value
 
 
 def preprocess_row(row, orm):

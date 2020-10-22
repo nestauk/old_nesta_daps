@@ -22,7 +22,7 @@ VARCHAR = lambda *args, **kwargs: _VARCHAR(*args,
 class Projects(Base):
     __tablename__ = 'nih_projects'
 
-    application_id = Column(INTEGER, primary_key=True)
+    application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     activity = Column(VARCHAR(3))
     administering_ic = Column(VARCHAR(2))
     application_type = Column(INTEGER)
@@ -73,14 +73,14 @@ class Projects(Base):
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
 
-    application_id = Column(INTEGER, primary_key=True)
+    application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
 
 
 class Publications(Base):
     __tablename__ = 'nih_publications'
 
-    pmid = Column(INTEGER, primary_key=True)
+    pmid = Column(INTEGER, primary_key=True, autoincrement=False)
     author_name = Column(TEXT)
     affiliation = Column(TEXT)
     author_list = Column(JSON)
@@ -110,7 +110,7 @@ class Patents(Base):
 class LinkTables(Base):
     __tablename__ = 'nih_linktables'
 
-    pmid = Column(INTEGER, primary_key=True)
+    pmid = Column(INTEGER, primary_key=True, autoincrement=False)
     project_number = Column(VARCHAR(50), index=True)
 
 

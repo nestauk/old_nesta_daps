@@ -35,7 +35,7 @@ class CollectTask(autobatch.AutoBatchTask):
     job_queue = luigi.Parameter(default='HighPriority')
     region_name = luigi.Parameter(default='eu-west-2')
     memory = luigi.IntParameter(default=2048)
-    max_live_jobs = luigi.IntParameter(default=2)
+    max_live_jobs = luigi.IntParameter(default=100)
 
     def output(self):
         '''Points to the output database engine'''
