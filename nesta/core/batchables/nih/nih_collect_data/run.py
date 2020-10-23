@@ -37,11 +37,9 @@ def run():
 
 if __name__ == "__main__":
     if "BATCHPAR_config" not in os.environ:
-        #os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY1989.zip-2020-10-21"
-        os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2020_015.zip-2020-10-22"
+        os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2019.zip-2020-10-22"
         os.environ["BATCHPAR_table_name"] = "nih_projects"
-        #os.environ["BATCHPAR_url"] = "https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY1989.zip"
-        os.environ["BATCHPAR_url"] = "https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2020_015.zip"
+        os.environ["BATCHPAR_url"] = "https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2019.zip"
         os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
         os.environ["BATCHPAR_db_name"] = "production"
     run()

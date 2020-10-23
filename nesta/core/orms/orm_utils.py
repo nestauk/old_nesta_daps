@@ -1,14 +1,15 @@
 from configparser import ConfigParser
 from contextlib import contextmanager
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, insert
 from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import class_mapper
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.expression import and_, or_
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.core.luigihacks.misctools import get_config, load_yaml_from_pathstub
+from nesta.packages.misc_utils.batches import split_batches
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
@@ -451,7 +452,8 @@ def _filter_out_duplicates(session, Base, _class, data,
         if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
-        objs.append(_class(**row))
+        #objs.append(_class(**row))
+        objs.append(row)
     session.close()
     return objs, existing_objs, failed_objs
 
@@ -470,21 +472,23 @@ def create_delete_stmt(_class, pkey_cols, pks):
     """Create a SqlAlchemy drop statement for fields with existing
     primary keys.
     """
-    all_rows_stmt = None  # The overall "where" statement
-    # Iterate through all existing primary keys (note, these are tuples)
-    for col_values in pks:
-        this_row_stmt = None  # The "where" statement for this primary key
-        # Iterate through the pk name and value
-        for col, value in zip(pkey_cols, col_values):
-            key = getattr(_class, col.name)
-            pk_stmt = (key == value)
-            # "&" is used since all PK components must match
-            this_row_stmt = (pk_stmt if this_row_stmt is None
-                             else (this_row_stmt & pk_stmt))
-        # "|" is used since want to filter any PKs that match
-        all_rows_stmt = (this_row_stmt if all_rows_stmt is None
-                         else (all_rows_stmt | this_row_stmt))
-    # Generate the delete statement
+    # Logic massively simplifies if only one key
+    is_composite = len(pkey_cols) > 1
+    if is_composite:
+        all_rows_stmt = []  # The overall "where" statement
+        # Iterate through all existing primary keys (note, these are tuples)
+        for col_values in pks:
+            this_row_stmt = []  # The "where" statement for this primary key
+            # Iterate through the pk name and value
+            for col, value in zip(pkey_cols, col_values):
+                key = getattr(_class, col.name)
+                this_row_stmt.append(key == value)
+            all_rows_stmt.append(and_(*this_row_stmt)) # AND the pk together
+        all_rows_stmt = or_(*all_rows_stmt) # OR across rows
+    else:
+        col, = pkey_cols # Unpack the only column (indexing isn't supported)
+        key = getattr(_class, col.name)
+        all_rows_stmt = key.in_(tuple(pk for pk, in pks))
     delete_stmt = _class.__table__.delete().where(all_rows_stmt)
     return delete_stmt
 
@@ -548,13 +552,15 @@ def merge_duplicates(db_env, section, database,
                     value = row[col]
                     break
             merged_row[col] = value
-        objs.append(_class(**merged_row))
+        #objs.append(_class(**merged_row))
+        objs.append(merged_row)
     return objs, delete_stmt, None
 
 
 def insert_data(db_env, section, database, Base,
                 _class, data, return_non_inserted=False,
-                low_memory=False, merge_non_null=False):
+                low_memory=False, merge_non_null=False,
+                insert_chunksize=1000):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -593,9 +599,11 @@ def insert_data(db_env, section, database, Base,
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    if merge_non_null:        
-        session.execute(existing_objs)  # Drop existing objs if merging    
-    session.bulk_save_objects(objs)
+    if merge_non_null:
+        session.execute(existing_objs)  # Drop existing objs if merging
+    for chunk in split_batches(objs, insert_chunksize):
+        stmt = insert(_class).values(chunk)
+        session.execute(stmt)
     session.commit()
     session.close()
     if return_non_inserted:
