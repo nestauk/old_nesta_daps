@@ -377,6 +377,7 @@ def filter_out_duplicates(db_env, section, database,
     """
     session = get_session(db_env, section, database, Base)
     return _filter_out_duplicates(session, Base, _class, data, low_memory)
+    return results
 
 
 def get_all_pks(session, _class, pkey_cols):
@@ -540,6 +541,7 @@ def merge_duplicates(db_env, section, database,
             pk_row_lookup[pk].append(_row)
             pks_to_drop.append(pk)
     delete_stmt = create_delete_stmt(_class, pkey_cols, pks_to_drop)
+    session.close()
 
     # Now merge the fields by taking the first non-null value
     objs = []
