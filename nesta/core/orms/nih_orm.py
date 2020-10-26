@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME
-from sqlalchemy import Column, Table
+from sqlalchemy import Column, Table, ForeignKey
 
 
 Base = declarative_base()
@@ -72,7 +72,6 @@ class Projects(Base):
 
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
-
     application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
 
@@ -121,3 +120,20 @@ class ClinicalStudies(Base):
     core_project_number = Column(VARCHAR(50), index=True)
     study = Column(TEXT)
     study_status = Column(VARCHAR(30), index=True)
+
+
+class PhrVector(Base):
+    """Document vectors for ."""
+    __tablename__ = 'nih_phr_vectors'
+    application_id = Column(INTEGER, ForeignKey(Projects.application_id),
+                            autoincrement=False, primary_key=True)
+    vector = Column(JSON)
+
+
+class AbstractVector(Base):
+    """Document vectors for ."""
+    __tablename__ = 'nih_abstract_vectors'
+    application_id = Column(INTEGER, ForeignKey(Abstracts.application_id),
+                            autoincrement=False, primary_key=True)
+    vector = Column(JSON)
+
