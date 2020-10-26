@@ -16,10 +16,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
-from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
-from nesta.packages.health_data.process_mesh import format_mesh_terms
-from nesta.packages.health_data.process_mesh import retrieve_duplicate_map
-from nesta.packages.health_data.process_mesh import format_duplicate_map
+from nesta.packages.nih.process_mesh import retrieve_mesh_terms
+from nesta.packages.nih.process_mesh import format_mesh_terms
+from nesta.packages.nih.process_mesh import retrieve_duplicate_map
+from nesta.packages.nih.process_mesh import format_duplicate_map
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.orms.orm_utils import get_es_ids

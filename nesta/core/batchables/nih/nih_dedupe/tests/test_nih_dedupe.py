@@ -1,5 +1,5 @@
-from nesta.core.batchables.health_data.nih_dedupe.run import get_value
-from nesta.core.batchables.health_data.nih_dedupe.run import extract_yearly_funds
+from nesta.core.batchables.nih.nih_dedupe.run import get_value
+from nesta.core.batchables.nih.nih_dedupe.run import extract_yearly_funds
 
 def test_get_value():
     test_dict = {'a':1, 'b':None}

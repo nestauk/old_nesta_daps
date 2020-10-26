@@ -16,7 +16,7 @@ Data / project specific batchables
     nesta.core.batchables.crunchbase
     nesta.core.batchables.eurito
     nesta.core.batchables.gtr
-    nesta.core.batchables.health_data
+    nesta.core.batchables.nih
     nesta.core.batchables.meetup
 
 General-purpose batchables

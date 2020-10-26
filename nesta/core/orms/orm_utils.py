@@ -1,18 +1,20 @@
 from configparser import ConfigParser
 from contextlib import contextmanager
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, insert
 from sqlalchemy import exists as sql_exists
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import class_mapper
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.expression import and_, or_
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.core.luigihacks.misctools import get_config, load_yaml_from_pathstub
+from nesta.packages.misc_utils.batches import split_batches
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 from datetime import datetime
 from py2neo.database import Graph
+import pandas as pd
 
 import importlib
 import re
@@ -96,11 +98,12 @@ def assert_correct_config(test, config, key):
         raise ValueError(f"In test mode the index '{key}' "
                          "must end with '_dev'")
 
+
 def default_to_regular(d):
-    """Convert nested defaultdicts to nested dicts. 
+    """Convert nested defaultdicts to nested dicts.
     This is useful when you want to throw KeyErrors, which
     would be dynamically accepted otherwise.
-    
+
     Args:
         d (nested defaultdict): A nested defaultdict object.
     Returns:
@@ -136,7 +139,7 @@ def parse_es_config(increment_version):
             prod_idx = f'{dataset}_v' + str(version + increment_version)     # e.g. arxiv_v1 / v2
             dev_idx = f'{dataset}_dev' + ('0' if increment_version else '')  # e.g. arxiv_dev / dev0
             config[endpoint][dataset][True] = {'index': prod_idx, **base_config}  # production mode
-            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode    
+            config[endpoint][dataset][False] = {'index': dev_idx, **base_config}  # dev mode
     return default_to_regular(config)
 
 
@@ -341,6 +344,14 @@ def cast_as_sql_python_type(field, data):
     return _data
 
 
+def get_session(db_env, section, database, Base):
+    engine = get_mysql_engine(db_env, section, database)
+    try_until_allowed(Base.metadata.create_all, engine)
+    Session = try_until_allowed(sessionmaker, engine)
+    session = try_until_allowed(Session)
+    return session
+
+
 def filter_out_duplicates(db_env, section, database,
                           Base, _class, data,
                           low_memory=False):
@@ -364,11 +375,32 @@ def filter_out_duplicates(db_env, section, database,
     Returns:
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
     """
-    engine = get_mysql_engine(db_env, section, database)
-    try_until_allowed(Base.metadata.create_all, engine)
-    Session = try_until_allowed(sessionmaker, engine)
-    session = try_until_allowed(Session)
+    session = get_session(db_env, section, database, Base)
     return _filter_out_duplicates(session, Base, _class, data, low_memory)
+    return results
+
+
+def get_all_pks(session, _class, pkey_cols):
+    """Get every PK in the database for this ORM"""
+    fields = [getattr(_class, pkey.name)
+              for pkey in pkey_cols]
+    all_pks = set(session.query(*fields).all())
+    return all_pks
+
+
+def check_is_auto_pkey(pkey_cols):
+    """Check if the PK is autoincrement"""
+    is_auto_pkey = all(p.autoincrement and
+                       p.type.python_type is int
+                       for p in pkey_cols)
+    return is_auto_pkey
+
+
+def generate_pk(row, pkey_cols):
+    """Generate the PK for this row, based on the PK column names"""
+    pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
+                for pkey in pkey_cols])
+    return pk
 
 
 def _filter_out_duplicates(session, Base, _class, data,
@@ -392,21 +424,15 @@ def _filter_out_duplicates(session, Base, _class, data,
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
     """
     # Add the data
-    all_pks = set()
     objs = []
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    is_auto_pkey = all(p.autoincrement and
-                       p.type.python_type is int
-                       for p in pkey_cols)
+    is_auto_pkey = check_is_auto_pkey(pkey_cols)
 
     # Read all pks if in low_memory mode
-    if low_memory and not is_auto_pkey:
-        fields = [getattr(_class, pkey.name)
-                  for pkey in pkey_cols]
-        all_pks = set(session.query(*fields).all())
-
+    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory and not is_auto_pkey
+               else set())
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
         if not is_auto_pkey and not all(pkey.name in row for pkey in pkey_cols):
@@ -417,8 +443,7 @@ def _filter_out_duplicates(session, Base, _class, data,
 
         # Generate the pkey for this row
         if not is_auto_pkey:
-            pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
-                        for pkey in pkey_cols])
+            pk = generate_pk(row, pkey_cols)
             # The row mustn't aleady exist in the input data
             if pk in all_pks and not is_auto_pkey:
                 existing_objs.append(row)
@@ -428,14 +453,116 @@ def _filter_out_duplicates(session, Base, _class, data,
         if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
-        objs.append(_class(**row))
+        #objs.append(_class(**row))
+        objs.append(row)
     session.close()
     return objs, existing_objs, failed_objs
 
 
+def retrieve_row_by_pk(session, _class, row, pkey_cols):
+    """Retrieve a row from the database based on it's PK components"""
+    q = session.query(_class)
+    for col in pkey_cols:
+        q = q.filter(getattr(_class, col.name) == row[col.name])
+    obj = q.one()
+    _row = object_to_dict(obj)
+    return _row
+
+
+def create_delete_stmt(_class, pkey_cols, pks):
+    """Create a SqlAlchemy drop statement for fields with existing
+    primary keys.
+    """
+    # Logic massively simplifies if only one key
+    is_composite = len(pkey_cols) > 1
+    if is_composite:
+        all_rows_stmt = []  # The overall "where" statement
+        # Iterate through all existing primary keys (note, these are tuples)
+        for col_values in pks:
+            this_row_stmt = []  # The "where" statement for this primary key
+            # Iterate through the pk name and value
+            for col, value in zip(pkey_cols, col_values):
+                key = getattr(_class, col.name)
+                this_row_stmt.append(key == value)
+            all_rows_stmt.append(and_(*this_row_stmt)) # AND the pk together
+        all_rows_stmt = or_(*all_rows_stmt) # OR across rows
+    else:
+        col, = pkey_cols # Unpack the only column (indexing isn't supported)
+        key = getattr(_class, col.name)
+        all_rows_stmt = key.in_(tuple(pk for pk, in pks))
+    delete_stmt = _class.__table__.delete().where(all_rows_stmt)
+    return delete_stmt
+
+
+def is_null(x):
+    """Wrapper around pandas isnull with an exception for iterables,
+    which cause a ValueError on conversion to boolean."""
+    try:
+        return bool(pd.isnull(x))
+    except ValueError:
+        return False
+
+
+def merge_duplicates(db_env, section, database,
+                     Base, _class, data, low_memory):
+    """Alternative to `filter_out_duplicates`: Find all duplicates in the list of data,
+    and also for duplicates between the provided data and the database, and then
+    select the most recent non-null value for upsertion.
+
+    Args:
+        session (:obj:`sqlalchemy.orm.session.Session`): SqlAlchemy session object.
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+        _class (:obj:`sqlalchemy.Base`): The ORM for this data.
+        data (:obj:`list` of :obj:`dict`): Rows of data to insert
+        low_memory (bool): If the pkeys are few or small types (i.e. they won't
+                           occupy lots of memory) then set this to True.
+                           This will speed things up significantly (like x 100),
+                           but will blow up for heavy pkeys or large tables.
+    Returns:
+        :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
+    """
+    pkey_cols = _class.__table__.primary_key.columns
+    is_auto_pkey = check_is_auto_pkey(pkey_cols)
+    if is_auto_pkey:
+        raise ValueError('AutoPK fields cannot be merged, you must set smart_update = False')
+    if not low_memory:
+        raise NotImplementedError('low_memory mode has not been implemented for `merge_duplicates`.'
+                                  'Use smart_update = False')
+    # Group objects into sets of duplicates
+    session = get_session(db_env, section, database, Base)
+    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory else set())
+    pks_to_drop = []
+    pk_row_lookup = defaultdict(list)
+    for row in data:
+        pk = generate_pk(row, pkey_cols)
+        pk_row_lookup[pk].append(row)
+        if pk in all_pks:
+            _row = retrieve_row_by_pk(session, _class, row, pkey_cols)
+            pk_row_lookup[pk].append(_row)
+            pks_to_drop.append(pk)
+    delete_stmt = create_delete_stmt(_class, pkey_cols, pks_to_drop)
+    session.close()
+
+    # Now merge the fields by taking the first non-null value
+    objs = []
+    for pk, rows in pk_row_lookup.items():
+        merged_row = {}
+        for col in rows[0].keys():
+            value = None
+            for row in rows:
+                if not is_null(row[col]):
+                    value = row[col]
+                    break
+            merged_row[col] = value
+        #objs.append(_class(**merged_row))
+        objs.append(merged_row)
+    return objs, delete_stmt, None
+
+
 def insert_data(db_env, section, database, Base,
                 _class, data, return_non_inserted=False,
-                low_memory=False):
+                low_memory=False, merge_non_null=False,
+                insert_chunksize=1000):
     """
     Convenience method for getting the MySQL engine and inserting
     data into the DB whilst ensuring a good connection is obtained
@@ -450,6 +577,8 @@ def insert_data(db_env, section, database, Base,
         low_memory (bool): To speed things up significantly, you can read
                            all pkeys into memory first, but this will blow
                            up for heavy pkeys or large tables.
+        merge_non_null (bool): Upsert rather than ignore duplicates,
+                               if the updated fields are not null.
         return_non_inserted (bool): Flag that when set will also return a lists of rows that
                                 were in the supplied data but not imported (for checks)
 
@@ -458,21 +587,25 @@ def insert_data(db_env, section, database, Base,
         :obj:`list` of :obj:`dict` data found already existing in the database (optional)
         :obj:`list` of :obj:`dict` data which could not be imported (optional)
     """
-
-    response = filter_out_duplicates(db_env=db_env,
-                                     section=section,
-                                     database=database,
-                                     Base=Base,
-                                     _class=_class,
-                                     data=data,
-                                     low_memory=low_memory)
+    filter_function = merge_duplicates if merge_non_null else filter_out_duplicates
+    response = filter_function(db_env=db_env,
+                               section=section,
+                               database=database,
+                               Base=Base,
+                               _class=_class,
+                               data=data,
+                               low_memory=low_memory)
     objs, existing_objs, failed_objs = response
     # save and commit
     engine = get_mysql_engine(db_env, section, database)
     try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    session.bulk_save_objects(objs)
+    if merge_non_null:
+        session.execute(existing_objs)  # Drop existing objs if merging
+    for chunk in split_batches(objs, insert_chunksize):
+        stmt = insert(_class).values(chunk)
+        session.execute(stmt)
     session.commit()
     session.close()
     if return_non_inserted:

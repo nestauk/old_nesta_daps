@@ -1,4 +1,4 @@
-from nesta.packages.health_data.process_nih import _extract_date
+from nesta.packages.nih.process_nih import _extract_date
 
 
 class TestExtractDateSuccess():

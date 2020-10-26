@@ -14,7 +14,7 @@ import logging
 from nesta.core.orms.orm_utils import load_json_from_pathstub
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 
-from nesta.packages.health_data.process_nih import _extract_date
+from nesta.packages.nih.process_nih import _extract_date
 from nesta.packages.geo_utils.geocode import geocode_dataframe
 from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe

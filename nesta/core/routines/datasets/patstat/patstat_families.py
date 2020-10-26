@@ -16,7 +16,6 @@ import logging
 from nesta.packages.patstat.fetch_appln import extract_data
 from nesta.packages.misc_utils.batches import split_batches
 from nesta.core.orms.patstat_orm import ApplnFamilyEU, ApplnFamilyAll, Base
-from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.orms.orm_utils import insert_data
