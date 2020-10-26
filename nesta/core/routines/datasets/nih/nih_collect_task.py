@@ -45,12 +45,13 @@ class CollectTask(autobatch.AutoBatchTask):
         '''Prepare the batch job parameters'''
         # Iterate over all tabs
         job_params = []
-        for i in range(0, 4):
+        #for i in range(0, 4):
+        for i in range(4, 6):
             logging.info("Extracting table {}...".format(i))
             title, urls = get_data_urls(i)
             table_name = "nih_{}".format(title.replace(" ","").lower())
             for url in urls:
-                key = f'{url}-{self.date}'
+                key = f'{url}-{self.date}-{self.test}'
                 done = key in bucket_keys(OUTBUCKET)  # Note: lru_cached
                 params = {"table_name": table_name,
                           "url": url,

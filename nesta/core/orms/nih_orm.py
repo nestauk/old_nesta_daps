@@ -117,7 +117,7 @@ class LinkTables(Base):
 class ClinicalStudies(Base):
     __tablename__ = "nih_clinicalstudies"
     
-    clinicaltrials_govid = Column(VARCHAR(20), primary_key=True)
+    clinicaltrials_gov_id = Column(VARCHAR(20), primary_key=True)
     core_project_number = Column(VARCHAR(50), index=True)
     study = Column(TEXT)
     study_status = Column(VARCHAR(30), index=True)
