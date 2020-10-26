@@ -9,7 +9,6 @@ from nesta.core.luigihacks import batchclient
 from subprocess import check_output
 from subprocess import CalledProcessError
 import time
-from datetime import datetime as dt
 import luigi
 from nesta.core.luigihacks.misctools import get_config
 import logging
@@ -93,9 +92,7 @@ class AutoBatchTask(luigi.Task, ABC):
     test = luigi.BoolParameter(default=True)
     max_live_jobs = luigi.IntParameter(default=25)
     worker_timeout = float('inf')
-    date = luigi.DateParameter(default=dt.now())
-
-
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.failed_jobs = set()
