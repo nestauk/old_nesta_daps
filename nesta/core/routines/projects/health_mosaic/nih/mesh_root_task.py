@@ -3,7 +3,7 @@ import datetime
 import logging
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 
-from nesta.core.routines.health_data.nih_data.mesh_join_task import MeshJoinTask
+from nesta.core.routines.nih.nih_data.mesh_join_task import MeshJoinTask
 
 class RootTask(luigi.WrapperTask):
     '''A dummy root task, which collects the database configurations

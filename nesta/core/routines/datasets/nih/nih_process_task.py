@@ -18,7 +18,7 @@ import logging
 import luigi
 from sqlalchemy.orm import sessionmaker
 
-from nesta.core.routines.health_data.nih_data.nih_collect_task import CollectTask
+from nesta.core.routines.nih.nih_data.nih_collect_task import CollectTask
 from nesta.core.luigihacks import autobatch, misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.orms.orm_utils import get_mysql_engine
@@ -51,7 +51,7 @@ class ProcessTask(autobatch.AutoBatchTask):
         yield CollectTask(date=self.date,
                           _routine_id=self._routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=f3p("batchables/health_data/nih_collect_data"),
+                          batchable=f3p("batchables/nih/nih_collect_data"),
                           env_files=[f3p("nesta/"),
                                      f3p("/core/config/mysqldb.config")],
                           job_def=self.job_def,
@@ -162,7 +162,7 @@ class ProcessRootTask(luigi.WrapperTask):
                           drop_and_recreate=self.drop_and_recreate,
                           _routine_id=_routine_id,
                           db_config_path=self.db_config_path,
-                          batchable=f3p("batchables/health_data/nih_process_data"),
+                          batchable=f3p("batchables/nih/nih_process_data"),
                           env_files=[f3p("nesta/"),
                                      f3p("config/mysqldb.config"),
                                      f3p("config/elasticsearch.yaml"),
