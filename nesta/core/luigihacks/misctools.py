@@ -6,7 +6,7 @@ import os
 from functools import lru_cache
 import yaml
 from datetime import datetime as dt
-import boto3
+
 
 def get_config(file_name, header, path="core/config/"):
     '''Get the configuration from a file in the luigi config path
@@ -125,18 +125,3 @@ def extract_task_info(luigi_task):
     task_name = type(luigi_task).__name__
     routine_id = f'{task_name}-{luigi_task.date}-{test}'
     return test, routine_id
-
-
-@lru_cache()
-def bucket_keys(bucket_name):
-    """Get all keys in an S3 bucket.
-    
-    Args:
-        bucket_name (str): Name of a bucket to query.
-    Returns:
-        keys (set): Set of keys
-    """
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(bucket_name)
-    keys = set(obj.key for obj in bucket.objects.all())
-    return keys
