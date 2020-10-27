@@ -10,13 +10,12 @@ from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME
 from sqlalchemy import Column, Table
+from functools import partial
 
 
 Base = declarative_base()
 TEXT = _TEXT(collation='utf8mb4_unicode_ci')
-VARCHAR = lambda *args, **kwargs: _VARCHAR(*args, 
-                                           collation='utf8mb4_unicode_ci', 
-                                           **kwargs)
+VARCHAR = partial(_VARCHAR, collation='utf8mb4_unicode_ci')
 
 
 class Projects(Base):
