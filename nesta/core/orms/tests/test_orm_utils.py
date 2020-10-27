@@ -25,6 +25,8 @@ from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import db_session_query
 from nesta.core.orms.orm_utils import cast_as_sql_python_type
+from nesta.core.orms.orm_utils import get_session
+from nesta.core.orms.orm_utils import get_all_pks
 
 
 Base = declarative_base()
@@ -88,6 +90,13 @@ class TestBasicUtils(TestDB):
         objs = insert_data("MYSQLDBCONF", "mysqldb", "production_tests",
                            Base, DummyModel, data)
         self.assertEqual(len(objs), 0)
+
+        # Not really unit-testing, but we need to have data in the DB
+        # to check that this works, and also this serves as a double check
+        # on that the previous insertions have worked correctly
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        with db_session(engine) as session:
+            assert get_all_pks(session, DummyModel) == {(10, 2), (20, 2)}  # Values inserted in previous test
 
     def test_get_class_by_tablename(self):
         '''Check that the DummyModel is acquired from it's __tablename__'''
@@ -379,3 +388,9 @@ def test_cast_as_sql_python_type_other():
             field.type.python_type = _type
             _data = cast_as_sql_python_type(field, data)
             assert _data == _type(data)
+
+
+def test_get_session():
+    session = get_session("MYSQLDBCONF", "mysqldb", 'production_tests', Base)
+    assert list(session.query(DummyModel).all()) is not None
+    session.close()

@@ -360,7 +360,7 @@ def get_session(db_env, section, database, Base):
     engine = get_mysql_engine(db_env, section, database)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
-    try_until_allowed(Base.metadata.create_all, session)
+    try_until_allowed(Base.metadata.create_all, session.get_bind())
     return session
 
 
@@ -392,8 +392,9 @@ def filter_out_duplicates(db_env, section, database,
     return results
 
 
-def get_all_pks(session, _class, pkey_cols):
+def get_all_pks(session, _class):
     """Get every PK in the database for this ORM"""
+    pkey_cols = _class.__table__.primary_key.columns
     fields = [getattr(_class, pkey.name)
               for pkey in pkey_cols]
     all_pks = set(session.query(*fields).all())
@@ -443,7 +444,7 @@ def _filter_out_duplicates(session, Base, _class, data,
     is_auto_pkey = check_is_auto_pkey(pkey_cols)
 
     # Read all pks if in low_memory mode
-    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory and not is_auto_pkey
+    all_pks = (get_all_pks(session, _class) if low_memory and not is_auto_pkey
                else set())
     for irow, row in enumerate(data):
         # The data must contain all of the pkeys
@@ -541,7 +542,7 @@ def merge_duplicates(db_env, section, database,
                                   'Use smart_update = False')
 
     session = get_session(db_env, section, database, Base)  # Open a session for reading the data
-    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory else set()) # Read PKs
+    all_pks = (get_all_pks(session, _class) if low_memory else set()) # Read PKs
     pks_to_drop = []  # List of PKs indicating rows to be dropped, prior to reinsertion
     pk_row_lookup = defaultdict(list)  # Grouping of rows by PK
 
