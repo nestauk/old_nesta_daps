@@ -345,10 +345,22 @@ def cast_as_sql_python_type(field, data):
 
 
 def get_session(db_env, section, database, Base):
+    """Return a database Session instance for the given credentials,
+    and also setup the table structure for the intended Base ORM.
+    
+    Args:
+        db_env: See :obj:`get_mysql_engine`                       
+        section: See :obj:`get_mysql_engine`                      
+        database: See :obj:`get_mysql_engine`                     
+        Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
+    Returns:
+        session ((:obj:`sqlalchemy.Session`): A database Session instance 
+                                              for the given credentials.
+    """
     engine = get_mysql_engine(db_env, section, database)
-    try_until_allowed(Base.metadata.create_all, engine)
     Session = try_until_allowed(sessionmaker, engine)
     session = try_until_allowed(Session)
+    try_until_allowed(Base.metadata.create_all, session)
     return session
 
 
@@ -527,31 +539,42 @@ def merge_duplicates(db_env, section, database,
     if not low_memory:
         raise NotImplementedError('low_memory mode has not been implemented for `merge_duplicates`.'
                                   'Use smart_update = False')
+
+    session = get_session(db_env, section, database, Base)  # Open a session for reading the data
+    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory else set()) # Read PKs
+    pks_to_drop = []  # List of PKs indicating rows to be dropped, prior to reinsertion
+    pk_row_lookup = defaultdict(list)  # Grouping of rows by PK
+
     # Group objects into sets of duplicates
-    session = get_session(db_env, section, database, Base)
-    all_pks = (get_all_pks(session, _class, pkey_cols) if low_memory else set())
-    pks_to_drop = []
-    pk_row_lookup = defaultdict(list)
     for row in data:
+        # Extract the PK for this row
         pk = generate_pk(row, pkey_cols)
         pk_row_lookup[pk].append(row)
-        if pk in all_pks:
-            _row = retrieve_row_by_pk(session, _class, row, pkey_cols)
-            pk_row_lookup[pk].append(_row)
-            pks_to_drop.append(pk)
+        if pk in all_pks:  # i.e. this is a duplicate
+            pks_to_drop.append(pk)  # and so will be dropped, prior to reinsertion
+        else:
+            continue  # i.e. not a duplicate
+        # Retrieve the duplicate row
+        _row = retrieve_row_by_pk(session, _class, row, pkey_cols)
+        pk_row_lookup[pk].append(_row)
+    # Generate a delete statement for duplicate rows
+    # (NB: Just generating the statement here, not executing it yet)
     delete_stmt = create_delete_stmt(_class, pkey_cols, pks_to_drop)
     session.close()
 
     # Now merge the fields by taking the first non-null value
     objs = []
     for pk, rows in pk_row_lookup.items():
+        field_names = list(rows[0].keys())    
         merged_row = {}
-        for col in rows[0].keys():
+        for col in field_names:
             value = None
+            # Find the first non-null value for this row
             for row in rows:
                 if not is_null(row[col]):
                     value = row[col]
-                    break
+                    break  # Take only the first non-null value
+            # Assign the value for this field
             merged_row[col] = value
         objs.append(merged_row)
     return objs, delete_stmt, None
@@ -594,18 +617,18 @@ def insert_data(db_env, section, database, Base,
                                data=data,
                                low_memory=low_memory)
     objs, existing_objs, failed_objs = response
-    # save and commit
-    engine = get_mysql_engine(db_env, section, database)
-    try_until_allowed(Base.metadata.create_all, engine)
-    Session = try_until_allowed(sessionmaker, engine)
-    session = try_until_allowed(Session)
+    # Open a transaction
+    session = get_session(db_env, section, database, Base)
     if merge_non_null:
         session.execute(existing_objs)  # Drop existing objs if merging
+    # Insert data in chunks
     for chunk in split_batches(objs, insert_chunksize):
         stmt = insert(_class).values(chunk)
         session.execute(stmt)
+    # Commit and close
     session.commit()
     session.close()
+    # Done
     if return_non_inserted:
         return objs, existing_objs, failed_objs
     return objs
