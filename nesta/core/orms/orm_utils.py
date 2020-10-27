@@ -453,7 +453,6 @@ def _filter_out_duplicates(session, Base, _class, data,
         if not is_auto_pkey and not low_memory and session.query(exists(_class, **row)).scalar():
             existing_objs.append(row)
             continue
-        #objs.append(_class(**row))
         objs.append(row)
     session.close()
     return objs, existing_objs, failed_objs
@@ -554,7 +553,6 @@ def merge_duplicates(db_env, section, database,
                     value = row[col]
                     break
             merged_row[col] = value
-        #objs.append(_class(**merged_row))
         objs.append(merged_row)
     return objs, delete_stmt, None
 

@@ -1,7 +1,6 @@
 import os
 import pytest
 from unittest.mock import Mock, call
-# from nesta.core.routines.health_data.nih_data import nih_process_task
 
 
 @pytest.fixture

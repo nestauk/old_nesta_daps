@@ -14,7 +14,7 @@ from nesta.core.orms.nih_orm import Projects
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import get_config
 
-from nesta.packages.health_data.process_mesh import retrieve_mesh_terms
+from nesta.packages.nih.process_mesh import retrieve_mesh_terms
 
 
 bucket = 'innovation-mapping-general'
