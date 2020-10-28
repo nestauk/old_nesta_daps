@@ -473,12 +473,14 @@ def _filter_out_duplicates(session, Base, _class, data,
     return objs, existing_objs, failed_objs
 
 
-def retrieve_row_by_pk(session, _class, row, pkey_cols):
+def retrieve_row_by_pk(session, pk, _class):
     """Retrieve a row from the database based on it's PK components"""
-    q = session.query(_class)
-    for col in pkey_cols:
-        q = q.filter(getattr(_class, col.name) == row[col.name])
-    obj = q.one()
+    q = session.query(_class)  # Build the base query statement
+    pkey_cols = _class.__table__.primary_key.columns
+    # Iterating for the case where the PK is composite
+    for pk_col, pk_value in zip(pkey_cols, pk):
+        q = q.filter(pk_col == pk_value)  # Append a "where" statement per PK
+    obj = q.one()  # Execute the query statement
     _row = object_to_dict(obj)
     return _row
 
@@ -558,7 +560,7 @@ def merge_duplicates(db_env, section, database,
         else:
             continue  # i.e. not a duplicate
         # Retrieve the duplicate row
-        _row = retrieve_row_by_pk(session, _class, row, pkey_cols)
+        _row = retrieve_row_by_pk(session, pk, _class)
         pk_row_lookup[pk].append(_row)
     # Generate a delete statement for duplicate rows
     # (NB: Just generating the statement here, not executing it yet)

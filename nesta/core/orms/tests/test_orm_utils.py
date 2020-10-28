@@ -29,6 +29,7 @@ from nesta.core.orms.orm_utils import get_session
 from nesta.core.orms.orm_utils import get_all_pks
 from nesta.core.orms.orm_utils import has_auto_pkey
 from nesta.core.orms.orm_utils import generate_pk
+from nesta.core.orms.orm_utils import retrieve_row_by_pk
 
 
 Base = declarative_base()
@@ -112,10 +113,31 @@ class TestBasicUtils(TestDB):
 
         # Not really unit-testing, but we need to have data in the DB
         # to check that this works, and also this serves as a double check
-        # on that the previous insertions have worked correctly
+        # that the previous insertions have worked correctly
         engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
         with db_session(engine) as session:
             assert get_all_pks(session, DummyModel) == {(10, 2), (20, 2)}  # Values inserted in previous test
+
+        # ... and finally we can retrieve the data based on the PKs
+        # for full closure
+        with db_session(engine) as session:
+            # First should return a copy of itself
+            pk = generate_pk(data[0], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[0]
+
+            # Second should return a copy of the first (duplicate)
+            pk = generate_pk(data[1], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[0]  # <-- note NOT obj[1]
+
+            # First should return a copy of itself
+            pk = generate_pk(data[2], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[2]
 
     def test_get_class_by_tablename(self):
         '''Check that the DummyModel is acquired from it's __tablename__'''
@@ -427,4 +449,3 @@ def test_generate_pk():
                  '_id':23}
     # Note, respects the order specified in the ORM
     assert generate_pk(test_data, DummyModel) == (23, 43)
-
