@@ -45,8 +45,7 @@ class CollectTask(autobatch.AutoBatchTask):
         '''Prepare the batch job parameters'''
         # Iterate over all tabs
         job_params = []
-        #for i in range(0, 4):
-        for i in range(4, 6):
+        for i in range(0, 6):
             logging.info("Extracting table {}...".format(i))
             title, urls = get_data_urls(i)
             table_name = "nih_{}".format(title.replace(" ","").lower())
