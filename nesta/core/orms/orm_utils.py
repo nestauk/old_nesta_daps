@@ -43,6 +43,13 @@ def _get_key_value(obj, key):
     return (key, value)
 
 
+def orm_column_names(_class):
+    """Return the set of column names for the provided ORM"""
+    mapper = class_mapper(_class)
+    columns = {column.key for column in mapper.columns}
+    return columns
+
+
 def object_to_dict(obj, shallow=False, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
