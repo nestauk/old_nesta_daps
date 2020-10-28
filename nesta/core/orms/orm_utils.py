@@ -401,9 +401,10 @@ def get_all_pks(session, _class):
     return all_pks
 
 
-def check_is_auto_pkey(pkey_cols):
-    """Check if the PK is autoincrement"""
-    is_auto_pkey = all(p.autoincrement and
+def has_auto_pkey(_class):
+    """Check if the PK of the ORM is autoincrement"""
+    pkey_cols = _class.__table__.primary_key.columns
+    is_auto_pkey = any(p.autoincrement and
                        p.type.python_type is int
                        for p in pkey_cols)
     return is_auto_pkey
@@ -441,7 +442,7 @@ def _filter_out_duplicates(session, Base, _class, data,
     existing_objs = []
     failed_objs = []
     pkey_cols = _class.__table__.primary_key.columns
-    is_auto_pkey = check_is_auto_pkey(pkey_cols)
+    is_auto_pkey = has_auto_pkey(_class)
 
     # Read all pks if in low_memory mode
     all_pks = (get_all_pks(session, _class) if low_memory and not is_auto_pkey
@@ -534,7 +535,7 @@ def merge_duplicates(db_env, section, database,
         :obj:`list` of :obj:`_class` instantiated by data, with duplicate pks removed.
     """
     pkey_cols = _class.__table__.primary_key.columns
-    is_auto_pkey = check_is_auto_pkey(pkey_cols)
+    is_auto_pkey = has_auto_pkey(_class)
     if is_auto_pkey:
         raise ValueError('AutoPK fields cannot be merged, you must set smart_update = False')
     if not low_memory:

@@ -27,6 +27,7 @@ from nesta.core.orms.orm_utils import db_session_query
 from nesta.core.orms.orm_utils import cast_as_sql_python_type
 from nesta.core.orms.orm_utils import get_session
 from nesta.core.orms.orm_utils import get_all_pks
+from nesta.core.orms.orm_utils import has_auto_pkey
 
 
 Base = declarative_base()
@@ -47,6 +48,23 @@ class DummyChild(Base):
     parent_id = Column(INTEGER, ForeignKey(DummyModel._id),
                        primary_key=True,
                        autoincrement=False)
+    _id = Column(INTEGER, primary_key=True,
+                 autoincrement=False)
+
+
+class AutoPKModel(Base):
+    __tablename__ = 'autopk'
+
+    parent_id = Column(INTEGER, primary_key=True,
+                       autoincrement=True)
+
+
+class CompositeAutoPKModel(Base):
+    __tablename__ = 'autopk_comp'
+
+    parent_id = Column(INTEGER, ForeignKey(DummyModel._id),
+                       primary_key=True,
+                       autoincrement=True)
     _id = Column(INTEGER, primary_key=True,
                  autoincrement=False)
 
@@ -394,3 +412,10 @@ def test_get_session():
     session = get_session("MYSQLDBCONF", "mysqldb", 'production_tests', Base)
     assert list(session.query(DummyModel).all()) is not None
     session.close()
+
+
+def test_check_is_auto_pkey():
+    assert has_auto_pkey(DummyModel) == False
+    assert has_auto_pkey(DummyChild) == False
+    assert has_auto_pkey(AutoPKModel) == True
+    assert has_auto_pkey(CompositeAutoPKModel) == True
