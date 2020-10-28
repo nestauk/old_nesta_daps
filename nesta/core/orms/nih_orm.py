@@ -2,61 +2,63 @@
 NIH schema
 ==============
 
-The schema for the World RePORTER data. Note that the schema
-was automatically generated based on an IPython hack session
-using the limits and properties of the data from the 
-World ExPORTER (which explains the unusual VARCHAR limits).
+The schema for the World RePORTER data.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import VARCHAR, TEXT
-from sqlalchemy.types import INTEGER
+from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
+from sqlalchemy.dialects.mysql import TEXT as _TEXT
+from sqlalchemy.types import INTEGER, JSON, DATETIME
 from sqlalchemy import Column, Table
+from functools import partial
 
 
 Base = declarative_base()
+TEXT = _TEXT(collation='utf8mb4_unicode_ci')
+VARCHAR = partial(_VARCHAR, collation='utf8mb4_unicode_ci')
+
 
 class Projects(Base):
     __tablename__ = 'nih_projects'
 
-    application_id = Column(INTEGER, primary_key=True)
+    application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     activity = Column(VARCHAR(3))
     administering_ic = Column(VARCHAR(2))
     application_type = Column(INTEGER)
     arra_funded = Column(VARCHAR(1))
-    award_notice_date = Column(VARCHAR(19))
-    budget_start = Column(VARCHAR(10))
-    budget_end = Column(VARCHAR(10))
-    cfda_code = Column(VARCHAR(23))
-    core_project_num = Column(VARCHAR(32), index=True)
-    ed_inst_type = Column(VARCHAR(70))
-    foa_number = Column(VARCHAR(14))
-    full_project_num = Column(VARCHAR(35))
-    funding_ics = Column(VARCHAR(291))
-    funding_mechanism = Column(VARCHAR(23))
-    fy = Column(INTEGER)
-    ic_name = Column(VARCHAR(79))
-    org_city = Column(VARCHAR(26))
-    org_country = Column(VARCHAR(14))
-    org_dept = Column(VARCHAR(30))
+    award_notice_date = Column(DATETIME)
+    budget_start = Column(DATETIME)
+    budget_end = Column(DATETIME)
+    cfda_code = Column(TEXT)
+    core_project_num = Column(VARCHAR(50), index=True)
+    ed_inst_type = Column(TEXT)
+    foa_number = Column(TEXT)
+    full_project_num = Column(VARCHAR(50), index=True)
+    funding_ics = Column(JSON)
+    funding_mechanism = Column(TEXT)
+    fy = Column(INTEGER, index=True)
+    ic_name = Column(VARCHAR(100), index=True)
+    org_city = Column(VARCHAR(50), index=True)
+    org_country = Column(VARCHAR(50), index=True)
+    org_dept = Column(VARCHAR(100), index=True)
     org_district = Column(INTEGER)
-    org_duns = Column(VARCHAR(75))
-    org_fips = Column(VARCHAR(2))
+    org_duns = Column(JSON)
+    org_fips = Column(VARCHAR(2), index=True)
     org_ipf_code = Column(INTEGER)
-    org_name = Column(VARCHAR(92))
-    org_state = Column(VARCHAR(2))
+    org_name = Column(VARCHAR(100), index=True)
+    org_state = Column(VARCHAR(2), index=True)
     org_zipcode = Column(VARCHAR(10))
     phr = Column(TEXT)
-    pi_ids = Column(VARCHAR(262))
-    pi_names = Column(VARCHAR(533))
-    program_officer_name = Column(VARCHAR(39))
-    project_start = Column(VARCHAR(10))
-    project_end = Column(VARCHAR(10))
-    project_terms = Column(TEXT)
-    project_title = Column(VARCHAR(200))
+    pi_ids = Column(JSON)
+    pi_names = Column(JSON)
+    program_officer_name = Column(TEXT)
+    project_start = Column(DATETIME)
+    project_end = Column(DATETIME)
+    project_terms = Column(JSON)
+    project_title = Column(TEXT)
     serial_number = Column(VARCHAR(6))
     study_section = Column(VARCHAR(4))
-    study_section_name = Column(VARCHAR(95))
+    study_section_name = Column(TEXT)
     suffix = Column(VARCHAR(6))
     support_year = Column(VARCHAR(2))
     direct_cost_amt = Column(INTEGER)
@@ -64,54 +66,57 @@ class Projects(Base):
     total_cost = Column(INTEGER)
     subproject_id = Column(INTEGER)
     total_cost_sub_project = Column(INTEGER)
-    nih_spending_cats = Column(VARCHAR(2232))
+    nih_spending_cats = Column(JSON)
 
 
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
 
-    application_id = Column(INTEGER, primary_key=True)
+    application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
+
 
 class Publications(Base):
     __tablename__ = 'nih_publications'
 
-    pmid = Column(INTEGER, primary_key=True)
-    author_name = Column(VARCHAR(166))
+    pmid = Column(INTEGER, primary_key=True, autoincrement=False)
+    author_name = Column(TEXT)
     affiliation = Column(TEXT)
-    author_list = Column(TEXT)
-    country = Column(VARCHAR(25))
+    author_list = Column(JSON)
+    country = Column(VARCHAR(50), index=True)
     issn = Column(VARCHAR(9))
     journal_issue = Column(VARCHAR(75))
-    journal_title = Column(VARCHAR(282))
-    journal_title_abbr = Column(VARCHAR(108))
+    journal_title = Column(VARCHAR(400), index=True)
+    journal_title_abbr = Column(VARCHAR(200))
     journal_volume = Column(VARCHAR(100))
     lang = Column(VARCHAR(3))
-    page_number = Column(VARCHAR(138))
-    pub_date = Column(VARCHAR(23))
-    pub_title = Column(TEXT)
-    pub_year = Column(INTEGER)
-    pmc_id = Column(INTEGER)
+    page_number = Column(VARCHAR(200))
+    pub_date = Column(DATETIME)
+    pub_title = Column(VARCHAR(400), index=True)
+    pub_year = Column(INTEGER, index=True)
+    pmc_id = Column(INTEGER, index=True)
+
      
 class Patents(Base):
     __tablename__ = 'nih_patents'
     
-    patent_id = Column(VARCHAR(9), primary_key=True)
-    patent_title = Column(VARCHAR(284))
-    project_id = Column(VARCHAR(11), index=True)
-    patent_org_name = Column(VARCHAR(50))
-
-# class LinkTables(Base):
-#     __tablename__ = 'nih_linktables'
-
-#     pmid = Column(INTEGER, primary_key=True)
-#     project_number = Column(VARCHAR(11), index=True)
+    patent_id = Column(VARCHAR(20), primary_key=True)
+    patent_title = Column(TEXT)
+    project_id = Column(VARCHAR(50), index=True)
+    patent_org_name = Column(TEXT)
 
 
-# class ClinicalStudies(Base):
-#     __tablename__ = "nih_clinicalstudies"
+class LinkTables(Base):
+    __tablename__ = 'nih_linktables'
+
+    pmid = Column(INTEGER, primary_key=True, autoincrement=False)
+    project_number = Column(VARCHAR(50), index=True)
+
+
+class ClinicalStudies(Base):
+    __tablename__ = "nih_clinicalstudies"
     
-#     core_project_number 
-#     clinicaltrials_govid
-#     study
-#     study_status
+    clinicaltrials_gov_id = Column(VARCHAR(20), primary_key=True)
+    core_project_number = Column(VARCHAR(50), index=True)
+    study = Column(TEXT)
+    study_status = Column(VARCHAR(30), index=True)
