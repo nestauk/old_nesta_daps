@@ -485,10 +485,11 @@ def retrieve_row_by_pk(session, pk, _class):
     return _row
 
 
-def create_delete_stmt(_class, pkey_cols, pks):
+def create_delete_stmt(_class, pks):
     """Create a SqlAlchemy drop statement for fields with existing
     primary keys.
     """
+    pkey_cols = _class.__table__.primary_key.columns
     # Logic massively simplifies if only one key
     is_composite = len(pkey_cols) > 1
     if is_composite:
@@ -502,7 +503,7 @@ def create_delete_stmt(_class, pkey_cols, pks):
                 this_row_stmt.append(key == value)
             all_rows_stmt.append(and_(*this_row_stmt)) # AND the pk together
         all_rows_stmt = or_(*all_rows_stmt) # OR across rows
-    else:
+    else:  # Only one PK
         col, = pkey_cols # Unpack the only column (indexing isn't supported)
         key = getattr(_class, col.name)
         all_rows_stmt = key.in_(tuple(pk for pk, in pks))
@@ -564,7 +565,7 @@ def merge_duplicates(db_env, section, database,
         pk_row_lookup[pk].append(_row)
     # Generate a delete statement for duplicate rows
     # (NB: Just generating the statement here, not executing it yet)
-    delete_stmt = create_delete_stmt(_class, pkey_cols, pks_to_drop)
+    delete_stmt = create_delete_stmt(_class, pks_to_drop)
     session.close()
 
     # Now merge the fields by taking the first non-null value

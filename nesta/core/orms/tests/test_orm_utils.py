@@ -30,6 +30,8 @@ from nesta.core.orms.orm_utils import get_all_pks
 from nesta.core.orms.orm_utils import has_auto_pkey
 from nesta.core.orms.orm_utils import generate_pk
 from nesta.core.orms.orm_utils import retrieve_row_by_pk
+from nesta.core.orms.orm_utils import is_null
+from nesta.core.orms.orm_utils import create_delete_stmt
 
 
 Base = declarative_base()
@@ -443,9 +445,32 @@ def test_check_is_auto_pkey():
     assert has_auto_pkey(AutoPKModel) == True
     assert has_auto_pkey(CompositeAutoPKModel) == True
 
+
 def test_generate_pk():
     test_data = {'_another_id': 43, 
                  'some_field': 'something',
                  '_id':23}
     # Note, respects the order specified in the ORM
     assert generate_pk(test_data, DummyModel) == (23, 43)
+
+
+def test_is_null():
+    from nesta.core.orms.orm_utils import pd
+    # Show behaviour consistent with pd.isnull
+    assert is_null(None)
+    assert is_null(pd.np.nan)
+    assert not is_null(False)
+    assert not is_null('')
+    # Bonus behaviour: don't throw an exception for iterables
+    assert not is_null([None, None])
+
+
+def test_create_delete_stmt():
+    pks = [(23, 43), (5, 28)]
+    stmt = create_delete_stmt(DummyModel, pks)
+    expected_stmt = ("DELETE FROM dummy_model "
+                     "WHERE dummy_model._id = :_id_1 "
+                     "AND dummy_model._another_id = :_another_id_1 "
+                     "OR dummy_model._id = :_id_2 "
+                     "AND dummy_model._another_id = :_another_id_2")
+    assert str(stmt) == expected_stmt
