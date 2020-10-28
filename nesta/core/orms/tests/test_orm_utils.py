@@ -141,6 +141,65 @@ class TestBasicUtils(TestDB):
             assert _obj.pop('children') == []  # No children specified
             assert _obj == data[2]
 
+    def tests_merges_dupe_rows(self):
+        # Insert some duplicate rows
+        _id, _another_id = 100, 2  # the composite PK
+        data = [{"_id": _id, "_another_id": _another_id,
+                 "some_field": None},
+                {"_id": _id, "_another_id": _another_id,
+                 "some_field": 30},  # <-- first non-null, will merge
+                {"_id": _id, "_another_id": _another_id,
+                 "some_field": 50}]  # <-- not first, will ignore
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, data,
+                           merge_non_null=True, low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 30
+
+    def tests_merges_dupe_row_and_db(self):
+        _id, _another_id = 200, 2  # the composite PK
+        initial_data = [{"_id": _id, "_another_id": _another_id,
+                         "some_field": 34}]
+        update_data = [{"_id": _id, "_another_id": _another_id,
+                        "some_field": None}]
+        final_data = [{"_id": _id, "_another_id": _another_id,
+                        "some_field": 40},
+                       {"_id": _id, "_another_id": _another_id,
+                        "some_field": 50}]
+
+        # Initial insert
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           initial_data, merge_non_null=True,
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 34
+
+        # Test null update NOT merged in
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           update_data, merge_non_null=True, 
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 34  # Not updated
+
+        # Test first non-null IS merged in
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           final_data, merge_non_null=True,
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 40  # first non-null
+
+
     def test_get_class_by_tablename(self):
         '''Check that the DummyModel is acquired from it's __tablename__'''
         _class = get_class_by_tablename(Base, 'dummy_model')

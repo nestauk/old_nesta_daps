@@ -541,10 +541,10 @@ def merge_duplicates(db_env, section, database,
     pkey_cols = _class.__table__.primary_key.columns
     is_auto_pkey = has_auto_pkey(_class)
     if is_auto_pkey:
-        raise ValueError('AutoPK fields cannot be merged, you must set smart_update = False')
+        raise ValueError('AutoPK fields cannot be merged, you must set merge_non_null = False')
     if not low_memory:
-        raise NotImplementedError('low_memory mode has not been implemented for `merge_duplicates`.'
-                                  'Use smart_update = False')
+        raise NotImplementedError('low_memory=False mode has not been implemented for `merge_duplicates`.'
+                                  'Use merge_non_null = False')
 
     session = get_session(db_env, section, database, Base)  # Open a session for reading the data
     all_pks = (get_all_pks(session, _class) if low_memory else set()) # Read PKs
