@@ -32,6 +32,7 @@ from nesta.core.orms.orm_utils import generate_pk
 from nesta.core.orms.orm_utils import retrieve_row_by_pk
 from nesta.core.orms.orm_utils import is_null
 from nesta.core.orms.orm_utils import create_delete_stmt
+from nesta.core.orms.orm_utils import orm_column_names
 
 
 Base = declarative_base()
@@ -541,3 +542,8 @@ def test_create_delete_stmt_non_composite():
                      "WHERE autopk.parent_id "
                      "IN (:parent_id_1, :parent_id_2)")
     assert str(stmt) == expected_stmt
+
+
+def test_orm_column_names():
+    assert orm_column_names(AutoPKModel) == {'parent_id',}
+    assert orm_column_names(DummyModel) == {'_id', '_another_id', 'some_field'}
