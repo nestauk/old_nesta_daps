@@ -1,7 +1,3 @@
-# TODO: set default batchable and runtime params where possible
-# TODO: update orm, where required, incl lots of indexes
-# TODO: update batchable to collect and clean as required
-# TODO: write decent tests to check good dq
 '''
 Data collection
 ===============
