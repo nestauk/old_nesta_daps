@@ -39,7 +39,7 @@ class CollectTask(autobatch.AutoBatchTask):
 
     def prepare(self):
         '''Prepare the batch job parameters'''
-        # Iterate over all tabs
+        # Iterate over "tabs" in exporter.nih.gov/ExPORTER_Catalog.aspx
         job_params = []
         for i in range(0, 6):
             logging.info("Extracting table {}...".format(i))

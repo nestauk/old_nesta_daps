@@ -95,19 +95,3 @@ def iterrows(url):
     for row in _data_it:
         yield {clean_field_name(col): val 
                for col, val in zip(columns, row)}
-
-
-if __name__ == '__main__':
-    # Iterate over the number of tabs on the page
-    for i in range(0, N_TABS+1):
-        # Get the URLs which point to the data for this tab
-        title, urls = get_data_urls(i)
-        print(title)
-        # Iterate over URLs
-        for url in urls:
-            print("\t", url)
-            # Iterate over rows in the CSV
-            for row in iterrows(urls):
-                print("\t\t", row)
-                break
-            break
