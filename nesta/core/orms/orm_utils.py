@@ -410,8 +410,9 @@ def has_auto_pkey(_class):
     return is_auto_pkey
 
 
-def generate_pk(row, pkey_cols):
+def generate_pk(row, _class):
     """Generate the PK for this row, based on the PK column names"""
+    pkey_cols = _class.__table__.primary_key.columns
     pk = tuple([cast_as_sql_python_type(pkey, row[pkey.name])
                 for pkey in pkey_cols])
     return pk
@@ -457,7 +458,7 @@ def _filter_out_duplicates(session, Base, _class, data,
 
         # Generate the pkey for this row
         if not is_auto_pkey:
-            pk = generate_pk(row, pkey_cols)
+            pk = generate_pk(row, _class)
             # The row mustn't aleady exist in the input data
             if pk in all_pks and not is_auto_pkey:
                 existing_objs.append(row)
@@ -550,7 +551,7 @@ def merge_duplicates(db_env, section, database,
     # Group objects into sets of duplicates
     for row in data:
         # Extract the PK for this row
-        pk = generate_pk(row, pkey_cols)
+        pk = generate_pk(row, _class)
         pk_row_lookup[pk].append(row)
         if pk in all_pks:  # i.e. this is a duplicate
             pks_to_drop.append(pk)  # and so will be dropped, prior to reinsertion

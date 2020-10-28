@@ -28,6 +28,7 @@ from nesta.core.orms.orm_utils import cast_as_sql_python_type
 from nesta.core.orms.orm_utils import get_session
 from nesta.core.orms.orm_utils import get_all_pks
 from nesta.core.orms.orm_utils import has_auto_pkey
+from nesta.core.orms.orm_utils import generate_pk
 
 
 Base = declarative_base()
@@ -419,3 +420,11 @@ def test_check_is_auto_pkey():
     assert has_auto_pkey(DummyChild) == False
     assert has_auto_pkey(AutoPKModel) == True
     assert has_auto_pkey(CompositeAutoPKModel) == True
+
+def test_generate_pk():
+    test_data = {'_another_id': 43, 
+                 'some_field': 'something',
+                 '_id':23}
+    # Note, respects the order specified in the ORM
+    assert generate_pk(test_data, DummyModel) == (23, 43)
+
