@@ -465,7 +465,7 @@ def test_is_null():
     assert not is_null([None, None])
 
 
-def test_create_delete_stmt():
+def test_create_delete_stmt_composite():
     pks = [(23, 43), (5, 28)]
     stmt = create_delete_stmt(DummyModel, pks)
     expected_stmt = ("DELETE FROM dummy_model "
@@ -473,4 +473,12 @@ def test_create_delete_stmt():
                      "AND dummy_model._another_id = :_another_id_1 "
                      "OR dummy_model._id = :_id_2 "
                      "AND dummy_model._another_id = :_another_id_2")
+    assert str(stmt) == expected_stmt
+
+def test_create_delete_stmt_non_composite():
+    pks = [(23, ), (5, )]
+    stmt = create_delete_stmt(AutoPKModel, pks)
+    expected_stmt = ("DELETE FROM autopk "
+                     "WHERE autopk.parent_id "
+                     "IN (:parent_id_1, :parent_id_2)")
     assert str(stmt) == expected_stmt

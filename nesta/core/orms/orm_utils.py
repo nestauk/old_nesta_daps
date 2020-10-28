@@ -503,8 +503,8 @@ def create_delete_stmt(_class, pks):
                 this_row_stmt.append(key == value)
             all_rows_stmt.append(and_(*this_row_stmt)) # AND the pk together
         all_rows_stmt = or_(*all_rows_stmt) # OR across rows
-    else:  # Only one PK
-        col, = pkey_cols # Unpack the only column (indexing isn't supported)
+    else:  # Only one PK, this is much faster since can use "in_" logic
+        col, = pkey_cols # Indexing isn't supported for column collections...
         key = getattr(_class, col.name)
         all_rows_stmt = key.in_(tuple(pk for pk, in pks))
     delete_stmt = _class.__table__.delete().where(all_rows_stmt)
