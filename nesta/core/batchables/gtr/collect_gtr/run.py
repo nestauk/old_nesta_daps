@@ -19,6 +19,7 @@ from nesta.packages.gtr.get_gtr_data import extract_link_table
 from nesta.packages.gtr.get_gtr_data import TOP_URL
 
 from nesta.core.orms.orm_utils import insert_data
+from nesta.core.orms.orm_utils import orm_column_names
 from nesta.core.orms.orm_utils import get_class_by_tablename
 from nesta.core.orms.gtr_orm import Base
 from nesta.core.luigihacks.s3 import parse_s3_path
@@ -54,9 +55,10 @@ def run():
     objs = []
     for table_name, rows in data.items():
         _class = get_class_by_tablename(Base, f"gtr_{table_name}")
-        # Remove any fields that aren't in the ORM
-        cleaned_rows = [{k:v for k, v in row.items() if k in _class.__dict__}
-                        for row in rows]
+        # Remove any fields that aren't in the ORM and set NULL as default
+        field_names = orm_column_names(_class)
+        cleaned_rows = [{field: (row[field] if field in row else None)
+                         for field in field_names} for row in rows]
         objs += insert_data("BATCHPAR_config", "mysqldb", db,
                             Base, _class, cleaned_rows)
 
@@ -73,9 +75,8 @@ def run():
 if __name__ == "__main__":
     # Local testing
     if "BATCHPAR_outinfo" not in os.environ:
-        os.environ['BATCHPAR_TOPURL'] = "https://gtr.ukri.org/gtr/api/projects"
-        os.environ['BATCHPAR_PAGESIZE'] = "100"
-        os.environ['BATCHPAR_page'] = "647"
+        os.environ['BATCHPAR_PAGESIZE'] = "10"
+        os.environ['BATCHPAR_page'] = "2"
         os.environ["BATCHPAR_db"] = "dev"
         os.environ["BATCHPAR_outinfo"] = ""
         os.environ["BATCHPAR_config"] = os.environ["MYSQLDBCONF"]

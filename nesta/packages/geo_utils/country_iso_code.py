@@ -25,8 +25,10 @@ def country_iso_code(country):
     country = str(country).title()
     for name_type in ['name', 'common_name', 'official_name']:
         query = {name_type: country}
-        try:
-            return pycountry.countries.get(**query)
+        try:            
+            result = pycountry.countries.get(**query)
+            if result is not None:
+                return result
         except KeyError:
             pass
 

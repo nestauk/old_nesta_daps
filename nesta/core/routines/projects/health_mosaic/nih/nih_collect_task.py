@@ -10,7 +10,7 @@ import luigi
 import datetime
 import logging
 
-from nesta.packages.health_data.collect_nih import get_data_urls
+from nesta.packages.nih.collect_nih import get_data_urls
 
 from nesta.core.luigihacks import misctools
 from nesta.core.luigihacks.mysqldb import MySqlTarget

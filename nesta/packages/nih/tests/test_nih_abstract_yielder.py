@@ -19,7 +19,7 @@ class TestAbstractYielder(TestCase):
         session = Session()
         Base.metadata.drop_all(self.engine)
         Base.metadata.create_all(self.engine)
-        for i in range(0, self.n_abstracts):
+        for i in range(1, self.n_abstracts+1):
             abstract = Abstracts(application_id=10*i,
                                  abstract_text="hello")
             session.add(abstract)

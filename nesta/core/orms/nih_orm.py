@@ -9,14 +9,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME
-from sqlalchemy import Column, Table, ForeignKey
+from sqlalchemy import Column, Table
+from functools import partial
 
 
 Base = declarative_base()
 TEXT = _TEXT(collation='utf8mb4_unicode_ci')
-VARCHAR = lambda *args, **kwargs: _VARCHAR(*args, 
-                                           collation='utf8mb4_unicode_ci', 
-                                           **kwargs)
+VARCHAR = partial(_VARCHAR, collation='utf8mb4_unicode_ci')
 
 
 class Projects(Base):
@@ -116,7 +115,7 @@ class LinkTables(Base):
 class ClinicalStudies(Base):
     __tablename__ = "nih_clinicalstudies"
     
-    clinicaltrials_govid = Column(VARCHAR(20), primary_key=True)
+    clinicaltrials_gov_id = Column(VARCHAR(20), primary_key=True)
     core_project_number = Column(VARCHAR(50), index=True)
     study = Column(TEXT)
     study_status = Column(VARCHAR(30), index=True)

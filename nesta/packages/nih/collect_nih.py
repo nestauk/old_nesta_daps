@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 import boto3
 from io import BytesIO
 from io import StringIO
+import re
 import requests
 from zipfile import ZipFile
 import csv
@@ -56,6 +57,17 @@ def get_data_urls(tab_index):
     return title, hrefs
 
 
+def clean_field_name(field_name):
+    '''Standardise inconsistently formatted field names,
+    by replacing non-alphanums with single underscores
+    and lowercasing.'''
+    name = field_name.lower()
+    name = re.sub('[^0-9a-zA-Z]+', '_', name)
+    while '__' in name:
+        name = name.replace('__', '_')
+    return name
+
+
 def iterrows(url):
     '''Yield rows from the CSV (found at URL :code:`url`) as JSON (well, :code:`dict` objects).
 
@@ -81,20 +93,5 @@ def iterrows(url):
     _data_it = csv.reader(_data)
     columns = next(_data_it)
     for row in _data_it:
-        yield {col.lower(): val for col, val in zip(columns, row)}
-
-
-if __name__ == '__main__':
-    # Iterate over the number of tabs on the page
-    for i in range(0, N_TABS+1):
-        # Get the URLs which point to the data for this tab
-        title, urls = get_data_urls(i)
-        print(title)
-        # Iterate over URLs
-        for url in urls:
-            print("\t", url)
-            # Iterate over rows in the CSV
-            for row in iterrows(urls):
-                print("\t\t", row)
-                break
-            break
+        yield {clean_field_name(col): val 
+               for col, val in zip(columns, row)}

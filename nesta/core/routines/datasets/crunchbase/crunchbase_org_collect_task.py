@@ -100,7 +100,7 @@ class OrgCollectTask(luigi.Task):
                                                                              low_memory=True)
         logging.info(f"Inserting {len(org_cats)} org categories "
                      f"({len(existing_org_cats)} already existed and {len(failed_org_cats)} failed)")
-        #org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
+        org_cats = [OrganizationCategory(**org_cat) for org_cat in org_cats]
         with db_session(self.engine) as session:
             session.add_all(org_cats)
 

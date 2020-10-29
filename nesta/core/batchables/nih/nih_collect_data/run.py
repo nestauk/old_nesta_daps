@@ -28,7 +28,8 @@ def run():
     data = [preprocess_row(row, _class) 
             for row in iterrows(url) if len(row) > 0]
     insert_data("BATCHPAR_config", "mysqldb", db_name,
-                Base, _class, data, low_memory=True, merge_non_null=True)
+                Base, _class, data, low_memory=True, 
+                merge_non_null=True, insert_chunksize=200)
     # Mark the task as done
     s3 = boto3.resource('s3')
     s3_obj = s3.Object(*parse_s3_path(s3_path))
@@ -36,10 +37,4 @@ def run():
 
 
 if __name__ == "__main__":
-    if "BATCHPAR_config" not in os.environ:
-        os.environ["BATCHPAR_outinfo"] = "s3://nesta-production-intermediate/https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2019.zip-2020-10-22"
-        os.environ["BATCHPAR_table_name"] = "nih_projects"
-        os.environ["BATCHPAR_url"] = "https://exporter.nih.gov//CSVs/final/RePORTER_PRJ_C_FY2019.zip"
-        os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
-        os.environ["BATCHPAR_db_name"] = "production"
     run()

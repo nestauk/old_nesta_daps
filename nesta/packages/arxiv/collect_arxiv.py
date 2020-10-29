@@ -357,7 +357,8 @@ def add_new_articles(article_batch, session):
     logging.info(f"Inserting a batch of {len(article_batch)} new Articles")
     objs, existing_objs, failed_objs =  _filter_out_duplicates(session, Base, Article,
                                                                article_batch, low_memory=True)
-    session.add_all(objs)
+    articles = [Article(**obj) for obj in objs]
+    session.add_all(articles)
     session.commit()
 
 

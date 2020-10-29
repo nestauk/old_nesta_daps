@@ -14,7 +14,7 @@ import logging
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 import os
 
-from nesta.core.routines.health_data.nih_data.nih_dedupe_task import DedupeTask
+from nesta.core.routines.nih.nih_data.nih_dedupe_task import DedupeTask
 
 
 class RootTask(luigi.WrapperTask):
@@ -45,7 +45,7 @@ class RootTask(luigi.WrapperTask):
                          process_batch_size=5000,
                          intermediate_bucket='nesta-production-intermediate',
                          test=(not self.production),
-                         batchable=f3p("batchables/health_data/"
+                         batchable=f3p("batchables/nih/"
                                        "nih_dedupe"),
                          env_files=[f3p("nesta/"),
                                     f3p("config/mysqldb.config"),
