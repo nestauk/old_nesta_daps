@@ -63,13 +63,9 @@ def run():
             ids.append(_id)
 
     # Convert text to vectors
-    if test:
-        for i, doc in enumerate(docs):
-            logging.info("\n\nDocument {i}:")
-            logging.info(doc)
     embeddings = model.encode(docs)
     # Write to output
-    out_data = [{id_field: _id, "vector": embedding.tolist()}
+    out_data = [{id_field: _id, "vector": ["%.5f" % v for v in embedding.tolist()]}
                 for _id, embedding in zip(ids, embeddings)]
     Base = get_base_from_orm_name(out_module)
     out_class = get_class_by_tablename(out_module, out_tablename)

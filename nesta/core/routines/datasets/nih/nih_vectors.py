@@ -18,8 +18,8 @@ from datetime import datetime as dt
 
 
 TASK_KWARGS = [
-    (Abstracts, Abstracts.application_id, Abstracts.abstract_text, AbstractVector),
-    (Projects, Projects.application_id, Projects.phr, PhrVector)
+    #(Abstracts, Abstracts.application_id, Abstracts.abstract_text, AbstractVector),
+    (Projects, Projects.application_id, Projects.phr, PhrVector),
 ]
 
 class RootTask(luigi.WrapperTask):
@@ -29,11 +29,14 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         set_log_level(not self.production)
-        batch_kwargs = load_batch_config(self, memory=16000, vcpus=4,
+        batch_kwargs = load_batch_config(self, memory=16000, 
+                                         vcpus=4, max_live_jobs=10,
+                                         date=self.date,
                                          job_def="py37_amzn2_pytorch")
         for in_class, id_field, text_field, out_class in TASK_KWARGS:
             in_class_name = in_class.__tablename__
-            _Task = type(f'{in_class_name}-Text2VecTask', (Text2VecTask,), {})
+            _Task = type(f'{in_class_name}-Text2VecTask-{self.date}', 
+                         (Text2VecTask,), {})
             yield _Task(in_class=in_class, id_field=id_field,
                         text_field=text_field, out_class=out_class,
                         **batch_kwargs)

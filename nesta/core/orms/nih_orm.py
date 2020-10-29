@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME
-from sqlalchemy import Column, Table
+from sqlalchemy import Column, Table, ForeignKey
 from functools import partial
 
 
