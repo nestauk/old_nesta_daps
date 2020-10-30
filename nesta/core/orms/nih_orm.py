@@ -8,7 +8,7 @@ The schema for the World RePORTER data.
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
-from sqlalchemy.types import INTEGER, JSON, DATETIME
+from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
 from sqlalchemy import Column, Table, ForeignKey
 from functools import partial
 
@@ -137,7 +137,7 @@ class AbstractVector(Base):
     vector = Column(JSON)
 
 
-class TextDuplicates(Base):
+class TextDuplicate(Base):
     """Link table to describe for NiH abstracts."""
     __tablename__ = 'nih_duplicates'
     application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
