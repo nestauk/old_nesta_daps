@@ -8,13 +8,16 @@ STR_TYPE = np.dtype('U40')
 
 
 def query_and_bundle(session, fields, offset, limit, filter_):
-    """Query the data base for a list of SqlAlchemy fields, 
+    """Query the database for a list of SqlAlchemy fields, 
     and apply limits, offsets and filters as required. The results
     are bundled into numpy arrays."""
     q = session.query(*fields)  # raw query    
     q = q.offset(offset) if filter_ is None else q.filter(filter_)  # filter / offset
     ids, vectors = zip(*q.limit(limit))  # unravel results
-    return np.array(ids, dtype=STR_TYPE), np.array(vectors, dtype=FLOAT_TYPE)  # bundle into arrays
+    # bundle into arrays
+    _ids = np.array(ids, dtype=STR_TYPE)
+    _vectors = np.array(vectors, dtype=FLOAT_TYPE)
+    return _ids, _vectors
 
 
 def prefill_inputs(orm, database, section="mysqldb", db_env="MYSQLDB"):
@@ -23,10 +26,13 @@ def prefill_inputs(orm, database, section="mysqldb", db_env="MYSQLDB"):
     from the DB and count of vectors in the DB.
     """
     engine = get_mysql_engine(db_env, section, database)
+    # Determine the "height" and "width" of the array
+    # by asking the database
     with db_session(engine) as session:
-        count = session.query(orm).count()
+        count = session.query(orm).count()  # "Height" of array
         a_vector, = session.query(orm.vector).limit(1).one()
-        dim = len(a_vector)
+        dim = len(a_vector) # "Width" of array
+    # Preallocate space
     data = np.empty((count, dim), dtype=FLOAT_TYPE)
     ids = np.empty((count, ), dtype=STR_TYPE)
     return data, ids
@@ -35,8 +41,9 @@ def prefill_inputs(orm, database, section="mysqldb", db_env="MYSQLDB"):
 def read_data(data, ids, orm, id_field, database,
               chunksize=10000, max_chunks=None,
               section="mysqldb", db_env="MYSQLDB"):
-    """Read data into arrays, always starting from the last read chunk 
-    (e.g. if connection fails). Data is read using the last available id,
+    """Read data into the data and id arrays, 
+    always starting from the last read chunk (e.g. if connection fails). 
+    Data is read using the last available id,
     since filtering is much faster than offsetting, for large datasets.
     """    
     id_field = getattr(orm, id_field)
@@ -51,18 +58,22 @@ def read_data(data, ids, orm, id_field, database,
     # Set default values of {n,max}_chunks
     n_chunks = -1 if max_chunks is None else 0
     max_chunks = 0 if max_chunks is None else max_chunks
+    # Start or continue collecting filling the data and id arrays
     while offset < count:
         if n_chunks >= max_chunks:
             # Note: this never happens if max_chunks is set to default
             break
         if offset % 10*chunksize == 0:
             logging.info(f"Collecting row {offset+1} of {count}")
+        # Query the database and bundle the results into intermediate arrays
         limit = chunksize if offset + chunksize < count else None
         with db_session(engine) as session:
             _ids, _data = query_and_bundle(session, fields, offset, limit, filter_)
-        filter_ = id_field > _ids[-1]
+        # Update the preallocated arrays
         ids[offset:offset+_ids.shape[0]] = _ids
         data[offset:offset+_data.shape[0]] = _data
+        # Update the filter/offset criteria
+        filter_ = id_field > _ids[-1]
         offset += chunksize
         # Increment the number of chunks we've processed thus far
         if max_chunks > 0:
