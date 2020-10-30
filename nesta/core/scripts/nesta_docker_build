@@ -73,6 +73,7 @@ cd ${TOP_DIR}
 DKR_IMG_NAME=${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
 docker tag ${DKR_PKG_NAME}:latest ${DKR_IMG_NAME}
 docker push ${DKR_IMG_NAME}
+docker system prune -f
 #docker system prune -a -f 
 
 # Register the job

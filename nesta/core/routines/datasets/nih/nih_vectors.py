@@ -18,12 +18,12 @@ from datetime import datetime as dt
 
 
 TASK_KWARGS = [
-    #(Abstracts, Abstracts.application_id, Abstracts.abstract_text, AbstractVector),
+    (Abstracts, Abstracts.application_id, Abstracts.abstract_text, AbstractVector),
     (Projects, Projects.application_id, Projects.phr, PhrVector),
 ]
 
 class RootTask(luigi.WrapperTask):
-    process_batch_size = luigi.IntParameter(default=1000)
+    process_batch_size = luigi.IntParameter(default=10000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
 
