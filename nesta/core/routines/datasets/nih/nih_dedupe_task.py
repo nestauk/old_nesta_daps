@@ -16,6 +16,7 @@ from nesta.core.orms.nih_orm import AbstractVector
 from nesta.core.orms.nih_orm import PhrVector
 from nesta.core.orms.nih_orm import TextDuplicate
 from nesta.core.orms.nih_orm import Base
+from nesta.core.orms.orm_utils import insert_data
 
 from nesta.packages.vectors.similarity import generate_duplicate_links
 import faiss
@@ -41,13 +42,17 @@ class VectorDedupeTask(luigi.Task):
     def run(self):
         database = 'dev' if self.test else 'production'
         read_max_chunks = 1 if self.test else None
+        duplicate_threshold = 0 if self.test else 0.5
         links = generate_duplicate_links(orm=self.vector_orm,
                                          id_field="application_id",
                                          database=database,
                                          metric=faiss.METRIC_L1,
-                                         duplicate_threshold=0.75,
+                                         k=20,
+                                         k_large=1000,
+                                         n_clusters=250,
+                                         duplicate_threshold=duplicate_threshold,
                                          read_max_chunks=read_max_chunks)
-        links = [{text_field:self.source, **link} for link in links]
+        links = [{"text_field":self.source, **link} for link in links]
         insert_data("MYSQLDB", "mysqldb", database, Base,
                     TextDuplicate, links, low_memory=True)
         self.output().touch()
@@ -57,10 +62,12 @@ class RootTask(luigi.WrapperTask):
     date = luigi.DateParameter(default=dt.now())
     production = luigi.Parameter(default=False)
     
-    def requires():
+    def requires(self):
         for source, orm in (("phr", PhrVector), 
                             ("abstract", AbstractVector)):
             yield VectorDedupeTask(vector_orm=orm,
                                    source=source,
                                    date=self.date,
                                    test=not self.production)
+            if not self.production:
+                break
