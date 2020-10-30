@@ -21,6 +21,7 @@ ls
 #aws sts get-caller-identity
 #aws iam list-roles
 sed -i '/tensorflow/d' requirements.txt  # rm TF from reqs since it's huge
+sed -i '/faiss/d' requirements.txt
 pip install -r requirements.txt
 #pip freeze
 conda clean -afy
