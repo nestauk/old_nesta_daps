@@ -1,6 +1,7 @@
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import get_mysql_engine
 import numpy as np
+import logging
 import json
 
 FLOAT_TYPE = np.float32
