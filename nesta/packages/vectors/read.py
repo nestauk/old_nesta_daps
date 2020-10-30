@@ -46,7 +46,7 @@ def read_data(data, ids, orm, id_field, database,
     always starting from the last read chunk (e.g. if connection fails). 
     Data is read using the last available id,
     since filtering is much faster than offsetting, for large datasets.
-    """    
+    """
     id_field = getattr(orm, id_field)
     fields = (id_field, orm.vector)
     count, _ = data.shape
@@ -84,7 +84,7 @@ def read_data(data, ids, orm, id_field, database,
 
 def download_vectors(orm, id_field, database, 
                      chunksize=10000, max_chunks=None):
-    """Download arxiv vectors from the DB"""
+    """Download vectors from the DB"""
     data, ids = prefill_inputs(orm, database)  # Empty numpy arrays
     while "reading data":
         try:
@@ -100,4 +100,10 @@ def download_vectors(orm, id_field, database,
             continue  # Retry
         else:
             break  # Done
+    # Truncate the results, to remove unallocated entries
+    # (this happens when max_chunks is not None)
+    done_rows = (ids != '')
+    ids = ids[done_rows]
+    data = data[done_rows]
+    # Return
     return data, ids
