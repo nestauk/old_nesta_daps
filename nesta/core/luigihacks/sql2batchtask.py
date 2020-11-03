@@ -7,6 +7,7 @@ Task for piping data from MySQL to a batch task in chunks
 
 import logging
 import luigi
+from luigi.parameter import ParameterVisibility
 import os
 
 from nesta.packages.misc_utils.batches import split_batches
@@ -43,6 +44,8 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=1000)
     id_field = SqlAlchemyParameter()
     filter = SqlAlchemyParameter(default=None)
+    filter_ids = luigi.ListParameter(default=[], significant=False,
+                                     visibility=ParameterVisibility.PRIVATE)
     kwargs = luigi.DictParameter(default={})
 
     def output(self):
@@ -68,6 +71,8 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
                 query = query.filter(self.filter)
             result = query.all()
             all_ids = {r[0] for r in result}
+        # Filter already done
+        all_ids = all_ids - set(self.filter_ids)
         logging.info(f"Retrieved {len(all_ids)} IDs rom MySQL")
 
         job_params = []

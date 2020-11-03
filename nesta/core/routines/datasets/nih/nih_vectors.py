@@ -12,15 +12,33 @@ from nesta.core.luigihacks.misctools import load_batch_config
 from nesta.core.luigihacks.text2vectask import Text2VecTask
 from nesta.core.orms.nih_orm import Projects, PhrVector
 from nesta.core.orms.nih_orm import Abstracts, AbstractVector
+from nesta.core.orms.orm_utils import get_mysql_engine, db_session
 
 import luigi
 from datetime import datetime as dt
-
+import logging
+from functools import lru_cache
 
 TASK_KWARGS = [
     (Abstracts, Abstracts.application_id, Abstracts.abstract_text, AbstractVector),
     (Projects, Projects.application_id, Projects.phr, PhrVector),
 ]
+
+
+@lru_cache()
+def get_done_ids(out_class, id_field, test):
+    # MySQL setup
+    database = 'dev' if test else 'production'
+    engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
+
+    # Get set of all objects IDs from the database
+    with db_session(engine) as session:
+        vec_id_field = getattr(out_class, id_field.key)
+        done_ids = {_id for _id, in
+                        session.query(vec_id_field).all()}
+    logging.info(f"Already collected {len(done_ids)} ids")
+    return done_ids
+    
 
 class RootTask(luigi.WrapperTask):
     process_batch_size = luigi.IntParameter(default=10000)
@@ -37,6 +55,8 @@ class RootTask(luigi.WrapperTask):
             in_class_name = in_class.__tablename__
             _Task = type(f'{in_class_name}-Text2VecTask-{self.date}', 
                          (Text2VecTask,), {})
+            done_ids = get_done_ids(out_class, id_field, not self.production)
             yield _Task(in_class=in_class, id_field=id_field,
                         text_field=text_field, out_class=out_class,
+                        filter_ids=done_ids, filter=(text_field != None),
                         **batch_kwargs)
