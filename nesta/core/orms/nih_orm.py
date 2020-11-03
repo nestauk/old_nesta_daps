@@ -8,7 +8,7 @@ The schema for the World RePORTER data.
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
-from sqlalchemy.types import INTEGER, JSON, DATETIME
+from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
 from sqlalchemy import Column, Table, ForeignKey
 from functools import partial
 
@@ -122,7 +122,7 @@ class ClinicalStudies(Base):
 
 
 class PhrVector(Base):
-    """Document vectors for ."""
+    """Document vectors for NiH PHR statements."""
     __tablename__ = 'nih_phr_vectors'
     application_id = Column(INTEGER, ForeignKey(Projects.application_id),
                             autoincrement=False, primary_key=True)
@@ -130,9 +130,20 @@ class PhrVector(Base):
 
 
 class AbstractVector(Base):
-    """Document vectors for ."""
+    """Document vectors for NiH abstracts."""
     __tablename__ = 'nih_abstract_vectors'
     application_id = Column(INTEGER, ForeignKey(Abstracts.application_id),
                             autoincrement=False, primary_key=True)
     vector = Column(JSON)
 
+
+class TextDuplicate(Base):
+    """Link table to describe for NiH abstracts."""
+    __tablename__ = 'nih_duplicates'
+    application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
+                              autoincrement=False, primary_key=True)
+    application_id_2 = Column(INTEGER, ForeignKey(Projects.application_id),
+                              autoincrement=False, primary_key=True)
+    text_field = Column(VARCHAR(8), primary_key=True, 
+                        index=True)  # Either "phr" or "abstract"
+    weight = Column(FLOAT, index=True)
