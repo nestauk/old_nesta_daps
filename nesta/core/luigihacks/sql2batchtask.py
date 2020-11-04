@@ -44,7 +44,10 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
     process_batch_size = luigi.IntParameter(default=1000)
     id_field = SqlAlchemyParameter()
     filter = SqlAlchemyParameter(default=None)
-    filter_ids = luigi.ListParameter(default=[], significant=False,
+    # Note: ParameterVisibility set for "filter_ids" because 
+    # the list of filter IDs can be arbitarily long, and so it clogs up
+    # the i/o stream and the email error message
+    filter_ids = luigi.ListParameter(default=[],
                                      visibility=ParameterVisibility.PRIVATE)
     kwargs = luigi.DictParameter(default={})
 
@@ -71,7 +74,7 @@ class Sql2BatchTask(autobatch.AutoBatchTask):
                 query = query.filter(self.filter)
             result = query.all()
             all_ids = {r[0] for r in result}
-        # Filter already done
+        # Filter out IDs if explicitly listed
         all_ids = all_ids - set(self.filter_ids)
         logging.info(f"Retrieved {len(all_ids)} IDs rom MySQL")
 
