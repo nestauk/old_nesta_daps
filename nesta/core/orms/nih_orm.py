@@ -138,7 +138,13 @@ class AbstractVector(Base):
 
 
 class TextDuplicate(Base):
-    """Link table to describe for NiH abstracts."""
+    """Link table to describe for NiH text-field duplicates,
+    which probably imply that projects are related, either
+    formally (if weight > 0.8 they are normally 
+    almost exact duplicates of each other) or contextually 
+    (if weight > 0.5 it is normally in the same general
+    subject area).
+    """
     __tablename__ = 'nih_duplicates'
     application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
                               autoincrement=False, primary_key=True)
