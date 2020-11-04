@@ -40,7 +40,6 @@ def get_done_ids(out_class, id_field, test):
         vec_id_field = getattr(out_class, id_field.key)
         done_ids, = zip(*session.query(vec_id_field).all())
     logging.info(f"Already collected {len(done_ids)} ids")
-    assert False
     return done_ids
     
 
