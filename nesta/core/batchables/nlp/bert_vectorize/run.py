@@ -75,19 +75,6 @@ def run():
 
 
 if __name__ == "__main__":
-    if 'BATCHPAR_config' not in os.environ:
-        os.environ["BATCHPAR_id_field_name"] = "application_id"
-        os.environ["BATCHPAR_config"] = "/home/ec2-user/nesta/nesta/core/config/mysqldb.config"
-        os.environ["BATCHPAR_bucket"] = "nesta-production-intermediate"
-        os.environ["BATCHPAR_out_class_tablename"] = "nih_phr_vectors"
-        os.environ["BATCHPAR_batch_file"] = "RootTask-2020-10-23-True-16034673506743276.json"
-        os.environ["BATCHPAR_in_class_module"] = "nih_orm"
-        os.environ["BATCHPAR_routine_id"] = "RootTask-2020-10-23-True"
-        os.environ["BATCHPAR_out_class_module"] = "nih_orm"
-        os.environ["BATCHPAR_test"] = "True"
-        os.environ["BATCHPAR_db_name"] = "dev"
-        os.environ["BATCHPAR_text_field_name"] = "phr"
-        os.environ["BATCHPAR_in_class_tablename"] = "nih_projects"
     log_stream_handler = logging.StreamHandler()
     logging.basicConfig(handlers=[log_stream_handler, ],
                         level=logging.INFO,
