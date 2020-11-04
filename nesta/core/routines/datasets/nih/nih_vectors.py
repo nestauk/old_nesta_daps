@@ -1,8 +1,9 @@
 """
-arXiv vectors
+NiH vectors
 ==============
 
-Tasks for converting arXiv abstracts to vectors via BERT in batches.
+Tasks for converting NiH text fields (PHR and abstracts) 
+to vectors via BERT in batches.
 """
 
 from nesta.core.luigihacks.luigi_logging import set_log_level
@@ -25,8 +26,11 @@ TASK_KWARGS = [
 ]
 
 
+# Cached because luigi calls "requires" several times
+# in order to resolve the DAG, and this a slow transaction
 @lru_cache()
 def get_done_ids(out_class, id_field, test):
+    """Get ID values for the given class and ID field"""
     # MySQL setup
     database = 'dev' if test else 'production'
     engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
@@ -34,9 +38,9 @@ def get_done_ids(out_class, id_field, test):
     # Get set of all objects IDs from the database
     with db_session(engine) as session:
         vec_id_field = getattr(out_class, id_field.key)
-        done_ids = {_id for _id, in
-                        session.query(vec_id_field).all()}
+        done_ids, = zip(*session.query(vec_id_field).all())
     logging.info(f"Already collected {len(done_ids)} ids")
+    assert False
     return done_ids
     
 
@@ -52,11 +56,16 @@ class RootTask(luigi.WrapperTask):
                                          date=self.date,
                                          job_def="py37_amzn2_pytorch")
         for in_class, id_field, text_field, out_class in TASK_KWARGS:
+            # Generate a dummy task name so we can differentiate
+            # the two tasks in the luigi task visualiser
             in_class_name = in_class.__tablename__
             _Task = type(f'{in_class_name}-Text2VecTask-{self.date}', 
                          (Text2VecTask,), {})
-            done_ids = get_done_ids(out_class, id_field, not self.production)
+            done_ids = get_done_ids(out_class, id_field, 
+                                    not self.production)
+            text_not_null = (text_field != None)
             yield _Task(in_class=in_class, id_field=id_field,
                         text_field=text_field, out_class=out_class,
-                        filter_ids=done_ids, filter=(text_field != None),
+                        filter_ids=done_ids, 
+                        filter=text_not_null, # Ignore null text fields
                         **batch_kwargs)
