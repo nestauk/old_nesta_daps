@@ -1,9 +1,24 @@
+"""
+vectors.read
+============
+
+Read vector data from MySQL, assuming the given
+schema has an ID field and a field called "vector".
+For large number of vectors, this can be slow and
+also very memory inefficient. There are two main
+bottlenecks which are overcome in this package:
+
+1) LIMIT / OFFSET is slower than filtering by sequential ids
+2) Creating lists and then arrays is slower and more memory intensive than preallocating arrays with thoughtful types.
+"""
+
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import get_mysql_engine
 import numpy as np
 import logging
 import json
 
+# The types used for preallocating space
 FLOAT_TYPE = np.float32
 STR_TYPE = np.dtype('U40')
 
