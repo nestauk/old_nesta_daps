@@ -2,7 +2,8 @@
 Deduplication of near duplicates
 ================================
 
-Discover near-duplicates of projects from similarity of document vectors.
+Discover near-duplicates of projects from similarity 
+of document vectors, and fill out the duplicates link table.
 '''
 
 import logging
@@ -34,15 +35,16 @@ class VectorDedupeTask(luigi.Task):
     date = luigi.DateParameter()
     test = luigi.BoolParameter()
     vector_orm = SqlAlchemyParameter()
-    source = luigi.ChoiceParameter(choices=["phr", "abstract"], var_type=str)
+    source = luigi.ChoiceParameter(choices=["phr", "abstract"],
+                                   var_type=str)
     
     def output(self):
         return make_mysql_target(self)
 
     def run(self):
         database = 'dev' if self.test else 'production'
-        read_max_chunks = 1 if self.test else None
-        duplicate_threshold = 0 if self.test else 0.5
+        max_chunks = 1 if self.test else None
+        thresh = 0 if self.test else 0.5
         links = generate_duplicate_links(orm=self.vector_orm,
                                          id_field="application_id",
                                          database=database,
@@ -50,8 +52,8 @@ class VectorDedupeTask(luigi.Task):
                                          k=20,
                                          k_large=1000,
                                          n_clusters=250,
-                                         duplicate_threshold=duplicate_threshold,
-                                         read_max_chunks=read_max_chunks)
+                                         duplicate_threshold=thresh,
+                                         read_max_chunks=max_chunks)
         links = [{"text_field":self.source, **link} for link in links]
         insert_data("MYSQLDB", "mysqldb", database, Base,
                     TextDuplicate, links, low_memory=True)
@@ -60,10 +62,10 @@ class VectorDedupeTask(luigi.Task):
 
 class RootTask(luigi.WrapperTask):    
     date = luigi.DateParameter(default=dt.now())
-    production = luigi.Parameter(default=False)
+    production = luigi.BoolParameter(default=False)
     
     def requires(self):
-        for source, orm in (("phr", PhrVector), 
+        for source, orm in (("phr", PhrVector),
                             ("abstract", AbstractVector)):
             yield VectorDedupeTask(vector_orm=orm,
                                    source=source,
