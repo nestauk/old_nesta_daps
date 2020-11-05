@@ -25,10 +25,18 @@ means that each region local to each vector is treated
 independently from one another. This then allows for a consistent
 definition of similarity, in terms of the mean distance
 of the `k_large` nearest neighbours to a "query" vector,
-such tha vectors close to the mean distance have a score of zero
+such that vectors close to the mean distance have a score of zero
 and the vectors close to the query vector have a score of one
-(noting, of course that negative scores are possible but
+(noting, of course, that negative scores are possible but
 uninteresting by definition).
+
+Clearly if `k_large` is too large then the assumption a) falls apart
+and if too small then assumption b) falls apart. `k_large` should
+ideally be tuned to be roughly the lower limit of how the
+neighbourhood of "contextually" similar vectors is. One might expect,
+in the case of a million text documents, that such "soft clusters" 
+would have at least 1000 members and so the default value of 
+`k_large` has been set at 1000.
 """
 
 from nesta.packages.vectors.read import download_vectors
