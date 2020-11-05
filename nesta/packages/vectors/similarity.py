@@ -1,3 +1,36 @@
+"""
+vectors.similarity
+==================
+
+Find similar vectors using a FAISS index. The methodology
+assumes very high-dimensionality vectors which, almost by
+definition, tend to occupy very sparse spaces. For this reason, 
+it is the L1 (Manhattan distance) metric which is used by 
+default, although this can be overwritten. The main use cases 
+are for finding near duplicates, and otherwise "contextually"
+similar vectors.
+
+A score is returned, which is defined relative to the `k_large`
+nearest neighbours. To understand this, you should consider
+that we make no assumptions about:
+
+a) the lumpiness (i.e. density) of the vector space, in that 
+   we assume that the space may be arbitarily lumpy; and
+b) a consistent definition of the "physical" interpretation 
+   of the density of any particular region of the vector space.
+   This is to say that the space is not assumed to be flat.
+
+Sampling only the `k_large` nearest neighbours therefore
+means that each region local to each vector is treated
+independently from one another. This then allows for a consistent
+definition of similarity, in terms of the mean distance
+of the `k_large` nearest neighbours to a "query" vector,
+such tha vectors close to the mean distance have a score of zero
+and the vectors close to the query vector have a score of one
+(noting, of course that negative scores are possible but
+uninteresting by definition).
+"""
+
 from nesta.packages.vectors.read import download_vectors
 import faiss
 
@@ -44,21 +77,28 @@ def find_similar_vectors(data, ids, k=20, k_large=1000,
     # in the close vicinity
     index.nprobe = 100
     D, I = index.search(data, k_large)
-    base_similarity = D.mean(axis=1)
+    base_similarity = D.mean(axis=1)  # Calculate the mean distance
 
     # Now subset only the top k results
-    D = D[:,:k]
-    I = I[:,:k]
+    D = D[:,:k]  # Distances
+    I = I[:,:k]  # Indexes of the k results
 
+    # Extract similar vectors
     similar_vectors = {}
-    for _id, row, sims, base in zip(ids, ids[I], D, base_similarity):
-        _id = str(_id)
+    for _id, all_ids, sims, base in zip(ids, ids[I], D, base_similarity):
+        _id = str(_id)  # FAISS returns ids as strings
         scores = (base - sims) / base
         over_threshold = scores > score_threshold
+        # If no similar results, noting that the query vector is always
+        # found so there will always be one result
         if over_threshold.sum() <= 1:
             continue
-        results = {i: float(s) for i, s in zip(row, scores)
-                   if s > score_threshold and _id != i and i not in similar_vectors}
+        results = {i: float(s) for i, s in zip(all_ids, scores)
+                   if s > score_threshold  # Ignore low scores
+                   and _id != i  # Ignore the query vector itself
+                   and i not in similar_vectors}  # Don't duplicate results
+        # Possible that there are no similar vectors, 
+        # depending on the score_threshold
         if len(results) == 0:
             continue
         similar_vectors[_id] = results
