@@ -52,8 +52,8 @@ class Projects(Base):
     pi_ids = Column(JSON)
     pi_names = Column(JSON)
     program_officer_name = Column(TEXT)
-    project_start = Column(DATETIME)
-    project_end = Column(DATETIME)
+    project_start = Column(DATETIME, index=True)
+    project_end = Column(DATETIME, index=True)
     project_terms = Column(JSON)
     project_title = Column(TEXT)
     serial_number = Column(VARCHAR(6))
@@ -138,7 +138,13 @@ class AbstractVector(Base):
 
 
 class TextDuplicate(Base):
-    """Link table to describe for NiH abstracts."""
+    """Link table to describe for NiH text-field duplicates,
+    which probably imply that projects are related, either
+    formally (if weight > 0.8 they are normally 
+    almost exact duplicates of each other) or contextually 
+    (if weight > 0.5 it is normally in the same general
+    subject area).
+    """
     __tablename__ = 'nih_duplicates'
     application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
                               autoincrement=False, primary_key=True)

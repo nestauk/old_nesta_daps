@@ -48,7 +48,7 @@ AWS_SECRET_ACCESS_KEY=$(aws --profile default configure get aws_secret_access_ke
 TOP_DIR=${PWD}
 
 # Clean up old and dangling images
-#docker system prune -a -f 
+docker system prune -f 
 docker rmi -f $(docker images --filter "dangling=true" -q --no-trunc) &> /dev/null
 
 # Register intention to push docker image with AWS ECR
@@ -74,7 +74,6 @@ DKR_IMG_NAME=${AWS_DKR_PATH}/${DKR_PKG_NAME}:latest
 docker tag ${DKR_PKG_NAME}:latest ${DKR_IMG_NAME}
 docker push ${DKR_IMG_NAME}
 docker system prune -f
-#docker system prune -a -f 
 
 # Register the job
 aws batch register-job-definition --region ${AWS_RGN_NAME} \
