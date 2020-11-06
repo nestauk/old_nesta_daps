@@ -47,7 +47,6 @@ class VectorDedupeTask(luigi.Task):
         thresh = 0 if self.test else 0.5
         links = generate_duplicate_links(orm=self.vector_orm,
                                          id_field="application_id",
-                                         filter_ids=filter_ids,
                                          database=database,
                                          metric=faiss.METRIC_L1,
                                          k=20,
