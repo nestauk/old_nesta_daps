@@ -44,7 +44,7 @@ import faiss
 
 
 def find_similar_vectors(data, ids, k=20, k_large=1000,
-                         n_clusters=250,
+                         n_clusters=500,
                          metric=faiss.METRIC_L1, score_threshold=0.5):
     """Returns a lookup of similar vectors, by ID.
     Similarity is determined by the given metric parameter. For high-dim
@@ -83,7 +83,7 @@ def find_similar_vectors(data, ids, k=20, k_large=1000,
     # Make an expansive search to determine the base level of 
     # similarity in this space as the mean similarity of documents
     # in the close vicinity
-    index.nprobe = 100
+    index.nprobe = 50
     D, I = index.search(data, k_large)
     base_similarity = D.mean(axis=1)  # Calculate the mean distance
 
