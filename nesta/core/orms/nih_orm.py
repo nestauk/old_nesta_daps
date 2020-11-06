@@ -64,7 +64,7 @@ class Projects(Base):
     direct_cost_amt = Column(INTEGER)
     indirect_cost_amt = Column(INTEGER)
     total_cost = Column(INTEGER)
-    subproject_id = Column(INTEGER)
+    subproject_id = Column(INTEGER, index=True)
     total_cost_sub_project = Column(INTEGER)
     nih_spending_cats = Column(JSON)
 
@@ -153,3 +153,4 @@ class TextDuplicate(Base):
     text_field = Column(VARCHAR(8), primary_key=True, 
                         index=True)  # Either "phr" or "abstract"
     weight = Column(FLOAT, index=True)
+
