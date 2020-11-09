@@ -122,7 +122,7 @@ class ClinicalStudies(Base):
 
 
 class PhrVector(Base):
-    """Document vectors for NiH PHR statements."""
+    """Document vectors for NiH Public Health Relevance (PHR) statements."""
     __tablename__ = 'nih_phr_vectors'
     application_id = Column(INTEGER, ForeignKey(Projects.application_id),
                             autoincrement=False, primary_key=True)
