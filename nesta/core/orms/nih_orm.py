@@ -144,6 +144,14 @@ class TextDuplicate(Base):
     almost exact duplicates of each other) or contextually 
     (if weight > 0.5 it is normally in the same general
     subject area).
+    
+    The cut-off for inclusion in this table is a weight of 0.5,
+    because the core interest for using this method is
+    to identify texts which are near duplicates,
+    since texts which are contextually similar can
+    also be found by other metrics (topic modelling, etc) and there
+    can be some weird side-effects of using BERT for this;
+    e.g. finding texts with a similar writing style rather than topic.
     """
     __tablename__ = 'nih_duplicates'
     application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
