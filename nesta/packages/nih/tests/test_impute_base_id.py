@@ -7,6 +7,8 @@ from nesta.packages.nih.impute_base_id import impute_base_id_thread
 
 from nesta.packages.nih.impute_base_id import Projects
 
+PATH = "nesta.packages.nih.impute_base_id.{}"
+
 def test_get_base_code():
     # Pass regex: return base code
     assert get_base_code("helloworld-1-2-3") == "helloworld"
@@ -20,7 +22,6 @@ def test_get_base_code():
 
 
 def test_impute_base_id():
-
     core_ids = ["helloworld-1-2-3", "foobar-11-0-23", "foo-bar-2-3",
                 "foo-bar-hello-world", "foobar123"]
     projects = [Projects(application_id=i, core_project_num=core_id)
@@ -45,8 +46,27 @@ def test_impute_base_id():
     assert imputed_values == expect_values
 
 
-def retrieve_id_ranges():
-    
+@mock.patch(PATH.format("get_mysql_engine"))
+@mock.patch(PATH.format("db_session"))
+def test_retrieve_id_ranges(mocked_session_context, mocked_engine):
+    session = mocked_session_context().__enter__()
+    q = session.query().order_by()
+    q.all.return_value = [(0,), (1,), ("1",), (2,), (3,), 
+                          (5,), (8,), (13,), (21,)]
+    id_ranges = retrieve_id_ranges(database="db_name", chunksize=3)
+    assert id_ranges == [(0, 2, "db_name"),  # 0 <= x <= 2
+                         (2, 8, "db_name"),  # 2 <= x <= 8
+                         (8, 21, "db_name")] # 8 <= x <= 21
+                         
 
-def impute_base_id_thread():
-    pass
+@mock.patch(PATH.format("get_mysql_engine"))
+@mock.patch(PATH.format("db_session"))
+@mock.patch(PATH.format("impute_base_id"))
+def test_impute_base_id_thread(mocked_impute_base_id,
+                               mocked_session_context, mocked_engine):
+    session = mocked_session_context().__enter__()
+    impute_base_id_thread((0, 2, "db_name"))
+    call_args_list = mocked_impute_base_id.call_args_list
+    print(call_args_list)
+    assert len(call_args_list) == 1
+    assert call_args_list[0] == [(session, 0, 2)]

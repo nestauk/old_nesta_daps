@@ -23,8 +23,8 @@ from nesta.core.orms.orm_utils import db_session
 
 REGEX = re.compile('^(.*)-(\d+)-(\d+)-(\d+)$')
 def get_base_code(core_code):
-    """Extract the base code from the core project number             
-    if the pattern matches, otherwise return the                      
+    """Extract the base code from the core project number
+    if the pattern matches, otherwise return the
     core project number."""
     try:
         core_code, _, _, _ = REGEX.findall(core_code)[0]
@@ -34,48 +34,53 @@ def get_base_code(core_code):
 
 
 def impute_base_id(session, from_id, to_id):
-    """Impute the base ID values back into the database.              
-                                                                      
-    Args:                                                             
+    """Impute the base ID values back into the database.
+
+    Args:
        session (sqlalchemy.Session): Active context-managed db session
-       from_id (str): First NiH project PK to impute base ID for.     
-       to_id (str): Last NiH project PK to impute base ID for.        
+       from_id (str): First NiH project PK to impute base ID for.
+       to_id (str): Last NiH project PK to impute base ID for.
     """
     q = session.query(Projects)
-    # Don't load bloaty fields, we don't need them                    
+    # Don't load bloaty fields, we don't need them
     q = q.options(load_only('application_id', 'core_project_num',
                             'base_core_project_num'))
-    # Don't update cached objects, since we're not using them         
+    # Don't update cached objects, since we're not using them
     q = q.execution_options(synchronize_session=False)
-    # Retrieve the projects                                           
+    # Retrieve the projects
     q = q.filter(Projects.application_id.between(from_id, to_id))
     for project in q.all():
-        # Ignore those which are null                                 
+        # Ignore those which are null
         if project.core_project_num is None:
             continue
-        # Extract the base code                                       
+        # Extract the base code
         base_code = get_base_code(project.core_project_num)
         app_id = project.application_id
-        # NB: the following triggers a SQL UPDATE when commit() is    
-        # called when the session context manager goes out of scope   
+        # NB: the following triggers a SQL UPDATE when commit() is
+        # called when the session context manager goes out of scope
         project.base_core_project_num = base_code
 
 
 def retrieve_id_ranges(database, chunksize=1000):
-    """Retrieve and calculate the input arguments,                         
+    """Retrieve and calculate the input arguments,
     over which "impute_base_id" can be mapped"""
     engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
-    # First get all offset values                                          
+    # First get all offset values
     with db_session(engine) as session:
         q = session.query(Projects.application_id)
         q = q.order_by(Projects.application_id)
         try:
             ids, = zip(*q.all())
-        except IndexError
-    ids = ids[0::chunksize]  # Every {chunksize}th id                      
-    # Zip together consecutive pairs of arguments, i.e.                    
-    # n-1 values of (from_id, to_id, database)                             
-    # where from_id[n] == to_id[n-1]                                       
+        except ValueError:  # Forgiveness, if there are no IDs in the DB
+            ids = []
+    final_id = ids[-1]
+    ids = list(ids[0::chunksize])  # Every {chunksize}th id
+    # Pop the final ID back in, if it has been truncated
+    if ids[-1] != final_id:
+        ids.append(final_id)
+    # Zip together consecutive pairs of arguments, i.e.
+    # n-1 values of (from_id, to_id, database)
+    # where from_id[n] == to_id[n-1]
     n = len(ids) - 1
     id_ranges = list(zip(ids, ids[1:], [database]*n))
     return id_ranges
@@ -87,4 +92,4 @@ def impute_base_id_thread(*args):
     engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
     with db_session(engine) as session:
         impute_base_id(session, from_id, to_id)
-        # Note: Commit happens now  
+        # Note: Commit happens now
