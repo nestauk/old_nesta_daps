@@ -49,9 +49,13 @@ class DropAbstracts(luigi.Task):
             filter_ = Projects.application_id == None
             q = sess.query(id_,).outerjoin(Projects, join_).filter(filter_)
             # Drop the missing ids
-            dud_ids, = zip(*q.all())
-            delete_stmt = Abstracts.__table__.delete().where(id_.in_(dud_ids))
-            sess.execute(delete_stmt)
+            try:
+                dud_ids, = zip(*q.all())
+            except ValueError:  # Forgiveness, if there are no dud IDs
+                pass
+            else:
+                delete_stmt = Abstracts.__table__.delete().where(id_.in_(dud_ids))
+                sess.execute(delete_stmt)
         self.output().touch()
 
 
