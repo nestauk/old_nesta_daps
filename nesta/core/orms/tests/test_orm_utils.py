@@ -25,6 +25,14 @@ from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.orm_utils import db_session
 from nesta.core.orms.orm_utils import db_session_query
 from nesta.core.orms.orm_utils import cast_as_sql_python_type
+from nesta.core.orms.orm_utils import get_session
+from nesta.core.orms.orm_utils import get_all_pks
+from nesta.core.orms.orm_utils import has_auto_pkey
+from nesta.core.orms.orm_utils import generate_pk
+from nesta.core.orms.orm_utils import retrieve_row_by_pk
+from nesta.core.orms.orm_utils import is_null
+from nesta.core.orms.orm_utils import create_delete_stmt
+from nesta.core.orms.orm_utils import orm_column_names
 
 
 Base = declarative_base()
@@ -45,6 +53,23 @@ class DummyChild(Base):
     parent_id = Column(INTEGER, ForeignKey(DummyModel._id),
                        primary_key=True,
                        autoincrement=False)
+    _id = Column(INTEGER, primary_key=True,
+                 autoincrement=False)
+
+
+class AutoPKModel(Base):
+    __tablename__ = 'autopk'
+
+    parent_id = Column(INTEGER, primary_key=True,
+                       autoincrement=True)
+
+
+class CompositeAutoPKModel(Base):
+    __tablename__ = 'autopk_comp'
+
+    parent_id = Column(INTEGER, ForeignKey(DummyModel._id),
+                       primary_key=True,
+                       autoincrement=True)
     _id = Column(INTEGER, primary_key=True,
                  autoincrement=False)
 
@@ -88,6 +113,93 @@ class TestBasicUtils(TestDB):
         objs = insert_data("MYSQLDBCONF", "mysqldb", "production_tests",
                            Base, DummyModel, data)
         self.assertEqual(len(objs), 0)
+
+        # Not really unit-testing, but we need to have data in the DB
+        # to check that this works, and also this serves as a double check
+        # that the previous insertions have worked correctly
+        engine = get_mysql_engine("MYSQLDBCONF", "mysqldb")
+        with db_session(engine) as session:
+            assert get_all_pks(session, DummyModel) == {(10, 2), (20, 2)}  # Values inserted in previous test
+
+        # ... and finally we can retrieve the data based on the PKs
+        # for full closure
+        with db_session(engine) as session:
+            # First should return a copy of itself
+            pk = generate_pk(data[0], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[0]
+
+            # Second should return a copy of the first (duplicate)
+            pk = generate_pk(data[1], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[0]  # <-- note NOT obj[1]
+
+            # First should return a copy of itself
+            pk = generate_pk(data[2], DummyModel)
+            _obj = retrieve_row_by_pk(session, pk, DummyModel)
+            assert _obj.pop('children') == []  # No children specified
+            assert _obj == data[2]
+
+    def tests_merges_dupe_rows(self):
+        # Insert some duplicate rows
+        _id, _another_id = 100, 2  # the composite PK
+        data = [{"_id": _id, "_another_id": _another_id,
+                 "some_field": None},
+                {"_id": _id, "_another_id": _another_id,
+                 "some_field": 30},  # <-- first non-null, will merge
+                {"_id": _id, "_another_id": _another_id,
+                 "some_field": 50}]  # <-- not first, will ignore
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, data,
+                           merge_non_null=True, low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 30
+
+    def tests_merges_dupe_row_and_db(self):
+        _id, _another_id = 200, 2  # the composite PK
+        initial_data = [{"_id": _id, "_another_id": _another_id,
+                         "some_field": 34}]
+        update_data = [{"_id": _id, "_another_id": _another_id,
+                        "some_field": None}]
+        final_data = [{"_id": _id, "_another_id": _another_id,
+                        "some_field": 40},
+                       {"_id": _id, "_another_id": _another_id,
+                        "some_field": 50}]
+
+        # Initial insert
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           initial_data, merge_non_null=True,
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 34
+
+        # Test null update NOT merged in
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           update_data, merge_non_null=True, 
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 34  # Not updated
+
+        # Test first non-null IS merged in
+        objs = insert_data("MYSQLDBCONF", "mysqldb", 
+                           "production_tests", Base, DummyModel, 
+                           final_data, merge_non_null=True,
+                           low_memory=True)
+        self.assertEqual(len(objs), 1)  # Only one object inserted
+        assert objs[0]["_id"] == _id
+        assert objs[0]["_another_id"] == _another_id
+        assert objs[0]["some_field"] == 40  # first non-null
+
 
     def test_get_class_by_tablename(self):
         '''Check that the DummyModel is acquired from it's __tablename__'''
@@ -379,3 +491,59 @@ def test_cast_as_sql_python_type_other():
             field.type.python_type = _type
             _data = cast_as_sql_python_type(field, data)
             assert _data == _type(data)
+
+
+def test_get_session():
+    session = get_session("MYSQLDBCONF", "mysqldb", 'production_tests', Base)
+    assert list(session.query(DummyModel).all()) is not None
+    session.close()
+
+
+def test_check_is_auto_pkey():
+    assert has_auto_pkey(DummyModel) == False
+    assert has_auto_pkey(DummyChild) == False
+    assert has_auto_pkey(AutoPKModel) == True
+    assert has_auto_pkey(CompositeAutoPKModel) == True
+
+
+def test_generate_pk():
+    test_data = {'_another_id': 43, 
+                 'some_field': 'something',
+                 '_id':23}
+    # Note, respects the order specified in the ORM
+    assert generate_pk(test_data, DummyModel) == (23, 43)
+
+
+def test_is_null():
+    from nesta.core.orms.orm_utils import pd
+    # Show behaviour consistent with pd.isnull
+    assert is_null(None)
+    assert is_null(pd.np.nan)
+    assert not is_null(False)
+    assert not is_null('')
+    # Bonus behaviour: don't throw an exception for iterables
+    assert not is_null([None, None])
+
+
+def test_create_delete_stmt_composite():
+    pks = [(23, 43), (5, 28)]
+    stmt = create_delete_stmt(DummyModel, pks)
+    expected_stmt = ("DELETE FROM dummy_model "
+                     "WHERE dummy_model._id = :_id_1 "
+                     "AND dummy_model._another_id = :_another_id_1 "
+                     "OR dummy_model._id = :_id_2 "
+                     "AND dummy_model._another_id = :_another_id_2")
+    assert str(stmt) == expected_stmt
+
+def test_create_delete_stmt_non_composite():
+    pks = [(23, ), (5, )]
+    stmt = create_delete_stmt(AutoPKModel, pks)
+    expected_stmt = ("DELETE FROM autopk "
+                     "WHERE autopk.parent_id "
+                     "IN (:parent_id_1, :parent_id_2)")
+    assert str(stmt) == expected_stmt
+
+
+def test_orm_column_names():
+    assert orm_column_names(AutoPKModel) == {'parent_id',}
+    assert orm_column_names(DummyModel) == {'_id', '_another_id', 'some_field'}
