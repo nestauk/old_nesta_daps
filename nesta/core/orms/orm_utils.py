@@ -702,7 +702,7 @@ def db_session(engine):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.close()        
 
 
 def exists(_class, **kwargs):
