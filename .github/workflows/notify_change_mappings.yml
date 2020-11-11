@@ -1,0 +1,16 @@
+name: commit-hawk
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - '/nesta/core/schemas/tier_1/mappings/**'
+jobs:
+  commit-hawk:
+    uses: actions/commit-hawk-action@v1
+    with:
+      slack_webhook_url: 'https://hooks.slack.com/services/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'
+      slack_message: '`dev`: mapping file(s) changed'
+
+# https://github.com/jesalg/commit-hawk
+# slack hook enabled in https://data-analytic-nesta.slack.com/services
