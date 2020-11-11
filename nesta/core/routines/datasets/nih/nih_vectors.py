@@ -38,7 +38,10 @@ def get_done_ids(out_class, id_field, test):
     # Get set of all objects IDs from the database
     with db_session(engine) as session:
         vec_id_field = getattr(out_class, id_field.key)
-        done_ids, = zip(*session.query(vec_id_field).all())
+        try:
+            done_ids, = zip(*session.query(vec_id_field).all())
+        except ValueError:  # Forgiveness, if there are no done IDs
+            done_ids = []
     logging.info(f"Already collected {len(done_ids)} ids")
     return done_ids
     
