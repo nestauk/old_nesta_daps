@@ -67,6 +67,5 @@ def test_impute_base_id_thread(mocked_impute_base_id,
     session = mocked_session_context().__enter__()
     impute_base_id_thread((0, 2, "db_name"))
     call_args_list = mocked_impute_base_id.call_args_list
-    print(call_args_list)
     assert len(call_args_list) == 1
     assert call_args_list[0] == [(session, 0, 2)]
