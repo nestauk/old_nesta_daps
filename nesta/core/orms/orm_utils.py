@@ -630,7 +630,6 @@ def insert_data(db_env, section, database, Base,
                                data=data,
                                low_memory=low_memory)
     objs, existing_objs, failed_objs = response
-
     # Prepare for transactions
     engine = get_mysql_engine(db_env, section, database)
 

@@ -162,4 +162,3 @@ class TextDuplicate(Base):
     text_field = Column(VARCHAR(8), primary_key=True, 
                         index=True)  # Either "phr" or "abstract"
     weight = Column(FLOAT, index=True)
-
