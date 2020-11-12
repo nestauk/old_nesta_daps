@@ -7,7 +7,7 @@ ORMs for curated data, to be transfered to the general ES endpoint.
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import BIGINT, JSON
-from sqlalchemy.types import INT, DATE, DATETIME, BOOLEAN
+from sqlalchemy.types import INTEGER, DATE, DATETIME, BOOLEAN
 from sqlalchemy import Column
 from nesta.core.orms.crunchbase_orm import fixture as cb_fixture
 from nesta.core.orms.types import TEXT, VARCHAR
@@ -33,8 +33,8 @@ class CrunchbaseOrg(Base):
     linkedin_url = cb_fixture('url')
     long_description = Column(TEXT)
     name = cb_fixture('name')
-    num_exits = Column(INT)
-    num_funding_rounds = Column(INT)
+    num_exits = Column(INTEGER)
+    num_funding_rounds = Column(INTEGER)
     parent_id = cb_fixture('id_idx')
     primary_role = Column(VARCHAR(50))
     region = cb_fixture('region')

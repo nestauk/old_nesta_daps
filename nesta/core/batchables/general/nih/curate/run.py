@@ -21,6 +21,8 @@ import os
 import pandas as pd
 import requests
 from collections import defaultdict
+from datetime import datetime
+import dateutil.parser
 
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
@@ -42,8 +44,13 @@ from nesta.core.orms.nih_orm import TextDuplicate
 from nesta.core.orms.general_orm import NihProject, Base
 
 
-
 CORE_ID = Projects.base_core_project_num
+DATETIME_FIELDS = {c.name for c in Projects.__table__.columns
+                   if c.type.python_type is datetime}
+RANGES = {'near_duplicate': (0.8, 1),
+          'very_similar': (0.65, 0.8),
+          'fairly_similar': (0.4, 0.65)}
+
 
 def group_projects_by_core_id(engine, core_ids, nrows=None):    
     if core_ids is not None:
@@ -56,7 +63,7 @@ def group_projects_by_core_id(engine, core_ids, nrows=None):
         results = q.limit(nrows).all()
         groups = [[object_to_dict(obj) for obj in group] 
                   for _, group in
-                  groupby(results, attrgetter('core_project_num'))]
+                  groupby(results, attrgetter('base_core_project_num'))]
     return groups
 
 
@@ -80,6 +87,8 @@ def retrieve_similar_projects(engine, appl_ids):
         appl_id_2 = d['application_id_2']
         # Pick out the PK for the similar project
         id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
+        if id_ in appl_ids:
+            continue
         sim_weights[id_].append(d['weight'])
     # Match against the largest weight, if the similar project
     # has been retrieved multiple times
@@ -95,22 +104,32 @@ def retrieve_similar_projects(engine, appl_ids):
     return sim_projs, sim_weights
 
 
+def earliest_date(project):
+    year = project['fy']
+    dates = [dateutil.parser.parse(project[f])
+             for f in DATETIME_FIELDS
+             if project[f] is not None]
+    min_date = datetime.max  # default value if no date fields present
+    if len(dates) > 0:
+        min_date = min(dates)
+    elif year is not None:
+        min_date = datetime(year=2020, month=1, day=1)
+    return min_date
+
+
 def retrieve_similar_proj_ids(engine, appl_ids):
     # Retrieve similar projects
     projs, weights = retrieve_similar_projects(engine, appl_ids)
     groups = []
     core_ids = set()
-    for proj in sim_projs:
+    for proj in projs:
         core_id = proj["base_core_project_num"]
         if core_id is None:
             groups.append([proj])
         else:
             core_ids.add(core_id)
-    groups += group_projects_by_core_id(engine, core_ids):
+    groups += group_projects_by_core_id(engine, core_ids)
     
-    # Sort each group by most recent project in the group
-    sorted_groups = [sorted(group, key=earliest_date, reverse=True)
-                     for group in groups]
     # Return just the PK of the most recent project in each group
     pk_weights = {}
     for group in groups:
@@ -119,23 +138,20 @@ def retrieve_similar_proj_ids(engine, appl_ids):
         pk0 = sorted_group[0]['application_id']
         # Get the maximum similarity of any project in the group
         pks = set(proj['application_id'] for proj in group)
-        max_weight = max(weights[pk] for pk in pks in pk in weights)
+        max_weight = max(weights[pk] for pk in pks if pk in weights)
         pk_weights[pk0] = max_weight
-    return pk_weights
 
-RANGES = {'near_duplicates': (0.8, 1),
-          ''
-groups += group_projects_by_core_id(engine, core_ids)
-for group in groups:
-    appl_ids = [proj['application_id'] for proj in group]
-    pk_weights = retrieve_similar_proj_ids(engine, appl_ids)
-    
-    
-    
+    # Group projects by their similarity
+    similar_projs = group_projs_by_similarity(pk_weights)
+    return similar_projs
 
 
-def assign_duplicates(row):
-    """For this row"""
+def group_projs_by_similarity(pk_weights):
+    grouped_projs = {f"{label}_ids": [pk for pk, weight in pk_weights.items()
+                                      if weight > lower and weight <= upper]
+                     for label, (lower, upper) in RANGES.items()}
+    return grouped_projs
+
 
 def reformat_row(row):
     """Curate raw data for ingestion to MySQL.
@@ -179,21 +195,32 @@ def run():
     # Database setup
     engine = get_mysql_engine("MYSQLDB", "mysqldb", db_name)
 
-    # Retrieve list of Org ids from S3
+    # Retrieve list of core ids from s3
     nrows = 1000 if test else None
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     core_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(core_ids)} projects retrieved from s3")
 
+    # Get the groups for this batch
+    groups = []
+    # Many core ids are null, so if this batch contains them
+    # then deal with them seperately
+    if None in core_ids:
+        core_ids.pop(None)
+        groups += group_projects_by_core_id(engine, None)
+    # Then also add in the projects with non-null core id
+    groups += group_projects_by_core_id(engine, core_ids)
+
+    # Curate each group
     data = []    
-    for group in group_projects_by_core_id(engine, core_ids):
-        row = assign_duplicates(group)
-        if len(row) == 0:
-            continue
+    for group in groups:
+        appl_ids = [proj['application_id'] for proj in group]
+        similar_projs = retrieve_similar_proj_ids(engine, appl_ids)        
         row = concat_group(group)
         row = reformat_row(row)
-        data.append(row)
+        row = {**row, **similar_projs}
+        data.append(row)    
 
     insert_data("MYSQLDB", "mysqldb", db_name, Base,
                 NihProject, data, low_memory=True)

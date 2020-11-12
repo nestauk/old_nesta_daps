@@ -6,16 +6,12 @@ The schema for the World RePORTER data.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
-from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
 from sqlalchemy import Column, Table, ForeignKey
-from functools import partial
+from nesta.core.orms.types import VARCHAR, TEXT
 
 
 Base = declarative_base()
-TEXT = _TEXT(collation='utf8mb4_unicode_ci')
-VARCHAR = partial(_VARCHAR, collation='utf8mb4_unicode_ci')
 
 
 class Projects(Base):
