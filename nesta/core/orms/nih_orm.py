@@ -8,8 +8,8 @@ The schema for the World RePORTER data.
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
 from sqlalchemy.dialects.mysql import TEXT as _TEXT
-from sqlalchemy.types import INTEGER, JSON, DATETIME
-from sqlalchemy import Column, Table
+from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
+from sqlalchemy import Column, Table, ForeignKey
 from functools import partial
 
 
@@ -52,8 +52,8 @@ class Projects(Base):
     pi_ids = Column(JSON)
     pi_names = Column(JSON)
     program_officer_name = Column(TEXT)
-    project_start = Column(DATETIME)
-    project_end = Column(DATETIME)
+    project_start = Column(DATETIME, index=True)
+    project_end = Column(DATETIME, index=True)
     project_terms = Column(JSON)
     project_title = Column(TEXT)
     serial_number = Column(VARCHAR(6))
@@ -71,7 +71,6 @@ class Projects(Base):
 
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
-
     application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
 
@@ -120,3 +119,45 @@ class ClinicalStudies(Base):
     core_project_number = Column(VARCHAR(50), index=True)
     study = Column(TEXT)
     study_status = Column(VARCHAR(30), index=True)
+
+
+class PhrVector(Base):
+    """Document vectors for NiH Public Health Relevance (PHR) statements."""
+    __tablename__ = 'nih_phr_vectors'
+    application_id = Column(INTEGER, ForeignKey(Projects.application_id),
+                            autoincrement=False, primary_key=True)
+    vector = Column(JSON)
+
+
+class AbstractVector(Base):
+    """Document vectors for NiH abstracts."""
+    __tablename__ = 'nih_abstract_vectors'
+    application_id = Column(INTEGER, ForeignKey(Abstracts.application_id),
+                            autoincrement=False, primary_key=True)
+    vector = Column(JSON)
+
+
+class TextDuplicate(Base):
+    """Link table to describe for NiH text-field duplicates,
+    which probably imply that projects are related, either
+    formally (if weight > 0.8 they are normally 
+    almost exact duplicates of each other) or contextually 
+    (if weight > 0.5 it is normally in the same general
+    subject area).
+    
+    The cut-off for inclusion in this table is a weight of 0.5,
+    because the core interest for using this method is
+    to identify texts which are near duplicates,
+    since texts which are contextually similar can
+    also be found by other metrics (topic modelling, etc) and there
+    can be some weird side-effects of using BERT for this;
+    e.g. finding texts with a similar writing style rather than topic.
+    """
+    __tablename__ = 'nih_duplicates'
+    application_id_1 = Column(INTEGER, ForeignKey(Projects.application_id),
+                              autoincrement=False, primary_key=True)
+    application_id_2 = Column(INTEGER, ForeignKey(Projects.application_id),
+                              autoincrement=False, primary_key=True)
+    text_field = Column(VARCHAR(8), primary_key=True, 
+                        index=True)  # Either "phr" or "abstract"
+    weight = Column(FLOAT, index=True)

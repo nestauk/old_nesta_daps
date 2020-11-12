@@ -630,17 +630,22 @@ def insert_data(db_env, section, database, Base,
                                data=data,
                                low_memory=low_memory)
     objs, existing_objs, failed_objs = response
-    # Open a transaction
-    session = get_session(db_env, section, database, Base)
-    if merge_non_null:
-        session.execute(existing_objs)  # Drop existing objs if merging
+    # Prepare for transactions
+    engine = get_mysql_engine(db_env, section, database)
+
+    # Drop existing objs if merging
+    with db_session(engine) as session:
+        try_until_allowed(Base.metadata.create_all, 
+                          session.get_bind())
+        if merge_non_null:
+            session.execute(existing_objs)
+
     # Insert data in chunks
     for chunk in split_batches(objs, insert_chunksize):
-        stmt = insert(_class).values(chunk)
-        session.execute(stmt)
-    # Commit and close
-    session.commit()
-    session.close()
+        with db_session(engine) as session:
+            stmt = insert(_class).values(chunk)
+            session.execute(stmt)
+
     # Done
     if return_non_inserted:
         return objs, existing_objs, failed_objs

@@ -25,6 +25,7 @@ ls
 #aws iam list-roles
 # Remove the following from reqs since they're huge
 sed -i '/tensorflow/d' requirements.txt
+sed -i '/faiss/d' requirements.txt
 sed -i '/hdbscan/d' requirements.txt
 sed -i '/Cython/d' requirements.txt
 sed -i '/sentence_transformers/d' requirements.txt

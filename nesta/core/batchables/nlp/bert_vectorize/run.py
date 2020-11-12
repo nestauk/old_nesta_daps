@@ -65,12 +65,13 @@ def run():
     # Convert text to vectors
     embeddings = model.encode(docs)
     # Write to output
-    out_data = [{"article_id": _id, "vector": embedding.tolist()}
+    out_data = [{id_field: _id, "vector": ["%.5f" % v for v in embedding.tolist()]}
                 for _id, embedding in zip(ids, embeddings)]
     Base = get_base_from_orm_name(out_module)
     out_class = get_class_by_tablename(out_module, out_tablename)
     insert_data("BATCHPAR_config", "mysqldb", db_name, Base,
-                out_class, out_data, low_memory=True)
+                out_class, out_data, low_memory=True,
+                insert_chunksize=10)
 
 
 if __name__ == "__main__":
