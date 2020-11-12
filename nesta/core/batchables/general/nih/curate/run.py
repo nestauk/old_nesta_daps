@@ -41,45 +41,97 @@ from nesta.core.orms.nih_orm import TextDuplicate
 # Output ORM
 from nesta.core.orms.general_orm import NihProject, Base
 
-def group_projects_by_core_id(engine, core_ids, nrows=None):
-    if core_ids is not None:
-        filter_stmt = ((Projects.core_project_num != None) & \
-                       (Projects.core_project_num.in_(core_ids)))
-    else:
-        filter_stmt = (Projects.core_project_num == None)
 
-    with db_session(engine) as session:
-        q = (session.query(Projects).filter(filter_stmt)
-             .order_by(Projects.core_project_num))
+
+CORE_ID = Projects.base_core_project_num
+
+def group_projects_by_core_id(engine, core_ids, nrows=None):    
+    if core_ids is not None:
+        filter_stmt = (CORE_ID != None) & (CORE_ID.in_(core_ids))
+    else:
+        filter_stmt = (CORE_ID == None)
+
+    with db_session(engine) as sess:
+        q = sess.query(Projects).filter(filter_stmt).order_by(CORE_ID)
         results = q.limit(nrows).all()
-        groups = [[object_to_dict(obj) for obj in group] for _, group in
+        groups = [[object_to_dict(obj) for obj in group] 
+                  for _, group in
                   groupby(results, attrgetter('core_project_num'))]
     return groups
 
 
-def retrieve_duplicates(engine, appl_ids, duplicate_threshold=0.8): 
-    # Retrieve all duplicate projects, which will include an overlap
-    # with appl_ids if there are already projects in this group
-    filter_stmt = ((TextDuplicate.application_id_1.in_(appl_ids) | 
-                    TextDuplicate.application_id_2.in_(appl_ids)) &  
-                    TextDuplicate.weight >= duplicate_threshold) 
+def retrieve_similar_projects(engine, appl_ids): 
+    # Retrieve all projects which are similar to those in this,
+    # project group. Some of the similar projects will be
+    # retrieved multiple times if match to multiple projects in
+    # the group
+    filter_stmt = (TextDuplicate.application_id_1.in_(appl_ids) | 
+                   TextDuplicate.application_id_2.in_(appl_ids))
     with db_session(engine) as session: 
         dupes = session.query(TextDuplicate).filter(filter_stmt).all() 
         dupes = [object_to_dict(obj) for obj in dupes]
+    
+    # Pick out the PK for each similar project, and match against
+    # the largest weight, if the project has been retrieved
+    # multiple times
+    sim_weights = defaultdict(list)
+    for d in dupes:
+        appl_id_1 = d['application_id_1']
+        appl_id_2 = d['application_id_2']
+        # Pick out the PK for the similar project
+        id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
+        sim_weights[id_].append(d['weight'])
+    # Match against the largest weight, if the similar project
+    # has been retrieved multiple times
+    sim_weights = {id_: max(weights) 
+                   for id_, weights in sim_weights.items()}
+    sim_ids = set(sim_weights.keys())
 
-    # Subset the new IDs, so we don't recollect any known duplicates
-    # in this group
-    dupe_ids = set([d['application_id_1'] for d in dupes] +\ 
-                   [d['application_id_2'] for d in dupes])
-    dupe_ids = dupe_ids - appl_ids
-
-    # Collect the new duplicates
-    filter_stmt = Projects.application_id.in_(dupe_ids)
+    # Retrieve the full projects by id
+    filter_stmt = Projects.application_id.in_(sim_ids)
     with db_session(engine) as session: 
-        new_projs = session.query(Projects).filter(filter_stmt)
-        new_projs = [object_to_dict(obj) for obj in dupe_projs]
-    return new_projs 
+        q = session.query(Projects).filter(filter_stmt)
+        sim_projs = [object_to_dict(obj) for obj in q.all()]
+    return sim_projs, sim_weights
 
+
+def retrieve_similar_proj_ids(engine, appl_ids):
+    # Retrieve similar projects
+    projs, weights = retrieve_similar_projects(engine, appl_ids)
+    groups = []
+    core_ids = set()
+    for proj in sim_projs:
+        core_id = proj["base_core_project_num"]
+        if core_id is None:
+            groups.append([proj])
+        else:
+            core_ids.add(core_id)
+    groups += group_projects_by_core_id(engine, core_ids):
+    
+    # Sort each group by most recent project in the group
+    sorted_groups = [sorted(group, key=earliest_date, reverse=True)
+                     for group in groups]
+    # Return just the PK of the most recent project in each group
+    pk_weights = {}
+    for group in groups:
+        # Get the most recent project
+        sorted_group = sorted(group, key=earliest_date, reverse=True)
+        pk0 = sorted_group[0]['application_id']
+        # Get the maximum similarity of any project in the group
+        pks = set(proj['application_id'] for proj in group)
+        max_weight = max(weights[pk] for pk in pks in pk in weights)
+        pk_weights[pk0] = max_weight
+    return pk_weights
+
+RANGES = {'near_duplicates': (0.8, 1),
+          ''
+groups += group_projects_by_core_id(engine, core_ids)
+for group in groups:
+    appl_ids = [proj['application_id'] for proj in group]
+    pk_weights = retrieve_similar_proj_ids(engine, appl_ids)
+    
+    
+    
 
 
 def assign_duplicates(row):
