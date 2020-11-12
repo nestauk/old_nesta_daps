@@ -8,11 +8,13 @@ The schema for the World RePORTER data.
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
 from sqlalchemy import Column, Table, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.associationproxy import association_proxy
+
 from nesta.core.orms.types import VARCHAR, TEXT
 
 
 Base = declarative_base()
-
 
 class Projects(Base):
     __tablename__ = 'nih_projects'
@@ -65,11 +67,63 @@ class Projects(Base):
     total_cost_sub_project = Column(INTEGER)
     nih_spending_cats = Column(JSON)
 
+    # Pseudo-FKs
+    abstract = relationship("Abstracts", uselist=False, 
+                            foreign_keys=[application_id],
+                            primaryjoin=("Projects.application_id=="
+                                         "Abstracts.application_id"))
+    publications = relationship("LinkTables",
+                                foreign_keys=[core_project_num],
+                                primaryjoin=("Projects.core_project_num=="
+                                             "LinkTables.project_number"))
+    patents = relationship("Patents",
+                           foreign_keys=[core_project_num],
+                           primaryjoin=("Projects.core_project_num=="
+                                        "Patents.project_id"))
+    clinicalstudies = relationship("ClinicalStudies",
+                                   foreign_keys=[core_project_num],
+                                   primaryjoin=("Projects.core_project_num=="
+                                                "ClinicalStudies.core_project_number"))
+
+    @property
+    def abstract_text(self):
+        return (None if self.abstract is None 
+                else self.abstract.abstract_text)
+
+    @property
+    def patent_ids(self):
+        return (None if self.patents is None
+                else [p.patent_id for p in self.patents])
+
+    @property
+    def patent_titles(self):
+        return (None if self.patents is None
+                else [p.patent_title for p in self.patents])
+        
+    @property
+    def pmids(self):
+        return (None if self.publications is None
+                else [p.pmid for p in self.publications])
+
+    @property
+    def clinicaltrial_ids(self):
+        return (None if self.clinicalstudies is None
+                else [c.clinicaltrials_gov_id 
+                      for c in self.clinicalstudies])
+
+    @property
+    def clinicaltrial_titles(self):
+        return (None if self.clinicalstudies is None
+                else [c.study for c in self.clinicalstudies])
+
+        
+
 
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
     application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
+    
 
 
 class Publications(Base):

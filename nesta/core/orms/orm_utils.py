@@ -50,7 +50,7 @@ def orm_column_names(_class):
     return columns
 
 
-def object_to_dict(obj, shallow=False, found=None):
+def object_to_dict(obj, shallow=False, properties=True, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
 
@@ -64,9 +64,17 @@ def object_to_dict(obj, shallow=False, found=None):
     if found is None:  # First time
         found = set()
     # Set up the mapper and retrieve shallow values
-    mapper = class_mapper(obj.__class__)
+    _class = obj.__class__
+    mapper = class_mapper(_class)
     columns = [column.key for column in mapper.columns]
     out = dict(map(lambda c: _get_key_value(obj, c), columns))
+    if properties:
+        # Work out if there are any properties
+        property_names = [name for name in dir(_class)
+                          if type(getattr(_class, name)) is property]
+        # Then pull them out if they exist
+        for name in property_names:
+            out[name] = getattr(obj, name)
     # Shallow means ignore relationships
     relationships = {} if shallow else mapper.relationships
     for name, relation in relationships.items():

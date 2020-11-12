@@ -23,6 +23,8 @@ import requests
 from collections import defaultdict
 from datetime import datetime
 import dateutil.parser
+import itertools
+from sqlalchemy.orm import load_only
 
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
@@ -44,15 +46,25 @@ from nesta.core.orms.nih_orm import TextDuplicate
 from nesta.core.orms.general_orm import NihProject, Base
 
 
+PK_ID = Projects.application_id
 CORE_ID = Projects.base_core_project_num
 DATETIME_FIELDS = {c.name for c in Projects.__table__.columns
                    if c.type.python_type is datetime}
 RANGES = {'near_duplicate': (0.8, 1),
           'very_similar': (0.65, 0.8),
           'fairly_similar': (0.4, 0.65)}
+FLAT_FIELDS = ["application_id", "base_core_project_num", "fy",
+               "org_city", "org_country", "org_name", "org_state",
+               "org_zipcode", "project_title", "ic_name", "phr",
+               "abstract_text"]
+
+LIST_FIELDS = ["clinicaltrial_ids", "clinicaltrial_titles", "patent_ids", 
+               "patent_titles", "pmids", "project_terms"]
 
 
-def group_projects_by_core_id(engine, core_ids, nrows=None):    
+
+def group_projects_by_core_id(engine, core_ids, nrows=None,
+                              pull_relationships=False):
     if core_ids is not None:
         filter_stmt = (CORE_ID != None) & (CORE_ID.in_(core_ids))
     else:
@@ -61,23 +73,25 @@ def group_projects_by_core_id(engine, core_ids, nrows=None):
     with db_session(engine) as sess:
         q = sess.query(Projects).filter(filter_stmt).order_by(CORE_ID)
         results = q.limit(nrows).all()
-        groups = [[object_to_dict(obj) for obj in group] 
+        groups = [[object_to_dict(obj, shallow=not pull_relationships,
+                                  properties=True)
+                   for obj in group]
                   for _, group in
                   groupby(results, attrgetter('base_core_project_num'))]
     return groups
 
 
-def retrieve_similar_projects(engine, appl_ids): 
+def retrieve_similar_projects(engine, appl_ids):
     # Retrieve all projects which are similar to those in this,
     # project group. Some of the similar projects will be
     # retrieved multiple times if match to multiple projects in
     # the group
-    filter_stmt = (TextDuplicate.application_id_1.in_(appl_ids) | 
+    filter_stmt = (TextDuplicate.application_id_1.in_(appl_ids) |
                    TextDuplicate.application_id_2.in_(appl_ids))
-    with db_session(engine) as session: 
-        dupes = session.query(TextDuplicate).filter(filter_stmt).all() 
-        dupes = [object_to_dict(obj) for obj in dupes]
-    
+    with db_session(engine) as session:
+        dupes = session.query(TextDuplicate).filter(filter_stmt).all()
+        dupes = [object_to_dict(obj, shallow=True) for obj in dupes]
+
     # Pick out the PK for each similar project, and match against
     # the largest weight, if the project has been retrieved
     # multiple times
@@ -92,15 +106,17 @@ def retrieve_similar_projects(engine, appl_ids):
         sim_weights[id_].append(d['weight'])
     # Match against the largest weight, if the similar project
     # has been retrieved multiple times
-    sim_weights = {id_: max(weights) 
+    sim_weights = {id_: max(weights)
                    for id_, weights in sim_weights.items()}
     sim_ids = set(sim_weights.keys())
 
     # Retrieve the full projects by id
-    filter_stmt = Projects.application_id.in_(sim_ids)
-    with db_session(engine) as session: 
+    filter_stmt = PK_ID.in_(sim_ids)
+    with db_session(engine) as session:
         q = session.query(Projects).filter(filter_stmt)
-        sim_projs = [object_to_dict(obj) for obj in q.all()]
+        q = q.options(load_only(PK_ID, CORE_ID))
+        sim_projs = [object_to_dict(obj, shallow=True) 
+                     for obj in q.all()]
     return sim_projs, sim_weights
 
 
@@ -109,11 +125,11 @@ def earliest_date(project):
     dates = [dateutil.parser.parse(project[f])
              for f in DATETIME_FIELDS
              if project[f] is not None]
-    min_date = datetime.max  # default value if no date fields present
+    min_date = datetime.min  # default value if no date fields present
     if len(dates) > 0:
         min_date = min(dates)
     elif year is not None:
-        min_date = datetime(year=2020, month=1, day=1)
+        min_date = datetime(year=year, month=1, day=1)
     return min_date
 
 
@@ -129,7 +145,7 @@ def retrieve_similar_proj_ids(engine, appl_ids):
         else:
             core_ids.add(core_id)
     groups += group_projects_by_core_id(engine, core_ids)
-    
+
     # Return just the PK of the most recent project in each group
     pk_weights = {}
     for group in groups:
@@ -151,6 +167,56 @@ def group_projs_by_similarity(pk_weights):
                                       if weight > lower and weight <= upper]
                      for label, (lower, upper) in RANGES.items()}
     return grouped_projs
+
+
+def combine(func, list_of_dict, key):
+    values = [_dict[key] for _dict in list_of_dict
+              if _dict[key] is not None]
+    if len(values) == 0:
+        return None
+    return func(values)
+
+
+def first_non_null(values):
+    return None if len(values) == 0 else values[0]
+
+
+def join_and_dedupe(values):
+    return list(set(itertools.chain(*values)))
+
+
+def aggregate_group(group):
+    # Sort by most recent first
+    group = list(sorted(group, key=earliest_date, reverse=True))
+    project = {"grouped_ids": [p['application_id'] for p in group],
+               "grouped_titles": [p['project_title'] for p in group]}
+
+    # Extract the first non-null fields directly from PROJECT_FIELDS
+    for field in FLAT_FIELDS:
+        project[field] = combine(first_non_null, group, field)
+    # Concat list fields
+    for field in LIST_FIELDS:
+        project[field] = combine(join_and_dedupe, group, field)
+    # Specific aggregrations
+    project["project_start"] = combine(min, group, "project_start")
+    project["project_end"] = combine(max, group, "project_end")
+    project["total_cost"] = combine(sum, group, "total_cost")
+
+    # Extra specific aggregrations for yearly funds
+    yearly_groups = defaultdict(list)
+    for proj in group:
+        date = earliest_date(proj)
+        if date == datetime.min:  # i.e. no date found
+            continue
+        yearly_groups[date.year].append(proj)
+    # Combine by year group
+    yearly_funds = [{"year": year,
+                     "project_start": combine(min, yr_group, "project_start"),
+                     "project_end": combine(max, yr_group, "project_end"),
+                     "total_cost": combine(sum, yr_group, "total_cost")}
+                    for year, yr_group in yearly_groups.items()]
+    project["yearly_funds"] = sorted(yearly_funds, key=lambda x: x['year'])
+    return project
 
 
 def reformat_row(row):
@@ -208,19 +274,22 @@ def run():
     # then deal with them seperately
     if None in core_ids:
         core_ids.pop(None)
-        groups += group_projects_by_core_id(engine, None)
+        groups += group_projects_by_core_id(engine, None,
+                                            pull_relationships=True)
     # Then also add in the projects with non-null core id
-    groups += group_projects_by_core_id(engine, core_ids)
+    groups += group_projects_by_core_id(engine, core_ids,
+                                        pull_relationships=True)
 
     # Curate each group
-    data = []    
+    data = []
     for group in groups:
         appl_ids = [proj['application_id'] for proj in group]
-        similar_projs = retrieve_similar_proj_ids(engine, appl_ids)        
-        row = concat_group(group)
-        row = reformat_row(row)
-        row = {**row, **similar_projs}
-        data.append(row)    
+        similar_projs = retrieve_similar_proj_ids(engine, appl_ids)
+        project = aggregate_group(group)
+        geographies = extract_geographies(project)  # TODO
+        row = {**project, **geographies, **similar_projs}
+        row = apply_cleaning(row) # TODO
+        data.append(row)
 
     insert_data("MYSQLDB", "mysqldb", db_name, Base,
                 NihProject, data, low_memory=True)
