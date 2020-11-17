@@ -14,6 +14,18 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from nesta.core.orms.types import VARCHAR, TEXT
 
 
+def getattr_(entity, attribute):
+    """Either unpack the attribute from every item in the entity
+    if the entity is a list, otherwise just return the attribute
+    from the entity. Returns None if the entity is either None
+    or empty."""
+    if entity in (None, []):
+        return None
+    if type(entity) is list:
+        return [getattr(item, attribute) for item in entity]
+    return getattr(entity, attribute)
+
+
 Base = declarative_base()
 
 class Projects(Base):
@@ -85,36 +97,30 @@ class Projects(Base):
                                    primaryjoin=("Projects.core_project_num=="
                                                 "ClinicalStudies.core_project_number"))
 
+    # Pseudo-fields (populated from relationships)
     @property
     def abstract_text(self):
-        return (None if self.abstract is None 
-                else self.abstract.abstract_text)
+        return getattr_(self.abstract, "abstract_text")
 
     @property
     def patent_ids(self):
-        return (None if self.patents == []
-                else [p.patent_id for p in self.patents])
+        return getattr_(self.patents, "patent_id")
 
     @property
     def patent_titles(self):
-        return (None if self.patents == []
-                else [p.patent_title for p in self.patents])
+        return getattr_(self.patents, "patent_title")
         
     @property
     def pmids(self):
-        return (None if self.publications == []
-                else [p.pmid for p in self.publications])
+        return getattr_(self.publications, "pmid")
 
     @property
     def clinicaltrial_ids(self):
-        return (None if self.clinicalstudies == []
-                else [c.clinicaltrials_gov_id 
-                      for c in self.clinicalstudies])
+        return getattr_(self.clinicalstudies, "clinicaltrials_gov_id")
 
     @property
     def clinicaltrial_titles(self):
-        return (None if self.clinicalstudies == []
-                else [c.study for c in self.clinicalstudies])
+        return getattr_(self.clinicalstudies, "study")
 
         
 
