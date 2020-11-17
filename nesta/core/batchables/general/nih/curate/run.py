@@ -1,5 +1,3 @@
-# TODO: Check NULL core_project_nums
-
 """
 run.py (general.nih.curate)
 ===========================
@@ -11,50 +9,42 @@ from nesta.core.luigihacks.elasticsearchplus import _null_empty_str
 from nesta.core.luigihacks.elasticsearchplus import _clean_up_lists
 from nesta.core.luigihacks.elasticsearchplus import _remove_padding
 from nesta.core.luigihacks.elasticsearchplus import _country_detection
-
-from ast import literal_eval
-import boto3
-import json
-import logging
-import os
-import pandas as pd
-import requests
-from collections import defaultdict
-from datetime import datetime
-import dateutil.parser
-import itertools
-from sqlalchemy.orm import load_only
-
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.lookup import get_country_continent_lookup
 from nesta.packages.geo_utils.lookup import get_eu_countries
 from nesta.packages.geo_utils.country_iso_code import country_iso_code
 from nesta.packages.geo_utils.geocode import _geocode
-
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
-from nesta.core.orms.orm_utils import load_json_from_pathstub, insert_data
-
+from nesta.core.orms.orm_utils import insert_data
 from nesta.core.orms.orm_utils import object_to_dict
-from itertools import groupby
-from operator import attrgetter
 
-
-# Input ORMs:
+# ORMs
 from nesta.core.orms.nih_orm import Projects, Abstracts
 from nesta.core.orms.nih_orm import TextDuplicate
-
-# Output ORM
 from nesta.core.orms.general_orm import NihProject, Base
 
+from ast import literal_eval
+import boto3
+from collections import defaultdict
+from datetime import datetime
+import dateutil.parser
+from itertools import groupby, chain
+import json
+import logging
+from operator import attrgetter
+import os
+from sqlalchemy.orm import load_only
 
+
+# Alias these fields, as they're verbose and used a lot
 PK_ID = Projects.application_id
 CORE_ID = Projects.base_core_project_num
+
+# Group different types of field together, as they will be treated
+# in a common way on aggregation
 DATETIME_FIELDS = {c.name for c in Projects.__table__.columns
                    if c.type.python_type is datetime}
-RANGES = {'near_duplicate': (0.8, 1),
-          'very_similar': (0.65, 0.8),
-          'fairly_similar': (0.4, 0.65)}
 FLAT_FIELDS = ["application_id", "base_core_project_num", "fy",
                "org_city", "org_country", "org_name", "org_state",
                "org_zipcode", "project_title", "ic_name", "phr",
@@ -63,14 +53,22 @@ LIST_FIELDS = ["clinicaltrial_ids", "clinicaltrial_titles", "patent_ids",
                "patent_titles", "pmids", "project_terms"]
 
 
-def group_projects_by_appl_id(engine, appl_ids, nrows=None,
-                              pull_relationships=False):
+def get_projects_by_appl_id(engine, appl_ids, nrows=None,
+                            pull_relationships=None):
+    """Get NiH projects by application ID (i.e. the primary key)
+    and assign each project to it's own group (i.e. a group size of 1).
+    This method is meant for projects with a NULL core ID, which therefore
+    can't be grouped into a family of projects. Note that the argument
+    `pull_relationships` is a dummy argument so that this function
+    can be used as a template alongside `group_projects_by_core_id`.
+    """
+    # Get all projects in the given set of IDs
     filter_stmt = PK_ID.in_(appl_ids)
     with db_session(engine) as sess:
         q = sess.query(Projects).filter(filter_stmt).order_by(PK_ID)
         results = q.limit(nrows).all()
         # "Fake" single project groups
-        groups = [[object_to_dict(obj, shallow=not pull_relationships,
+        groups = [[object_to_dict(obj, shallow=False,
                                   properties=True)]
                   for obj in results]
     return groups
@@ -78,14 +76,17 @@ def group_projects_by_appl_id(engine, appl_ids, nrows=None,
 
 def group_projects_by_core_id(engine, core_ids, nrows=None,
                               pull_relationships=False):
-    if core_ids is not None:
-        filter_stmt = (CORE_ID != None) & (CORE_ID.in_(core_ids))
-    else:
-        filter_stmt = (CORE_ID == None)
-
+    """Get NiH projects by the base core project number ("core id"), 
+    and then group projects by this core id. If `pull_relationships`
+    is True, then also unbundle any SqlAlchemy "relationship" objects;
+    although this isn't required (and therefore substantially speeds 
+    things up) when, for example, only IDs are required."""
+    # Get all projects in the given set of IDs
+    filter_stmt = CORE_ID.in_(core_ids)
     with db_session(engine) as sess:
         q = sess.query(Projects).filter(filter_stmt).order_by(CORE_ID)
         results = q.limit(nrows).all()
+        # Group the results by the core project number
         groups = [[object_to_dict(obj, shallow=not pull_relationships,
                                   properties=True)
                    for obj in group]
@@ -95,27 +96,34 @@ def group_projects_by_core_id(engine, core_ids, nrows=None,
 
 
 def retrieve_similar_projects(engine, appl_ids):
-    # Retrieve all projects which are similar to those in this,
-    # project group. Some of the similar projects will be
-    # retrieved multiple times if match to multiple projects in
-    # the group
-    filter_stmt = (TextDuplicate.application_id_1.in_(appl_ids) |
-                   TextDuplicate.application_id_2.in_(appl_ids))
+    """Retrieve all projects which are similar to those in this
+    project group. Some of the similar projects will be retrieved 
+    multiple times if matched to multiple projects in the group.
+    `appl_ids` is the set of IDs in this group.
+    """
+    # Note a) the TextDuplicate table doesn't double-count 
+    # application IDs, so the application IDs of this group 
+    # could be in either application_id_1 or application_id_2
+    either = (TextDuplicate.application_id_1.in_(appl_ids) |
+              TextDuplicate.application_id_2.in_(appl_ids))
+    both = (TextDuplicate.application_id_1.in_(appl_ids) &
+            TextDuplicate.application_id_2.in_(appl_ids))
+    # We want either application_id_1 or application_id_2, but
+    # not both, since in such a case both projects would already be
+    # in the same group.
+    filter_stmt = (either & ~both)
     with db_session(engine) as session:
         dupes = session.query(TextDuplicate).filter(filter_stmt).all()
         dupes = [object_to_dict(obj, shallow=True) for obj in dupes]
 
-    # Pick out the PK for each similar project, and match against
-    # the largest weight, if the project has been retrieved
-    # multiple times
+    # Retrieve the similarity weights for this project
     sim_weights = defaultdict(list)
     for d in dupes:
         appl_id_1 = d['application_id_1']
         appl_id_2 = d['application_id_2']
-        # Pick out the PK for the similar project
+        # Referring to Note a) above, determine which ID is the PK 
+        # for the similar project
         id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
-        if id_ in appl_ids:
-            continue
         sim_weights[id_].append(d['weight'])
     # Match against the largest weight, if the similar project
     # has been retrieved multiple times
@@ -134,25 +142,40 @@ def retrieve_similar_projects(engine, appl_ids):
 
 
 def earliest_date(project):
+    """Determine the earliest date, among all the date fields
+    in this project. Returns `datetime.min` if no date is found."""
     year = project['fy']
+    # Try to find a date
     dates = [dateutil.parser.parse(project[f])
              for f in DATETIME_FIELDS
              if project[f] is not None]
     min_date = datetime.min  # default value if no date fields present
     if len(dates) > 0:
         min_date = min(dates)
+    # Otherwise, fall back on the year field
     elif year is not None:
         min_date = datetime(year=year, month=1, day=1)
     return min_date
 
 
 def retrieve_similar_proj_ids(engine, appl_ids):
+    """Retrieve similar projects, expand each similar
+    project into its group using the core ID.
+    Then extract only the most recent PK ID from each group,
+    and group these PK IDs by their similarity score, in order
+    to have lists of "near duplicates", "very similar" and
+    "fairly similar" IDs. `appl_ids` is the set of IDs in this group,
+    from which similar projects are to be found.
+    """
     # Retrieve similar projects
     projs, weights = retrieve_similar_projects(engine, appl_ids)
+    # Retrieve core IDs in order to perform groupby on the
+    # similar projects
     groups = []
     core_ids = set()
     for proj in projs:
         core_id = proj["base_core_project_num"]
+        # Around 3% of projs have no core id, and hence no group
         if core_id is None:
             groups.append([proj])
         else:
@@ -175,14 +198,21 @@ def retrieve_similar_proj_ids(engine, appl_ids):
     return similar_projs
 
 
-def group_projs_by_similarity(pk_weights):
-    grouped_projs = {f"{label}_ids": [pk for pk, weight in pk_weights.items()
-                                      if weight > lower and weight <= upper]
-                     for label, (lower, upper) in RANGES.items()}
+def group_projs_by_similarity(pk_weights, 
+                              ranges = {'near_duplicate_ids': (0.8, 1),
+                                        'very_similar_ids': (0.65, 0.8),
+                                        'fairly_similar_ids': (0.4, 0.65)}):
+    """Group projects by range of similarity. Ranges have been
+    hand-selected, and clearly are subject to optimisation."""
+    grouped_projs = {label: [pk for pk, weight in pk_weights.items()
+                             if weight > lower and weight <= upper]
+                     for label, (lower, upper) in ranges.items()}
     return grouped_projs
 
 
 def combine(func, list_of_dict, key):
+    """Apply the given function over the values retrieved
+    by the given key for each item in a of dictionaries"""
     values = [_dict[key] for _dict in list_of_dict
               if _dict[key] is not None]
     if len(values) == 0:
@@ -191,6 +221,7 @@ def combine(func, list_of_dict, key):
 
 
 def first_non_null(values):
+    """Return the first non-null value in the list"""
     for v in values:
         if v is None:
             continue
@@ -199,21 +230,32 @@ def first_non_null(values):
 
 
 def join_and_dedupe(values):
-    return list(set(itertools.chain(*values)))
+    """Flatten the list, sort and deduplicate"""
+    return list(sorted(set(chain(*values))))
 
 
 def format_us_zipcode(zipcode):
+    """NiH US postcodes have wildly inconsistent formatting, 
+    leading to geocoding errors. If the postcode if greater
+    than 5 chars, it should be in the format XXXXX-XXXX,
+    or XXXXX, even if the first 5 chars require zero-padding."""
     ndigits = len(zipcode)
+    # Only apply the procedure to numeric postcodes like
     if not zipcode.isnumeric():
         return zipcode
+    # e.g 123456789 --> 12345-6789
+    # or    3456789 --> 00345-6789
     if ndigits > 5:
         start, end = zipcode[:-4].zfill(5), zipcode[-4:]
         return f'{start}-{end}'
+    # e.g 12345 --> 12345
+    # or    345 --> 00345
     else:
         return zipcode.zfill(5)
 
 
 def geocode(city, state, country, postalcode):
+    """Apply the OSM geocoding for as many fields as possible."""
     kwargs = {'city': city,
               'state': state,
               'country': country,
@@ -238,6 +280,8 @@ def geocode(city, state, country, postalcode):
 
 
 def aggregate_group(group):
+    """Aggregate fields from all projects in this group into a
+    single curated pseudo-project."""
     # Sort by most recent first
     group = list(sorted(group, key=earliest_date, reverse=True))
     project = {"grouped_ids": [p['application_id'] for p in group],
@@ -282,12 +326,12 @@ def extract_geographies(row):
     iso2 = None
     if row['org_country'] is not None:
         iso_info = country_iso_code(row['org_country'])
-        row['org_country'] = iso_info.name  # Standardise country naming
         iso2 = iso_info.alpha_2
-    continent_iso2 = ctry_continent_lookup[iso2]
+        row['org_country'] = iso_info.name  # Standardise country naming
     row['iso2'] = iso2
     row['is_eu'] = iso2 in eu_countries
     row['state_name'] = states_lookup[row['org_state']]
+    continent_iso2 = ctry_continent_lookup[iso2]
     row['continent_iso2'] = continent_iso2
     row['continent_name'] = continent_lookup[continent_iso2]
 
@@ -304,13 +348,7 @@ def extract_geographies(row):
 
 
 def apply_cleaning(row):
-    """Curate raw data for ingestion to MySQL.
-
-    Args:
-        row (dict): Row of data.
-    Returns:
-        row (dict): Reformatted row of data
-    """
+    """Curate raw data for ingestion to MySQL."""
     row = _country_detection(row, 'country_mentions')
     row = _remove_padding(row)
     row = _null_empty_str(row)
@@ -336,12 +374,13 @@ def run():
     core_ids = json.loads(obj.get()['Body']._raw_stream.read())
     logging.info(f"{len(core_ids)} projects retrieved from s3")
 
-    # Get the groups for this batch
-    # Many core ids are null, and so these are retrieved in batches
-    # of application id instead, and otherwise pull in the projects
-    # with the non-null core id as these can be aggregated together
+    # Get the groups for this batch.
+    # Around 3% of core ids are null, and so these are retrieved 
+    # in batches of application id instead, and otherwise pull
+    # in the projects with the non-null core id as these can 
+    # be aggregated together.
     data_getter = (group_projects_by_core_id if using_core_ids
-                   else group_projects_by_appl_id)
+                   else get_projects_by_appl_id)
     groups = data_getter(engine, core_ids, pull_relationships=True)
 
     # Curate each group
@@ -355,6 +394,7 @@ def run():
         row = apply_cleaning(row)
         data.append(row)
 
+    # Insert data into the database
     insert_data("MYSQLDB", "mysqldb", db_name, Base,
                 NihProject, data, low_memory=True)
     logging.info("Batch job complete.")
