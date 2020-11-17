@@ -6,10 +6,12 @@ tools for lookup of iso codes for countries
 '''
 
 import pycountry
+from functools import lru_cache
 
 from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 
 
+@lru_cache()
 def country_iso_code(country):
     '''
     Look up the ISO 3166 codes for countries.

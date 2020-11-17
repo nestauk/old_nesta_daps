@@ -72,15 +72,15 @@ class Projects(Base):
                             foreign_keys=[application_id],
                             primaryjoin=("Projects.application_id=="
                                          "Abstracts.application_id"))
-    publications = relationship("LinkTables",
+    publications = relationship("LinkTables", uselist=True,
                                 foreign_keys=[core_project_num],
                                 primaryjoin=("Projects.core_project_num=="
                                              "LinkTables.project_number"))
-    patents = relationship("Patents",
+    patents = relationship("Patents", uselist=True,
                            foreign_keys=[core_project_num],
                            primaryjoin=("Projects.core_project_num=="
                                         "Patents.project_id"))
-    clinicalstudies = relationship("ClinicalStudies",
+    clinicalstudies = relationship("ClinicalStudies", uselist=True,
                                    foreign_keys=[core_project_num],
                                    primaryjoin=("Projects.core_project_num=="
                                                 "ClinicalStudies.core_project_number"))
@@ -92,28 +92,28 @@ class Projects(Base):
 
     @property
     def patent_ids(self):
-        return (None if self.patents is None
+        return (None if self.patents == []
                 else [p.patent_id for p in self.patents])
 
     @property
     def patent_titles(self):
-        return (None if self.patents is None
+        return (None if self.patents == []
                 else [p.patent_title for p in self.patents])
         
     @property
     def pmids(self):
-        return (None if self.publications is None
+        return (None if self.publications == []
                 else [p.pmid for p in self.publications])
 
     @property
     def clinicaltrial_ids(self):
-        return (None if self.clinicalstudies is None
+        return (None if self.clinicalstudies == []
                 else [c.clinicaltrials_gov_id 
                       for c in self.clinicalstudies])
 
     @property
     def clinicaltrial_titles(self):
-        return (None if self.clinicalstudies is None
+        return (None if self.clinicalstudies == []
                 else [c.study for c in self.clinicalstudies])
 
         

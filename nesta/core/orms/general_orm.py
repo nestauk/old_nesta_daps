@@ -82,7 +82,8 @@ class NihProject(Base):
     abstract_text = Column(TEXT)
 
     # New, joined or updated fields
-    clinicalstudies = Column(JSON)
+    clinicaltrial_ids = Column(JSON)
+    clinicaltrial_titles = Column(JSON)
     currency = Column(VARCHAR(3), default="USD", index=True)
     fairly_similar_ids = Column(JSON)
     near_duplicate_ids = Column(JSON)
@@ -100,10 +101,9 @@ class NihProject(Base):
 
     # Geographic fields
     continent_iso2 = Column(VARCHAR(2), index=True)
-    continent = Column(TEXT)
-    coordinate = Column(JSON)
-    countryTags = Column(JSON)
-    is_eu = Column(BOOLEAN, nullable=False)
+    continent_name = Column(TEXT)
+    coordinates = Column(JSON)
+    country_mentions = Column(JSON)
+    is_eu = Column(BOOLEAN, index=True, nullable=False)
     iso2 = Column(VARCHAR(2), index=True)
-    iso3 = Column(VARCHAR(3), index=True)
-    isoNumeric = Column(INTEGER, index=True)
+    state_name = Column(TEXT)

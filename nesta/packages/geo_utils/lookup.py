@@ -40,11 +40,36 @@ def get_continent_lookup():
 
 
 @lru_cache()
+def get_country_continent_lookup():
+    """
+    Retrieves continent lookups for all world countries, 
+    by ISO2 code, from a static open URL.
+
+    Returns:
+        data (dict): Values are country_name-continent pairs.
+    """
+    r = requests.get(COUNTRY_CODES_URL)
+    r.raise_for_status()
+    with StringIO(r.text) as csv:
+        df = pd.read_csv(csv, usecols=['ISO3166-1-Alpha-2',
+                                       'Continent'],
+                         keep_default_na=False)
+    data = {row['ISO3166-1-Alpha-2']: row['Continent']
+            for _, row in df.iterrows()
+            if not pd.isnull(row['ISO3166-1-Alpha-2'])}
+    # Kosovo, null
+    data['XK'] = 'EU'
+    data[None] = None
+    return data
+    
+
+
+@lru_cache()
 def get_country_region_lookup():
     """
     Retrieves subregions (around 18 in total)
     lookups for all world countries, by ISO2 code,
-    form a static open URL.
+    from a static open URL.
 
     Returns:
         data (dict): Values are country_name-region_name pairs.

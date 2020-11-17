@@ -9,10 +9,12 @@ import logging
 import pandas as pd
 import requests
 from retrying import retry
+from functools import lru_cache
 
 from nesta.packages.decorators.ratelimit import ratelimit
 
 
+@lru_cache()
 def geocode(**request_kwargs):
     '''
     Geocoder using the Open Street Map Nominatim API.

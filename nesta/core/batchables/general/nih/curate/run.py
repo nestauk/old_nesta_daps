@@ -8,7 +8,6 @@ Curate NiH data, ready for ingestion to the general ES endpoint.
 """
 
 from nesta.core.luigihacks.elasticsearchplus import _null_empty_str
-from nesta.core.luigihacks.elasticsearchplus import __floatify_coord
 from nesta.core.luigihacks.elasticsearchplus import _clean_up_lists
 from nesta.core.luigihacks.elasticsearchplus import _remove_padding
 from nesta.core.luigihacks.elasticsearchplus import _country_detection
@@ -28,7 +27,10 @@ from sqlalchemy.orm import load_only
 
 from nesta.packages.geo_utils.lookup import get_us_states_lookup
 from nesta.packages.geo_utils.lookup import get_continent_lookup
+from nesta.packages.geo_utils.lookup import get_country_continent_lookup
 from nesta.packages.geo_utils.lookup import get_eu_countries
+from nesta.packages.geo_utils.country_iso_code import country_iso_code
+from nesta.packages.geo_utils.geocode import _geocode
 
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.orms.orm_utils import load_json_from_pathstub, insert_data
@@ -57,10 +59,21 @@ FLAT_FIELDS = ["application_id", "base_core_project_num", "fy",
                "org_city", "org_country", "org_name", "org_state",
                "org_zipcode", "project_title", "ic_name", "phr",
                "abstract_text"]
-
-LIST_FIELDS = ["clinicaltrial_ids", "clinicaltrial_titles", "patent_ids", 
+LIST_FIELDS = ["clinicaltrial_ids", "clinicaltrial_titles", "patent_ids",
                "patent_titles", "pmids", "project_terms"]
 
+
+def group_projects_by_appl_id(engine, appl_ids, nrows=None,
+                              pull_relationships=False):
+    filter_stmt = PK_ID.in_(appl_ids)
+    with db_session(engine) as sess:
+        q = sess.query(Projects).filter(filter_stmt).order_by(PK_ID)
+        results = q.limit(nrows).all()
+        # "Fake" single project groups
+        groups = [[object_to_dict(obj, shallow=not pull_relationships,
+                                  properties=True)]
+                  for obj in results]
+    return groups
 
 
 def group_projects_by_core_id(engine, core_ids, nrows=None,
@@ -115,7 +128,7 @@ def retrieve_similar_projects(engine, appl_ids):
     with db_session(engine) as session:
         q = session.query(Projects).filter(filter_stmt)
         q = q.options(load_only(PK_ID, CORE_ID))
-        sim_projs = [object_to_dict(obj, shallow=True) 
+        sim_projs = [object_to_dict(obj, shallow=True)
                      for obj in q.all()]
     return sim_projs, sim_weights
 
@@ -178,11 +191,50 @@ def combine(func, list_of_dict, key):
 
 
 def first_non_null(values):
-    return None if len(values) == 0 else values[0]
+    for v in values:
+        if v is None:
+            continue
+        return v
+    return None
 
 
 def join_and_dedupe(values):
     return list(set(itertools.chain(*values)))
+
+
+def format_us_zipcode(zipcode):
+    ndigits = len(zipcode)
+    if not zipcode.isnumeric():
+        return zipcode
+    if ndigits > 5:
+        start, end = zipcode[:-4].zfill(5), zipcode[-4:]
+        return f'{start}-{end}'
+    else:
+        return zipcode.zfill(5)
+
+
+def geocode(city, state, country, postalcode):
+    kwargs = {'city': city,
+              'state': state,
+              'country': country,
+              'postalcode': postalcode}
+    # Ditch null kwargs
+    kwargs = {k: v for k, v in kwargs.items()
+              if v is not None}
+    if len(kwargs) == 0:
+        return None
+    # Try with the postal code (doesn't always work, but when
+    # it does it gives more accurate results)
+    coords = _geocode(**kwargs)
+    # Otherwise, try removing the postcode
+    if coords is None and 'postalcode' in kwargs:
+        del kwargs['postalcode']
+        coords = _geocode(**kwargs)
+    # If still no results, try a plain query (tends to give
+    # very coarse resolution)
+    if coords is None:
+        coords = _geocode(q=', '.join(kwargs.values()))
+    return coords
 
 
 def aggregate_group(group):
@@ -219,7 +271,39 @@ def aggregate_group(group):
     return project
 
 
-def reformat_row(row):
+def extract_geographies(row):
+    # Lookup helpers (note, all are lru_cached)
+    states_lookup = get_us_states_lookup()
+    ctry_continent_lookup = get_country_continent_lookup()
+    continent_lookup = get_continent_lookup()
+    eu_countries = get_eu_countries()
+
+    # Perform lookups
+    iso2 = None
+    if row['org_country'] is not None:
+        iso_info = country_iso_code(row['org_country'])
+        row['org_country'] = iso_info.name  # Standardise country naming
+        iso2 = iso_info.alpha_2
+    continent_iso2 = ctry_continent_lookup[iso2]
+    row['iso2'] = iso2
+    row['is_eu'] = iso2 in eu_countries
+    row['state_name'] = states_lookup[row['org_state']]
+    row['continent_iso2'] = continent_iso2
+    row['continent_name'] = continent_lookup[continent_iso2]
+
+    # Clean zip code if US
+    if iso2 == 'US' and row['org_zipcode'] is not None:
+        row['org_zipcode'] = format_us_zipcode(row['org_zipcode'])
+
+    # Retrieve lat / lon for this org
+    row['coordinates'] = geocode(city=row['org_city'],
+                                 state=row['state_name'],
+                                 country=row['org_country'],
+                                 postalcode=row['org_zipcode'])
+    return row
+
+
+def apply_cleaning(row):
     """Curate raw data for ingestion to MySQL.
 
     Args:
@@ -227,23 +311,6 @@ def reformat_row(row):
     Returns:
         row (dict): Reformatted row of data
     """
-    states_lookup = get_us_states_lookup()  # Note: this is lru_cached
-    continent_lookup = get_continent_lookup()  # Note: this is lru_cached
-    eu_countries = get_eu_countries()  # Note: this is lru_cached
-
-    row['aliases'] = [row.pop('legal_name')] + [row.pop(f'alias{i}') for i in [1, 2, 3]]
-    row['aliases'] = sorted(set(a for a in row['aliases'] if a is not None))
-    row['investor_names'] = sorted(set(investor_names))
-    row['is_eu'] = row['country_alpha_2'] in eu_countries
-    row['coordinates'] = {'lat': row.pop('latitude'), 'lon': row.pop('longitude')}
-    row['updated_at'] = row['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
-    row['category_list'] = sorted(set(categories))
-    row['category_groups_list'] = sorted(set(categories_groups_list))
-    row['state_name'] = states_lookup[row['state_code']]
-    row['continent_name'] = continent_lookup[row['continent']]
-
-
-    row['coordinates'] = __floatify_coord(row['coordinates'])
     row = _country_detection(row, 'country_mentions')
     row = _remove_padding(row)
     row = _null_empty_str(row)
@@ -253,6 +320,7 @@ def reformat_row(row):
 
 def run():
     test = literal_eval(os.environ["BATCHPAR_test"])
+    using_core_ids = literal_eval(os.environ["BATCHPAR_using_core_ids"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
     db_name = os.environ["BATCHPAR_db_name"]
@@ -269,16 +337,12 @@ def run():
     logging.info(f"{len(core_ids)} projects retrieved from s3")
 
     # Get the groups for this batch
-    groups = []
-    # Many core ids are null, so if this batch contains them
-    # then deal with them seperately
-    if None in core_ids:
-        core_ids.pop(None)
-        groups += group_projects_by_core_id(engine, None,
-                                            pull_relationships=True)
-    # Then also add in the projects with non-null core id
-    groups += group_projects_by_core_id(engine, core_ids,
-                                        pull_relationships=True)
+    # Many core ids are null, and so these are retrieved in batches
+    # of application id instead, and otherwise pull in the projects
+    # with the non-null core id as these can be aggregated together
+    data_getter = (group_projects_by_core_id if using_core_ids
+                   else group_projects_by_appl_id)
+    groups = data_getter(engine, core_ids, pull_relationships=True)
 
     # Curate each group
     data = []
@@ -286,9 +350,9 @@ def run():
         appl_ids = [proj['application_id'] for proj in group]
         similar_projs = retrieve_similar_proj_ids(engine, appl_ids)
         project = aggregate_group(group)
-        geographies = extract_geographies(project)  # TODO
+        geographies = extract_geographies(project)
         row = {**project, **geographies, **similar_projs}
-        row = apply_cleaning(row) # TODO
+        row = apply_cleaning(row)
         data.append(row)
 
     insert_data("MYSQLDB", "mysqldb", db_name, Base,

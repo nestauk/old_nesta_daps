@@ -9,6 +9,7 @@ from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.crunchbase_orm import Organization as CrunchbaseOrg
+from nesta.core.orms.nih_orm import Projects as NihProject
 from nesta.core.luigihacks.misctools import get_config
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 
@@ -27,7 +28,7 @@ def kwarg_maker(dataset, routine_id):
 
 
 class CurateTask(luigi.Task):
-    process_batch_size = luigi.IntParameter(default=5000)
+    process_batch_size = luigi.IntParameter(default=1000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
 
@@ -56,10 +57,16 @@ class CurateTask(luigi.Task):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        params = (('companies', CrunchbaseOrg.id),
-                  ('nih', NihProject.core_project_num)):
-        for dataset, id_field in params:
+        nih_pk = NihProject.application_id
+        nih_core = NihProject.base_core_project_num
+        nih_is_null = nih_core == None
+        #params = (('companies', CrunchbaseOrg.id, None, {}),
+        params = (('nih', nih_core, ~nih_is_null, {'using_core_ids': True}),
+                  ('nih', nih_pk, nih_is_null, {'using_core_ids': False}))
+        for dataset, id_field, filter, extra_kwargs in params:
             yield Sql2BatchTask(id_field=id_field,
+                                filter=filter,
+                                kwargs=extra_kwargs,
                                 **kwarg_maker(dataset, routine_id),
                                 **default_kwargs)
 
