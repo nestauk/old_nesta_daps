@@ -95,6 +95,23 @@ def group_projects_by_core_id(engine, core_ids, nrows=None,
     return groups
 
 
+def get_sim_weights(dupes, appl_ids):
+    """Retrieve the similarity weights for this project"""
+    sim_weights = defaultdict(list)
+    for d in dupes:
+        appl_id_1 = d['application_id_1']
+        appl_id_2 = d['application_id_2']
+        # Referring to Note a) in `retrieve_similar_projects`, 
+        # determine which ID is the PK for the similar project
+        id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
+        sim_weights[id_].append(d['weight'])
+    # Match against the largest weight, if the similar project
+    # has been retrieved multiple times
+    sim_weights = {id_: max(weights)
+                   for id_, weights in sim_weights.items()}
+    return sim_weights
+
+
 def retrieve_similar_projects(engine, appl_ids):
     """Retrieve all projects which are similar to those in this
     project group. Some of the similar projects will be retrieved 
@@ -116,19 +133,8 @@ def retrieve_similar_projects(engine, appl_ids):
         dupes = session.query(TextDuplicate).filter(filter_stmt).all()
         dupes = [object_to_dict(obj, shallow=True) for obj in dupes]
 
-    # Retrieve the similarity weights for this project
-    sim_weights = defaultdict(list)
-    for d in dupes:
-        appl_id_1 = d['application_id_1']
-        appl_id_2 = d['application_id_2']
-        # Referring to Note a) above, determine which ID is the PK 
-        # for the similar project
-        id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
-        sim_weights[id_].append(d['weight'])
-    # Match against the largest weight, if the similar project
-    # has been retrieved multiple times
-    sim_weights = {id_: max(weights)
-                   for id_, weights in sim_weights.items()}
+    # Get the similarity weights for this project
+    sim_weights = get_sim_weights(dupes, appl_ids)
     sim_ids = set(sim_weights.keys())
 
     # Retrieve the full projects by id
@@ -230,8 +236,8 @@ def first_non_null(values):
 
 
 def join_and_dedupe(values):
-    """Flatten the list, sort and deduplicate"""
-    return list(sorted(set(chain(*values))))
+    """Flatten the list and deduplicate"""
+    return list(set(chain(*values)))
 
 
 def format_us_zipcode(zipcode):
