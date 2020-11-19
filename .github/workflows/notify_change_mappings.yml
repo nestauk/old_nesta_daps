@@ -4,7 +4,7 @@ on:
     branches:
       - dev
     paths:
-      - '/nesta/core/schemas/tier_1/mappings/**'
+      - 'nesta/core/schemas/tier_1/mappings/**'
 jobs:
   commit-hawk:
     runs-on: ubuntu-latest
