@@ -140,10 +140,15 @@ def retrieve_similar_projects(engine, appl_ids):
     # Retrieve the full projects by id
     filter_stmt = PK_ID.in_(sim_ids)
     with db_session(engine) as session:
-        q = session.query(Projects).filter(filter_stmt)
-        q = q.options(load_only(PK_ID, CORE_ID))
-        sim_projs = [object_to_dict(obj, shallow=True)
-                     for obj in q.all()]
+        q = session.query(PK_ID, CORE_ID).filter(filter_stmt)
+        #q = q.options(load_only(PK_ID, CORE_ID))
+        #q = session.query(CORE_ID).filter(filter_stmt)
+        #sim_core_ids, = zip(*q.all())
+        #sim_projs = [object_to_dict(obj, shallow=True, properties=False)
+        #             for obj in q.all()]
+        sim_projs = [{'base_core_project_num': core_id,
+                      'application_id': pk_id} 
+                     for pk_id, core_id in q.all()]
     return sim_projs, sim_weights
 
 
@@ -380,7 +385,7 @@ def run():
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     core_ids = json.loads(obj.get()['Body']._raw_stream.read())
-    logging.info(f"{len(core_ids)} projects retrieved from s3")
+    logging.info(f"{len(core_ids)} ids retrieved from s3")
 
     # Get the groups for this batch.
     # Around 3% of core ids are null, and so these are retrieved 

@@ -21,7 +21,7 @@ def getattr_(entity, attribute):
     or empty."""
     if entity in (None, []):
         return None
-    if type(entity) is list:
+    if isinstance(entity, list):
         return [getattr(item, attribute) for item in entity]
     return getattr(entity, attribute)
 
