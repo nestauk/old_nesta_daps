@@ -20,6 +20,7 @@ from datetime import datetime as dt
 from multiprocessing.dummy import Pool as ThreadPool
 
 from nesta.core.luigihacks.mysqldb import make_mysql_target
+from nesta.packages.nih.impute_base_id import retrieve_id_ranges
 from nesta.packages.nih.impute_base_id import impute_base_id_thread
 
 
