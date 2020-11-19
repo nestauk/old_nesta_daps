@@ -13,6 +13,7 @@ from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
+from nesta.packages.geo_utils.lookup import get_country_continent_lookup
 
 REQUESTS = 'nesta.packages.geo_utils.geocode.requests.get'
 PYCOUNTRY = 'nesta.packages.geo_utils.country_iso_code.pycountry.countries.get'
@@ -135,7 +136,7 @@ class TestGeocodeDataFrame():
         assert mocked_geocode.mock_calls == expected_calls
 
     @mock.patch(_GEOCODE)
-    def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode, 
+    def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode,
                                                                       test_dataframe):
         mocked_geocode.side_effect = [None, None, None, 'dog', 'cat', 'squirrel']
         geocoded_dataframe = geocode_dataframe(test_dataframe)
@@ -460,3 +461,19 @@ def test_get_country_region_lookup():
     assert all(len(v) == 2 for v in countries.values())
     all_regions = {v[1] for v in countries.values()}
     assert len(all_regions) == 18
+
+
+def test_country_continent_lookup():
+    lookup = get_country_continent_lookup()
+    non_nulls = {k: v for k, v in lookup.items()
+                 if k is not None and k != ''}
+    # All iso2, so length == 2
+    assert all(len(k) == 2 for k in non_nulls.items())
+    assert all(len(v) == 2 for v in non_nulls.values())
+    # Either strings or Nones
+    country_types = set(type(v) for v in lookup.values())
+    assert country_types == {str, type(None)}
+    # Right ball-park of country and continent numbers
+    assert len(non_nulls) > 100  # num countries
+    assert len(non_nulls) < 1000 # num countries
+    assert len(set(non_nulls.values())) == 7 # num continents

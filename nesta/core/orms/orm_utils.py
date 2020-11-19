@@ -57,6 +57,8 @@ def object_to_dict(obj, shallow=False, properties=True, found=None):
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
         shallow (bool): Fully unpack nested objs via relationships.
+        properties (bool): Also retrieve all @property values as if they
+                           were columns in the row object.
         found: For internal recursion, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.

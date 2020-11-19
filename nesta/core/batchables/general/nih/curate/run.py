@@ -322,6 +322,8 @@ def aggregate_group(group):
 
 
 def extract_geographies(row):
+    """Infer standard geographic info for this row"""
+
     # Lookup helpers (note, all are lru_cached)
     states_lookup = get_us_states_lookup()
     ctry_continent_lookup = get_country_continent_lookup()
