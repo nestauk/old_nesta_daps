@@ -1,6 +1,8 @@
 Elasticsearch mappings
 ======================
 
+A DUMMY CHANGE
+
 Our methodology for constructing Elasticsearch mappings is described here. It is intended to minimise duplication of efforts and enforce standardisation when referring to a common dataset whilst being flexible to individual project needs. It is implied in our framework that a single :code:`dataset` can be used across many projects, and each project is mapped to a single :code:`endpoint`. It is useful to start by looking at the structure of the :code:`nesta/core/schemas/tier_1/mappings/` directory:
 
 .. code-block:: bash
