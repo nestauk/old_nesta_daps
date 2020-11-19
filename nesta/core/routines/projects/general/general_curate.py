@@ -31,6 +31,8 @@ class CurateTask(luigi.Task):
     process_batch_size = luigi.IntParameter(default=1000)
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
+    dataset = luigi.ChoiceParameter(default='all',
+                                    choices=['all', 'nih', 'companies'])
 
     def output(self):
         test = not self.production
@@ -57,13 +59,23 @@ class CurateTask(luigi.Task):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
+        # NiH run conditions
         nih_pk = NihProject.application_id
         nih_core = NihProject.base_core_project_num
         nih_is_null = nih_core == None
-        #params = (('companies', CrunchbaseOrg.id, None, {}),
-        params = (('nih', nih_core, ~nih_is_null, {'using_core_ids': True}),
-                  ('nih', nih_pk, nih_is_null, {'using_core_ids': False}))
+
+        # Iterate over run params
+                   # Crunchbase
+        params = (('companies', CrunchbaseOrg.id, None, {}),
+                   # NiH Core IDs != Null
+                  ('nih', nih_core, ~nih_is_null,                    
+                   {'using_core_ids': True}),
+                   # NiH Core IDs == Null
+                  ('nih', nih_pk, nih_is_null, 
+                   {'using_core_ids': False}))
         for dataset, id_field, filter, extra_kwargs in params:
+            if self.dataset != 'all' and dataset != self.dataset:
+                continue
             yield Sql2BatchTask(id_field=id_field,
                                 filter=filter,
                                 kwargs=extra_kwargs,
