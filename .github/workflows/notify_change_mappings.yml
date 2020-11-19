@@ -1,4 +1,4 @@
-name: commit-hawk
+name: "commit-hawk"
 on:
   push:
     branches:
