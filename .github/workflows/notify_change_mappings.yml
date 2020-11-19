@@ -1,4 +1,4 @@
-name: "commit-hawk"
+name: commit-hawk
 on:
   push:
     branches:
@@ -7,6 +7,7 @@ on:
       - '/nesta/core/schemas/tier_1/mappings/**'
 jobs:
   commit-hawk:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/commit-hawk-action@v1
         with:
