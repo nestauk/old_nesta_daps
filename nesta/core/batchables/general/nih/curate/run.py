@@ -40,17 +40,33 @@ from sqlalchemy.orm import load_only
 # Alias these fields, as they're verbose and used a lot
 PK_ID = Projects.application_id
 CORE_ID = Projects.base_core_project_num
+DATETIME_COLS = [c for c in Projects.__table__.columns
+                 if c.type.python_type is datetime]
 
 # Group different types of field together, as they will be treated
 # in a common way on aggregation
-DATETIME_FIELDS = {c.name for c in Projects.__table__.columns
-                   if c.type.python_type is datetime}
+DATETIME_FIELDS = [c.name for c in DATETIME_COLS]
 FLAT_FIELDS = ["application_id", "base_core_project_num", "fy",
                "org_city", "org_country", "org_name", "org_state",
                "org_zipcode", "project_title", "ic_name", "phr",
                "abstract_text"]
 LIST_FIELDS = ["clinicaltrial_ids", "clinicaltrial_titles", "patent_ids",
                "patent_titles", "pmids", "project_terms"]
+
+
+# Geo names edge cases
+CTRY_LOOKUP = {'Korea Rep Of': 'Korea, Republic of',
+               'Russia': 'Russian Federation',
+               'Congo Dem Rep': 'Congo, The Democratic Republic of the',
+               "Cote D'ivoire": "Côte d'Ivoire",
+               'Dominican Rep': 'Dominican Republic',
+               'Eswatini': 'Swaziland',
+               'Fed Micronesia', 'Micronesia, Federated States of',
+               'Papua N Guinea': 'Papua New Guinea',
+               'St Kitts/nevis': 'Saint Kitts and Nevis'
+               'St Lucia': 'Saint Lucia',
+               'Tanzania U Rep': 'Tanzania',
+               'Trinidad/toba': 'Trinidad and Tobago'}
 
 
 def get_projects_by_appl_id(engine, appl_ids, nrows=None,
@@ -137,18 +153,14 @@ def retrieve_similar_projects(engine, appl_ids):
     sim_weights = get_sim_weights(dupes, appl_ids)
     sim_ids = set(sim_weights.keys())
 
-    # Retrieve the full projects by id
+    # Retrieve only the required fields by project id
     filter_stmt = PK_ID.in_(sim_ids)
+    query_fields = [PK_ID, CORE_ID, Projects.fy, *DATETIME_COLS]    
     with db_session(engine) as session:
-        q = session.query(PK_ID, CORE_ID).filter(filter_stmt)
-        #q = q.options(load_only(PK_ID, CORE_ID))
-        #q = session.query(CORE_ID).filter(filter_stmt)
-        #sim_core_ids, = zip(*q.all())
-        #sim_projs = [object_to_dict(obj, shallow=True, properties=False)
-        #             for obj in q.all()]
-        sim_projs = [{'base_core_project_num': core_id,
-                      'application_id': pk_id} 
-                     for pk_id, core_id in q.all()]
+        q = session.query(*query_fields).filter(filter_stmt)
+        sim_projs = [{field.name: value 
+                      for field, value in zip(query_fields, values)}
+                     for values in q.all()]
     return sim_projs, sim_weights
 
 
@@ -157,9 +169,14 @@ def earliest_date(project):
     in this project. Returns `datetime.min` if no date is found."""
     year = project['fy']
     # Try to find a date
-    dates = [dateutil.parser.parse(project[f])
-             for f in DATETIME_FIELDS
-             if project[f] is not None]
+    dates = []
+    for f in DATETIME_FIELDS:
+        date = project[f]
+        if type(date) is str:
+            date = dateutil.parser.parse(date)
+        elif date is None:
+            continue
+        dates.append(date)
     min_date = datetime.min  # default value if no date fields present
     if len(dates) > 0:
         min_date = min(dates)
@@ -335,10 +352,15 @@ def extract_geographies(row):
     continent_lookup = get_continent_lookup()
     eu_countries = get_eu_countries()
 
+    # If country name is badly formatted, reassign
+    ctry = row['org_country']
+    if ctry in CTRY_LOOKUP:
+        ctry = CTRY_LOOKUP[ctry]
+
     # Perform lookups
     iso2 = None
-    if row['org_country'] is not None:
-        iso_info = country_iso_code(row['org_country'])
+    if ctry is not None:
+        iso_info = country_iso_code(ctry)
         iso2 = iso_info.alpha_2
         row['org_country'] = iso_info.name  # Standardise country naming
     row['iso2'] = iso2
