@@ -11,6 +11,18 @@ from functools import lru_cache
 from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 
 
+def _country_iso_code(country):
+    for name_type in ['name', 'common_name', 'official_name']:
+        query = {name_type: country}
+        try:            
+            result = pycountry.countries.get(**query)
+            if result is not None:
+                return result
+        except KeyError:
+            pass
+    raise KeyError(f"{country} not found")
+
+
 @lru_cache()
 def country_iso_code(country):
     '''
@@ -24,17 +36,15 @@ def country_iso_code(country):
     Returns:
         Country object from the pycountry module
     '''
-    country = str(country).title()
-    for name_type in ['name', 'common_name', 'official_name']:
-        query = {name_type: country}
-        try:            
-            result = pycountry.countries.get(**query)
-            if result is not None:
-                return result
-        except KeyError:
-            pass
-
-    raise KeyError(f"{country} not found")
+    country = str(country)
+    try:
+        result = _country_iso_code(country)
+    except KeyError:
+        pass
+    else:
+        result = _country_iso_code(country.title())
+    finally:
+        return result
 
 
 def country_iso_code_dataframe(df, country='country'):
