@@ -61,9 +61,9 @@ CTRY_LOOKUP = {'Korea Rep Of': 'Korea, Republic of',
                "Cote D'ivoire": "Côte d'Ivoire",
                'Dominican Rep': 'Dominican Republic',
                'Eswatini': 'Swaziland',
-               'Fed Micronesia', 'Micronesia, Federated States of',
+               'Fed Micronesia': 'Micronesia, Federated States of',
                'Papua N Guinea': 'Papua New Guinea',
-               'St Kitts/nevis': 'Saint Kitts and Nevis'
+               'St Kitts/nevis': 'Saint Kitts and Nevis',
                'St Lucia': 'Saint Lucia',
                'Tanzania U Rep': 'Tanzania',
                'Trinidad/toba': 'Trinidad and Tobago'}
