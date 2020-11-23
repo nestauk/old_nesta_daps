@@ -44,7 +44,7 @@ class ImputeBaseIDTask(luigi.Task):
         # Threading required because it takes 2-3 days to impute
         # all values on a single thread, or a few hours on 15 threads
         pool = ThreadPool(15)
-        results = pool.map(impute_base_id_thread, id_ranges)
+        results = pool.starmap(impute_base_id_thread, id_ranges)
         pool.close()
         pool.join()
         self.output().touch()

@@ -72,23 +72,24 @@ def retrieve_id_ranges(database, chunksize=1000):
         try:
             ids, = zip(*q.all())
         except ValueError:  # Forgiveness, if there are no IDs in the DB
-            ids = []
+            return []
+
     final_id = ids[-1]
     ids = list(ids[0::chunksize])  # Every {chunksize}th id
     # Pop the final ID back in, if it has been truncated
     if ids[-1] != final_id:
         ids.append(final_id)
     # Zip together consecutive pairs of arguments, i.e.
-    # n-1 values of (from_id, to_id, database)
+    # n-1 values of (from_id, to_id) 
     # where from_id[n] == to_id[n-1]
     n = len(ids) - 1
     id_ranges = list(zip(ids, ids[1:], [database]*n))
     return id_ranges
 
 
-def impute_base_id_thread(*args):
+def impute_base_id_thread(from_id, to_id, database):
     """Apply "impute_base_id" over this chunk of IDs"""
-    from_id, to_id, database = args[0]  # Unpack thread args
+    #from_id, to_id, database = args[0]  # Unpack thread args
     engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
     with db_session(engine) as session:
         impute_base_id(session, from_id, to_id)
