@@ -27,6 +27,7 @@ def test_get_json_cols():
 
 def test_get_long_text_cols():
     assert get_long_text_cols(Projects) == {'cfda_code', 'core_project_num',
+                                            'base_core_project_num',
                                             'ed_inst_type', 'foa_number',
                                             'full_project_num',
                                             'funding_mechanism', 'ic_name',
