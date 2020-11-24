@@ -139,9 +139,9 @@ def test_auto_translate_true_long(row):
     assert row.pop('mixed_lang') != _row['mixed_lang']
     assert _row.pop(TRANS_TAG)
     trans_korean = _row.pop('korean')
-    assert all(term in trans_korean.lower() 
-               for term in ('brown','fox','jump',
-                            'over','lazy','dog'))
+    assert all(term in trans_korean.lower()
+               for term in ('brown', 'fox', 'jump',
+                            'over', 'lazy', 'dog'))
     trans_mixed = _row.pop('mixed_lang')
     assert all(term in trans_mixed.lower()
                for term in ('brown', 'fox',

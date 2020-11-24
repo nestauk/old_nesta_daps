@@ -91,7 +91,7 @@ def load_batch_config(luigi_task, additional_env_files=[], **overrides):
     """Load default luigi batch parametes, and apply any overrides if required. Note that
     the usage pattern for this is normally :obj:`load_batch_config(self, additional_env_files, **overrides)`
     from within a luigi Task, where :obj:`self` is the luigi Task.
-    
+
     Args:
         luigi_task (luigi.Task): Task to extract test and date parameters from.
         additional_env_files (list): List of files to pass directly to the batch local environment.
@@ -105,7 +105,7 @@ def load_batch_config(luigi_task, additional_env_files=[], **overrides):
     config['job_name'] = routine_id
     config['routine_id'] = routine_id
     config['env_files'] += additional_env_files
-    config['env_files'] = [f3p(fp) for fp in config['env_files']]    
+    config['env_files'] = [f3p(fp) for fp in config['env_files']]
     config['date'] = dt.now()
     config.update(overrides)
     return config
@@ -114,13 +114,13 @@ def load_batch_config(luigi_task, additional_env_files=[], **overrides):
 @lru_cache()
 def extract_task_info(luigi_task):
     """Extract task name and generate a routine id from a luigi task, from the date and test fields.
-    
+
     Args:
         luigi_task (luigi.Task): Task to extract test and date parameters from.
     Returns:
         {test, routine_id} (tuple): Test flag, and routine ID for this task.
     """
-    test = (luigi_task.test if 'test' in luigi_task.__dict__ 
+    test = (luigi_task.test if 'test' in luigi_task.__dict__
             else not luigi_task.production)
     task_name = type(luigi_task).__name__
     routine_id = f'{task_name}-{luigi_task.date}-{test}'
@@ -130,7 +130,7 @@ def extract_task_info(luigi_task):
 @lru_cache()
 def bucket_keys(bucket_name):
     """Get all keys in an S3 bucket.
-    
+
     Args:
         bucket_name (str): Name of a bucket to query.
     Returns:
