@@ -1,2 +1,2 @@
-tensorflow>=2.4.0
+tensorflow>=2.4.0rc0
 tensorflow-hub==0.10.0
