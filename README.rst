@@ -28,8 +28,8 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
     :alt: Documentation Status
     :target: https://nesta.readthedocs.io/en/latest/?badge=latest
 
-.. |build| image:: https://travis-ci.org/nestauk/nesta.svg?branch=master
-    :target: https://travis-ci.org/nestauk/nesta
+.. |build| image:: https://travis-ci.com/nestauk/nesta.svg?branch=master
+    :target: https://travis-ci.com/nestauk/nesta
     :alt: Build Status (master)
     
 
@@ -38,6 +38,6 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
     :target: https://nesta.readthedocs.io/en/latest/?badge=dev
 
 
-.. |build (dev)| image:: https://travis-ci.org/nestauk/nesta.svg?branch=dev
+.. |build (dev)| image:: https://travis-ci.com/nestauk/nesta.svg?branch=dev
     :alt: Build Status (dev)
-    :target: https://travis-ci.org/nestauk/nesta
+    :target: https://travis-ci.com/nestauk/nesta
