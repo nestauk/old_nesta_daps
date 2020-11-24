@@ -80,10 +80,9 @@ def retrieve_id_ranges(database, chunksize=1000):
     if ids[-1] != final_id:
         ids.append(final_id)
     # Zip together consecutive pairs of arguments, i.e.
-    # n-1 values of (from_id, to_id) 
+    # n-1 values of (from_id, to_id)
     # where from_id[n] == to_id[n-1]
-    n = len(ids) - 1
-    id_ranges = list(zip(ids, ids[1:], [database]*n))
+    id_ranges = list(zip(ids, ids[1:]))
     return id_ranges
 
 

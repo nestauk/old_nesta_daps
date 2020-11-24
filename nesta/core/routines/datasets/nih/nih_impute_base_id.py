@@ -14,9 +14,11 @@ This task imputes these values using a simple regex of the form:
 Any `core_project_num` failing this regex are ignored.
 '''
 
+
 import logging
 import luigi
 from datetime import datetime as dt
+from itertools import repeat
 from multiprocessing.dummy import Pool as ThreadPool
 
 from nesta.core.luigihacks.mysqldb import make_mysql_target
@@ -44,7 +46,8 @@ class ImputeBaseIDTask(luigi.Task):
         # Threading required because it takes 2-3 days to impute
         # all values on a single thread, or a few hours on 15 threads
         pool = ThreadPool(15)
-        results = pool.starmap(impute_base_id_thread, id_ranges)
+        args = zip(id_ranges, repeat(database))
+        results = pool.starmap(impute_base_id_thread, args)
         pool.close()
         pool.join()
         self.output().touch()
