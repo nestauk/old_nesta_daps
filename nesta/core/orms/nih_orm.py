@@ -27,6 +27,7 @@ class Projects(Base):
     application_type = Column(INTEGER)
     arra_funded = Column(VARCHAR(1))
     award_notice_date = Column(DATETIME)
+    base_core_project_num = Column(VARCHAR(50), index=True)
     budget_start = Column(DATETIME)
     budget_end = Column(DATETIME)
     cfda_code = Column(TEXT)
