@@ -35,7 +35,14 @@ CHAIN_TRANS=f"{PATH}.ElasticsearchPlus.chain_transforms"
 SUPER_INDEX=f"{PATH}.Elasticsearch.index"
 BOTO=f"{PATH}.boto3"
 AWS4AUTH=f"{PATH}.AWS4Auth"
-TRANSLATOR = Translator()
+
+
+# This adds stability
+SERVICE_URLS = [f"translate.google.{ext}"
+                for ext in ('com', 'co.uk', 'co.kr', 'at',
+                            'ru', 'fr', 'de', 'ch', 'es')]
+TRANSLATOR = Translator(service_urls=SERVICE_URLS)
+
 
 @pytest.fixture
 def lookup():
@@ -95,7 +102,7 @@ def test_sentence_chunks():
 
 def test_auto_translate_true_short(row):
     """The translator shouldn't be applied for short pieces of text"""
-    time.sleep(5)
+    time.sleep(2)
     _row = _auto_translate(row, TRANSLATOR, 1000)
     assert not _row.pop(TRANS_TAG)
     assert len(_row.pop(LANGS_TAG)) == 0
@@ -104,9 +111,9 @@ def test_auto_translate_true_short(row):
     assert row == _row
 
 def test_auto_translate_true_long_small_chunks(row):
-    time.sleep(5)
+    time.sleep(2)
     _row_1 = _auto_translate(row, TRANSLATOR, 10, chunksize=1)
-    time.sleep(5)
+    time.sleep(2)
     _row_2 = _auto_translate(row, TRANSLATOR, 10, chunksize=10000)
     assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
     
@@ -133,7 +140,7 @@ def test_auto_translate_true_long_small_chunks(row):
     assert _row_1 == _row_2
 
 def test_auto_translate_true_long(row):
-    time.sleep(5)
+    time.sleep(2)
     _row = _auto_translate(row, TRANSLATOR, 10)
     assert row.pop('korean') != _row['korean']
     assert row.pop('mixed_lang') != _row['mixed_lang']
@@ -152,7 +159,7 @@ def test_auto_translate_true_long(row):
 def test_auto_translate_false(row):
     row.pop('korean')
     row.pop('mixed_lang')
-    time.sleep(5)
+    time.sleep(2)
     _row = _auto_translate(row, TRANSLATOR)
     assert not _row.pop(TRANS_TAG)
     assert _row.pop(LANGS_TAG) == ['en']
