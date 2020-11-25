@@ -92,10 +92,10 @@ def get_projects_by_appl_id(engine, appl_ids, nrows=None,
 
 def group_projects_by_core_id(engine, core_ids, nrows=None,
                               pull_relationships=False):
-    """Get NiH projects by the base core project number ("core id"), 
+    """Get NiH projects by the base core project number ("core id"),
     and then group projects by this core id. If `pull_relationships`
     is True, then also unbundle any SqlAlchemy "relationship" objects;
-    although this isn't required (and therefore substantially speeds 
+    although this isn't required (and therefore substantially speeds
     things up) when, for example, only IDs are required."""
     # Get all projects in the given set of IDs
     filter_stmt = CORE_ID.in_(core_ids)
@@ -117,7 +117,7 @@ def get_sim_weights(dupes, appl_ids):
     for d in dupes:
         appl_id_1 = d['application_id_1']
         appl_id_2 = d['application_id_2']
-        # Referring to Note a) in `retrieve_similar_projects`, 
+        # Referring to Note a) in `retrieve_similar_projects`,
         # determine which ID is the PK for the similar project
         id_ = appl_id_1 if appl_id_1 not in appl_ids else appl_id_2
         sim_weights[id_].append(d['weight'])
@@ -130,12 +130,12 @@ def get_sim_weights(dupes, appl_ids):
 
 def retrieve_similar_projects(engine, appl_ids):
     """Retrieve all projects which are similar to those in this
-    project group. Some of the similar projects will be retrieved 
+    project group. Some of the similar projects will be retrieved
     multiple times if matched to multiple projects in the group.
     `appl_ids` is the set of IDs in this group.
     """
-    # Note a) the TextDuplicate table doesn't double-count 
-    # application IDs, so the application IDs of this group 
+    # Note a) the TextDuplicate table doesn't double-count
+    # application IDs, so the application IDs of this group
     # could be in either application_id_1 or application_id_2
     either = (TextDuplicate.application_id_1.in_(appl_ids) |
               TextDuplicate.application_id_2.in_(appl_ids))
@@ -155,10 +155,10 @@ def retrieve_similar_projects(engine, appl_ids):
 
     # Retrieve only the required fields by project id
     filter_stmt = PK_ID.in_(sim_ids)
-    query_fields = [PK_ID, CORE_ID, Projects.fy, *DATETIME_COLS]    
+    query_fields = [PK_ID, CORE_ID, Projects.fy, *DATETIME_COLS]
     with db_session(engine) as session:
         q = session.query(*query_fields).filter(filter_stmt)
-        sim_projs = [{field.name: value 
+        sim_projs = [{field.name: value
                       for field, value in zip(query_fields, values)}
                      for values in q.all()]
     return sim_projs, sim_weights
@@ -226,7 +226,7 @@ def retrieve_similar_proj_ids(engine, appl_ids):
     return similar_projs
 
 
-def group_projs_by_similarity(pk_weights, 
+def group_projs_by_similarity(pk_weights,
                               ranges = {'near_duplicate_ids': (0.8, 1),
                                         'very_similar_ids': (0.65, 0.8),
                                         'fairly_similar_ids': (0.4, 0.65)}):
@@ -263,7 +263,7 @@ def join_and_dedupe(values):
 
 
 def format_us_zipcode(zipcode):
-    """NiH US postcodes have wildly inconsistent formatting, 
+    """NiH US postcodes have wildly inconsistent formatting,
     leading to geocoding errors. If the postcode if greater
     than 5 chars, it should be in the format XXXXX-XXXX,
     or XXXXX, even if the first 5 chars require zero-padding."""
@@ -410,9 +410,9 @@ def run():
     logging.info(f"{len(core_ids)} ids retrieved from s3")
 
     # Get the groups for this batch.
-    # Around 3% of core ids are null, and so these are retrieved 
+    # Around 3% of core ids are null, and so these are retrieved
     # in batches of application id instead, and otherwise pull
-    # in the projects with the non-null core id as these can 
+    # in the projects with the non-null core id as these can
     # be aggregated together.
     data_getter = (group_projects_by_core_id if using_core_ids
                    else get_projects_by_appl_id)
