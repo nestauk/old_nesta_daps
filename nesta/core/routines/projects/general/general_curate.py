@@ -10,15 +10,62 @@ from nesta.core.luigihacks.sql2batchtask import Sql2BatchTask
 from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
 from nesta.core.orms.crunchbase_orm import Organization as CrunchbaseOrg
 from nesta.core.orms.nih_orm import Projects as NihProject
+from nesta.core.orms.orm_utils import get_base_from_orm_name
+from nesta.core.orms.orm_utils import get_class_by_tablename
 from nesta.core.luigihacks.misctools import get_config
-from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.mysqldb import make_mysql_target
 
+
+from sqlalchemy.sql import text as sql_text
 import luigi
 from datetime import datetime as dt
 import os
+import pathlib
+import yaml
+from functools import lru_cache
+
 
 S3_BUCKET='nesta-production-intermediate'
 ENV_FILES = ['mysqldb.config', 'nesta']
+
+
+@lru_cache()
+def read_config():
+    """Read raw data from the config file"""
+    this_path = pathlib.Path(__file__).parent.absolute()
+    with open(this_path / 'curate_config.yaml') as f:
+        return yaml.safe_load(f)
+
+
+def get_datasets():
+    """Return unique values of the 'dataset' from the config"""
+    return list(set(item['dataset'] for item in read_config()))
+
+
+def parse_config():
+    """Yield this task's parameter fields from the config"""
+    config = read_config()
+    for item in config:
+        # Required fields
+        dataset = item['dataset']
+        orm = item['orm']
+        table_name = item['table_name']
+        _id_field = item['id_field']
+
+        # Optional fields
+        filter = item.get('filter', None)
+        if filter is not None:
+            filter = sql_text(filter)
+        extra_kwargs = item.get('batchable_kwargs', {})
+
+        # Extract the actual ORM ID field
+        Base = get_base_from_orm_name(orm)
+        _class = get_class_by_tablename(Base, table_name)
+        id_field = getattr(_class, _id_field)
+
+        # Yield this curation task's parameters
+        yield dataset, id_field, filter, extra_kwargs
+
 
 def kwarg_maker(dataset, routine_id):
     """kwarg factory for Sql2BatchTask tasks"""
@@ -32,16 +79,10 @@ class CurateTask(luigi.Task):
     production = luigi.BoolParameter(default=False)
     date = luigi.DateParameter(default=dt.now())
     dataset = luigi.ChoiceParameter(default='all',
-                                    choices=['all', 'nih', 'companies'])
+                                    choices=['all'] + get_datasets())
 
     def output(self):
-        test = not self.production
-        routine_id = f'General-Curate-Root-{self.date}-{test}'
-        db_config_path = os.environ['MYSQLDB']
-        db_config = get_config(db_config_path, "mysqldb")
-        db_config["database"] = 'dev' if test else 'production'
-        db_config["table"] = f"{routine_id} <dummy>"  # Not a real table
-        return MySqlTarget(update_id=routine_id, **db_config)
+        return make_mysql_target(self)
 
     def requires(self):
         set_log_level(True)
@@ -59,26 +100,13 @@ class CurateTask(luigi.Task):
                               memory=2048,
                               intermediate_bucket=S3_BUCKET)
 
-        # NiH run conditions
-        nih_pk = NihProject.application_id
-        nih_core = NihProject.base_core_project_num
-        nih_is_null = nih_core == None
-
-        # Iterate over run params
-                   # Crunchbase
-        params = (('companies', CrunchbaseOrg.id, None, {}),
-                   # NiH Core IDs != Null
-                  ('nih', nih_core, ~nih_is_null,                    
-                   {'using_core_ids': True}),
-                   # NiH Core IDs == Null
-                  ('nih', nih_pk, nih_is_null, 
-                   {'using_core_ids': False}))
-        for dataset, id_field, filter, extra_kwargs in params:
+        # Iterate over each task specified in the config
+        for dataset, id_field, filter, kwargs in parse_config():
             if self.dataset != 'all' and dataset != self.dataset:
                 continue
             yield Sql2BatchTask(id_field=id_field,
                                 filter=filter,
-                                kwargs=extra_kwargs,
+                                kwargs=kwargs,
                                 **kwarg_maker(dataset, routine_id),
                                 **default_kwargs)
 
