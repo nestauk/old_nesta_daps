@@ -32,12 +32,12 @@ def test_impute_base_id():
     q.all.return_value = projects
 
     # Check that the base_project_num has not been imputed yet
-    assert all(p.base_core_project_num is None 
+    assert all(p.base_core_project_num is None
                for p in projects)
 
     # Impute the ids
     impute_base_id(session, from_id=None, to_id=None)
-    
+
     # Check that the base_project_num has been imputed
     imputed_values = [p.base_core_project_num for p in projects]
     expect_values = ["helloworld", "foobar", # <-- Regex passes
@@ -51,13 +51,13 @@ def test_impute_base_id():
 def test_retrieve_id_ranges(mocked_session_context, mocked_engine):
     session = mocked_session_context().__enter__()
     q = session.query().order_by()
-    q.all.return_value = [(0,), (1,), ("1",), (2,), (3,), 
+    q.all.return_value = [(0,), (1,), ("1",), (2,), (3,),
                           (5,), (8,), (13,), (21,)]
     id_ranges = retrieve_id_ranges(database="db_name", chunksize=3)
-    assert id_ranges == [(0, 2, "db_name"),  # 0 <= x <= 2
-                         (2, 8, "db_name"),  # 2 <= x <= 8
-                         (8, 21, "db_name")] # 8 <= x <= 21
-                         
+    assert id_ranges == [(0, 2),  # 0 <= x <= 2
+                         (2, 8),  # 2 <= x <= 8
+                         (8, 21)] # 8 <= x <= 21
+
 
 @mock.patch(PATH.format("get_mysql_engine"))
 @mock.patch(PATH.format("db_session"))
@@ -65,7 +65,7 @@ def test_retrieve_id_ranges(mocked_session_context, mocked_engine):
 def test_impute_base_id_thread(mocked_impute_base_id,
                                mocked_session_context, mocked_engine):
     session = mocked_session_context().__enter__()
-    impute_base_id_thread((0, 2, "db_name"))
+    impute_base_id_thread(0, 2, 'db_name')
     call_args_list = mocked_impute_base_id.call_args_list
     assert len(call_args_list) == 1
     assert call_args_list[0] == [(session, 0, 2)]

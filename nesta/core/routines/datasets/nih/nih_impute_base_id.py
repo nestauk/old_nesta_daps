@@ -18,6 +18,7 @@ import logging
 import luigi
 from datetime import datetime as dt
 from multiprocessing.dummy import Pool as ThreadPool
+from itertools import chain
 
 from nesta.core.luigihacks.mysqldb import make_mysql_target
 from nesta.packages.nih.impute_base_id import retrieve_id_ranges
@@ -41,10 +42,12 @@ class ImputeBaseIDTask(luigi.Task):
     def run(self):
         database = 'dev' if self.test else 'production'
         id_ranges = retrieve_id_ranges(database)
+        _id_ranges = map(lambda x: chain(x, [database]), id_ranges)
+
         # Threading required because it takes 2-3 days to impute
         # all values on a single thread, or a few hours on 15 threads
         pool = ThreadPool(15)
-        results = pool.map(impute_base_id_thread, id_ranges)
+        pool.starmap(impute_base_id_thread, _id_ranges)
         pool.close()
         pool.join()
         self.output().touch()
