@@ -88,19 +88,19 @@ def test_retrieve_similar_projects(mocked_get_sim_weights,
                                    mocked_db_session):
     sim_weights = {5: 0.4, 6: 0.9}
     mocked_get_sim_weights.return_value = sim_weights
-    sim_ids = set(sim_weights.keys())
+    sim_ids = [(id,) for id in set(sim_weights.keys())]
+    sim_projs = [{"application_id": id} for id, in sim_ids]
 
     # Mock the session and query
     mocked_session = mock.MagicMock()
-    q = mocked_session.query().filter().options()
+    q = mocked_session.query().filter()
     q.all.return_value = sim_ids  # <-- will just return the input
     # Assign the session to the context manager
     mocked_db_session().__enter__.return_value = mocked_session
 
     # Just return the value itself
     mocked_obj2dict.side_effect = lambda obj, shallow: obj
-
-    assert run.retrieve_similar_projects(None, []) == (list(sim_ids), sim_weights)
+    assert run.retrieve_similar_projects(None, []) == (sim_projs, sim_weights)
 
 
 def test_earliest_date_good_dates():
