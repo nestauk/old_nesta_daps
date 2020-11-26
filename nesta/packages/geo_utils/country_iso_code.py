@@ -6,10 +6,24 @@ tools for lookup of iso codes for countries
 '''
 
 import pycountry
+from functools import lru_cache
 
 from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_mapping
 
 
+def _country_iso_code(country):
+    for name_type in ['name', 'common_name', 'official_name']:
+        query = {name_type: country}
+        try:
+            result = pycountry.countries.get(**query)
+            if result is not None:
+                return result
+        except KeyError:
+            pass
+    raise KeyError(f"{country} not found")
+
+
+@lru_cache()
 def country_iso_code(country):
     '''
     Look up the ISO 3166 codes for countries.
@@ -22,17 +36,14 @@ def country_iso_code(country):
     Returns:
         Country object from the pycountry module
     '''
-    country = str(country).title()
-    for name_type in ['name', 'common_name', 'official_name']:
-        query = {name_type: country}
-        try:            
-            result = pycountry.countries.get(**query)
-            if result is not None:
-                return result
-        except KeyError:
-            pass
-
-    raise KeyError(f"{country} not found")
+    country = str(country)
+    try:
+        # Note this will raise KeyError if fails
+        result = _country_iso_code(country)
+    except KeyError:
+        # Note this will raise KeyError if fails
+        result = _country_iso_code(country.title())
+    return result
 
 
 def country_iso_code_dataframe(df, country='country'):
@@ -78,7 +89,7 @@ def country_iso_code_to_name(code, iso2=False):
     Returns:
         str: name of the country or None if not valid
     """
-    try:        
+    try:
         if iso2:
             return pycountry.countries.get(alpha_2=code).name
         else:

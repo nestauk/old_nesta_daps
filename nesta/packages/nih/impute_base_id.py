@@ -88,7 +88,6 @@ def retrieve_id_ranges(database, chunksize=1000):
 
 def impute_base_id_thread(from_id, to_id, database):
     """Apply "impute_base_id" over this chunk of IDs"""
-    #from_id, to_id, database = args[0]  # Unpack thread args
     engine = get_mysql_engine("MYSQLDB", "mysqldb", database)
     with db_session(engine) as session:
         impute_base_id(session, from_id, to_id)

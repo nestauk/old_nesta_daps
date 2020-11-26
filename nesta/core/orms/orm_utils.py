@@ -50,13 +50,15 @@ def orm_column_names(_class):
     return columns
 
 
-def object_to_dict(obj, shallow=False, found=None):
+def object_to_dict(obj, shallow=False, properties=True, found=None):
     """Converts a nested SqlAlchemy object to a fully
     unpacked json object.
 
     Args:
         obj: A SqlAlchemy object (i.e. single 'row' of data)
         shallow (bool): Fully unpack nested objs via relationships.
+        properties (bool): Also retrieve all @property values as if they
+                           were columns in the row object.
         found: For internal recursion, do not change the default.
     Returns:
         _obj (dict): An unpacked json-like dict object.
@@ -64,9 +66,17 @@ def object_to_dict(obj, shallow=False, found=None):
     if found is None:  # First time
         found = set()
     # Set up the mapper and retrieve shallow values
-    mapper = class_mapper(obj.__class__)
+    _class = obj.__class__
+    mapper = class_mapper(_class)
     columns = [column.key for column in mapper.columns]
     out = dict(map(lambda c: _get_key_value(obj, c), columns))
+    if properties:
+        # Work out if there are any properties
+        property_names = [name for name in dir(_class)
+                          if type(getattr(_class, name)) is property]
+        # Then pull them out if they exist
+        for name in property_names:
+            out[name] = getattr(obj, name)
     # Shallow means ignore relationships
     relationships = {} if shallow else mapper.relationships
     for name, relation in relationships.items():
@@ -354,14 +364,14 @@ def cast_as_sql_python_type(field, data):
 def get_session(db_env, section, database, Base):
     """Return a database Session instance for the given credentials,
     and also setup the table structure for the intended Base ORM.
-    
+
     Args:
-        db_env: See :obj:`get_mysql_engine`                       
-        section: See :obj:`get_mysql_engine`                      
-        database: See :obj:`get_mysql_engine`                     
+        db_env: See :obj:`get_mysql_engine`
+        section: See :obj:`get_mysql_engine`
+        database: See :obj:`get_mysql_engine`
         Base (:obj:`sqlalchemy.Base`): The Base ORM for this data.
     Returns:
-        session ((:obj:`sqlalchemy.Session`): A database Session instance 
+        session ((:obj:`sqlalchemy.Session`): A database Session instance
                                               for the given credentials.
     """
     engine = get_mysql_engine(db_env, section, database)
@@ -578,7 +588,7 @@ def merge_duplicates(db_env, section, database,
     # Now merge the fields by taking the first non-null value
     objs = []
     for pk, rows in pk_row_lookup.items():
-        field_names = list(rows[0].keys())    
+        field_names = list(rows[0].keys())
         merged_row = {}
         for col in field_names:
             value = None
@@ -635,7 +645,7 @@ def insert_data(db_env, section, database, Base,
 
     # Drop existing objs if merging
     with db_session(engine) as session:
-        try_until_allowed(Base.metadata.create_all, 
+        try_until_allowed(Base.metadata.create_all,
                           session.get_bind())
         if merge_non_null:
             session.execute(existing_objs)

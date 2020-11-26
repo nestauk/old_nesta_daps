@@ -1,0 +1,23 @@
+# Crunchbase
+- dataset: companies
+  orm: crunchbase_orm
+  table_name: crunchbase_organizations
+  id_field: id
+
+# NiH (iterate over base_core_project_num)
+- dataset: nih
+  orm: nih_orm
+  table_name: nih_projects
+  id_field: base_core_project_num
+  filter: "nih_projects.base_core_project_num IS NOT NULL"
+  batchable_kwargs:
+    using_core_ids: true
+
+# NiH (iterate over PK as base_core_project_num is null)
+- dataset: nih
+  orm: nih_orm
+  table_name: nih_projects
+  id_field: application_id
+  filter: "nih_projects.base_core_project_num IS NULL"
+  batchable_kwargs:
+    using_core_ids: false

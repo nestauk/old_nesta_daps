@@ -6,17 +6,27 @@ The schema for the World RePORTER data.
 '''
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.mysql import VARCHAR as _VARCHAR
-from sqlalchemy.dialects.mysql import TEXT as _TEXT
 from sqlalchemy.types import INTEGER, JSON, DATETIME, FLOAT
 from sqlalchemy import Column, Table, ForeignKey
-from functools import partial
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.associationproxy import association_proxy
+
+from nesta.core.orms.types import VARCHAR, TEXT
+
+
+def getattr_(entity, attribute):
+    """Either unpack the attribute from every item in the entity
+    if the entity is a list, otherwise just return the attribute
+    from the entity. Returns None if the entity is either None
+    or empty."""
+    if entity in (None, []):
+        return None
+    if isinstance(entity, list):
+        return [getattr(item, attribute) for item in entity]
+    return getattr(entity, attribute)
 
 
 Base = declarative_base()
-TEXT = _TEXT(collation='utf8mb4_unicode_ci')
-VARCHAR = partial(_VARCHAR, collation='utf8mb4_unicode_ci')
-
 
 class Projects(Base):
     __tablename__ = 'nih_projects'
@@ -65,15 +75,61 @@ class Projects(Base):
     direct_cost_amt = Column(INTEGER)
     indirect_cost_amt = Column(INTEGER)
     total_cost = Column(INTEGER)
-    subproject_id = Column(INTEGER)
+    subproject_id = Column(INTEGER, index=True)
     total_cost_sub_project = Column(INTEGER)
     nih_spending_cats = Column(JSON)
+
+    # Pseudo-FKs
+    abstract = relationship("Abstracts", uselist=False, 
+                            foreign_keys=[application_id],
+                            primaryjoin=("Projects.application_id=="
+                                         "Abstracts.application_id"))
+    publications = relationship("LinkTables", uselist=True,
+                                foreign_keys=[core_project_num],
+                                primaryjoin=("Projects.core_project_num=="
+                                             "LinkTables.project_number"))
+    patents = relationship("Patents", uselist=True,
+                           foreign_keys=[core_project_num],
+                           primaryjoin=("Projects.core_project_num=="
+                                        "Patents.project_id"))
+    clinicalstudies = relationship("ClinicalStudies", uselist=True,
+                                   foreign_keys=[core_project_num],
+                                   primaryjoin=("Projects.core_project_num=="
+                                                "ClinicalStudies.core_project_number"))
+
+    # Pseudo-fields (populated from relationships)
+    @property
+    def abstract_text(self):
+        return getattr_(self.abstract, "abstract_text")
+
+    @property
+    def patent_ids(self):
+        return getattr_(self.patents, "patent_id")
+
+    @property
+    def patent_titles(self):
+        return getattr_(self.patents, "patent_title")
+        
+    @property
+    def pmids(self):
+        return getattr_(self.publications, "pmid")
+
+    @property
+    def clinicaltrial_ids(self):
+        return getattr_(self.clinicalstudies, "clinicaltrials_gov_id")
+
+    @property
+    def clinicaltrial_titles(self):
+        return getattr_(self.clinicalstudies, "study")
+
+        
 
 
 class Abstracts(Base):
     __tablename__ = 'nih_abstracts'
     application_id = Column(INTEGER, primary_key=True, autoincrement=False)
     abstract_text = Column(TEXT)
+    
 
 
 class Publications(Base):

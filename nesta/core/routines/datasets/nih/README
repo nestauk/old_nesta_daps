@@ -1,0 +1,12 @@
+For future development, the order of tasks here is:
+
+1. nih_collect_task
+2a. nih_drop_abstracts
+    3a. nih_vectors_task
+    4a. nih_dedupe_task
+2b. nih_impute_base_id
+
+followed by (in the "general" project routine)
+
+5. general_curate_task
+

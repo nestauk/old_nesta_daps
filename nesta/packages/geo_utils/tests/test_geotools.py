@@ -13,6 +13,7 @@ from nesta.packages.geo_utils.country_iso_code import country_iso_code_dataframe
 from nesta.packages.geo_utils.country_iso_code import country_iso_code_to_name
 from nesta.packages.geo_utils.lookup import get_continent_lookup
 from nesta.packages.geo_utils.lookup import get_country_region_lookup
+from nesta.packages.geo_utils.lookup import get_country_continent_lookup
 
 REQUESTS = 'nesta.packages.geo_utils.geocode.requests.get'
 PYCOUNTRY = 'nesta.packages.geo_utils.country_iso_code.pycountry.countries.get'
@@ -135,7 +136,7 @@ class TestGeocodeDataFrame():
         assert mocked_geocode.mock_calls == expected_calls
 
     @mock.patch(_GEOCODE)
-    def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode, 
+    def test_underlying_geocoding_function_called_with_query_fallback(self, mocked_geocode,
                                                                       test_dataframe):
         mocked_geocode.side_effect = [None, None, None, 'dog', 'cat', 'squirrel']
         geocoded_dataframe = geocode_dataframe(test_dataframe)
@@ -319,6 +320,7 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 1
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_lookup_via_common_name(self, mocked_pycountry):
@@ -330,6 +332,7 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 2
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_lookup_via_official_name(self, mocked_pycountry):
@@ -342,25 +345,35 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 3
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_invalid_lookup_raises_keyerror(self, mocked_pycountry):
-        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError()]
+        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError()]*2
 
         with pytest.raises(KeyError) as e:
             country_iso_code('Fake Country')
         assert 'Fake Country not found' in str(e.value)
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_title_case_is_applied(self, mocked_pycountry):
-        expected_calls = [mock.call(name='United Kingdom'),
-                          mock.call(name='United Kingdom'),
-                          mock.call(name='United Kingdom')]
-
-        country_iso_code('united kingdom')
-        country_iso_code('UNITED KINGDOM')
-        country_iso_code('United kingdom')
+        expected_calls = []
+        names = ['united kingdom', 'UNITED KINGDOM',
+                 'United kingdom']
+        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError(), 'blah'] * len(names)
+        for name in names:
+            country_iso_code(name)  # Find the iso codes
+            raw_call = mock.call(name=name)
+            common_call = mock.call(common_name=name)
+            official_call = mock.call(official_name=name)
+            title_call = mock.call(name='United Kingdom')
+            expected_calls.append(raw_call)  # The initial call
+            expected_calls.append(common_call)  # Tries common name call
+            expected_calls.append(official_call)  # Tries official name
+            expected_calls.append(title_call) # The title case call
         assert mocked_pycountry.mock_calls == expected_calls
+    country_iso_code.cache_clear()
 
 
 class TestCountryIsoCodeDataframe():
@@ -460,3 +473,19 @@ def test_get_country_region_lookup():
     assert all(len(v) == 2 for v in countries.values())
     all_regions = {v[1] for v in countries.values()}
     assert len(all_regions) == 18
+
+
+def test_country_continent_lookup():
+    lookup = get_country_continent_lookup()
+    non_nulls = {k: v for k, v in lookup.items()
+                 if k is not None and k != ''}
+    # All iso2, so length == 2
+    assert all(len(k) == 2 for k in non_nulls.items())
+    assert all(len(v) == 2 for v in non_nulls.values())
+    # Either strings or Nones
+    country_types = set(type(v) for v in lookup.values())
+    assert country_types == {str, type(None)}
+    # Right ball-park of country and continent numbers
+    assert len(non_nulls) > 100  # num countries
+    assert len(non_nulls) < 1000 # num countries
+    assert len(set(non_nulls.values())) == 7 # num continents
