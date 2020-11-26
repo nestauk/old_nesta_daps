@@ -10,7 +10,7 @@
   table_name: nih_projects
   id_field: base_core_project_num
   filter: "nih_projects.base_core_project_num IS NOT NULL"
-  dataset_kwargs:
+  batchable_kwargs:
     using_core_ids: true
 
 # NiH (iterate over PK as base_core_project_num is null)
@@ -19,5 +19,5 @@
   table_name: nih_projects
   id_field: application_id
   filter: "nih_projects.base_core_project_num IS NULL"
-  dataset_kwargs:
+  batchable_kwargs:
     using_core_ids: false

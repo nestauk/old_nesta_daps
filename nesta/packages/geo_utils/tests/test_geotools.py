@@ -320,6 +320,7 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 1
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_lookup_via_common_name(self, mocked_pycountry):
@@ -331,6 +332,7 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 2
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_lookup_via_official_name(self, mocked_pycountry):
@@ -343,25 +345,35 @@ class TestCountryIsoCode():
         assert country_iso_code('United Kingdom') == 'country_object'
         assert mocked_pycountry.mock_calls == expected_calls
         assert mocked_pycountry.call_count == 3
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_invalid_lookup_raises_keyerror(self, mocked_pycountry):
-        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError()]
+        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError()]*2
 
         with pytest.raises(KeyError) as e:
             country_iso_code('Fake Country')
         assert 'Fake Country not found' in str(e.value)
+        country_iso_code.cache_clear()
 
     @mock.patch(PYCOUNTRY)
     def test_title_case_is_applied(self, mocked_pycountry):
-        expected_calls = [mock.call(name='United Kingdom'),
-                          mock.call(name='United Kingdom'),
-                          mock.call(name='United Kingdom')]
-
-        country_iso_code('united kingdom')
-        country_iso_code('UNITED KINGDOM')
-        country_iso_code('United kingdom')
+        expected_calls = []
+        names = ['united kingdom', 'UNITED KINGDOM',
+                 'United kingdom']
+        mocked_pycountry.side_effect = [KeyError(), KeyError(), KeyError(), 'blah'] * len(names)
+        for name in names:
+            country_iso_code(name)  # Find the iso codes
+            raw_call = mock.call(name=name)
+            common_call = mock.call(common_name=name)
+            official_call = mock.call(official_name=name)
+            title_call = mock.call(name='United Kingdom')
+            expected_calls.append(raw_call)  # The initial call
+            expected_calls.append(common_call)  # Tries common name call
+            expected_calls.append(official_call)  # Tries official name
+            expected_calls.append(title_call) # The title case call
         assert mocked_pycountry.mock_calls == expected_calls
+    country_iso_code.cache_clear()
 
 
 class TestCountryIsoCodeDataframe():

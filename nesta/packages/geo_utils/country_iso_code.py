@@ -14,7 +14,7 @@ from nesta.packages.geo_utils.alpha2_to_continent import alpha2_to_continent_map
 def _country_iso_code(country):
     for name_type in ['name', 'common_name', 'official_name']:
         query = {name_type: country}
-        try:            
+        try:
             result = pycountry.countries.get(**query)
             if result is not None:
                 return result
@@ -38,13 +38,12 @@ def country_iso_code(country):
     '''
     country = str(country)
     try:
+        # Note this will raise KeyError if fails
         result = _country_iso_code(country)
     except KeyError:
-        pass
-    else:
+        # Note this will raise KeyError if fails
         result = _country_iso_code(country.title())
-    finally:
-        return result
+    return result
 
 
 def country_iso_code_dataframe(df, country='country'):
@@ -90,7 +89,7 @@ def country_iso_code_to_name(code, iso2=False):
     Returns:
         str: name of the country or None if not valid
     """
-    try:        
+    try:
         if iso2:
             return pycountry.countries.get(alpha_2=code).name
         else:
