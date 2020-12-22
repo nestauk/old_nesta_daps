@@ -29,6 +29,7 @@ TRANS_TAG = "booleanFlag_autotranslated_entity"
 LANGS_TAG = "terms_iso2lang_entity"
 PUNCTUATION = re.compile(r'[a-zA-Z\d\s:]').sub('', string.printable)
 
+
 def sentence_chunks(text, chunksize=2000, delim='. '):
     """Split a string into chunks, but breaking only on
     the specified delimiter.
@@ -53,16 +54,20 @@ def sentence_chunks(text, chunksize=2000, delim='. '):
 
 class MLStripper(HTMLParser):
     """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html."""
+
     def __init__(self):
         self.reset()
         self.strict = False
-        self.convert_charrefs= True
+        self.convert_charrefs = True
         self.fed = []
         super().__init__()
+
     def handle_data(self, d):
         self.fed.append(d)
+
     def get_data(self):
         return ''.join(self.fed)
+
 
 def strip_tags(html):
     """Taken from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python. Tested in _sanitize_html"""
@@ -86,7 +91,8 @@ def translate(text, translator, chunksize=2000):
         {text, langs} ({str, set}): Translated text and set of
                                     detected languages.
     """
-    chunks = [strip_tags(t) for t in sentence_chunks(text, chunksize=chunksize)]
+    chunks = [strip_tags(t)
+              for t in sentence_chunks(text, chunksize=chunksize)]
     texts, langs = [], set()
     for t in translator.translate(chunks, dest='en'):
         texts.append(t.text.capitalize())  # GT uncapitalizes chunks
@@ -133,10 +139,10 @@ def _ngram_and_tokenize(row, ngrammer, ngram_fields):
         processed_tokens = ngrammer.process_document(text)
         tokens += [t.replace('_', ' ')
                    for tokens in processed_tokens
-                   for t in tokens]    
+                   for t in tokens]
     _row['terms_tokens_entity'] = tokens
     return _row
-    
+
 
 def _sanitize_html(row):
     """Strips out any html encoding. Note: nothing clever is done
@@ -153,6 +159,7 @@ def _sanitize_html(row):
             continue
         _row[k] = strip_tags(v)
     return _row
+
 
 def _clean_bad_unicode_conversion(row):
     """Removes sequences of ??? from strings, which normally
@@ -172,11 +179,12 @@ def _clean_bad_unicode_conversion(row):
         elif "??" not in v:
             continue
         while "???" in v:
-            v = v.replace("???","")
+            v = v.replace("???", "")
         while "??" in v:
-            v = v.replace("??","")
+            v = v.replace("??", "")
         _row[k] = v
     return _row
+
 
 def _nullify_pairs(row, null_pairs={}):
     """Nullify any value if it's 'parent' is also null.
@@ -201,6 +209,7 @@ def _nullify_pairs(row, null_pairs={}):
             _row[child] = None
     return _row
 
+
 def _remove_padding(row):
     """Remove padding from text or list text
 
@@ -218,6 +227,7 @@ def _remove_padding(row):
                        for item in v]
     return _row
 
+
 def _caps_to_camel_case_by_value(v):
     if type(v) is not str:
         return v
@@ -226,6 +236,7 @@ def _caps_to_camel_case_by_value(v):
     if v != v.upper():
         return v
     return v.lower().title()
+
 
 def _caps_to_camel_case(row):
     """Convert CAPITAL TERMS to Camel Case
@@ -275,10 +286,12 @@ def _clean_up_lists(row, do_sort=True):
         _row[k] = v
     return _row
 
+
 def _add_entity_type(row, entity_type):
     _row = deepcopy(row)
     _row['type_of_entity'] = entity_type
     return _row
+
 
 def _null_empty_str(row):
     """Nullify values if they are empty strings.
@@ -326,6 +339,7 @@ def _coordinates_as_floats(row):
             _row[k] = __floatify_coord(v)
     return _row
 
+
 @lru_cache()
 def _country_lookup():
     """Extract country/nationality --> iso2 code lookup
@@ -334,7 +348,7 @@ def _country_lookup():
     Returns:
         lookup (dict): country/nationality --> iso2 code lookup.
     """
-    df = pd.read_csv(COUNTRY_LOOKUP, encoding='latin', na_filter = False)
+    df = pd.read_csv(COUNTRY_LOOKUP, encoding='latin', na_filter=False)
     lookup = defaultdict(list)
     for _, row in df.iterrows():
         iso2 = row.pop("ISO 3166 Code")
@@ -343,6 +357,7 @@ def _country_lookup():
                 continue
             lookup[v].append(iso2)
     return lookup
+
 
 def _country_detection(row, country_tag=COUNTRY_TAG):
     """Append a list of countries detected from keywords
@@ -391,6 +406,7 @@ def _guess_delimiter(item, threshold=0.25):
     if score < threshold:
         return p
 
+
 def _listify_terms(row, delimiters=None):
     """Split any 'terms' fields by a guessed delimiter if the
     field is a string.
@@ -410,7 +426,8 @@ def _listify_terms(row, delimiters=None):
         if _type is list:
             continue
         elif _type is not str:
-            raise TypeError(f"Type for '{k}' is '{_type}' but expected 'str' or 'list'.")
+            raise TypeError(
+                f"Type for '{k}' is '{_type}' but expected 'str' or 'list'.")
         # Now determine the delimiter
         if delimiters is None:
             delimiter = _guess_delimiter(v)
@@ -521,6 +538,7 @@ class ElasticsearchPlus(Elasticsearch):
         do_sort (bool): Sort all lists?
         {args, kwargs}: (kw)args for the core :obj:`Elasticsearch` API.
     """
+
     def __init__(self, entity_type,
                  aws_auth_region,
                  no_commit=False,
@@ -578,28 +596,29 @@ class ElasticsearchPlus(Elasticsearch):
 
         # Convert items which SHOULD be lists to lists
         if listify_terms:
-            self.transforms.append(lambda row: _listify_terms(row, terms_delimiters))
+            self.transforms.append(
+                lambda row: _listify_terms(row, terms_delimiters))
 
         # Convert upper case text to camel case
         if caps_to_camel_case:
             self.transforms.append(_caps_to_camel_case)
 
-        # Translate any text to english
-        if auto_translate:
-            # URLs to load balance Google Translate
-            urls = list(f"translate.google.{ext}"
-                        for ext in ('com', 'co.uk', 'co.kr', 'at',
-                                    'ru', 'fr', 'de', 'ch', 'es'))
-            self.transforms.append(lambda row: _auto_translate(row, translator=None,
-                                                               service_urls=urls,
-                                                               **auto_translate_kwargs))
+        # # Translate any text to english
+        # if auto_translate:
+        #     # URLs to load balance Google Translate
+        #     urls = list(f"translate.googleapis.{ext}"
+        #                 for ext in ('com', 'co.uk', 'co.kr', 'at',
+        #                             'ru', 'fr', 'de', 'ch', 'es'))
+        #     self.transforms.append(lambda row: _auto_translate(row, translator=None,
+        #                                                        service_urls=urls,
+        #                                                        **auto_translate_kwargs))
 
         # Extract any ngrams and split into tokens
         if len(ngram_fields) > 0:
             # Setup ngrammer
-            if 'MYSQLDBCONF' not in os.environ:                
+            if 'MYSQLDBCONF' not in os.environ:
                 os.environ['MYSQLDBCONF'] = 'mysqldb.config'
-            ngrammer = Ngrammer(database="production") 
+            ngrammer = Ngrammer(database="production")
             self.transforms.append(lambda row: _ngram_and_tokenize(row, ngrammer,
                                                                    ngram_fields))
 

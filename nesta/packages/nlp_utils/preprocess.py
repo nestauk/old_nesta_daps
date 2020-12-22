@@ -30,7 +30,7 @@ tokens_re = re.compile(r'('+'|'.join(regex_str)+')',
                        re.VERBOSE | re.IGNORECASE)
 
 
-def tokenize_document(text, remove_stops=False):
+def tokenize_document(text, remove_stops=False, keep_quasi_numeric=True):
     """Preprocess a whole raw document.
     Args:
         text (str): Raw string of text.
@@ -38,11 +38,11 @@ def tokenize_document(text, remove_stops=False):
     Return:
         List of preprocessed and tokenized documents
     """
-    return [clean_and_tokenize(sentence, remove_stops)
+    return [clean_and_tokenize(sentence, remove_stops, keep_quasi_numeric)
             for sentence in nltk.sent_tokenize(text)]
 
 
-def clean_and_tokenize(text, remove_stops):
+def clean_and_tokenize(text, remove_stops, keep_quasi_numeric=False):
     """Preprocess a raw string/sentence of text.
     Args:
        text (str): Raw string of text.
@@ -56,14 +56,14 @@ def clean_and_tokenize(text, remove_stops):
     filtered_tokens = [token.replace('-', '_') for token in _tokens
                        if not (remove_stops and len(token) <= 2)
                        and (not remove_stops or token not in stop_words)
-                       and not any(x in token for x in string.digits)
+                       and (keep_quasi_numeric or not any(x in token for x in string.digits))
                        and any(x in token for x in string.ascii_lowercase)]
     return filtered_tokens
 
 
 def filter_by_idf(documents, lower_idf_limit, upper_idf_limit):
     """Remove (from documents) terms which are in a range of IDF values.
-    
+
     Args:
         documents (list): Either a :obj:`list` of :obj:`str` or a
                           :obj:`list` of :obj:`list` of :obj:`str` to be
