@@ -94,9 +94,7 @@ def translate(text, translator, chunksize=2000):
     chunks = [strip_tags(t)
               for t in sentence_chunks(text, chunksize=chunksize)]
     texts, langs = [], set()
-    print(chunks)
     for t in translator.translate(chunks, dest='en'):
-        print(t.text)
         texts.append(t.text.capitalize())  # GT uncapitalizes chunks
         langs.add(t.src)
     return '. '.join(texts), langs
@@ -128,7 +126,6 @@ def _auto_translate(row, translator=None, min_len=150, chunksize=2000, service_u
         _row[k] = result
         _row[TRANS_TAG] = True
     _row[LANGS_TAG] = list(_row[LANGS_TAG])
-    print(_row)
     return _row
 
 
