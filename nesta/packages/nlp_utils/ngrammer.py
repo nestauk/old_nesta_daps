@@ -27,6 +27,7 @@ class Ngrammer:
                   variable 'MYSQLDBCONF'
         database (str): Database name
     """
+
     def __init__(self, config_filepath=None, database="dev"):
         if config_filepath is not None:
             os.environ["MYSQLDBCONF"] = config_filepath
@@ -67,7 +68,8 @@ class Ngrammer:
             return True
         return False
 
-    def process_document(self, raw_text, remove_stops=True):
+    def process_document(self, raw_text, remove_stops=True,
+                         keep_quasi_numeric=True):
         """Tokenize and insert n-grams into documents.
 
         Args:
@@ -77,7 +79,8 @@ class Ngrammer:
              processed_doc (list): Iterable ready for word embedding
         """
         # Tokenize and clean up the text first
-        text = tokenize_document(raw_text)
+        text = tokenize_document(
+            raw_text, keep_quasi_numeric=keep_quasi_numeric)
         # Replace large n-grams first, then small n-grams
         for size in sorted(self.ngrams, reverse=True):
             for sentence in text:

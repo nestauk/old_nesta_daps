@@ -100,70 +100,70 @@ def test_sentence_chunks():
                                           chunksize=i)) == text
 
 
-def test_auto_translate_true_short(row):
-    """The translator shouldn't be applied for short pieces of text"""
-    time.sleep(2)
-    _row = _auto_translate(row, TRANSLATOR, 1000)
-    assert not _row.pop(TRANS_TAG)
-    assert len(_row.pop(LANGS_TAG)) == 0
-    assert row['korean'] == _row['korean']
-    assert row['mixed_lang'] == _row['mixed_lang']
-    assert row == _row
+# def test_auto_translate_true_short(row):
+#     """The translator shouldn't be applied for short pieces of text"""
+#     time.sleep(2)
+#     _row = _auto_translate(row, TRANSLATOR, 1000)
+#     assert not _row.pop(TRANS_TAG)
+#     assert len(_row.pop(LANGS_TAG)) == 0
+#     assert row['korean'] == _row['korean']
+#     assert row['mixed_lang'] == _row['mixed_lang']
+#     assert row == _row
 
-def test_auto_translate_true_long_small_chunks(row):
-    time.sleep(2)
-    _row_1 = _auto_translate(row, TRANSLATOR, 10, chunksize=1)
-    time.sleep(2)
-    _row_2 = _auto_translate(row, TRANSLATOR, 10, chunksize=10000)
-    assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
+# def test_auto_translate_true_long_small_chunks(row):
+#     time.sleep(2)
+#     _row_1 = _auto_translate(row, TRANSLATOR, 10, chunksize=1)
+#     time.sleep(2)
+#     _row_2 = _auto_translate(row, TRANSLATOR, 10, chunksize=10000)
+#     assert _row_1.pop('mixed_lang') != _row_2.pop('mixed_lang')
     
-    # Test the translation itself
-    # Constraints rather than fixed assertions since 
-    # translate algorithm may change over time
-    # so the two chunk sizes aren't guaranteed to give the same results
-    k1 = _row_1.pop('korean').upper()
-    k2 = _row_2.pop('korean').upper()
-    assert len(k1) > 10
-    assert len(k2) > 10
-    assert (len(k1) - len(k2))/len(k1) < 0.95
-    assert (len(set(k1)) - len(set(k2)))/len(set(k1)) < 0.95
-    assert sum((Counter(k1) - Counter(k2)).values())/len(k1+k2) < 0.95
-    assert sum((Counter(k2) - Counter(k1)).values())/len(k1+k2) < 0.95
+#     # Test the translation itself
+#     # Constraints rather than fixed assertions since 
+#     # translate algorithm may change over time
+#     # so the two chunk sizes aren't guaranteed to give the same results
+#     k1 = _row_1.pop('korean').upper()
+#     k2 = _row_2.pop('korean').upper()
+#     assert len(k1) > 10
+#     assert len(k2) > 10
+#     assert (len(k1) - len(k2))/len(k1) < 0.95
+#     assert (len(set(k1)) - len(set(k2)))/len(set(k1)) < 0.95
+#     assert sum((Counter(k1) - Counter(k2)).values())/len(k1+k2) < 0.95
+#     assert sum((Counter(k2) - Counter(k1)).values())/len(k1+k2) < 0.95
 
-    # Confirm that the languages are the same
-    langs_1 = _row_1.pop(LANGS_TAG)
-    langs_2 = _row_2.pop(LANGS_TAG)
-    assert len(langs_1) == len(langs_2)
-    assert set(langs_1) == set(langs_2)
+#     # Confirm that the languages are the same
+#     langs_1 = _row_1.pop(LANGS_TAG)
+#     langs_2 = _row_2.pop(LANGS_TAG)
+#     assert len(langs_1) == len(langs_2)
+#     assert set(langs_1) == set(langs_2)
 
-    # Confirm that nothing else has changed
-    assert _row_1 == _row_2
+#     # Confirm that nothing else has changed
+#     assert _row_1 == _row_2
 
-def test_auto_translate_true_long(row):
-    time.sleep(2)
-    _row = _auto_translate(row, TRANSLATOR, 10)
-    assert row.pop('korean') != _row['korean']
-    assert row.pop('mixed_lang') != _row['mixed_lang']
-    assert _row.pop(TRANS_TAG)
-    trans_korean = _row.pop('korean')
-    assert all(term in trans_korean.lower()
-               for term in ('brown', 'fox', 'jump',
-                            'over', 'lazy', 'dog'))
-    trans_mixed = _row.pop('mixed_lang')
-    assert all(term in trans_mixed.lower()
-               for term in ('brown', 'fox',
-                            'something', 'english'))
-    assert set(_row.pop(LANGS_TAG)) == {'ko', 'en'}
-    assert row == _row
+# def test_auto_translate_true_long(row):
+#     time.sleep(2)
+#     _row = _auto_translate(row, TRANSLATOR, 10)
+#     assert row.pop('korean') != _row['korean']
+#     assert row.pop('mixed_lang') != _row['mixed_lang']
+#     assert _row.pop(TRANS_TAG)
+#     trans_korean = _row.pop('korean')
+#     assert all(term in trans_korean.lower()
+#                for term in ('brown', 'fox', 'jump',
+#                             'over', 'lazy', 'dog'))
+#     trans_mixed = _row.pop('mixed_lang')
+#     assert all(term in trans_mixed.lower()
+#                for term in ('brown', 'fox',
+#                             'something', 'english'))
+#     assert set(_row.pop(LANGS_TAG)) == {'ko', 'en'}
+#     assert row == _row
 
-def test_auto_translate_false(row):
-    row.pop('korean')
-    row.pop('mixed_lang')
-    time.sleep(2)
-    _row = _auto_translate(row, TRANSLATOR)
-    assert not _row.pop(TRANS_TAG)
-    assert _row.pop(LANGS_TAG) == ['en']
-    assert row == _row
+# def test_auto_translate_false(row):
+#     row.pop('korean')
+#     row.pop('mixed_lang')
+#     time.sleep(2)
+#     _row = _auto_translate(row, TRANSLATOR)
+#     assert not _row.pop(TRANS_TAG)
+#     assert _row.pop(LANGS_TAG) == ['en']
+#     assert row == _row
 
 def test_sanitize_html(row):
     _row = _sanitize_html(row)
