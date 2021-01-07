@@ -12,7 +12,7 @@ geopy==1.20.0
 googletrans==3.0.0
 jellyfish==0.7.1
 luigi==2.8.6
-lxml==4.3.4
+lxml==4.6.2
 matplotlib==3.1.1
 mock==3.0.5
 mysql_connector_repackaged==0.3.1
