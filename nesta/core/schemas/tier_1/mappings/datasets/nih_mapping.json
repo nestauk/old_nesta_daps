@@ -3,10 +3,6 @@
         "_doc": {
             "dynamic": "strict",
             "properties": {
-                "booleanFlag_duplicate_abstract": {
-                    "null_value": false,
-                    "type": "boolean"
-                },
                 "coordinate_of_organisation": {
                     "type": "geo_point"
                 },
@@ -128,9 +124,54 @@
                     },
                     "type": "text"
                 },
-                "terms_sdg_abstract": {
+		"terms_id_clinicalTrials":{
+                    "type": "keyword"
+		},
+		"terms_id_similarProjects":{
+                    "type": "keyword"
+		},		
+		"terms_id_exactDupes":{
+                    "type": "keyword"
+		},		
+		"terms_title_exactDupes":{
+		    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+		},
+		"terms_id_nearDupeProjects":{
                     "type": "keyword"
                 },
+		"terms_id_verySimilarProjects":{
+                    "type": "keyword"
+                },		
+		"terms_id_patents":{
+                    "type": "keyword"
+                },		
+		"terms_title_patents":{
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+		"terms_id_pubmed":{
+                    "type": "keyword"
+                },				
+		"terms_title_clinicalTrials":{
+		    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+		},
                 "textBody_abstract_project": {
                     "fields": {
                         "keyword": {
