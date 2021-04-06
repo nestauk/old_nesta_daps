@@ -103,6 +103,24 @@
                     },
                     "type": "text"
                 },
+                "terms_exactDupeId_project": {
+                    "type": "keyword"
+                },
+                "terms_exactDupeTitle_project": {
+                    "analyzer": "terms_analyzer",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword"
+                        }
+                    },
+                    "type": "text"
+                },
+                "terms_id_clinicalTrials": {
+                    "type": "keyword"
+                },
+                "terms_id_patents": {
+                    "type": "keyword"
+                },
                 "terms_mesh_abstract": {
                     "analyzer": "terms_analyzer",
                     "fields": {
@@ -111,6 +129,9 @@
                         }
                     },
                     "type": "text"
+                },
+                "terms_nearDupeId_project": {
+                    "type": "keyword"
                 },
                 "terms_of_countryTags": {
                     "type": "keyword"
@@ -124,34 +145,13 @@
                     },
                     "type": "text"
                 },
-		"terms_id_clinicalTrials":{
-                    "type": "keyword"
-		},
-		"terms_id_similarProjects":{
-                    "type": "keyword"
-		},		
-		"terms_id_exactDupes":{
-                    "type": "keyword"
-		},		
-		"terms_title_exactDupes":{
-		    "analyzer": "terms_analyzer",
-                    "fields": {
-                        "keyword": {
-                            "type": "keyword"
-                        }
-                    },
-                    "type": "text"
-		},
-		"terms_id_nearDupeProjects":{
+                "terms_pubmedId_article": {
                     "type": "keyword"
                 },
-		"terms_id_verySimilarProjects":{
+                "terms_similarId_project": {
                     "type": "keyword"
-                },		
-		"terms_id_patents":{
-                    "type": "keyword"
-                },		
-		"terms_title_patents":{
+                },
+                "terms_title_clinicalTrials": {
                     "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
@@ -160,18 +160,18 @@
                     },
                     "type": "text"
                 },
-		"terms_id_pubmed":{
-                    "type": "keyword"
-                },				
-		"terms_title_clinicalTrials":{
-		    "analyzer": "terms_analyzer",
+                "terms_title_patents": {
+                    "analyzer": "terms_analyzer",
                     "fields": {
                         "keyword": {
                             "type": "keyword"
                         }
                     },
                     "type": "text"
-		},
+                },
+                "terms_verySimilarId_project": {
+                    "type": "keyword"
+                },
                 "textBody_abstract_project": {
                     "fields": {
                         "keyword": {
