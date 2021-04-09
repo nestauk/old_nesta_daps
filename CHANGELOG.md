@@ -15,7 +15,13 @@
     * `verySimilarId`: referring to IDs of projects with similarity >= 0.65
     * `similarId`: referring to IDs of projects with similarity >= 0.4
     
-    For example [this project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:2180092) has several exact dupes and [one near dupe](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:3297189), which itself has one exact dupe
+    For example:
+    
+    * [this project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:2180092) has several exact dupes and [one near dupe](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:3297189), which itself has one exact dupe
+    * [this project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:100160) has [one very similar but non-identical project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:100296)
+    * [this project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:100074) and [this project](https://search-general-wvbdcvn3kmpz6lvjo2nkx36pbu.eu-west-2.es.amazonaws.com/nih_v0/_search?q=_id:7220147) are fairly similar
+    
+    
     
 * An additional form of deduplication was discovered as discussed in [this PR](nestauk/nesta#337), which says that what NiH tell you is a primary key isn't really a primary key. Instead we impute a primary key based on the core ID as per the PR and consolidate projects accordingly.
 
