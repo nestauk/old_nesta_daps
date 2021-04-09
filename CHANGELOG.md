@@ -2,6 +2,12 @@
 
 # 9/4/21
 
+* New fields corresponding to NiH project outputs, which are mainly IDs that could be linked to other open datasets:
+
+    * `terms_id_clinicalTrial`: Clinical trial IDs for this project that can be linked directly to `https://www.clinicaltrials.gov/ct2/show/{clinical_trial_id}`
+    * `terms_id_pubmedId`: PubMed IDs for this project that can be direclty linked to `https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}`
+    * `terms_title_patent` and `terms_id_patent`: Patent titles and IDs. Would require linking to patstat for more info.
+
 * Deduplication according to strategy implemented in [this PR](nestauk/nesta#300), which helps explain the following new fields for the format `terms_{X}_project` with `X` =
 
     * `exactDupeId`, `exactDupeTitle`: refering to IDs and titles of projects which we have removed from the dataset for being exact duplicates. Only distinct titles are provided, and any funding allocations, start and end dates and funding are incorporated into the deduplicated recorded in the logical way (earliest start date, latest end date, sum of funding)
