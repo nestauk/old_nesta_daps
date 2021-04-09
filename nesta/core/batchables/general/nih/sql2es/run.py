@@ -41,10 +41,10 @@ def datetime_to_date(row):
 def reformat_row(row):
     """Reformat MySQL data ready for parsing to Elasticsearch"""
     # Apply datetime --> date conversion on row
-    row = parse_dates(row)
+    row = datetime_to_date(row)
     # Also apply datetime --> date conversion on subfields in yearly_funds
     for _row in row['yearly_funds']:
-        _row = parse_dates(_row)
+        _row = datetime_to_date(_row)
     return row
 
 
