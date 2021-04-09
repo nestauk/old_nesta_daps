@@ -20,7 +20,16 @@ from nesta.core.orms.orm_utils import object_to_dict
 from nesta.core.orms.general_orm import NihProject as Project
 
 
-def parse_dates(row):
+def datetime_to_date(row):
+    """Strip null time info from datetime and return as a date
+    
+    Args:
+        row (dict): Row object optionally containing
+                    'project_start' and 'project_end' dict keys
+    Returns:
+        rows (dict): Modified row, with null time info from 
+                     datetime and return as a date.
+    """
     for key in ['project_start', 'project_end']:
         if row[key] is None:
             continue
@@ -30,13 +39,18 @@ def parse_dates(row):
 
 
 def reformat_row(row):
+    """Reformat MySQL data ready for parsing to Elasticsearch"""
+    # Apply datetime --> date conversion on row
     row = parse_dates(row)
+    # Also apply datetime --> date conversion on subfields in yearly_funds
     for _row in row['yearly_funds']:
         _row = parse_dates(_row)
     return row
 
 
 def run():
+    """The 'main' function"""
+    # Extract env vars for this task
     test = literal_eval(os.environ["BATCHPAR_test"])
     bucket = os.environ['BATCHPAR_bucket']
     batch_file = os.environ['BATCHPAR_batch_file']
@@ -53,7 +67,6 @@ def run():
 
     # es setup
     logging.info('Connecting to ES')
-    strans_kwargs = {'filename': 'nih.json'}
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
                            aws_auth_region=aws_auth_region,
@@ -65,7 +78,6 @@ def run():
 
     # collect file
     logging.info('Retrieving article ids')
-    nrows = 20 if test else None
     s3 = boto3.resource('s3')
     obj = s3.Object(bucket, batch_file)
     proj_ids = json.loads(obj.get()['Body']._raw_stream.read())
@@ -76,14 +88,11 @@ def run():
     with db_session(engine) as sess:
         _filter = Project.application_id.in_(proj_ids)
         query = sess.query(Project).filter(_filter)
-        for count, obj in enumerate(query.all()):
+        for obj in query.all():
             row = object_to_dict(obj)
             row = reformat_row(row)
-            print(row)            
             es.index(index=es_index, doc_type=es_type,
                      id=row.pop('application_id'), body=row)
-            if not count % 1000:
-                logging.info(f"{count} rows loaded to elasticsearch")
     logging.info("Batch job complete.")
 
 
