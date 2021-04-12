@@ -12,8 +12,8 @@
 
     * `exactDupeId`, `exactDupeTitle`: refering to IDs and titles of projects which we have removed from the dataset for being exact duplicates. Only distinct titles are provided, and any funding allocations, start and end dates and funding are incorporated into the deduplicated recorded in the logical way (earliest start date, latest end date, sum of funding)
     * `nearDupeId`: referring to IDs of projects with similarity >= 0.8
-    * `verySimilarId`: referring to IDs of projects with similarity >= 0.65
-    * `similarId`: referring to IDs of projects with similarity >= 0.4
+    * `verySimilarId`: referring to IDs of projects with 0.8 > similarity >= 0.65
+    * `similarId`: referring to IDs of projects with 0.65 > similarity >= 0.4
     
     For example:
     
