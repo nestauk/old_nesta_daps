@@ -25,7 +25,6 @@ CORD_TO_ARXIV_LOOKUP = {
     "journal_ref": "journal",
     "doi": "doi",
     "abstract": "abstract",
-    "article_source": "cord19",
 }
 
 
@@ -57,7 +56,7 @@ def cord_csv(date=None):
         (match,) = filter(None, map(csv_re.match, tf.getnames()))
         # Load the CSV file data into memory
         csv = tf.extractfile(match.group())
-        return StringIO(csv.read().decode("latin"))  # Return wipes the cache
+        return StringIO(csv.read().decode("utf-8"))  # Return wipes the cache
 
 
 def cord_data(date=None):
@@ -83,7 +82,7 @@ def to_arxiv_format(cord_row):
         arxiv_key: cord_row[cord_key]
         for arxiv_key, cord_key in CORD_TO_ARXIV_LOOKUP.items()
     }
-    arxiv_row["id"] = "cord" + cord_row["cord_uid"]
+    arxiv_row["id"] = f"cord-{cord_row['cord_uid']}"
     arxiv_row["authors"] = cord_row["authors"].split(";")
     arxiv_row["article_source"] = "cord"  # hard-coded
     return arxiv_row
