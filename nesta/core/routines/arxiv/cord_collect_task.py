@@ -45,7 +45,8 @@ class CollectCordTask(luigi.Task):
         return MySqlTarget(update_id=update_id, **db_config)
 
     def run(self):
-        articles = list(map(to_arxiv_format, cord_data()))
+        date = '2020-03-13' if self.test else None
+        articles = list(map(to_arxiv_format, cord_data(date=date)))
         db = "dev" if self.test else "production"
         engine = get_mysql_engine(self.db_config_env, "mysqldb", db)
         with db_session(engine) as session:
