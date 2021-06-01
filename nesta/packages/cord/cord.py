@@ -26,6 +26,7 @@ CORD_TO_ARXIV_LOOKUP = {
     "journal_ref": "journal",
     "doi": "doi",
     "abstract": "abstract",
+    "authors": "authors"
 }
 
 
@@ -73,18 +74,18 @@ def cord_data(date=None):
 
 
 def most_recent_date():
+    """Determine the most recent date of CORD data from their website"""
     response = requests.get(HTML_URL)
     response.raise_for_status()
     return LATEST_RE.search(response.text).group()
 
  
-def is_private_char(char): 
-    return unicodedata.category(char) == 'Co'
-
 def remove_private_chars(text):
-    return "".join([char for char in text if not is_private_char(char)])
+    """Remove private unicode characters"""
+    return "".join([char for char in text if unicodedata.category(char) != 'Co'])
 
 def convert_date(text):
+    """Standardise one of the three expected date formats"""
     # Mapping of text length to processing lambda
     date_converter = {0: lambda text: None,
                       4: lambda	text: f'{text}-01-01',
@@ -96,6 +97,7 @@ def convert_date(text):
         raise ValueError(f'Unrecognise date format: {text}')
     
 def to_arxiv_format(cord_row):
+    """Convert a row of CORD data ready for ingestion in the arxiv MySQL table"""
     # Remove private unicode
     for field in ['abstract', 'title']:
         cord_row[field] = remove_private_chars(cord_row[field])
