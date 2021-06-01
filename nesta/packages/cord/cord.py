@@ -82,7 +82,8 @@ def to_arxiv_format(cord_row):
         arxiv_key: cord_row[cord_key]
         for arxiv_key, cord_key in CORD_TO_ARXIV_LOOKUP.items()
     }
+    authors = cord_row["authors"].split(";")
     arxiv_row["id"] = f"cord-{cord_row['cord_uid']}"
-    arxiv_row["authors"] = cord_row["authors"].split(";")
+    arxiv_row["authors"] = list(map(str.strip, authors))
     arxiv_row["article_source"] = "cord"  # hard-coded
     return arxiv_row
