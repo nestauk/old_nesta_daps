@@ -6,6 +6,7 @@ import tarfile
 import csv
 import re
 from io import StringIO
+import unicodedata 
 
 
 LATEST_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
@@ -76,14 +77,41 @@ def most_recent_date():
     response.raise_for_status()
     return LATEST_RE.search(response.text).group()
 
+ 
+def is_private_char(char): 
+    return unicodedata.category(char) == 'Co'
 
+def remove_private_chars(text):
+    return "".join([char for char in text if not is_private_char(char)])
+
+def convert_date(text):
+    # Mapping of text length to processing lambda
+    date_converter = {0: lambda text: None,
+                      4: lambda	text: f'{text}-01-01',
+                      10: lambda text: text}
+    # Convert the datestring according to the number of chars
+    try:
+        return date_converter[len(text)](text)
+    except KeyError:
+        raise ValueError(f'Unrecognise date format: {text}')
+    
 def to_arxiv_format(cord_row):
+    # Remove private unicode
+    for field in ['abstract', 'title']:
+        cord_row[field] = remove_private_chars(cord_row[field])
+    cord_row['publish_time'] = convert_date(cord_row['publish_time'])
+    # Empty to null
+    cord_row = {k: (v if (v != '' or k == 'authors') else None)
+                for k, v in cord_row.items()}
+    # Format authors
+    authors = cord_row["authors"].split(";")
+    cord_row["authors"] = list(map(str.strip, authors))
+    # Transpose field nameas
     arxiv_row = {
         arxiv_key: cord_row[cord_key]
         for arxiv_key, cord_key in CORD_TO_ARXIV_LOOKUP.items()
     }
-    authors = cord_row["authors"].split(";")
+    # Hard-coded fields
     arxiv_row["id"] = f"cord-{cord_row['cord_uid']}"
-    arxiv_row["authors"] = list(map(str.strip, authors))
-    arxiv_row["article_source"] = "cord"  # hard-coded
+    arxiv_row["article_source"] = "cord"
     return arxiv_row

@@ -3,7 +3,7 @@ Arxiv
 =====
 """
 from sqlalchemy import Table, Column, ForeignKey
-from sqlalchemy.dialects.mysql import VARCHAR, TEXT
+from sqlalchemy.dialects.mysql import VARCHAR, TEXT, MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON, DATE, INTEGER, BIGINT, FLOAT, BOOLEAN
@@ -65,9 +65,9 @@ class Article(Base):
     created = Column(DATE)
     updated = Column(DATE)
     title = Column(TEXT(collation="utf8mb4_unicode_ci"))
-    journal_ref = Column(TEXT)
+    journal_ref = Column(TEXT(collation="utf8mb4_unicode_ci"))
     doi = Column(VARCHAR(200))
-    abstract = Column(TEXT(collation="utf8mb4_unicode_ci"))
+    abstract = Column(MEDIUMTEXT(collation="utf8mb4_unicode_ci"))
     authors = Column(JSON)
     mag_authors = Column(JSON)
     mag_id = Column(BIGINT)
