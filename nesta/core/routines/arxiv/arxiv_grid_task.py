@@ -14,7 +14,11 @@ import logging
 from datetime import datetime
 
 from nesta.core.routines.arxiv.arxiv_mag_sparql_task import MagSparqlTask
-from nesta.packages.arxiv.collect_arxiv import add_article_institutes, create_article_institute_links, update_existing_articles
+from nesta.packages.arxiv.collect_arxiv import (
+    add_article_institutes,
+    create_article_institute_links,
+    update_existing_articles,
+)
 from nesta.packages.grid.grid import ComboFuzzer, grid_name_lookup
 from nesta.packages.misc_utils.batches import BatchWriter
 from nesta.core.orms.arxiv_orm import Base, Article
@@ -39,6 +43,7 @@ class GridTask(luigi.Task):
                                   retrieved. Must be in YYYY-MM-DD format
                                   (not used in this task but passed down to others)
     """
+
     date = luigi.DateParameter()
     _routine_id = luigi.Parameter()
     test = luigi.BoolParameter(default=True)
@@ -47,41 +52,46 @@ class GridTask(luigi.Task):
     mag_config_path = luigi.Parameter()
     insert_batch_size = luigi.IntParameter(default=500)
     articles_from_date = luigi.Parameter()
+    article_source = luigi.Parameter(default=None)
 
     def output(self):
-        '''Points to the output database engine'''
+        """Points to the output database engine"""
         db_config = misctools.get_config(self.db_config_path, "mysqldb")
-        db_config["database"] = 'dev' if self.test else 'production'
+        db_config["database"] = "dev" if self.test else "production"
         db_config["table"] = "arXlive <dummy>"  # Note, not a real table
         update_id = "ArxivGrid_{}".format(self.date)
         return MySqlTarget(update_id=update_id, **db_config)
 
     def requires(self):
-        yield MagSparqlTask(date=self.date,
-                            _routine_id=self._routine_id,
-                            db_config_path=self.db_config_path,
-                            db_config_env=self.db_config_env,
-                            mag_config_path=self.mag_config_path,
-                            test=self.test,
-                            articles_from_date=self.articles_from_date,
-                            insert_batch_size=self.insert_batch_size)
+        yield MagSparqlTask(
+            date=self.date,
+            _routine_id=self._routine_id,
+            db_config_path=self.db_config_path,
+            db_config_env=self.db_config_env,
+            mag_config_path=self.mag_config_path,
+            test=self.test,
+            articles_from_date=self.articles_from_date,
+            insert_batch_size=self.insert_batch_size,
+            article_source=self.article_source,
+        )
 
     def run(self):
         # database setup
-        database = 'dev' if self.test else 'production'
+        database = "dev" if self.test else "production"
         logging.info(f"Using {database} database")
-        self.engine = get_mysql_engine(self.db_config_env, 'mysqldb', database)
+        self.engine = get_mysql_engine(self.db_config_env, "mysqldb", database)
         Base.metadata.create_all(self.engine)
 
-        article_institute_batcher = BatchWriter(self.insert_batch_size,
-                                                add_article_institutes,
-                                                self.engine)
-        match_attempted_batcher = BatchWriter(self.insert_batch_size,
-                                              update_existing_articles,
-                                              self.engine)
+        article_institute_batcher = BatchWriter(
+            self.insert_batch_size, add_article_institutes, self.engine
+        )
+        match_attempted_batcher = BatchWriter(
+            self.insert_batch_size, update_existing_articles, self.engine
+        )
 
-        fuzzer = ComboFuzzer([fuzz.token_sort_ratio, fuzz.partial_ratio],
-                             store_history=True)
+        fuzzer = ComboFuzzer(
+            [fuzz.token_sort_ratio, fuzz.partial_ratio], store_history=True
+        )
 
         # extract lookup of GRID institute names to ids - seems to be OK to hold in memory
         institute_name_id_lookup = grid_name_lookup(self.engine)
@@ -91,13 +101,15 @@ class GridTask(luigi.Task):
             all_grid_ids = {i.id for i in session.query(Institute.id).all()}
             logging.info(f"{len(all_grid_ids)} institutes in GRID")
 
-            article_query = (session
-                             .query(Article.id, Article.mag_authors)
-                             .filter(Article.institute_match_attempted.is_(False)
-                                     & ~Article.institutes.any()
-                                     & Article.mag_authors.isnot(None)))
+            article_query = session.query(Article.id, Article.mag_authors).filter(
+                Article.institute_match_attempted.is_(False)
+                & ~Article.institutes.any()
+                & Article.mag_authors.isnot(None)
+            )
             total = article_query.count()
-            logging.info(f"Total articles with authors and no institutes links: {total}")
+            logging.info(
+                f"Total articles with authors and no institutes links: {total}"
+            )
 
             logging.debug("Starting the matching process")
             articles = article_query.all()
@@ -106,28 +118,33 @@ class GridTask(luigi.Task):
             article_institute_links = []
             for author in article.mag_authors:
                 # prevent duplicates when a mixture of institute aliases are used in the same article
-                existing_article_institute_ids = {link['institute_id']
-                                                  for link in article_institute_links}
+                existing_article_institute_ids = {
+                    link["institute_id"] for link in article_institute_links
+                }
 
                 # extract and validate grid_id
                 try:
-                    extracted_grid_id = author['affiliation_grid_id']
+                    extracted_grid_id = author["affiliation_grid_id"]
                 except KeyError:
                     pass
                 else:
                     # check grid id is valid
-                    if (extracted_grid_id in all_grid_ids
-                            and extracted_grid_id not in existing_article_institute_ids):
-                        links = create_article_institute_links(article_id=article.id,
-                                                               institute_ids=[extracted_grid_id],
-                                                               score=1)
+                    if (
+                        extracted_grid_id in all_grid_ids
+                        and extracted_grid_id not in existing_article_institute_ids
+                    ):
+                        links = create_article_institute_links(
+                            article_id=article.id,
+                            institute_ids=[extracted_grid_id],
+                            score=1,
+                        )
                         article_institute_links.extend(links)
                         logging.debug(f"Used grid_id: {extracted_grid_id}")
                         continue
 
                 # extract author affiliation
                 try:
-                    affiliation = author['author_affiliation']
+                    affiliation = author["author_affiliation"]
                 except KeyError:
                     # no grid id or affiliation for this author
                     logging.debug(f"No affiliation found in: {author}")
@@ -140,37 +157,43 @@ class GridTask(luigi.Task):
                     pass
                 else:
                     institute_ids = set(institute_ids) - existing_article_institute_ids
-                    links = create_article_institute_links(article_id=article.id,
-                                                           institute_ids=institute_ids,
-                                                           score=1)
+                    links = create_article_institute_links(
+                        article_id=article.id, institute_ids=institute_ids, score=1
+                    )
                     article_institute_links.extend(links)
                     logging.debug(f"Found an exact match for: {affiliation}")
                     continue
 
                 # fuzzy matching
                 try:
-                    match, score = fuzzer.fuzzy_match_one(affiliation,
-                                                          institute_name_id_lookup.keys())
+                    match, score = fuzzer.fuzzy_match_one(
+                        affiliation, institute_name_id_lookup.keys()
+                    )
                 except KeyError:
                     # failed fuzzy match
                     logging.debug(f"Failed fuzzy match: {affiliation}")
                 else:
                     institute_ids = institute_name_id_lookup[match]
                     institute_ids = set(institute_ids) - existing_article_institute_ids
-                    links = create_article_institute_links(article_id=article.id,
-                                                           institute_ids=institute_ids,
-                                                           score=score)
+                    links = create_article_institute_links(
+                        article_id=article.id, institute_ids=institute_ids, score=score
+                    )
                     article_institute_links.extend(links)
-                    logging.debug(f"Found a fuzzy match: {affiliation}  {score}  {match}")
+                    logging.debug(
+                        f"Found a fuzzy match: {affiliation}  {score}  {match}"
+                    )
 
             # add links for this article to the batch queue
             article_institute_batcher.extend(article_institute_links)
             # mark that matching has been attempted for this article
-            match_attempted_batcher.append(dict(id=article.id,
-                                                institute_match_attempted=True))
+            match_attempted_batcher.append(
+                dict(id=article.id, institute_match_attempted=True)
+            )
 
             if not count % 100:
-                logging.info(f"{count} processed articles from {total} : {(count / total) * 100:.1f}%")
+                logging.info(
+                    f"{count} processed articles from {total} : {(count / total) * 100:.1f}%"
+                )
 
             if self.test and count == 5000:
                 logging.warning("Exiting after 5000 articles in test mode")
@@ -184,8 +207,12 @@ class GridTask(luigi.Task):
             match_attempted_batcher.write()
 
         logging.info("All articles processed")
-        logging.info(f"Total successful fuzzy matches for institute names: {len(fuzzer.successful_fuzzy_matches)}")
-        logging.info(f"Total failed fuzzy matches for institute names{len(fuzzer.failed_fuzzy_matches): }")
+        logging.info(
+            f"Total successful fuzzy matches for institute names: {len(fuzzer.successful_fuzzy_matches)}"
+        )
+        logging.info(
+            f"Total failed fuzzy matches for institute names{len(fuzzer.failed_fuzzy_matches): }"
+        )
 
         # mark as done
         logging.info("Task complete")
@@ -200,20 +227,22 @@ class GridRootTask(luigi.WrapperTask):
     articles_from_date = luigi.Parameter(default=None)
     insert_batch_size = luigi.IntParameter(default=500)
     debug = luigi.BoolParameter(default=False)
+    article_source = luigi.BoolParameter(default=None)
 
     def requires(self):
-        '''Collects the database configurations
-        and executes the central task.'''
+        """Collects the database configurations
+        and executes the central task."""
         logging.getLogger().setLevel(logging.INFO)
         _routine_id = "{}-{}".format(self.date, self.production)
         grid_task_kwargs = {
-            '_routine_id':_routine_id,
-            'db_config_path':self.db_config_path,
-            'db_config_env':'MYSQLDB',
-            'mag_config_path':'mag.config',
-            'test':not self.production,
-            'insert_batch_size':self.insert_batch_size,
-            'articles_from_date':self.articles_from_date,
-            'date':self.date,
+            "_routine_id": _routine_id,
+            "db_config_path": self.db_config_path,
+            "db_config_env": "MYSQLDB",
+            "mag_config_path": "mag.config",
+            "test": not self.production,
+            "insert_batch_size": self.insert_batch_size,
+            "articles_from_date": self.articles_from_date,
+            "date": self.date,
+            "article_source": self.article_source,
         }
         yield GridTask(**grid_task_kwargs)
